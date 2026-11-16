@@ -266,13 +266,40 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
     };
 
     function makePixelTex(drawFn) {
+      // Render the classic 16px art on a 32px canvas, then add restrained
+      // single-pixel material grain. Nearest filtering keeps the block look crisp.
       const c = document.createElement("canvas");
-      c.width = 16; c.height = 16;
-      const ctx = c.getContext("2d");
+      c.width = 32; c.height = 32;
+      const ctx = c.getContext("2d", { willReadFrequently: true });
+      ctx.imageSmoothingEnabled = false;
+      ctx.setTransform(2, 0, 0, 2, 0, 0);
       drawFn(ctx);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+      const image = ctx.getImageData(0, 0, 32, 32);
+      const px = image.data;
+      for (let y = 0; y < 32; y++) {
+        for (let x = 0; x < 32; x++) {
+          const p = (y * 32 + x) * 4;
+          if (px[p + 3] === 0) continue;
+          const hash = (Math.imul(x + 17, 374761393) + Math.imul(y + 31, 668265263)) | 0;
+          const grain = ((hash ^ (hash >>> 13)) >>> 0) % 29;
+          const shade = grain === 0 ? 15 : grain === 1 ? -13 : grain === 2 ? 8 : 0;
+          if (shade) {
+            px[p] = Math.max(0, Math.min(255, px[p] + shade));
+            px[p + 1] = Math.max(0, Math.min(255, px[p + 1] + shade));
+            px[p + 2] = Math.max(0, Math.min(255, px[p + 2] + shade));
+          }
+        }
+      }
+      ctx.putImageData(image, 0, 0);
+
       const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
       tex.magFilter = THREE.NearestFilter;
       tex.minFilter = THREE.NearestFilter;
+      tex.generateMipmaps = false;
+      if (typeof renderer !== "undefined") tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
       return { tex, dataUrl: c.toDataURL() };
     }
 
@@ -289,6 +316,13 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           }
         }
       }
+      // Gentle edge contrast gives each tile more depth without leaving pixel art.
+      ctx.fillStyle = "rgba(255,255,255,0.055)";
+      ctx.fillRect(0, 0, 16, 1);
+      ctx.fillRect(0, 0, 1, 16);
+      ctx.fillStyle = "rgba(0,0,0,0.09)";
+      ctx.fillRect(0, 15, 16, 1);
+      ctx.fillRect(15, 0, 1, 16);
     }
 
     function initTextures() {
@@ -795,27 +829,33 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
     // =========================================================================
     const canvas = document.getElementById("game-canvas");
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.08;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x88aae0);
-    scene.fog = new THREE.Fog(0x88aae0, 26, 72);
+    scene.fog = new THREE.Fog(0x88aae0, 34, 96);
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 160);
     camera.rotation.order = "YXZ";
     camera.rotation.z = 0;
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.64);
-    scene.add(ambientLight);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.72);
+    const skyLight = new THREE.HemisphereLight(0xdceaff, 0x65533b, 0.34);
+    scene.add(ambientLight, skyLight);
 
-    const sunLight = new THREE.DirectionalLight(0xf7f2e3, 0.8);
+    const sunLight = new THREE.DirectionalLight(0xfff1d8, 1.05);
     sunLight.position.set(40, 80, 30);
     sunLight.castShadow = true;
-    sunLight.shadow.mapSize.width = 1024;
-    sunLight.shadow.mapSize.height = 1024;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.bias = -0.00018;
+    sunLight.shadow.normalBias = 0.025;
     sunLight.shadow.camera.near = 5;
     sunLight.shadow.camera.far = 160;
     const d = 38;
