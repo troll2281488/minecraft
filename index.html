@@ -1074,6 +1074,9 @@
       iron_boots: { name: "Железные ботинки", cat: "armor_food", stack: 1, armor: 2, equip: "feet" },
       diamond_leggings: { name: "Алмазные поножи", cat: "armor_food", stack: 1, armor: 6, equip: "legs" },
       diamond_boots: { name: "Алмазные ботинки", cat: "armor_food", stack: 1, armor: 3, equip: "feet" },
+      leather: { name: "Кожа", cat: "misc", stack: 64 },
+      ancient_debris: { name: "Древние обломки", cat: "misc", stack: 64 },
+      netherite_scrap: { name: "Незеритовый лом", cat: "misc", stack: 64 },
       netherite_ingot: { name: "Незеритовый слиток", cat: "misc", stack: 64 },
       netherite_helmet: { name: "Незеритовый шлем", cat: "armor_food", stack: 1, armor: 3, equip: "head", toughness: 3 },
       netherite_chestplate: { name: "Незеритовый нагрудник", cat: "armor_food", stack: 1, armor: 8, equip: "chest", toughness: 3 },
@@ -1538,7 +1541,8 @@
       { out: { id: "iron_boots", count: 1 }, req: { iron_ingot: 4 } },
       { out: { id: "diamond_leggings", count: 1 }, req: { diamond: 7 } },
       { out: { id: "diamond_boots", count: 1 }, req: { diamond: 4 } },
-      { out: { id: "netherite_ingot", count: 1 }, req: { gold_ingot: 4, diamond: 4 } },
+      { out: { id: "netherite_scrap", count: 1 }, req: { ancient_debris: 1 } },
+      { out: { id: "netherite_ingot", count: 1 }, req: { gold_ingot: 4, netherite_scrap: 4 } },
       { out: { id: "netherite_helmet", count: 1 }, req: { diamond: 1, netherite_ingot: 1 } },
       { out: { id: "netherite_chestplate", count: 1 }, req: { diamond: 1, netherite_ingot: 1 } },
       { out: { id: "netherite_leggings", count: 1 }, req: { diamond: 1, netherite_ingot: 1 } },
@@ -2234,7 +2238,41 @@
         this.buildStronghold();
       }
 
+      buildEndCityAt(cx, cz) {
+        const baseY = 31;
+        for (let dx = -6; dx <= 6; dx++) for (let dz = -6; dz <= 6; dz++) {
+          this.setBlockRaw(cx + dx, baseY, cz + dz, B.END_STONE);
+        }
+        for (let y = baseY + 1; y <= baseY + 17; y++) {
+          for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
+            const edge = Math.abs(dx) === 2 || Math.abs(dz) === 2;
+            if (edge || y === baseY + 17) this.setBlockRaw(cx + dx, y, cz + dz, B.OBSIDIAN);
+          }
+        }
+        for (let y = baseY + 4; y <= baseY + 12; y += 4) {
+          for (let dx = -4; dx <= 4; dx++) this.setBlockRaw(cx + dx, y, cz + 3, B.END_STONE);
+          for (let dz = -4; dz <= 4; dz++) this.setBlockRaw(cx + 3, y, cz + dz, B.END_STONE);
+        }
+        this.setBlockRaw(cx, baseY + 18, cz, B.CHEST);
+        const loot = new Array(27).fill(null);
+        loot[0] = { id: "diamond", count: 4 };
+        loot[1] = { id: "netherite_scrap", count: 2 };
+        loot[2] = { id: "elytra", count: 1 };
+        this.chests.set(`end:${cx},${baseY + 18},${cz}`, loot);
+      }
+
       ensureStructuresInRegion(wx, wz) {
+        if (this.dimension === "end") {
+          const rx = Math.floor(wx / 96), rz = Math.floor(wz / 96);
+          const key = "end:" + rx + "," + rz;
+          if (this.generatedRegions.has(key)) return;
+          this.generatedRegions.add(key);
+          const h = hash2(rx, rz, this.seed + 4501);
+          if ((rx !== 0 || rz !== 0) && h > 0.52) {
+            this.buildEndCityAt(rx * 96 + 54, rz * 96 + 54);
+          }
+          return;
+        }
         if (this.dimension !== "overworld") return;
         const rx = Math.floor(wx / 320);
         const rz = Math.floor(wz / 320);
