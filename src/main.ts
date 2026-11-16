@@ -5014,6 +5014,23 @@ const WORLD_CONFIG: WorldConfig = {
       e.target.textContent = `Громкость звуков: ${Math.round(SFX.volume * 100)}%`;
     };
 
+    document.getElementById("btn-set-quality").onclick = (e) => {
+      SFX.click();
+      const levels = ["low", "medium", "high"];
+      GAME.graphicsQuality = levels[(levels.indexOf(GAME.graphicsQuality) + 1) % levels.length];
+      const cfg = {
+        low: { pixelRatio: 0.85, shadows: false, renderDist: Math.min(GAME.renderDist, 4), label: "Низкое" },
+        medium: { pixelRatio: 1.15, shadows: true, renderDist: Math.min(GAME.renderDist, 6), label: "Среднее" },
+        high: { pixelRatio: 1.5, shadows: true, renderDist: Math.max(GAME.renderDist, 6), label: "Высокое" }
+      }[GAME.graphicsQuality];
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, cfg.pixelRatio));
+      renderer.shadowMap.enabled = cfg.shadows;
+      sunLight.castShadow = cfg.shadows;
+      GAME.renderDist = cfg.renderDist;
+      e.target.textContent = "Качество графики: " + cfg.label;
+      updateChunksAroundPlayer(true);
+      showBanner("Графика: " + cfg.label.toLowerCase());
+    };
     // Pause, Death, GUI & End Poem Buttons
     document.getElementById("btn-resume").onclick = () => {
       SFX.click();
