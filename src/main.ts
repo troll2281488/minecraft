@@ -2356,6 +2356,36 @@ const WORLD_CONFIG: WorldConfig = {
           continue;
         }
 
+        if (e.type === "wind_charge_projectile") {
+          e.life -= dt;
+          e.mesh.position.addScaledVector(e.vel, dt);
+          const blockHit = BLOCK_PROPS[GAME.world.getBlock(e.mesh.position.x, e.mesh.position.y, e.mesh.position.z)]?.solid;
+          let hit = false;
+          for (const target of entities) {
+            if (!target.cfg || target === e) continue;
+            const center = target.mesh.position.clone().add(new THREE.Vector3(0, (target.cfg.h || 1) * 0.5, 0));
+            if (center.distanceTo(e.mesh.position) < Math.max(0.8, (target.cfg.w || 0.5) * 0.9)) {
+              damageEntity(target, 3);
+              const push = target.mesh.position.clone().sub(e.mesh.position).setY(0.8).normalize();
+              target.mesh.position.addScaledVector(push, 2.8);
+              hit = true;
+              break;
+            }
+          }
+          if (blockHit || hit || e.life <= 0) {
+            spawnParticles(e.mesh.position.x, e.mesh.position.y, e.mesh.position.z, 0xc5e6df, 18);
+            const push = PLAYER.pos.clone().sub(e.mesh.position);
+            if (push.length() < 4.5 && push.length() > 0.01) {
+              push.normalize();
+              PLAYER.vel.addScaledVector(push, 7);
+              PLAYER.vel.y = Math.max(PLAYER.vel.y, 5);
+            }
+            scene.remove(e.mesh);
+            entities.splice(i, 1);
+          }
+          continue;
+        }
+
         if (e.type === "arrow") {
           e.life -= dt;
           e.vel.y -= 18 * dt;
