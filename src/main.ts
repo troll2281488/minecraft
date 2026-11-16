@@ -110,7 +110,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       STONE_BRICKS: 38, DRAGON_EGG: 39, BOOKSHELF: 40, WOOL_WHITE: 41,
       BRICKS: 42, TNT: 43, HAY_BLOCK: 44, SANDSTONE: 45,
       NETHER_BRICKS: 46, QUARTZ_ORE: 47, GOLD_BLOCK: 48,
-      BED_FOOT: 49, BED_HEAD: 50, CRYING_OBSIDIAN: 51
+      BED_FOOT: 49, BED_HEAD: 50, CRYING_OBSIDIAN: 51, ANCIENT_DEBRIS: 52, NETHER_GOLD_ORE: 53, BASALT: 54, BLACKSTONE: 55, SOUL_SOIL: 56
     };
 
     const BLOCK_PROPS = {
@@ -165,7 +165,12 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       [B.GOLD_BLOCK]: { name: "Золотой блок", solid: true, hardness: 2.5, mat: "stone", tool: "pickaxe", minTier: 2, drop: B.GOLD_BLOCK },
       [B.BED_FOOT]: { name: "Кровать (низ)", solid: true, hardness: 0.3, mat: "wood", drop: "bed", interactive: "bed" },
       [B.BED_HEAD]: { name: "Кровать (изголовье)", solid: true, hardness: 0.3, mat: "wood", drop: "bed", interactive: "bed" },
-      [B.CRYING_OBSIDIAN]: { name: "Плачущий обсидиан", solid: true, hardness: 8.5, mat: "stone", tool: "pickaxe", minTier: 4, drop: B.CRYING_OBSIDIAN }
+      [B.CRYING_OBSIDIAN]: { name: "Плачущий обсидиан", solid: true, hardness: 8.5, mat: "stone", tool: "pickaxe", minTier: 4, drop: B.CRYING_OBSIDIAN },
+      [B.ANCIENT_DEBRIS]: { name: "Древние обломки", solid: true, hardness: 30, blastResistance: 1200, mat: "stone", tool: "pickaxe", minTier: 4, drop: "ancient_debris" },
+      [B.NETHER_GOLD_ORE]: { name: "Незерская золотая руда", solid: true, hardness: 3, mat: "stone", tool: "pickaxe", minTier: 1, drop: "gold_ingot" },
+      [B.BASALT]: { name: "Базальт", solid: true, hardness: 1.25, mat: "stone", tool: "pickaxe", minTier: 1, drop: B.BASALT },
+      [B.BLACKSTONE]: { name: "Чернит", solid: true, hardness: 1.5, mat: "stone", tool: "pickaxe", minTier: 1, drop: B.BLACKSTONE },
+      [B.SOUL_SOIL]: { name: "Почва душ", solid: true, hardness: 0.5, mat: "grass", drop: B.SOUL_SOIL }
     };
 
     const ITEMS = {
@@ -530,7 +535,9 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         [B.FARMLAND, farmland], [B.STONE_BRICKS, stoneBricks], [B.DRAGON_EGG, obsidian],
         [B.WOOL_WHITE, wool], [B.BRICKS, bricks], [B.HAY_BLOCK, haySide],
         [B.SANDSTONE, sandstone], [B.NETHER_BRICKS, netherBricks], [B.QUARTZ_ORE, quartzOre],
-        [B.GOLD_BLOCK, goldBlock], [B.CRYING_OBSIDIAN, cryingObsidian]
+        [B.GOLD_BLOCK, goldBlock], [B.CRYING_OBSIDIAN, cryingObsidian],
+        [B.ANCIENT_DEBRIS, netherrack], [B.NETHER_GOLD_ORE, goldOre],
+        [B.BASALT, stone], [B.BLACKSTONE, cobble], [B.SOUL_SOIL, soulSand]
       ];
       for (const [id, t] of simple) {
         ATLAS.materials[id] = mat(t);
@@ -570,7 +577,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       ATLAS.icons[B.TORCH] = torch.dataUrl;
 
       // 16x16 Pixel Icons for Tools, Weapons, Armor, Food & Items
-      const tierColors = { wood: "#967444", stone: "#828282", iron: "#c7c7c7", diamond: "#4ec2b4" };
+      const tierColors = { wood: "#967444", stone: "#828282", iron: "#c7c7c7", diamond: "#4ec2b4", netherite: "#51464d" };
       const drawPickaxe = (headCol) => makePixelTex(ctx => {
         ctx.clearRect(0, 0, 16, 16);
         ctx.fillStyle = "#6e4e2a";
@@ -602,7 +609,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         ctx.fillRect(7, 2, 6, 2);
       });
 
-      for (const t of ["wood", "stone", "iron", "diamond"]) {
+      for (const t of ["wood", "stone", "iron", "diamond", "netherite"]) {
         const c = tierColors[t];
         const p = drawPickaxe(c); ATLAS.icons[`${t}_pickaxe`] = p.dataUrl; ATLAS.itemTextures[`${t}_pickaxe`] = p.tex;
         const a = drawAxe(c); ATLAS.icons[`${t}_axe`] = a.dataUrl; ATLAS.itemTextures[`${t}_axe`] = a.tex;
@@ -748,6 +755,8 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
     const SMELT_MAP = {
       [B.IRON_ORE]: "iron_ingot",
       [B.GOLD_ORE]: "gold_ingot",
+      [B.ANCIENT_DEBRIS]: "netherite_scrap",
+      [B.NETHER_GOLD_ORE]: "gold_ingot",
       [B.COBBLESTONE]: B.STONE,
       [B.SAND]: B.GLASS
     };
@@ -1054,9 +1063,15 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
               const floorH = Math.floor(14 + fbm2D(wx, wz, this.seed + 3) * 14);
               for (let y = 1; y <= floorH; y++) {
                 const r = hash2(wx * 11 + y, wz * 19, this.seed);
-                if (y < floorH && r < 0.04) setLocal(lx, y, lz, B.QUARTZ_ORE);
+                const oreRoll = hash2(wx * 31 + y * 7, wz * 17 - y, this.seed + 712);
+                if (y >= 5 && y <= 22 && oreRoll < 0.0018) setLocal(lx, y, lz, B.ANCIENT_DEBRIS);
+                else if (y < floorH && r < 0.04) setLocal(lx, y, lz, B.QUARTZ_ORE);
+                else if (y < floorH && oreRoll < 0.010) setLocal(lx, y, lz, B.NETHER_GOLD_ORE);
+                else if (y === floorH && floorH < 18 && hash2(wx, wz, this.seed + 81) < 0.45) setLocal(lx, y, lz, B.SOUL_SOIL);
                 else setLocal(lx, y, lz, (y === floorH && floorH < 18) ? B.SOUL_SAND : B.NETHERRACK);
               }
+              if (hash2(wx, wz, this.seed + 991) < 0.018) setLocal(lx, floorH, lz, B.BASALT);
+              if (hash2(wx, wz, this.seed + 992) < 0.012) setLocal(lx, floorH, lz, B.BLACKSTONE);
               for (let y = floorH + 1; y <= 16; y++) setLocal(lx, y, lz, B.LAVA);
               for (let y = 38; y < 46; y++) setLocal(lx, y, lz, B.NETHERRACK);
               if (hash2(wx, wz, 404) < 0.025) setLocal(lx, 37, lz, B.GLOWSTONE);
@@ -1913,6 +1928,7 @@ const WORLD_CONFIG: WorldConfig = {
       renderDist: 4,
       fov: 75,
       mouseSens: 1.0,
+      graphicsQuality: "medium",
       world: null,
       timeOfDay: 1800,
       dayCount: 1,
@@ -2333,10 +2349,12 @@ const WORLD_CONFIG: WorldConfig = {
           if (hasCrystal && e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + dt * 2.5);
           document.getElementById("boss-bar-fill").style.width = `${Math.max(0, (e.hp / e.maxHp) * 100)}%`;
 
-          const tx = Math.cos(e.timer) * 18;
-          const tz = Math.sin(e.timer) * 18;
-          const ty = 40 + Math.sin(e.timer * 2.2) * 5;
-          e.mesh.position.lerp(new THREE.Vector3(tx, ty, tz), dt * 2);
+          const orbitX = Math.cos(e.timer) * 16;
+          const orbitZ = Math.sin(e.timer) * 16;
+          const targetX = PLAYER.pos.x * 0.28 + orbitX;
+          const targetZ = PLAYER.pos.z * 0.28 + orbitZ;
+          const ty = Math.max(28, Math.min(48, PLAYER.pos.y + 14 + Math.sin(e.timer * 2.2) * 4));
+          e.mesh.position.lerp(new THREE.Vector3(targetX, ty, targetZ), dt * 1.5);
           e.mesh.rotation.y = -e.timer;
           if (e.parts.wings.length === 2) {
             const flap = Math.sin(e.timer * 8) * 0.45;
@@ -3302,9 +3320,12 @@ const WORLD_CONFIG: WorldConfig = {
         showBanner("Нижний мир! Крепость находится примерно в 200 блоках от портала.");
       } else if (newDim === "end") {
         PLAYER.pos.set(0.5, 34, 14.5);
-        for (const [px, pz] of [[12, 0], [-12, 0], [0, 12], [0, -12]]) {
-          for (let y = 30; y <= 40; y++) GAME.world.setBlockRaw(px, y, pz, B.OBSIDIAN);
-          spawnMob("crystal", px + 0.5, 41, pz + 0.5);
+        for (const [px, pz] of [[22, 0], [-22, 0], [0, 22], [0, -22], [16, 16], [-16, 16], [16, -16], [-16, -16]]) {
+          for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) {
+            for (let y = 28; y <= 42; y++) GAME.world.setBlockRaw(px + dx, y, pz + dz, (Math.abs(dx) === 1 || Math.abs(dz) === 1) ? B.OBSIDIAN : B.OBSIDIAN);
+          }
+          for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) GAME.world.setBlockRaw(px + dx, 43, pz + dz, B.OBSIDIAN);
+          spawnMob("crystal", px + 0.5, 44, pz + 0.5);
         }
         spawnMob("dragon", 0, 42, 0);
         showBanner("КРАЙ! Уничтожьте Кристаллы Края на башнях и победите Дракона!");
@@ -3442,6 +3463,7 @@ const WORLD_CONFIG: WorldConfig = {
         }
         if (keys["Space"] && PLAYER.onGround) {
           PLAYER.vel.y = PLAYER.effects.jump > 0 ? 11.5 : 8.4;
+          PLAYER.fallStartY = PLAYER.pos.y;
           PLAYER.onGround = false;
           const under = GAME.world.getBlock(PLAYER.pos.x, PLAYER.pos.y - 0.2, PLAYER.pos.z);
           if (under === B.FARMLAND) {
@@ -3473,8 +3495,8 @@ const WORLD_CONFIG: WorldConfig = {
         PLAYER.pos.y = prevY;
         if (PLAYER.vel.y < 0) {
           if (!PLAYER.onGround && PLAYER.fallStartY !== null && !PLAYER.inWater && !PLAYER.flying) {
-            const fallDist = PLAYER.fallStartY - PLAYER.pos.y;
-            if (fallDist > 3.5) damagePlayer(Math.floor(fallDist - 3), "Разбился насмерть", true);
+            const fallDist = Math.max(0, PLAYER.fallStartY - PLAYER.pos.y);
+            if (fallDist > 3.0) damagePlayer(Math.max(1, Math.ceil(fallDist - 3.0)), "Разбился насмерть", true);
           }
           PLAYER.onGround = true;
           PLAYER.fallStartY = null;
@@ -4972,7 +4994,7 @@ const WORLD_CONFIG: WorldConfig = {
     };
     document.getElementById("btn-set-render").onclick = (e) => {
       SFX.click();
-      GAME.renderDist = GAME.renderDist >= 6 ? 3 : GAME.renderDist + 1;
+      GAME.renderDist = GAME.renderDist >= 8 ? 3 : GAME.renderDist + 1;
       e.target.textContent = `Дальность прорисовки: ${GAME.renderDist} чанка`;
       updateChunksAroundPlayer();
     };
