@@ -3001,7 +3001,7 @@ const WORLD_CONFIG: WorldConfig = {
       const origin = getEyePos();
       const dir = getLookDir();
       for (const e of entities) {
-        if (e.type === "drop" || e.type === "arrow" || e.type === "thrown_eye") continue;
+        if (e.type === "drop" || e.type === "arrow" || e.type === "wind_charge_projectile" || e.type === "thrown_eye") continue;
         const center = e.mesh.position.clone().add(new THREE.Vector3(0, e.cfg.h * 0.5, 0));
         const toEnt = center.sub(origin);
         const proj = toEnt.dot(dir);
