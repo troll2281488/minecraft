@@ -2709,6 +2709,8 @@
       health: 20,
       maxHealth: 20,
       hunger: 20,
+      hungerTick: 0,
+      regenTick: 0,
       air: 300,
       fireTicks: 0,
       xp: 0,
@@ -3617,12 +3619,7 @@
         return;
       }
 
-      // 2. Shield Blocking (Main hand or Off-hand)
-      if ((held?.id === "shield" || off?.id === "shield") && (!targetBlock || !BLOCK_PROPS[targetBlock.id]?.interactive)) {
-        PLAYER.blockingShield = true;
-        return;
-      }
-
+      // Main-hand actions take priority over off-hand shield blocking.
       // 3. Bow Drawing
       if (held?.id === "bow") {
         const hasArrows = GAME.gamemode === "creative" || PLAYER.inv.some(s => s && s.id === "arrow") || off?.id === "arrow";
@@ -3636,7 +3633,7 @@
       }
 
       // 4. Eating Food
-      if (held && ITEMS[held.id]?.food && PLAYER.hunger < 20) {
+      if (held && ITEMS[held.id]?.food && (PLAYER.hunger < 20 || held.id === "golden_apple")) {
         PLAYER.hunger = Math.min(20, PLAYER.hunger + ITEMS[held.id].food);
         if (held.id === "golden_apple") PLAYER.health = Math.min(20, PLAYER.health + 8);
         consumeHeld(1);
@@ -3648,6 +3645,12 @@
       // 5. Launch Flying Eye of Ender (unless aiming at an empty End Portal Frame)
       if (held && held.id === "ender_eye" && (!targetBlock || targetBlock.id !== B.END_PORTAL_FRAME)) {
         launchEyeOfEnder();
+        return;
+      }
+
+      // The shield is a fallback action; it must not prevent placing blocks or using items.
+      if ((held?.id === "shield" || off?.id === "shield") && (!targetBlock || !BLOCK_PROPS[targetBlock.id]?.interactive)) {
+        PLAYER.blockingShield = true;
         return;
       }
 
@@ -3842,21 +3845,22 @@
       GAME.world.dimension = newDim;
 
       if (newDim === "nether") {
+        // Safe arrival point; build the fortress roughly 200 blocks away.
         PLAYER.pos.set(0.5, 23, 0.5);
-        // Build Nether Brick Fortress Bridge & Spawner Platform right near entry!
-        for (let dx = -3; dx <= 3; dx++) {
-          for (let dz = -3; dz <= 18; dz++) {
-            GAME.world.setBlockRaw(dx, 21, dz, B.NETHER_BRICKS);
-            for (let dy = 1; dy <= 5; dy++) GAME.world.setBlockRaw(dx, 21 + dy, dz, B.AIR);
-            if (Math.abs(dx) === 3) GAME.world.setBlockRaw(dx, 22, dz, B.NETHER_BRICKS);
+        const fortressX = 200, fortressZ = 0;
+        for (let dx = -4; dx <= 4; dx++) {
+          for (let dz = -4; dz <= 24; dz++) {
+            GAME.world.setBlockRaw(fortressX + dx, 21, fortressZ + dz, B.NETHER_BRICKS);
+            for (let dy = 1; dy <= 6; dy++) GAME.world.setBlockRaw(fortressX + dx, 21 + dy, fortressZ + dz, B.AIR);
+            if (Math.abs(dx) === 4) GAME.world.setBlockRaw(fortressX + dx, 22, fortressZ + dz, B.NETHER_BRICKS);
           }
         }
-        spawnMob("blaze", 2, 22, 7);
-        spawnMob("blaze", -2, 22, 12);
-        spawnMob("blaze", 0, 22, 16);
-        spawnMob("wither_skeleton", -2, 22, 8);
-        spawnMob("wither_skeleton", 2, 22, 14);
-        showBanner("Нижний мир (Ад)! Адская крепость с Ифритами и Визер-скелетами.");
+        spawnMob("blaze", fortressX + 2, 22, fortressZ + 7);
+        spawnMob("blaze", fortressX - 2, 22, fortressZ + 12);
+        spawnMob("blaze", fortressX, 22, fortressZ + 18);
+        spawnMob("wither_skeleton", fortressX - 2, 22, fortressZ + 8);
+        spawnMob("wither_skeleton", fortressX + 2, 22, fortressZ + 14);
+        showBanner("Нижний мир! Крепость находится примерно в 200 блоках от портала.");
       } else if (newDim === "end") {
         PLAYER.pos.set(0.5, 34, 14.5);
         for (const [px, pz] of [[12, 0], [-12, 0], [0, 12], [0, -12]]) {
@@ -3925,6 +3929,34 @@
 
       if (GAME.difficulty === "peaceful" && PLAYER.health < 20 && Math.random() < dt * 2) {
         PLAYER.health = Math.min(20, PLAYER.health + 1);
+      }
+
+      // Survival hunger and natural regeneration.
+      if (GAME.gamemode === "survival" && GAME.difficulty !== "peaceful") {
+        const moving = keys["KeyW"] || keys["KeyA"] || keys["KeyS"] || keys["KeyD"];
+        PLAYER.hungerTick += dt * (PLAYER.sprinting && moving ? 1.8 : moving ? 0.65 : 0.12);
+        if (PLAYER.hungerTick >= 18) {
+          PLAYER.hungerTick = 0;
+          PLAYER.hunger = Math.max(0, PLAYER.hunger - 1);
+          updateHUD();
+        }
+        if (PLAYER.hunger >= 18 && PLAYER.health < PLAYER.maxHealth) {
+          PLAYER.regenTick += dt;
+          if (PLAYER.regenTick >= 4) {
+            PLAYER.regenTick = 0;
+            PLAYER.health = Math.min(PLAYER.maxHealth, PLAYER.health + 1);
+            updateHUD();
+          }
+        } else if (PLAYER.hunger > 0) {
+          PLAYER.regenTick = 0;
+        }
+        if (PLAYER.hunger <= 0) {
+          PLAYER.regenTick += dt;
+          if (PLAYER.regenTick >= 4) {
+            PLAYER.regenTick = 0;
+            if (PLAYER.health > 1) damagePlayer(1, "Истощение", true);
+          }
+        }
       }
 
       let forward = 0, strafe = 0;
