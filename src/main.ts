@@ -2147,6 +2147,7 @@ const WORLD_CONFIG: WorldConfig = {
         creeper: { name: "Крипер", hp: 20, hostile: true, w: 0.65, h: 1.75, dmg: 8, drop: "coal" },
         enderman: { name: "Эндермен", hp: 30, hostile: true, w: 0.65, h: 2.6, dmg: 5, drop: "ender_pearl" },
         blaze: { name: "Ифрит", hp: 20, hostile: true, w: 0.75, h: 1.7, dmg: 4, drop: "blaze_rod" },
+        breeze: { name: "Бриз", hp: 24, hostile: true, w: 0.65, h: 1.8, dmg: 2, drop: "wind_charge", dropExtra: "breeze_rod" },
         crystal: { name: "Кристалл Края", hp: 1, hostile: false, w: 1.2, h: 1.4 },
         dragon: { name: "Дракон Края", hp: 120, maxHp: 120, hostile: true, w: 3.6, h: 2.2, dmg: 6 }
       };
@@ -2448,6 +2449,21 @@ const WORLD_CONFIG: WorldConfig = {
           }
         }
 
+        if (e.type === "breeze") {
+          e.walkPhase += dt * 4;
+          e.parts.rods.forEach((r, idx) => {
+            const a = r.ang + e.walkPhase * (idx % 2 ? -1 : 1);
+            r.mesh.position.x = Math.cos(a) * 0.52;
+            r.mesh.position.z = Math.sin(a) * 0.52;
+          });
+          e.mesh.position.y += Math.sin(e.walkPhase * 1.4) * dt * 0.5;
+          e.shootCooldown = (e.shootCooldown || 1.8) - dt;
+          const breezeDistance = e.mesh.position.distanceTo(PLAYER.pos);
+          if (breezeDistance < 16 && breezeDistance > 3 && e.shootCooldown <= 0 && GAME.gamemode === "survival") {
+            launchHostileProjectile(e, "wind_charge");
+            e.shootCooldown = 2.5 + Math.random() * 1.2;
+          }
+        }
         if (e.type === "dragon") {
           e.timer += dt * 0.7;
           const hasCrystal = entities.some(x => x.type === "crystal");
