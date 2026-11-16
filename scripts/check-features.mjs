@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 
 const source = readFileSync(new URL("../src/main.js", import.meta.url), "utf8");
+const exploration = readFileSync(new URL("../src/exploration-update.ts", import.meta.url), "utf8");
 const checks = [
   [
     "Three.js renderer",
@@ -91,7 +92,8 @@ const checks = [
     "/state`"
   ]
 ];
-const missing = checks.filter(([, anchor]) => !source.includes(anchor)).map(([name]) => name);
+const extra = [["1.11 observer/shulker content","SHULKER_BOX"],["Totem revival","consumeTotem"],["Woodland mansion layout","createWoodlandMansionPlan"],["1.11 illagers and llama","vindicator"],["Cartographer profession","cartographer"]];
+const missing = [...checks.filter(([, anchor]) => !source.includes(anchor)).map(([name]) => name), ...extra.filter(([, anchor]) => !exploration.includes(anchor)).map(([name]) => name)];
 
 if (missing.length) {
   console.error("Feature regression detected:", missing.join(", "));

@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { EXPLORATION_BLOCKS, EXPLORATION_BLOCK_PROPS, EXPLORATION_ITEMS, EXPLORATION_RECIPES, EXPLORATION_PROFESSIONS, EXPLORATION_MOB_CONFIGS, consumeTotem, getMansionCoordinates, createWoodlandMansionPlan } from "./exploration-update.ts";
 
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded, onDisconnect } from "firebase/database";
@@ -109,7 +110,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       STONE_BRICKS: 38, DRAGON_EGG: 39, BOOKSHELF: 40, WOOL_WHITE: 41,
       BRICKS: 42, TNT: 43, HAY_BLOCK: 44, SANDSTONE: 45,
       NETHER_BRICKS: 46, QUARTZ_ORE: 47, GOLD_BLOCK: 48,
-      BED_FOOT: 49, BED_HEAD: 50, CRYING_OBSIDIAN: 51
+      BED_FOOT: 49, BED_HEAD: 50, CRYING_OBSIDIAN: 51, OBSERVER: EXPLORATION_BLOCKS.OBSERVER, SHULKER_BOX: EXPLORATION_BLOCKS.SHULKER_BOX
     };
 
     const BLOCK_PROPS = {
@@ -164,7 +165,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       [B.GOLD_BLOCK]: { name: "Золотой блок", solid: true, hardness: 2.5, mat: "stone", tool: "pickaxe", minTier: 2, drop: B.GOLD_BLOCK },
       [B.BED_FOOT]: { name: "Кровать (низ)", solid: true, hardness: 0.3, mat: "wood", drop: "bed", interactive: "bed" },
       [B.BED_HEAD]: { name: "Кровать (изголовье)", solid: true, hardness: 0.3, mat: "wood", drop: "bed", interactive: "bed" },
-      [B.CRYING_OBSIDIAN]: { name: "Плачущий обсидиан", solid: true, hardness: 8.5, mat: "stone", tool: "pickaxe", minTier: 4, drop: B.CRYING_OBSIDIAN }
+      [B.CRYING_OBSIDIAN]: { name: "Плачущий обсидиан", solid: true, hardness: 8.5, mat: "stone", tool: "pickaxe", minTier: 4, drop: B.CRYING_OBSIDIAN }, ...EXPLORATION_BLOCK_PROPS
     };
 
     const ITEMS = {
@@ -241,7 +242,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       stone_sword: { name: "Каменный меч", cat: "tools", stack: 1, damage: 5 },
       iron_sword: { name: "Железный меч", cat: "tools", stack: 1, damage: 6 },
       diamond_sword: { name: "Алмазный меч", cat: "tools", stack: 1, damage: 8 },
-      wood_hoe: { name: "Деревянная мотыга", cat: "tools", stack: 1, tool: "hoe" }
+      wood_hoe: { name: "Деревянная мотыга", cat: "tools", stack: 1, tool: "hoe" }, ...EXPLORATION_ITEMS
     };
 
     const ATLAS = {
@@ -700,7 +701,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       { out: { id: "bow", count: 1 }, req: { stick: 3, string: 3 } },
       { out: { id: "arrow", count: 4 }, req: { stick: 1, [B.GRAVEL]: 1 } },
       { out: { id: "blaze_powder", count: 2 }, req: { blaze_rod: 1 } },
-      { out: { id: "ender_eye", count: 1 }, req: { ender_pearl: 1, blaze_powder: 1 } }
+      { out: { id: "ender_eye", count: 1 }, req: { ender_pearl: 1, blaze_powder: 1 } }, ...EXPLORATION_RECIPES
     ];
 
     const VILLAGER_PROFESSIONS = {
@@ -733,6 +734,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           { give: { id: "emerald", count: 12 }, get: { id: "diamond_pickaxe", count: 1 } }
         ]
       },
+      ...EXPLORATION_PROFESSIONS,
       cleric: {
         title: "Житель — Священник",
         hatColor: 0x5c2e78,
@@ -966,10 +968,10 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
             y: 18,
             z: Math.round(Math.sin(shAngle) * shDist)
           },
-          villages: [],
-          pyramids: [],
-          ruinedPortals: []
+          villages: [], pyramids: [], ruinedPortals: [], woodlandMansions: []
         };
+        const mansion=getMansionCoordinates(seed); const mansionY=Math.max(27,this.getSurfaceHeight(mansion.x,mansion.z));
+        this.structures.woodlandMansions.push({x:mansion.x,y:mansionY,z:mansion.z}); this.buildWoodlandMansionAt(mansion.x,mansion.z,mansionY,seed);
       }
 
       chunkKey(cx, cz) { return `${this.dimension}:${cx},${cz}`; }
@@ -1151,6 +1153,18 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         this.modifications[this.dimension].set(`${ix},${iy},${iz}`, id);
       }
 
+      buildWoodlandMansionAt(mx,mz,baseY,seed) {
+        const plan=createWoodlandMansionPlan(seed), hw=Math.floor(plan.width/2), hd=Math.floor(plan.depth/2);
+        for(let floor=0;floor<plan.floors;floor++){const y0=baseY+floor*plan.floorHeight;
+          for(let dx=-hw;dx<=hw;dx++)for(let dz=-hd;dz<=hd;dz++){this.setBlockRaw(mx+dx,y0,mz+dz,B.STONE_BRICKS);
+            if(Math.abs(dx)===hw||Math.abs(dz)===hd)for(let dy=1;dy<plan.floorHeight;dy++){const win=dy===2&&(Math.abs(dx)===hw?Math.abs(dz)%4===0:Math.abs(dx)%4===0);this.setBlockRaw(mx+dx,y0+dy,mz+dz,win?B.GLASS:B.OAK_PLANKS);}}
+          for(let dx=-hw+1;dx<hw;dx++)for(let dz=-hd+1;dz<hd;dz++)if((dx%6===0||dz%6===0)&&Math.abs(dx)>2&&Math.abs(dz)>2){for(let dy=1;dy<plan.floorHeight;dy++)this.setBlockRaw(mx+dx,y0+dy,mz+dz,B.OAK_PLANKS);this.setBlockRaw(mx+dx,y0+2,mz+dz,B.AIR);}
+          this.setBlockRaw(mx+(floor-1)*4,y0+1,mz+2,B.CHEST);this.setBlockRaw(mx+(floor===1?4:-4),y0+1,mz+3,B.BOOKSHELF);
+        }
+        for(let dx=-hw-1;dx<=hw+1;dx++)for(let dz=-hd-1;dz<=hd+1;dz++)this.setBlockRaw(mx+dx,baseY+plan.floors*plan.floorHeight,mz+dz,B.OAK_PLANKS);
+        for(let dy=1;dy<=3;dy++)this.setBlockRaw(mx,baseY+dy,mz-hd,B.AIR);
+      }
+
       // Build a full Village with houses, farms, Fletcher & Blacksmith Villagers
       buildVillageAt(vx, vz) {
         const vy = Math.max(27, this.getSurfaceHeight(vx, vz));
@@ -1203,11 +1217,25 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         this.setBlockRaw(hx + 1, hy + 1, hz + 2, B.BED_HEAD);
 
         // Wheat Farm
-        for (let fx = 0; fx < 5; fx++) {
-          for (let fz = 0; fz < 4; fz++) {
-            this.setBlockRaw(vx + 6 + fx, vy, vz + fz, fx === 2 ? B.WATER : B.FARMLAND);
-            if (fx !== 2) this.setBlockRaw(vx + 6 + fx, vy + 1, vz + fz, B.WHEAT_7);
+        for (let fx = 0; fx < 7; fx++) {
+          for (let fz = 0; fz < 6; fz++) {
+            this.setBlockRaw(vx + 6 + fx, vy, vz + fz, fx === 3 ? B.WATER : B.FARMLAND);
+            if (fx !== 3) this.setBlockRaw(vx + 6 + fx, vy + 1, vz + fz, B.WHEAT_7);
           }
+        }
+
+        // Extra village homes and profession workstations make the settlement larger and easier to recognize.
+        const cabins = [[vx + 13, vz - 5, B.CRAFTING_TABLE], [vx - 12, vz - 7, B.BOOKSHELF], [vx + 4, vz + 12, B.FURNACE]];
+        for (const [hx2, hz2, station] of cabins) {
+          const hy2 = Math.max(27, this.getSurfaceHeight(hx2, hz2));
+          for (let dx = -3; dx <= 3; dx++) for (let dz = -3; dz <= 3; dz++) {
+            this.setBlockRaw(hx2 + dx, hy2, hz2 + dz, B.COBBLESTONE);
+            for (let dy = 1; dy <= 3; dy++) this.setBlockRaw(hx2 + dx, hy2 + dy, hz2 + dz, (Math.abs(dx) === 3 || Math.abs(dz) === 3) ? B.OAK_PLANKS : B.AIR);
+            this.setBlockRaw(hx2 + dx, hy2 + 4, hz2 + dz, B.OAK_PLANKS);
+          }
+          this.setBlockRaw(hx2, hy2 + 1, hz2, station);
+          this.setBlockRaw(hx2, hy2 + 1, hz2 - 3, B.AIR);
+          this.setBlockRaw(hx2, hy2 + 2, hz2 - 3, B.AIR);
         }
       }
 
@@ -1433,6 +1461,10 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           const vy = Math.max(27, this.getSurfaceHeight(cx, cz));
           spawnMob("villager_fletcher", cx + 1, vy + 1, cz - 1);
           spawnMob("villager_blacksmith", cx - 1, vy + 1, cz + 1);
+          spawnMob("villager_cartographer", cx + 13, Math.max(27, this.getSurfaceHeight(cx + 13, cz - 5)) + 1, cz - 5);
+          spawnMob("villager_nitwit", cx - 12, Math.max(27, this.getSurfaceHeight(cx - 12, cz - 7)) + 1, cz - 7);
+          spawnMob("villager_farmer", cx + 7, vy + 1, cz + 2);
+          spawnMob("villager_cleric", cx + 4, Math.max(27, this.getSurfaceHeight(cx + 4, cz + 12)) + 1, cz + 12);
         } else if (h < 0.78) {
           this.buildPyramidAt(cx, cz);
         } else {
@@ -1843,6 +1875,17 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           g.add(rod);
           parts.rods.push({ mesh: rod, ang });
         }
+      } else if (type === "evoker" || type === "vindicator") {
+        const robe = new THREE.Mesh(new THREE.BoxGeometry(0.55,0.95,0.34), new THREE.MeshLambertMaterial({color:type==="evoker"?0x6b4b73:0x66513e})); robe.position.y=0.92;
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.48,0.52,0.48),new THREE.MeshLambertMaterial({color:0xb28b72})); head.position.y=1.68; g.add(robe,head); parts.head=head;
+        for(const sx of [-0.16,0.16]){const leg=new THREE.Mesh(new THREE.BoxGeometry(0.18,0.72,0.18),new THREE.MeshLambertMaterial({color:0x3b3030}));leg.position.set(sx,0.36,0);g.add(leg);parts.legs.push(leg);}
+        if(type==="vindicator"){const axe=new THREE.Mesh(new THREE.BoxGeometry(0.12,0.72,0.12),new THREE.MeshLambertMaterial({color:0x777777}));axe.position.set(0.42,1.05,0.16);g.add(axe);}
+      } else if (type === "vex") {
+        const body=new THREE.Mesh(new THREE.BoxGeometry(0.34,0.48,0.24),new THREE.MeshLambertMaterial({color:0xb7c9d8,transparent:true,opacity:0.8}));body.position.y=0.48;
+        const head=new THREE.Mesh(new THREE.BoxGeometry(0.32,0.32,0.32),new THREE.MeshLambertMaterial({color:0xd0dce5}));head.position.y=0.88;
+        const wing=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.5,0.52),new THREE.MeshLambertMaterial({color:0x9baec0}));wing.position.set(-0.28,0.55,0);const wing2=wing.clone();wing2.position.x=0.28;g.add(body,head,wing,wing2);parts.head=head;parts.wings.push(wing,wing2);
+      } else if (type === "llama") {
+        makeQuadruped(0xb99a75,[0.58,0.82,0.92],0xc6a987,[0.38,0.52,0.36],0.72);
       } else if (type === "crystal") {
         const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.65), new THREE.MeshBasicMaterial({ color: 0xc952c9 }));
         core.position.y = 0.8;
@@ -1903,7 +1946,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       swingTimer: 0,
       equipAnim: 0,
       cameraMode: 0,
-      skin: "steve"
+      skin: "steve", doWeatherCycle: true, maxEntityCramming: 24
     };
 
     const PLAYER = {
@@ -2054,7 +2097,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         enderman: { name: "Эндермен", hp: 30, hostile: true, w: 0.65, h: 2.6, dmg: 5, drop: "ender_pearl" },
         blaze: { name: "Ифрит", hp: 20, hostile: true, w: 0.75, h: 1.7, dmg: 4, drop: "blaze_rod" },
         crystal: { name: "Кристалл Края", hp: 1, hostile: false, w: 1.2, h: 1.4 },
-        dragon: { name: "Дракон Края", hp: 120, maxHp: 120, hostile: true, w: 3.6, h: 2.2, dmg: 6 }
+        dragon: { name: "Дракон Края", hp: 120, maxHp: 120, hostile: true, w: 3.6, h: 2.2, dmg: 6 }, ...EXPLORATION_MOB_CONFIGS
       };
       const cfg = configs[type];
       if (!cfg) return;
@@ -2128,7 +2171,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       const start = source.mesh.position.clone().add(new THREE.Vector3(0, 0.8, 0));
       const target = PLAYER.pos.clone().add(new THREE.Vector3(0, 1.0, 0));
       const direction = target.sub(start).normalize();
-      const color = kind === "dragon_breath" ? 0x9b42d6 : 0xff8a24;
+      const color = kind === "dragon_breath" ? 0x9b42d6 : kind === "evoker_fangs" ? 0x7d5a9e : 0xff8a24;
       const mesh = new THREE.Mesh(
         new THREE.SphereGeometry(kind === "dragon_breath" ? 0.34 : 0.22, 8, 8),
         new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.92 })
@@ -2139,7 +2182,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         type: "hostile_projectile", kind, mesh,
         vel: direction.multiplyScalar(kind === "dragon_breath" ? 8 : 10),
         life: kind === "dragon_breath" ? 5 : 4,
-        damage: kind === "dragon_breath" ? 5 : 4
+        damage: kind === "dragon_breath" ? 5 : kind === "evoker_fangs" ? 6 : 4
       });
     }
 
@@ -2285,6 +2328,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           }
         }
 
+        if (e.type === "evoker") { e.fangCooldown = (e.fangCooldown || 2.5) - dt; if (dist < 12 && dist > 2 && e.fangCooldown <= 0 && GAME.gamemode === "survival") { launchHostileProjectile(e, "evoker_fangs"); e.fangCooldown = 4.2; } }
         if (e.type === "dragon") {
           e.timer += dt * 0.7;
           const hasCrystal = entities.some(x => x.type === "crystal");
@@ -2367,8 +2411,8 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
     // 10. INVENTORY, OFF-HAND ('F'), CREATIVE CATALOG, CRAFTING & VILLAGER TRADE
     // =========================================================================
     function getItemInfo(id) {
-      if (typeof id === "number") return { name: BLOCK_PROPS[id]?.name || "Блок", icon: ATLAS.icons[id], stack: 64 };
-      return { name: ITEMS[id]?.name || id, icon: ATLAS.icons[id], stack: ITEMS[id]?.stack || 64 };
+      if (typeof id === "number") return { name: BLOCK_PROPS[id]?.name || "Блок", icon: ATLAS.icons[id] || null, stack: 64 };
+      return { name: ITEMS[id]?.name || id, icon: ATLAS.icons[id] || null, stack: ITEMS[id]?.stack || 64 };
     }
 
     function giveItem(id, count = 1) {
@@ -2423,7 +2467,16 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         img.src = info.icon;
         img.style.width = "28px";
         img.style.height = "28px";
+        img.alt = info.name;
+        img.onerror = () => { img.remove(); slotEl.textContent = String(info.name).slice(0, 2).toUpperCase(); };
         slotEl.appendChild(img);
+      } else {
+        const fallback = document.createElement("span");
+        fallback.className = "item-icon-fallback";
+        fallback.textContent = String(info.name).slice(0, 2).toUpperCase();
+        fallback.title = info.name;
+        fallback.style.cssText = "display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:4px;background:linear-gradient(135deg,#8a6b45,#3d5266);color:#fff;font-size:11px;font-weight:700;text-shadow:1px 1px #222;";
+        slotEl.appendChild(fallback);
       }
       if (stack.count > 1) {
         const cnt = document.createElement("span");
@@ -3200,11 +3253,13 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       const toughness = Object.values(PLAYER.armor || {}).reduce((sum, stack) => sum + (stack ? (ITEMS[stack.id]?.toughness || 0) : 0), 0);
       amount *= 1 - Math.min(0.8, armorValue * 0.04 + Math.min(0.12, toughness * 0.015));
       PLAYER.invulnTimer = 0.55;
+      if (PLAYER.absorption > 0) { const absorbed = Math.min(PLAYER.absorption, amount); PLAYER.absorption -= absorbed; amount -= absorbed; }
       PLAYER.health = Math.max(0, PLAYER.health - amount);
       SFX.hurt();
       updateHUD();
 
       if (PLAYER.health <= 0) {
+        if (consumeTotem(PLAYER)) { PLAYER.health = 1; PLAYER.absorption = 8; PLAYER.absorptionTimer = 5; PLAYER.invulnTimer = 2; PLAYER.fireTicks = 0; showBanner("Тотем бессмертия спас вас!"); updateHUD(); updateHotbarUI(); return; }
         GAME.state = "dead";
         PLAYER.blockingShield = false;
         PLAYER.isPullingBow = false;
@@ -4130,7 +4185,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       "/effect clear",
       "/locate village",
       "/locate pyramid",
-      "/locate stronghold",
+      "/locate stronghold", "/locate mansion", "/summon evoker", "/summon vindicator", "/summon vex", "/summon llama", "/give totem_of_undying 1", "/give shulker_shell 2",
       "/seed",
       "/weather clear",
       "/weather rain"
@@ -4191,7 +4246,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           addChatLine("/difficulty <peaceful|easy|normal|hard|0|1|2|3>");
           addChatLine("/give <предмет> [кол-во] • /tp <x> <y> <z> | spawn • /spawnpoint");
           addChatLine("/heal • /feed • /clear • /kill • /effect <speed|jump|strength|clear>");
-          addChatLine("/locate <village|pyramid|stronghold> • /seed");
+          addChatLine("/locate <village|pyramid|stronghold|mansion> • /mansion • /seed");
           break;
 
         case "gamerule":
@@ -4279,7 +4334,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           break;
 
         case "summon": {
-          const allowed = ["zombie", "skeleton", "creeper", "enderman", "cow", "pig", "sheep", "chicken", "villager_fletcher", "blaze"];
+          const allowed = ["zombie", "skeleton", "creeper", "enderman", "cow", "pig", "sheep", "chicken", "villager_fletcher", "villager_cartographer", "villager_nitwit", "evoker", "vindicator", "vex", "llama", "blaze"];
           const type = a1 || "pig";
           if (!allowed.includes(type)) { addChatLine(`Неизвестный тип существа: ${type}`, "#c98b8b"); break; }
           const dir = getLookDir();
@@ -4337,10 +4392,33 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           } else if (a1 === "stronghold") {
             const s = GAME.world.structures.stronghold;
             logAndBroadcastCommand(`Найдена подземная крепость (Портал в Край): X=${s.x}, Y=${s.y}, Z=${s.z}`);
+          } else if (a1 === "mansion") {
+            const list = GAME.world.structures.woodlandMansions || [];
+            const m = list.reduce((best, item) => !best || Math.hypot(item.x - PLAYER.pos.x, item.z - PLAYER.pos.z) < Math.hypot(best.x - PLAYER.pos.x, best.z - PLAYER.pos.z) ? item : best, null);
+            if (!m) { addChatLine("Особняк ещё не найден в сгенерированных регионах. Используй /mansion, чтобы принудительно создать точку поиска.", "#c98b8b"); break; }
+            const distance = Math.round(Math.hypot(m.x - PLAYER.pos.x, m.z - PLAYER.pos.z));
+            logAndBroadcastCommand(`Ближайший лесной особняк: X=${m.x}, Y=${m.y}, Z=${m.z} (примерно ${distance} блоков). /mansion — телепорт.`);
           } else {
-            addChatLine("Использование: /locate <village|pyramid|stronghold>", "#c98b8b");
+            addChatLine("Использование: /locate <village|pyramid|stronghold|mansion>; /mansion — телепорт к особняку", "#c98b8b");
           }
           break;
+
+        case "mansion": {
+          if (!GAME.world.structures.woodlandMansions?.length) {
+            const base = getMansionCoordinates(GAME.world.seed);
+            const ground = GAME.world.getSurfaceHeight(base.x, base.z);
+            const mansion = { x: base.x, y: Math.max(28, ground + 1), z: base.z };
+            GAME.world.structures.woodlandMansions.push(mansion);
+            GAME.world.buildWoodlandMansionAt?.(mansion.x, mansion.y, mansion.z);
+          }
+          const m = GAME.world.structures.woodlandMansions.reduce((best, item) => !best || Math.hypot(item.x - PLAYER.pos.x, item.z - PLAYER.pos.z) < Math.hypot(best.x - PLAYER.pos.x, best.z - PLAYER.pos.z) ? item : best, null);
+          PLAYER.pos.set(m.x + 2.5, Math.max(m.y + 2, findSafeSurfaceY(m.x + 2, m.z + 2)), m.z + 2.5);
+          PLAYER.vel.set(0, 0, 0);
+          updateChunksAroundPlayer(true);
+          resolveStuckInBlocks();
+          logAndBroadcastCommand(`Телепортация к особняку: X=${m.x}, Y=${m.y}, Z=${m.z}`);
+          break;
+        }
 
         case "seed":
           addChatLine(`Сид мира: ${GAME.world.seed}`, "#a8c993");
@@ -4546,6 +4624,57 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       return GAME.world.getSurfaceHeight(ix, iz) + 1.5;
     }
 
+    const LOCAL_WORLD_SAVE_KEY = "voxelcraft:world:v1";
+    let localSaveClock = 0;
+    function saveWorldLocal() {
+      if (!GAME.world || MP.active) return false;
+      try {
+        const payload = {
+          version: 1, seed: GAME.world.seed, dimension: GAME.world.dimension,
+          modifications: Object.fromEntries(Object.entries(GAME.world.modifications).map(([dim, map]) => [dim, [...map.entries()]])),
+          generatedRegions: [...GAME.world.generatedRegions],
+          structures: GAME.world.structures,
+          game: { gamemode: GAME.gamemode, difficulty: GAME.difficulty, keepInventory: GAME.keepInventory, allowCheats: GAME.allowCheats, doDaylightCycle: GAME.doDaylightCycle, weather: GAME.weather, timeOfDay: GAME.timeOfDay, dayCount: GAME.dayCount },
+          player: { pos: PLAYER.pos.toArray(), vel: PLAYER.vel.toArray(), yaw: PLAYER.yaw, pitch: PLAYER.pitch, health: PLAYER.health, hunger: PLAYER.hunger, air: PLAYER.air, inv: PLAYER.inv, offhand: PLAYER.offhand, hotbarIdx: PLAYER.hotbarIdx, spawnPos: PLAYER.spawnPos, flying: PLAYER.flying }
+        };
+        localStorage.setItem(LOCAL_WORLD_SAVE_KEY, JSON.stringify(payload));
+        return true;
+      } catch (error) { console.warn("Local world save failed", error); return false; }
+    }
+
+    function loadWorldLocal() {
+      try {
+        const data = JSON.parse(localStorage.getItem(LOCAL_WORLD_SAVE_KEY) || "null");
+        if (!data || data.version !== 1 || !data.player || !Array.isArray(data.player.pos)) return false;
+        clearAllEntities();
+        if (GAME.world) GAME.world.clearAllMeshes();
+        if (PLAYER.rig) scene.remove(PLAYER.rig.root);
+        PLAYER.rig = createHumanoidRig(GAME.skin);
+        GAME.world = new VoxelWorld(Number(data.seed));
+        for (const dim of ["overworld", "nether", "end"]) GAME.world.modifications[dim] = new Map(data.modifications?.[dim] || []);
+        GAME.world.generatedRegions = new Set(data.generatedRegions || []);
+        if (data.structures) GAME.world.structures = data.structures;
+        GAME.world.dimension = data.dimension || "overworld";
+        Object.assign(GAME, data.game || {});
+        const p = data.player;
+        PLAYER.pos.fromArray(p.pos); PLAYER.vel.fromArray(p.vel || [0,0,0]);
+        PLAYER.yaw = p.yaw || 0; PLAYER.pitch = p.pitch || 0;
+        PLAYER.health = p.health ?? 20; PLAYER.hunger = p.hunger ?? 20; PLAYER.air = p.air ?? 300;
+        PLAYER.inv = Array.isArray(p.inv) ? p.inv : Array(36).fill(null);
+        PLAYER.offhand = p.offhand || null; PLAYER.hotbarIdx = p.hotbarIdx || 0;
+        PLAYER.spawnPos = p.spawnPos || {dim:"overworld",x:8.5,y:36,z:8.5};
+        PLAYER.flying = !!p.flying;
+        GAME.world.getChunk(0,0);
+        GAME.world.buildStructures();
+        updateChunksAroundPlayer(true); resolveStuckInBlocks(); updateHotbarUI(); updateHUD();
+        document.querySelectorAll(".screen-overlay").forEach(el => el.classList.add("hidden"));
+        document.getElementById("hud").classList.remove("hidden");
+        GAME.state = "playing";
+        addChatLine("Локальный мир загружен из сохранения.", "#a8c993");
+        return true;
+      } catch (error) { console.warn("Local world load failed", error); return false; }
+    }
+
     function startNewWorld(cfg) {
       clearAllEntities();
       if (GAME.world) GAME.world.clearAllMeshes();
@@ -4617,6 +4746,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       addChatLine(`[Мир "${cfg.name}"] Сид: ${numericSeed}. Исследуй мир, чтобы найти деревни, пирамиды и порталы.`, "#d6cf82");
 
       GAME.state = "playing";
+      saveWorldLocal();
       requestLock();
       showBanner("Клик по экрану — захват мыши • F — предмет во вторую руку • E — инвентарь/креатив");
     }
@@ -4626,6 +4756,10 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
     }
 
     // Menu Bindings
+    document.getElementById("btn-load-local-world").onclick = () => {
+      SFX.click();
+      if (!loadWorldLocal()) showBanner("Сохранение не найдено или повреждено. Создай новый мир.");
+    };
     document.getElementById("btn-open-create").onclick = () => {
       SFX.click();
       document.getElementById("main-menu").classList.add("hidden");
@@ -4811,6 +4945,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
     };
     document.getElementById("btn-quit-menu").onclick = () => {
       SFX.click();
+      saveWorldLocal();
       leaveMultiplayerRoom();
       GAME.state = "menu";
       document.getElementById("hud").classList.add("hidden");
@@ -4834,6 +4969,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
     };
     document.getElementById("btn-death-menu").onclick = () => {
       SFX.click();
+      saveWorldLocal();
       leaveMultiplayerRoom();
       document.getElementById("death-screen").classList.add("hidden");
       document.getElementById("hud").classList.add("hidden");
@@ -5015,8 +5151,28 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
     // 18. INITIALIZATION & MAIN LOOP
     // =========================================================================
     initTextures();
-
+    ATLAS.materials[B.OBSERVER]=ATLAS.materials[B.STONE]; ATLAS.materials[B.SHULKER_BOX]=ATLAS.materials[B.OAK_PLANKS];
+    ATLAS.icons[B.OBSERVER]=ATLAS.icons[B.STONE]; ATLAS.icons[B.SHULKER_BOX]=ATLAS.icons[B.CHEST];
+    for(const [id,sourceId] of [["totem_of_undying","golden_apple"],["shulker_shell","quartz"],["iron_nugget","iron_ingot"],["paper","wheat"],["explorer_map_woodland","ender_eye"],["explorer_map_ocean","ender_eye"],["evoker_spawn_egg","ender_eye"],["vindicator_spawn_egg","ender_eye"],["vex_spawn_egg","ender_eye"],["llama_spawn_egg","ender_eye"]]){ATLAS.icons[id]=ATLAS.icons[sourceId];ATLAS.itemTextures[id]=ATLAS.itemTextures[sourceId];}
+    // Every registered item must have a visible catalogue icon, even if its custom art is missing.
+    for (const [id, info] of Object.entries(ITEMS)) {
+      if (!ATLAS.icons[id]) {
+        const icon = makePixelTex(ctx => {
+          const hue = Array.from(id).reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) >>> 0, 7) % 360;
+          ctx.fillStyle = `hsl(${hue}, 38%, 38%)`; ctx.fillRect(1, 1, 14, 14);
+          ctx.strokeStyle = "#e6dfc8"; ctx.strokeRect(1.5, 1.5, 13, 13);
+          ctx.fillStyle = "#fff"; ctx.font = "bold 7px sans-serif"; ctx.textAlign = "center";
+          ctx.fillText(String(info.name || id).slice(0, 2).toUpperCase(), 8, 10);
+        });
+        ATLAS.icons[id] = icon.dataUrl;
+        ATLAS.itemTextures[id] = icon.tex;
+      }
+    }
+    for (const id of [B.OBSERVER, B.SHULKER_BOX]) {
+      if (!ATLAS.icons[id]) ATLAS.icons[id] = ATLAS.icons[id === B.OBSERVER ? B.STONE : B.CHEST];
+    }
     GAME.world = new VoxelWorld(12345);
+    const mansionSpawn=GAME.world.structures.woodlandMansions[0]; spawnMob("evoker",mansionSpawn.x+2,mansionSpawn.y+1,mansionSpawn.z+2); spawnMob("vindicator",mansionSpawn.x-3,mansionSpawn.y+1,mansionSpawn.z-2); spawnMob("vindicator",mansionSpawn.x+4,mansionSpawn.y+1,mansionSpawn.z-3);
     for (let dx = -2; dx <= 2; dx++) {
       for (let dz = -2; dz <= 2; dz++) GAME.world.rebuildChunkMesh(dx, dz);
     }
@@ -5027,6 +5183,9 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
     function animate(now) {
       requestAnimationFrame(animate);
       const dt = Math.min(0.05, (now - lastTime) / 1000);
+      localSaveClock += dt;
+      if (localSaveClock >= 15) { localSaveClock = 0; if (GAME.state === "playing" && !MP.active) saveWorldLocal(); }
+      if (PLAYER.absorptionTimer > 0) { PLAYER.absorptionTimer -= dt; if (PLAYER.absorptionTimer <= 0) PLAYER.absorption = 0; }
       lastTime = now;
 
       fpsFrames++;
