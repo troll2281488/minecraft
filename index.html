@@ -796,6 +796,7 @@
       <div class="hud-stats-row" style="justify-content:flex-end;">
         <div class="stat-icons" id="air-icons"></div>
       </div>
+      <div class="stat-icons" id="armor-icons" style="justify-content:center;gap:4px;margin-bottom:1px;"></div>
       <div class="hud-stats-row">
         <div style="display:flex; flex-direction:column; gap:2px;">
           <div class="stat-icons" id="armor-icons"></div>
@@ -1066,6 +1067,18 @@
       bow: { name: "Лук", cat: "tools", stack: 1 },
       arrow: { name: "Стрела", cat: "tools", stack: 64 },
       shield: { name: "Щит", cat: "armor_food", stack: 1 },
+      leather_helmet: { name: "Кожаный шлем", cat: "armor_food", stack: 1, armor: 1, equip: "head" },
+      leather_chestplate: { name: "Кожаная куртка", cat: "armor_food", stack: 1, armor: 3, equip: "chest" },
+      leather_leggings: { name: "Кожаные поножи", cat: "armor_food", stack: 1, armor: 2, equip: "legs" },
+      leather_boots: { name: "Кожаные ботинки", cat: "armor_food", stack: 1, armor: 1, equip: "feet" },
+      chainmail_helmet: { name: "Кольчужный шлем", cat: "armor_food", stack: 1, armor: 2, equip: "head" },
+      chainmail_chestplate: { name: "Кольчужный нагрудник", cat: "armor_food", stack: 1, armor: 5, equip: "chest" },
+      chainmail_leggings: { name: "Кольчужные поножи", cat: "armor_food", stack: 1, armor: 4, equip: "legs" },
+      chainmail_boots: { name: "Кольчужные ботинки", cat: "armor_food", stack: 1, armor: 1, equip: "feet" },
+      gold_helmet: { name: "Золотой шлем", cat: "armor_food", stack: 1, armor: 2, equip: "head" },
+      gold_chestplate: { name: "Золотой нагрудник", cat: "armor_food", stack: 1, armor: 5, equip: "chest" },
+      gold_leggings: { name: "Золотые поножи", cat: "armor_food", stack: 1, armor: 3, equip: "legs" },
+      gold_boots: { name: "Золотые ботинки", cat: "armor_food", stack: 1, armor: 1, equip: "feet" },
       iron_helmet: { name: "Железный шлем", cat: "armor_food", stack: 1, armor: 2, equip: "head" },
       iron_chestplate: { name: "Железный нагрудник", cat: "armor_food", stack: 1, armor: 6, equip: "chest" },
       diamond_helmet: { name: "Алмазный шлем", cat: "armor_food", stack: 1, armor: 3, equip: "head" },
@@ -1085,6 +1098,7 @@
       elytra: { name: "Элитры", cat: "armor_food", stack: 1, equip: "chest", elytra: true },
       netherite_pickaxe: { name: "Незеритовая кирка", cat: "tools", stack: 1, tool: "pickaxe", tier: 5, speed: 9.5 },
       netherite_sword: { name: "Незеритовый меч", cat: "tools", stack: 1, damage: 9 },
+      trident: { name: "Трезубец", cat: "tools", stack: 1, damage: 9, trident: true },
       wood_pickaxe: { name: "Деревянная кирка", cat: "tools", stack: 1, tool: "pickaxe", tier: 1, speed: 2.2 },
       stone_pickaxe: { name: "Каменная кирка", cat: "tools", stack: 1, tool: "pickaxe", tier: 2, speed: 4.0 },
       iron_pickaxe: { name: "Железная кирка", cat: "tools", stack: 1, tool: "pickaxe", tier: 3, speed: 6.0 },
@@ -3334,8 +3348,8 @@
         const stackAmt = getItemInfo(item.id).stack;
         renderSlot(sl, { id: item.id, count: 1 });
         sl.title = `${item.name} (Клик: взять x${stackAmt})`;
-        sl.onclick = () => {
-          giveItem(item.id, stackAmt);
+        sl.onclick = e => {
+          giveItem(item.id, e.shiftKey ? stackAmt : 1);
           SFX.click();
           refreshGuiGrids();
         };
@@ -3846,6 +3860,17 @@
       const hitEnt = findEntityUnderCrosshair(4.2);
       if (hitEnt && hitEnt.cfg.passiveVillager) {
         openGUI("trade", hitEnt.cfg.passiveVillager);
+        return;
+      }
+
+      // Right-click equips armor directly from the selected hotbar slot.
+      if (held && ITEMS[held.id]?.equip) {
+        const slot = ITEMS[held.id].equip;
+        const previous = PLAYER.armor[slot];
+        PLAYER.armor[slot] = { id: held.id, count: 1 };
+        if (previous && !giveItem(previous.id, 1)) spawnDrop(PLAYER.pos.x, PLAYER.pos.y + 1, PLAYER.pos.z, previous.id, 1);
+        if (GAME.gamemode !== "creative") consumeHeld(1);
+        updateHUD(); SFX.click();
         return;
       }
 
@@ -5200,6 +5225,19 @@
         }
       }
 
+      const armorBox = document.getElementById("armor-icons");
+      if (armorBox) {
+        armorBox.innerHTML = "";
+        for (const key of ["head", "chest", "legs", "feet"]) {
+          const slot = document.createElement("span");
+          const stack = PLAYER.armor?.[key];
+          slot.textContent = stack ? "▣" : "□";
+          slot.title = stack ? (ITEMS[stack.id]?.name || stack.id) : "Пустой слот брони";
+          slot.style.cssText = "display:inline-flex;width:17px;height:17px;align-items:center;justify-content:center;border:1px solid #aaa;background:#333;color:" + (stack ? "#e7e7e7" : "#777");
+          armorBox.appendChild(slot);
+        }
+      }
+
       const fBox = document.getElementById("hunger-icons");
       fBox.innerHTML = "";
       if (GAME.gamemode === "survival" || GAME.gamemode === "adventure") {
@@ -5623,6 +5661,15 @@
     };
 
     // Keyboard & Mouse Controls
+    let qDropHeld = false, qDropCooldown = 0;
+    function dropHeldItem(amount = 1) {
+      const held = PLAYER.inv[PLAYER.hotbarIdx];
+      if (!held) return;
+      const dir = getLookDir();
+      const count = Math.min(amount, held.count);
+      spawnDrop(PLAYER.pos.x + dir.x * 1.2, PLAYER.pos.y + 1.2, PLAYER.pos.z + dir.z * 1.2, held.id, count);
+      consumeHeld(count);
+    }
     window.addEventListener("keydown", e => {
       if ((e.ctrlKey || e.metaKey) && ["KeyS", "KeyD", "KeyP", "KeyR", "KeyF", "KeyG", "KeyU", "KeyH", "KeyJ"].includes(e.code)) {
         e.preventDefault();
@@ -5687,12 +5734,8 @@
         if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {});
         else document.exitFullscreen?.().catch(() => {});
       } else if (e.code === "KeyQ" && GAME.state === "playing") {
-        const held = PLAYER.inv[PLAYER.hotbarIdx];
-        if (held) {
-          const dir = getLookDir();
-          spawnDrop(PLAYER.pos.x + dir.x * 1.2, PLAYER.pos.y + 1.2, PLAYER.pos.z + dir.z * 1.2, held.id, 1);
-          consumeHeld(1);
-        }
+        dropHeldItem(1);
+        qDropHeld = true; qDropCooldown = 0;
       } else if (e.code.startsWith("Digit")) {
         const n = Number(e.code.replace("Digit", ""));
         if (n >= 1 && n <= 9) {
@@ -5705,6 +5748,7 @@
 
     window.addEventListener("keyup", e => {
       keys[e.code] = false;
+      if (e.code === "KeyQ") qDropHeld = false;
       if (e.code === "Tab") {
         document.getElementById("tab-player-list").classList.add("hidden");
       }
@@ -5803,6 +5847,10 @@
       }
 
       if (GAME.state === "playing") {
+        if (qDropHeld) {
+          qDropCooldown += dt;
+          if (qDropCooldown >= 0.18) { qDropCooldown = 0; dropHeldItem(1); }
+        }
         tickPlayerPhysics(dt);
         updateRaycast();
         tickMining(dt);
