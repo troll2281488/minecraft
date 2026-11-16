@@ -179,7 +179,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       if (B[key] !== undefined) continue;
       const id = Math.max(...Object.values(B).filter(v => typeof v === "number")) + 1;
       B[key] = id;
-      BLOCK_PROPS[id] = { name, solid: true, hardness: palette === "glass" ? 0.3 : 1.2, mat: palette === "wood" ? "wood" : "stone", drop: id, legacyPalette: palette };
+      BLOCK_PROPS[id] = { name, solid: true, transparent: palette === "glass", hardness: palette === "glass" ? 0.3 : 1.2, mat: palette === "wood" ? "wood" : "stone", drop: id, legacyPalette: palette };
     }
 
     const ITEMS = {
@@ -350,6 +350,11 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       diamond_sword: { name: "Алмазный меч", cat: "tools", stack: 1, damage: 8 },
       wood_sword: { name: "Деревянный меч", cat: "tools", stack: 1, damage: 4 },
       crossbow: { name: "Арбалет", cat: "tools", stack: 1, damage: 7 },
+      gold_pickaxe: { name: "Золотая кирка", cat: "tools", stack: 1, tool: "pickaxe", tier: 1, speed: 12 },
+      gold_axe: { name: "Золотой топор", cat: "tools", stack: 1, tool: "axe", tier: 1, speed: 12, damage: 4 },
+      gold_shovel: { name: "Золотая лопата", cat: "tools", stack: 1, tool: "shovel", tier: 1, speed: 12 },
+      gold_hoe: { name: "Золотая мотыга", cat: "tools", stack: 1, tool: "hoe", tier: 1 },
+      gold_sword: { name: "Золотой меч", cat: "tools", stack: 1, damage: 4 },
       trident: { name: "Трезубец", cat: "tools", stack: 1, damage: 9, trident: true }
     };
 
@@ -2682,7 +2687,7 @@ const WORLD_CONFIG: WorldConfig = {
           const dist = e.mesh.position.distanceTo(PLAYER.pos.clone().add(new THREE.Vector3(0, 0.8, 0)));
           if (dist < 2.2 && e.age > 0.35) {
             e.mesh.position.lerp(PLAYER.pos.clone().add(new THREE.Vector3(0, 0.8, 0)), dt * 10);
-            if (dist < 0.75 && !e.pickupPending) {
+            if (dist < 0.75 && !e.pickupPending && canAcceptDrop(e.id, e.count)) {
               if (e.netId && MP.active && fbDb && MP.roomId) {
                 e.pickupPending = true;
                 const dropRef = ref(fbDb, `minecraft_game/rooms/${MP.roomId}/drops/${e.netId}`);
@@ -2930,6 +2935,17 @@ const WORLD_CONFIG: WorldConfig = {
       if (typeof id === "number") return { name: BLOCK_PROPS[id]?.name || "Блок", icon: ATLAS.icons[id], stack: 64 };
       ensureItemIcon(id);
       return { name: ITEMS[id]?.name || id, icon: ATLAS.icons[id], stack: ITEMS[id]?.stack || 64 };
+    }
+
+    function canAcceptDrop(id, count = 1) {
+      const stackMax = getItemInfo(id).stack;
+      let remaining = count;
+      for (const slot of PLAYER.inv) {
+        if (slot && slot.id === id) remaining -= Math.max(0, stackMax - slot.count);
+        if (remaining <= 0) return true;
+      }
+      const emptySlots = PLAYER.inv.filter(slot => !slot).length;
+      return remaining <= emptySlots * stackMax;
     }
 
     function giveItem(id, count = 1) {
@@ -4609,7 +4625,7 @@ const WORLD_CONFIG: WorldConfig = {
           }
           for (let idx = entities.length - 1; idx >= 0; idx--) {
             const entity = entities[idx];
-            if (entity.type === "drop" && entity.fromNetwork && entity.netId && !activeKeys.has(entity.netId)) {
+            if (entity.type === "drop" && entity.netId && !activeKeys.has(entity.netId)) {
               scene.remove(entity.mesh);
               entities.splice(idx, 1);
             }
