@@ -3490,7 +3490,7 @@
       bp.innerHTML = "";
       hb.innerHTML = "";
       renderSlot(offSlot, PLAYER.offhand);
-remove stale drag handler      bindInventoryCursor(offSlot, () => PLAYER.offhand, value => { PLAYER.offhand = value; });
+      bindInventoryCursor(offSlot, () => PLAYER.offhand, value => { PLAYER.offhand = value; });
 
       const makeInvSlot = (idx) => {
         const sl = document.createElement("div");
