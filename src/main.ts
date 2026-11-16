@@ -204,6 +204,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       apple: { name: "Яблоко", cat: "armor_food", stack: 64, food: 4 },
       bread: { name: "Хлеб", cat: "armor_food", stack: 64, food: 5 },
       cooked_beef: { name: "Жареная говядина", cat: "armor_food", stack: 64, food: 8 },
+      raw_beef: { name: "Сырая говядина", cat: "armor_food", stack: 64, food: 3 },
       raw_chicken: { name: "Сырая курятина", cat: "armor_food", stack: 64, food: 2 },
       cooked_chicken: { name: "Жареная курятина", cat: "armor_food", stack: 64, food: 6 },
       potato: { name: "Картофель", cat: "misc", stack: 64 },
@@ -1052,6 +1053,15 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       { out: { id: "elytra", count: 1 }, req: { string: 8, leather: 4 } },
       { out: { id: "flint_and_steel", count: 1 }, req: { iron_ingot: 1, [B.GRAVEL]: 1 } },
       { out: { id: "bread", count: 1 }, req: { wheat: 3 } },
+      { out: { id: "fishing_rod", count: 1 }, req: { stick: 3, string: 2 } },
+      { out: { id: "cookie", count: 8 }, req: { wheat: 2, cocoa_beans: 1 } },
+      { out: { id: "pumpkin_pie", count: 1 }, req: { pumpkin: 1, sugar: 1, egg: 1 } },
+      { out: { id: "golden_carrot", count: 1 }, req: { carrot: 1, gold_ingot: 8 } },
+      { out: { id: "mushroom_stew", count: 1 }, req: { red_mushroom: 1, brown_mushroom: 1, bowl: 1 } },
+      { out: { id: "beetroot_soup", count: 1 }, req: { beetroot: 6, bowl: 1 } },
+      { out: { id: "rabbit_stew", count: 1 }, req: { cooked_rabbit: 1, carrot: 1, potato: 1, mushroom_stew: 1 } },
+      { out: { id: "cake", count: 1 }, req: { wheat: 3, sugar: 2, egg: 1, milk_bucket: 3 } },
+      { out: { id: B.TNT, count: 4 }, req: { gunpowder: 5, sand: 4 } },
       { out: { id: "golden_apple", count: 1 }, req: { apple: 1, gold_ingot: 8 } },
       { out: { id: "bow", count: 1 }, req: { stick: 3, string: 3 } },
       { out: { id: "arrow", count: 4 }, req: { stick: 1, [B.GRAVEL]: 1 } },
@@ -1360,7 +1370,8 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           },
           villages: [],
           pyramids: [],
-          ruinedPortals: []
+          ruinedPortals: [],
+          biomeStructures: []
         };
       }
 
@@ -1369,9 +1380,15 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       getBiome(x, z) {
         if (this.dimension === "nether") return "Пустоши Нижнего мира";
         if (this.dimension === "end") return "Край";
-        const m = valueNoise2D(x * 0.012, z * 0.012, this.seed + 99);
-        if (m < 0.32) return "Пустыня";
-        if (m < 0.68) return "Равнины";
+        const climate = valueNoise2D(x * 0.006, z * 0.006, this.seed + 99);
+        const detail = valueNoise2D(x * 0.021, z * 0.021, this.seed + 177);
+        const wet = valueNoise2D(x * 0.009, z * 0.009, this.seed + 291);
+        if (climate < 0.16) return detail > 0.48 ? "Ледяные пики" : "Снежная тайга";
+        if (climate < 0.29) return wet < 0.42 ? "Пустыня" : "Бесплодные земли";
+        if (climate < 0.43) return wet > 0.58 ? "Болото" : "Саванна";
+        if (climate < 0.57) return detail > 0.5 ? "Джунгли" : "Берёзовый лес";
+        if (climate < 0.72) return wet < 0.38 ? "Тёмный лес" : "Равнины";
+        if (climate < 0.86) return wet > 0.62 ? "Тропический берег" : "Тайга";
         return "Дубовый лес";
       }
 
@@ -1404,8 +1421,10 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
                   setLocal(lx, y, lz, y < 7 ? B.LAVA : B.AIR);
                   continue;
                 }
-                if (y === h) setLocal(lx, y, lz, (biome === "Пустыня" || h < 27) ? B.SAND : B.GRASS);
-                else if (y >= h - 3) setLocal(lx, y, lz, biome === "Пустыня" ? B.SAND : B.DIRT);
+                const sandyBiome = biome === "Пустыня" || biome === "Бесплодные земли" || biome === "Тропический берег";
+                const snowyBiome = biome === "Ледяные пики" || biome === "Снежная тайга";
+                if (y === h) setLocal(lx, y, lz, sandyBiome ? B.SAND : (snowyBiome ? (B.SNOW_BLOCK || B.GRASS) : B.GRASS));
+                else if (y >= h - 3) setLocal(lx, y, lz, sandyBiome ? B.SAND : B.DIRT);
                 else {
                   const r = hash2(wx * 13 + y, wz * 17 - y, this.seed);
                   if (y < 14 && r < 0.012) setLocal(lx, y, lz, B.DIAMOND_ORE);
@@ -1420,24 +1439,27 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
 
               for (let y = h + 1; y <= 26; y++) setLocal(lx, y, lz, B.WATER);
 
-              if (h >= 27 && biome !== "Пустыня") {
+              if (h >= 27 && !["Пустыня","Бесплодные земли","Ледяные пики","Саванна"].includes(biome)) {
                 const treeNoise = hash2(wx, wz, this.seed + 55);
-                const treeChance = biome === "Дубовый лес" ? 0.032 : 0.011;
+                const dense = ["Дубовый лес","Тёмный лес","Джунгли","Тайга","Берёзовый лес","Снежная тайга"].includes(biome);
+                const treeChance = dense ? (biome === "Джунгли" || biome === "Тёмный лес" ? 0.052 : 0.034) : 0.009;
                 if (lx >= 2 && lx <= 13 && lz >= 2 && lz <= 13 && treeNoise < treeChance) {
-                  const trunkH = 4 + Math.floor(hash2(wx, wz, 7) * 2);
-                  for (let ty = 1; ty <= trunkH; ty++) setLocal(lx, h + ty, lz, B.OAK_LOG);
-                  for (let dx = -2; dx <= 2; dx++) {
-                    for (let dz = -2; dz <= 2; dz++) {
-                      for (let dy = trunkH - 1; dy <= trunkH + 1; dy++) {
-                        if (Math.abs(dx) === 2 && Math.abs(dz) === 2 && dy === trunkH + 1) continue;
-                        if (dx === 0 && dz === 0 && dy <= trunkH) continue;
-                        setLocal(lx + dx, h + dy, lz + dz, B.OAK_LEAVES);
-                      }
+                  const jungle = biome === "Джунгли";
+                  const spruce = biome === "Тайга" || biome === "Снежная тайга";
+                  const birch = biome === "Берёзовый лес";
+                  const logId = jungle ? (B.JUNGLE_LOG || B.OAK_LOG) : spruce ? (B.SPRUCE_LOG || B.OAK_LOG) : birch ? (B.BIRCH_LOG || B.OAK_LOG) : B.OAK_LOG;
+                  const leafId = jungle ? (B.JUNGLE_LEAVES || B.OAK_LEAVES) : spruce ? (B.SPRUCE_LEAVES || B.OAK_LEAVES) : birch ? (B.BIRCH_LEAVES || B.OAK_LEAVES) : B.OAK_LEAVES;
+                  const trunkH = (jungle ? 7 : spruce ? 6 : 4) + Math.floor(hash2(wx, wz, 7) * 3);
+                  for (let ty = 1; ty <= trunkH; ty++) setLocal(lx, h + ty, lz, logId);
+                  const canopy = jungle ? 3 : 2;
+                  for (let dx = -canopy; dx <= canopy; dx++) for (let dz = -canopy; dz <= canopy; dz++) {
+                    for (let dy = trunkH - 1; dy <= trunkH + 1; dy++) {
+                      if (Math.abs(dx) === canopy && Math.abs(dz) === canopy && dy === trunkH + 1) continue;
+                      if (dx === 0 && dz === 0 && dy <= trunkH) continue;
+                      setLocal(lx + dx, h + dy, lz + dz, leafId);
                     }
                   }
-                } else if (treeNoise > 0.94) {
-                  setLocal(lx, h + 1, lz, treeNoise > 0.97 ? B.POPPY : B.DANDELION);
-                }
+                } else if (treeNoise > 0.94) setLocal(lx, h + 1, lz, treeNoise > 0.97 ? B.POPPY : B.DANDELION);
               }
             } else if (this.dimension === "nether") {
               setLocal(lx, 0, lz, B.BEDROCK);
@@ -1550,11 +1572,18 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       }
 
       // Build a full Village with houses, farms, Fletcher & Blacksmith Villagers
-      buildVillageAt(vx, vz) {
+      buildVillageAt(vx, vz, biome = this.getBiome(vx, vz)) {
         const vy = Math.max(27, this.getSurfaceHeight(vx, vz));
-        this.structures.villages.push({ x: vx, y: vy, z: vz });
+        const villagePlanks = biome === "Тайга" || biome === "Снежная тайга" ? (B.SPRUCE_PLANKS || villagePlanks) :
+          biome === "Джунгли" ? (B.JUNGLE_PLANKS || villagePlanks) :
+          biome === "Саванна" ? (B.ACACIA_PLANKS || villagePlanks) :
+          biome === "Тёмный лес" ? (B.DARK_OAK_PLANKS || villagePlanks) : villagePlanks;
+        const villageLog = biome === "Тайга" || biome === "Снежная тайга" ? (B.SPRUCE_LOG || villageLog) :
+          biome === "Джунгли" ? (B.JUNGLE_LOG || villageLog) :
+          biome === "Саванна" ? (B.ACACIA_LOG || villageLog) : villageLog;
+        this.structures.villages.push({ x: vx, y: vy, z: vz, biome });
 
-        // House 1: Blacksmith / Fletcher Workshop
+        // House 1: biome-themed blacksmith / Fletcher workshop
         for (let dx = -4; dx <= 4; dx++) {
           for (let dz = -4; dz <= 4; dz++) {
             this.setBlockRaw(vx + dx, vy, vz + dz, B.COBBLESTONE);
@@ -1563,7 +1592,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         }
         for (let dx = -3; dx <= 3; dx++) {
           for (let dz = -3; dz <= 3; dz++) {
-            this.setBlockRaw(vx + dx, vy + 4, vz + dz, B.OAK_PLANKS);
+            this.setBlockRaw(vx + dx, vy + 4, vz + dz, villagePlanks);
             if (Math.abs(dx) === 3 || Math.abs(dz) === 3) {
               for (let dy = 1; dy <= 3; dy++) this.setBlockRaw(vx + dx, vy + dy, vz + dz, B.COBBLESTONE);
             }
@@ -1589,9 +1618,9 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           for (let dz = -3; dz <= 3; dz++) {
             this.setBlockRaw(hx + dx, hy, hz + dz, B.COBBLESTONE);
             for (let dy = 1; dy <= 4; dy++) this.setBlockRaw(hx + dx, hy + dy, hz + dz, B.AIR);
-            this.setBlockRaw(hx + dx, hy + 4, hz + dz, B.OAK_LOG);
+            this.setBlockRaw(hx + dx, hy + 4, hz + dz, villageLog);
             if (Math.abs(dx) === 3 || Math.abs(dz) === 3) {
-              for (let dy = 1; dy <= 3; dy++) this.setBlockRaw(hx + dx, hy + dy, hz + dz, B.OAK_PLANKS);
+              for (let dy = 1; dy <= 3; dy++) this.setBlockRaw(hx + dx, hy + dy, hz + dz, villagePlanks);
             }
           }
         }
@@ -1803,6 +1832,28 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         this.chests.set(`end:${cx},${baseY + 18},${cz}`, loot);
       }
 
+      buildBiomeStructureAt(x, z, kind) {
+        const y = Math.max(27, this.getSurfaceHeight(x, z));
+        this.structures.biomeStructures.push({ x, y, z, kind, biome: this.getBiome(x, z) });
+        const floor = kind === "igloo" ? (B.SNOW_BLOCK || B.QUARTZ_BLOCK || B.STONE) : kind === "witch_hut" ? (B.SPRUCE_PLANKS || B.OAK_PLANKS) : (B.MOSSY_COBBLESTONE || B.COBBLESTONE);
+        const wall = kind === "igloo" ? floor : kind === "witch_hut" ? (B.SPRUCE_LOG || B.OAK_LOG) : (B.MOSSY_COBBLESTONE || B.COBBLESTONE);
+        const radius = kind === "jungle_temple" ? 4 : 3;
+        for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) {
+          this.setBlockRaw(x + dx, y, z + dz, floor);
+          for (let dy = 1; dy <= (kind === "igloo" ? 2 : 4); dy++) {
+            const edge = Math.abs(dx) === radius || Math.abs(dz) === radius;
+            if (edge) this.setBlockRaw(x + dx, y + dy, z + dz, wall);
+          }
+        }
+        for (let dy = 1; dy <= 2; dy++) this.setBlockRaw(x, y + dy, z - radius, B.AIR);
+        const chestX = x + radius - 1, chestZ = z + radius - 1;
+        this.setBlockRaw(chestX, y + 1, chestZ, B.CHEST);
+        const loot = new Array(27).fill(null);
+        loot[0] = { id: kind === "igloo" ? "golden_apple" : kind === "witch_hut" ? "mushroom_stew" : "arrow", count: 2 };
+        loot[1] = { id: "bread", count: 3 };
+        this.chests.set(`overworld:${chestX},${y + 1},${chestZ}`, loot);
+      }
+
       ensureStructuresInRegion(wx, wz) {
         if (this.dimension === "end") {
           const rx = Math.floor(wx / 96), rz = Math.floor(wz / 96);
@@ -1826,15 +1877,22 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         const h = hash2(rx, rz, this.seed + 707);
         const cx = rx * 320 + 150;
         const cz = rz * 320 + 150;
-        if (h < 0.45) {
-          this.buildVillageAt(cx, cz);
-          const vy = Math.max(27, this.getSurfaceHeight(cx, cz));
-          spawnMob("villager_fletcher", cx + 1, vy + 1, cz - 1);
-          spawnMob("villager_blacksmith", cx - 1, vy + 1, cz + 1);
-        } else if (h < 0.78) {
-          this.buildPyramidAt(cx, cz);
+        const biome = this.getBiome(cx, cz);
+        if (biome === "Пустыня" || biome === "Бесплодные земли") {
+          if (h < 0.76) this.buildPyramidAt(cx, cz);
+          else this.buildRuinedPortalAt(cx, cz);
+        } else if (biome === "Снежная тайга" || biome === "Ледяные пики") {
+          this.buildBiomeStructureAt(cx, cz, "igloo");
+        } else if (biome === "Болото") {
+          this.buildBiomeStructureAt(cx, cz, "witch_hut");
+        } else if (biome === "Джунгли") {
+          this.buildBiomeStructureAt(cx, cz, "jungle_temple");
         } else {
-          this.buildRuinedPortalAt(cx, cz);
+          this.buildVillageAt(cx, cz, biome);
+          const vy = Math.max(27, this.getSurfaceHeight(cx, cz));
+          spawnMob("villager_farmer", cx + 1, vy + 1, cz - 1);
+          spawnMob("villager_fletcher", cx - 1, vy + 1, cz + 1);
+          spawnMob("villager_blacksmith", cx + 2, vy + 1, cz + 2);
         }
       }
 
@@ -2377,6 +2435,7 @@ const WORLD_CONFIG: WorldConfig = {
       dayCount: 1,
       portalTimer: 0,
       swingTimer: 0,
+      fishing: null,
       equipAnim: 0,
       cameraMode: 0,
       skin: "steve",
@@ -2533,10 +2592,11 @@ const WORLD_CONFIG: WorldConfig = {
         villager_farmer: { name: "Фермер", hp: 20, passiveVillager: "farmer", w: 0.65, h: 1.9 },
         villager_blacksmith: { name: "Оружейник", hp: 20, passiveVillager: "blacksmith", w: 0.65, h: 1.9 },
         villager_cleric: { name: "Священник", hp: 20, passiveVillager: "cleric", w: 0.65, h: 1.9 },
-        cow: { name: "Корова", hp: 10, hostile: false, w: 0.85, h: 1.25, drop: "cooked_beef", dropExtra: "leather" },
-        pig: { name: "Свинья", hp: 10, hostile: false, w: 0.75, h: 0.95, drop: "apple" },
-        sheep: { name: "Овца", hp: 8, hostile: false, w: 0.8, h: 1.2, drop: B.WOOL_WHITE },
+        cow: { name: "Корова", hp: 10, hostile: false, w: 0.85, h: 1.25, drop: "raw_beef", dropExtra: "leather" },
+        pig: { name: "Свинья", hp: 10, hostile: false, w: 0.75, h: 0.95, drop: "porkchop" },
+        sheep: { name: "Овца", hp: 8, hostile: false, w: 0.8, h: 1.2, drop: "mutton", dropExtra: B.WOOL_WHITE },
         chicken: { name: "Курица", hp: 4, hostile: false, w: 0.5, h: 0.7, drop: "raw_chicken", dropExtra: "feather" },
+        rabbit: { name: "Кролик", hp: 6, hostile: false, w: 0.45, h: 0.55, drop: "rabbit", dropExtra: "rabbit_hide" },
         zombie: { name: "Зомби", hp: 20, hostile: true, w: 0.65, h: 1.85, dmg: 3, drop: "iron_ingot" },
         skeleton: { name: "Скелет", hp: 20, hostile: true, w: 0.65, h: 1.85, dmg: 3, drop: "bone" },
         wither_skeleton: { name: "Визер-скелет", hp: 24, hostile: true, w: 0.7, h: 2.2, dmg: 5, drop: "wither_skull" },
@@ -3596,6 +3656,35 @@ const WORLD_CONFIG: WorldConfig = {
         if (previous && !giveItem(previous.id, 1)) spawnDrop(PLAYER.pos.x, PLAYER.pos.y + 1, PLAYER.pos.z, previous.id, 1);
         if (GAME.gamemode !== "creative") consumeHeld(1);
         updateHUD(); SFX.click();
+        return;
+      }
+
+      // Fishing: cast into real water and reel in only after a bite.
+      if (held?.id === "fishing_rod") {
+        if (GAME.fishing?.active) {
+          const fishing = GAME.fishing;
+          if (fishing.bite) {
+            const catchTable = ["raw_fish","raw_fish","raw_salmon","clownfish","pufferfish","string","bow"];
+            const caught = catchTable[Math.floor(Math.random() * catchTable.length)];
+            giveItem(caught, 1);
+            showBanner(`Поймано: ${ITEMS[caught]?.name || caught}`);
+            SFX.pickup();
+          } else showBanner("Рыба сорвалась с крючка!");
+          if (fishing.mesh) scene.remove(fishing.mesh);
+          GAME.fishing = null;
+        } else {
+          const dir = getLookDir();
+          let waterPoint = null;
+          for (let d = 1.5; d <= 12; d += 0.5) {
+            const px = PLAYER.pos.x + dir.x * d, py = PLAYER.pos.y + 1.1 + dir.y * d, pz = PLAYER.pos.z + dir.z * d;
+            if (GAME.world.getBlock(px, py, pz) === B.WATER) { waterPoint = new THREE.Vector3(px, py, pz); break; }
+          }
+          if (!waterPoint) { showBanner("Для рыбалки направь удочку в воду!"); return; }
+          const bobber = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), new THREE.MeshLambertMaterial({ color: 0xe34b37 }));
+          bobber.position.copy(waterPoint).add(new THREE.Vector3(0, 0.12, 0)); scene.add(bobber);
+          GAME.fishing = { active: true, bite: false, timer: 2.5 + Math.random() * 5.5, mesh: bobber, point: waterPoint };
+          showBanner("Поплавок заброшен... жди поклёвки!");
+        }
         return;
       }
 
@@ -5969,6 +6058,15 @@ const WORLD_CONFIG: WorldConfig = {
         updateRaycast();
         tickMining(dt);
         tickEntities(dt);
+        if (GAME.fishing?.active && !GAME.fishing.bite) {
+          GAME.fishing.timer -= dt;
+          if (GAME.fishing.timer <= 0) {
+            GAME.fishing.bite = true;
+            GAME.fishing.mesh.position.y -= 0.18;
+            showBanner("ПОКЛЁВКА! Нажми ПКМ, чтобы вытащить!");
+            SFX.pickup();
+          }
+        }
         tickMultiplayer(dt);
 
         chunkTimer += dt;
