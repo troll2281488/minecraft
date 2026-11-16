@@ -37,5 +37,10 @@ This is the compatibility checklist for the game that already exists. Future wor
 ## Important boundary
 This checklist records the previously implemented game, not every vanilla Minecraft feature. The existing online mode does not yet synchronize every entity, mob AI, inventory, or combat event. Those are future additions to the existing multiplayer system, not reasons to rebuild it.
 
+## Block visuals
+- Vanilla 1.21.11 block textures are loaded for the existing block catalog, with the procedural pixel art retained as an offline fallback.
+- Grass, logs, crafting/furnace/chest/TNT/sandstone/hay/portal-frame faces use the correct face-specific vanilla texture variants.
+- Block mining uses the ten vanilla destroy-stage crack overlays in progression order.
+
 ## Regression rule
 A CI check runs before deployment and fails if a core implementation anchor listed in `scripts/check-features.mjs` disappears.
