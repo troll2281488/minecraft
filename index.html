@@ -2926,6 +2926,21 @@
       });
     }
 
+    function launchEnderPearl() {
+      const start = getEyePos().add(getLookDir().multiplyScalar(0.7));
+      const velocity = getLookDir().multiplyScalar(15);
+      velocity.y += 2.0;
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.16, 8, 8),
+        new THREE.MeshBasicMaterial({ color: 0x287d70 })
+      );
+      mesh.position.copy(start);
+      scene.add(mesh);
+      entities.push({ type: "thrown_pearl", mesh, vel: velocity, life: 3.5 });
+      consumeHeld(1);
+      SFX.eyeLaunch();
+    }
+
     function tickEntities(dt) {
       for (let i = entities.length - 1; i >= 0; i--) {
         const e = entities[i];
@@ -2960,6 +2975,27 @@
             else {
               SFX.breakBlock("stone");
               spawnParticles(e.mesh.position.x, e.mesh.position.y, e.mesh.position.z, 0x48ba7b, 10);
+            }
+            scene.remove(e.mesh);
+            entities.splice(i, 1);
+          }
+          continue;
+        }
+
+        if (e.type === "thrown_pearl") {
+          e.life -= dt;
+          e.vel.y -= 12 * dt;
+          e.mesh.position.addScaledVector(e.vel, dt);
+          const pearlBlock = GAME.world.getBlock(e.mesh.position.x, e.mesh.position.y, e.mesh.position.z);
+          if (BLOCK_PROPS[pearlBlock]?.solid || e.life <= 0) {
+            const safe = e.mesh.position.clone();
+            safe.y = Math.max(2, safe.y);
+            if (!collidesAt(safe)) {
+              PLAYER.pos.copy(safe);
+              PLAYER.vel.set(0, 0, 0);
+              damagePlayer(2, "Телепортация жемчугом Эндера", true);
+              updateChunksAroundPlayer(true);
+              resolveStuckInBlocks();
             }
             scene.remove(e.mesh);
             entities.splice(i, 1);
@@ -3665,6 +3701,11 @@
       }
 
       // Main-hand actions take priority over off-hand shield blocking.
+      if (held?.id === "ender_pearl") {
+        launchEnderPearl();
+        return;
+      }
+
       // 3. Bow Drawing
       if (held?.id === "bow") {
         const hasArrows = GAME.gamemode === "creative" || PLAYER.inv.some(s => s && s.id === "arrow") || off?.id === "arrow";
@@ -3693,8 +3734,8 @@
         return;
       }
 
-      // The shield is a fallback action; it must not prevent placing blocks or using items.
-      if ((held?.id === "shield" || off?.id === "shield") && (!targetBlock || !BLOCK_PROPS[targetBlock.id]?.interactive)) {
+      // Shield blocking is only the fallback when the main hand has no usable item.
+      if ((!held || held.id === "shield") && (held?.id === "shield" || off?.id === "shield") && (!targetBlock || !BLOCK_PROPS[targetBlock.id]?.interactive)) {
         PLAYER.blockingShield = true;
         return;
       }
