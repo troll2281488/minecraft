@@ -243,6 +243,9 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       netherite_pickaxe: { name: "Незеритовая кирка", cat: "tools", stack: 1, tool: "pickaxe", tier: 5, speed: 9.5 },
       netherite_sword: { name: "Незеритовый меч", cat: "tools", stack: 1, damage: 9 },
       trident: { name: "Трезубец", cat: "tools", stack: 1, damage: 9, trident: true },
+      breeze_rod: { name: "Стержень бриза", cat: "misc", stack: 64 },
+      heavy_core: { name: "Тяжёлое ядро", cat: "misc", stack: 64 },
+      mace: { name: "Булава", cat: "tools", stack: 1, damage: 7, mace: true },
       wood_pickaxe: { name: "Деревянная кирка", cat: "tools", stack: 1, tool: "pickaxe", tier: 1, speed: 2.2 },
       stone_pickaxe: { name: "Каменная кирка", cat: "tools", stack: 1, tool: "pickaxe", tier: 2, speed: 4.0 },
       iron_pickaxe: { name: "Железная кирка", cat: "tools", stack: 1, tool: "pickaxe", tier: 3, speed: 6.0 },
@@ -641,6 +644,9 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         ancient_debris: ctx => { ctx.fillStyle = "#493b35"; ctx.fillRect(3, 4, 10, 8); ctx.fillStyle = "#b27b3d"; ctx.fillRect(5, 5, 3, 2); ctx.fillRect(9, 9, 2, 2); },
         netherite_scrap: ctx => { ctx.fillStyle = "#51464d"; ctx.fillRect(4, 4, 8, 8); ctx.fillStyle = "#8d766d"; ctx.fillRect(5, 5, 3, 2); },
         netherite_ingot: ctx => { ctx.fillStyle = "#51464d"; ctx.fillRect(3, 5, 10, 6); ctx.fillStyle = "#a18a78"; ctx.fillRect(4, 6, 8, 2); },
+        breeze_rod: ctx => { ctx.fillStyle = "#b7d8c4"; ctx.fillRect(7, 2, 3, 12); ctx.fillStyle = "#e6f5dd"; ctx.fillRect(5, 4, 7, 2); ctx.fillRect(4, 9, 7, 2); },
+        heavy_core: ctx => { ctx.fillStyle = "#5d5a58"; ctx.fillRect(3, 3, 10, 10); ctx.fillStyle = "#b0a79c"; ctx.fillRect(5, 5, 6, 6); ctx.fillStyle = "#383638"; ctx.fillRect(7, 7, 2, 2); },
+        mace: ctx => { ctx.fillStyle = "#76543a"; ctx.fillRect(7, 7, 2, 8); ctx.fillStyle = "#b9a58d"; ctx.fillRect(4, 2, 8, 6); ctx.fillStyle = "#e2d5c0"; ctx.fillRect(5, 3, 6, 2); },
         wither_skull: ctx => { ctx.fillStyle = "#242424"; ctx.fillRect(3, 3, 10, 10); ctx.fillStyle = "#7a7a7a"; ctx.fillRect(5, 6, 2, 2); ctx.fillRect(9, 6, 2, 2); },
         bed: ctx => { ctx.fillStyle = "#9e3333"; ctx.fillRect(2, 6, 12, 6); ctx.fillStyle = "#d9d9d9"; ctx.fillRect(2, 6, 4, 4); ctx.fillStyle = "#6e4e2a"; ctx.fillRect(2, 12, 2, 2); ctx.fillRect(12, 12, 2, 2); },
         coal: ctx => { ctx.fillStyle = "#262626"; ctx.fillRect(4, 4, 8, 8); ctx.fillStyle = "#3b3b3b"; ctx.fillRect(5, 5, 3, 3); },
@@ -728,6 +734,9 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       { out: { id: "netherite_boots", count: 1 }, req: { diamond: 1, netherite_ingot: 1 } },
       { out: { id: "netherite_pickaxe", count: 1 }, req: { diamond: 1, netherite_ingot: 1, stick: 2 } },
       { out: { id: "netherite_sword", count: 1 }, req: { diamond: 1, netherite_ingot: 1, stick: 1 } },
+      { out: { id: "breeze_rod", count: 1 }, req: { blaze_rod: 2, quartz: 2 } },
+      { out: { id: "heavy_core", count: 1 }, req: { iron_ingot: 4, netherite_ingot: 1 } },
+      { out: { id: "mace", count: 1 }, req: { heavy_core: 1, breeze_rod: 1, stick: 1 } },
       { out: { id: "elytra", count: 1 }, req: { string: 8, leather: 4 } },
       { out: { id: "flint_and_steel", count: 1 }, req: { iron_ingot: 1, [B.GRAVEL]: 1 } },
       { out: { id: "bread", count: 1 }, req: { wheat: 3 } },
@@ -2989,6 +2998,16 @@ const WORLD_CONFIG: WorldConfig = {
         const held = PLAYER.inv[PLAYER.hotbarIdx];
         let dmg = (held && ITEMS[held.id]?.damage) ? ITEMS[held.id].damage : 2;
         if (PLAYER.effects.strength > 0) dmg += 4;
+        if (held && ITEMS[held.id]?.mace) {
+          const fallingDistance = !PLAYER.onGround && PLAYER.fallStartY !== null ? Math.max(0, PLAYER.fallStartY - PLAYER.pos.y) : 0;
+          if (fallingDistance > 1.5) {
+            const smashBonus = Math.min(18, Math.floor((fallingDistance - 1.5) * 3));
+            dmg += smashBonus;
+            PLAYER.vel.y = Math.max(PLAYER.vel.y, 2.2);
+            spawnParticles(hitEnt.mesh.position.x, hitEnt.mesh.position.y + 0.8, hitEnt.mesh.position.z, 0xd9c7a6, 12);
+            showBanner(`Сокрушительный удар булавой! +${smashBonus} урона`);
+          }
+        }
         damageEntity(hitEnt, dmg);
       }
     }
