@@ -129,6 +129,14 @@ const checks = [
   [
     "Throwable wind charge",
     "wind_charge_projectile"
+  ],
+  [
+    "Breeze mob model and AI",
+    'breeze: { name: "Бриз"'
+  ],
+  [
+    "Breeze wind charge attacks",
+    'launchHostileProjectile(e, "wind_charge")'
   ]
 ];
 const missing = checks.filter(([, anchor]) => !source.includes(anchor)).map(([name]) => name);
