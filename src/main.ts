@@ -1061,7 +1061,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       { out: { id: "beetroot_soup", count: 1 }, req: { beetroot: 6, bowl: 1 } },
       { out: { id: "rabbit_stew", count: 1 }, req: { cooked_rabbit: 1, carrot: 1, potato: 1, mushroom_stew: 1 } },
       { out: { id: "cake", count: 1 }, req: { wheat: 3, sugar: 2, egg: 1, milk_bucket: 3 } },
-      { out: { id: B.TNT, count: 4 }, req: { gunpowder: 5, sand: 4 } },
+      { out: { id: B.TNT, count: 4 }, req: { gunpowder: 5, [B.SAND]: 4 } },
       { out: { id: "golden_apple", count: 1 }, req: { apple: 1, gold_ingot: 8 } },
       { out: { id: "bow", count: 1 }, req: { stick: 3, string: 3 } },
       { out: { id: "arrow", count: 4 }, req: { stick: 1, [B.GRAVEL]: 1 } },
@@ -1574,13 +1574,13 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       // Build a full Village with houses, farms, Fletcher & Blacksmith Villagers
       buildVillageAt(vx, vz, biome = this.getBiome(vx, vz)) {
         const vy = Math.max(27, this.getSurfaceHeight(vx, vz));
-        const villagePlanks = biome === "Тайга" || biome === "Снежная тайга" ? (B.SPRUCE_PLANKS || villagePlanks) :
-          biome === "Джунгли" ? (B.JUNGLE_PLANKS || villagePlanks) :
-          biome === "Саванна" ? (B.ACACIA_PLANKS || villagePlanks) :
-          biome === "Тёмный лес" ? (B.DARK_OAK_PLANKS || villagePlanks) : villagePlanks;
-        const villageLog = biome === "Тайга" || biome === "Снежная тайга" ? (B.SPRUCE_LOG || villageLog) :
-          biome === "Джунгли" ? (B.JUNGLE_LOG || villageLog) :
-          biome === "Саванна" ? (B.ACACIA_LOG || villageLog) : villageLog;
+        const villagePlanks = biome === "Тайга" || biome === "Снежная тайга" ? (B.SPRUCE_PLANKS || B.OAK_PLANKS) :
+          biome === "Джунгли" ? (B.JUNGLE_PLANKS || B.OAK_PLANKS) :
+          biome === "Саванна" ? (B.ACACIA_PLANKS || B.OAK_PLANKS) :
+          biome === "Тёмный лес" ? (B.DARK_OAK_PLANKS || B.OAK_PLANKS) : B.OAK_PLANKS;
+        const villageLog = biome === "Тайга" || biome === "Снежная тайга" ? (B.SPRUCE_LOG || B.OAK_LOG) :
+          biome === "Джунгли" ? (B.JUNGLE_LOG || B.OAK_LOG) :
+          biome === "Саванна" ? (B.ACACIA_LOG || B.OAK_LOG) : B.OAK_LOG;
         this.structures.villages.push({ x: vx, y: vy, z: vz, biome });
 
         // House 1: biome-themed blacksmith / Fletcher workshop
@@ -1609,6 +1609,10 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         vChest[1] = { id: "iron_ingot", count: 5 };
         vChest[2] = { id: "bread", count: 6 };
         vChest[3] = { id: "stick", count: 16 };
+        vChest[4] = { id: "carrot", count: 3 };
+        vChest[5] = { id: "potato", count: 4 };
+        vChest[6] = { id: "beetroot", count: 3 };
+        vChest[7] = { id: "melon_slice", count: 4 };
         this.chests.set(`overworld:${vx},${vy + 1},${vz + 2}`, vChest);
 
         // House 2: Oak Cottage
@@ -2600,7 +2604,7 @@ const WORLD_CONFIG: WorldConfig = {
         zombie: { name: "Зомби", hp: 20, hostile: true, w: 0.65, h: 1.85, dmg: 3, drop: "iron_ingot" },
         skeleton: { name: "Скелет", hp: 20, hostile: true, w: 0.65, h: 1.85, dmg: 3, drop: "bone" },
         wither_skeleton: { name: "Визер-скелет", hp: 24, hostile: true, w: 0.7, h: 2.2, dmg: 5, drop: "wither_skull" },
-        creeper: { name: "Крипер", hp: 20, hostile: true, w: 0.65, h: 1.75, dmg: 8, drop: "coal" },
+        creeper: { name: "Крипер", hp: 20, hostile: true, w: 0.65, h: 1.75, dmg: 8, drop: "gunpowder" },
         enderman: { name: "Эндермен", hp: 30, hostile: true, w: 0.65, h: 2.6, dmg: 5, drop: "ender_pearl" },
         blaze: { name: "Ифрит", hp: 20, hostile: true, w: 0.75, h: 1.7, dmg: 4, drop: "blaze_rod" },
         crystal: { name: "Кристалл Края", hp: 1, hostile: false, w: 1.2, h: 1.4 },
