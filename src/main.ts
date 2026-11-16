@@ -774,7 +774,9 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         [B.SANDSTONE, ["sandstone.png", "sandstone.png", "sandstone_top.png", "sandstone_bottom.png", "sandstone.png", "sandstone.png"]],
         [B.HAY_BLOCK, ["hay_block_side.png", "hay_block_side.png", "hay_block_top.png", "hay_block_top.png", "hay_block_side.png", "hay_block_side.png"]],
         [B.END_PORTAL_FRAME, ["end_portal_frame_side.png", "end_portal_frame_side.png", "end_portal_frame_top.png", "end_stone.png", "end_portal_frame_side.png", "end_portal_frame_side.png"]],
-        [B.END_PORTAL_FRAME_EYE, ["end_portal_frame_side.png", "end_portal_frame_side.png", "end_portal_frame_eye.png", "end_stone.png", "end_portal_frame_side.png", "end_portal_frame_side.png"]]
+        [B.END_PORTAL_FRAME_EYE, ["end_portal_frame_side.png", "end_portal_frame_side.png", "end_portal_frame_eye.png", "end_stone.png", "end_portal_frame_side.png", "end_portal_frame_side.png"]],
+        [B.BASALT, ["basalt_side.png", "basalt_side.png", "basalt_top.png", "basalt_top.png", "basalt_side.png", "basalt_side.png"]],
+        [B.ANCIENT_DEBRIS, ["ancient_debris_side.png", "ancient_debris_side.png", "ancient_debris_top.png", "ancient_debris_top.png", "ancient_debris_side.png", "ancient_debris_side.png"]]
       ]);
       const blockFiles = new Map([
         [B.DIRT, "dirt.png"], [B.STONE, "stone.png"], [B.COBBLESTONE, "cobblestone.png"],
@@ -787,8 +789,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         [B.STONE_BRICKS, "stone_bricks.png"], [B.DRAGON_EGG, "dragon_egg.png"], [B.WOOL_WHITE, "white_wool.png"],
         [B.BRICKS, "bricks.png"], [B.NETHER_BRICKS, "nether_bricks.png"], [B.QUARTZ_ORE, "nether_quartz_ore.png"],
         [B.GOLD_BLOCK, "gold_block.png"], [B.CRYING_OBSIDIAN, "crying_obsidian.png"],
-        [B.ANCIENT_DEBRIS, "ancient_debris_side.png"], [B.NETHER_GOLD_ORE, "nether_gold_ore.png"],
-        [B.BASALT, "basalt_side.png"], [B.BLACKSTONE, "blackstone.png"], [B.SOUL_SOIL, "soul_soil.png"],
+        [B.NETHER_GOLD_ORE, "nether_gold_ore.png"], [B.BLACKSTONE, "blackstone.png"], [B.SOUL_SOIL, "soul_soil.png"],
         [B.POPPY, "poppy.png"], [B.DANDELION, "dandelion.png"], [B.WHEAT_1, "wheat_stage0.png"],
         [B.WHEAT_7, "wheat_stage7.png"], [B.TORCH, "torch.png"], [B.WATER, "water_still.png"],
         [B.LAVA, "lava_still.png"], [B.NETHER_PORTAL, "nether_portal.png"], [B.END_PORTAL, "end_portal.png"]
