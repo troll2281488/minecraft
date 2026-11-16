@@ -1111,12 +1111,12 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
     // =========================================================================
     const canvas = document.getElementById("game-canvas");
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 0.85));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.08;
-    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.enabled = false;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     const scene = new THREE.Scene();
@@ -1133,7 +1133,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
 
     const sunLight = new THREE.DirectionalLight(0xfff1d8, 1.05);
     sunLight.position.set(40, 80, 30);
-    sunLight.castShadow = true;
+    sunLight.castShadow = false;
     sunLight.shadow.mapSize.width = 2048;
     sunLight.shadow.mapSize.height = 2048;
     sunLight.shadow.bias = -0.00018;
@@ -1948,8 +1948,8 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           const m = ATLAS.materials[data.bId];
           const useMat = Array.isArray(m) ? m[data.fIdx] : m;
           const mesh = new THREE.Mesh(geo, useMat);
-          mesh.receiveShadow = true;
-          mesh.castShadow = !BLOCK_PROPS[data.bId]?.transparent;
+          mesh.receiveShadow = false;
+          mesh.castShadow = false;
           group.add(mesh);
         };
 
@@ -2363,7 +2363,7 @@ const WORLD_CONFIG: WorldConfig = {
       allowCheats: true,
       doDaylightCycle: true,
       weather: "clear",
-      renderDist: 32,
+      renderDist: 12,
       fov: 75,
       mouseSens: 1.0,
       graphicsQuality: "medium",
@@ -5637,11 +5637,13 @@ const WORLD_CONFIG: WorldConfig = {
       const levels = ["low", "medium", "high"];
       GAME.graphicsQuality = levels[(levels.indexOf(GAME.graphicsQuality) + 1) % levels.length];
       const cfg = {
-        low: { pixelRatio: 0.85, shadows: false, label: "Низкое" },
-        medium: { pixelRatio: 1.0, shadows: true, label: "Среднее" },
-        high: { pixelRatio: 1.2, shadows: true, label: "Высокое" }
+        low: { pixelRatio: 0.65, shadows: false, label: "Низкое" },
+        medium: { pixelRatio: 0.85, shadows: false, label: "Среднее" },
+        high: { pixelRatio: 1.0, shadows: true, label: "Высокое" }
       }[GAME.graphicsQuality];
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, cfg.pixelRatio));
+      adaptivePixelRatio = Math.min(window.devicePixelRatio || 1, cfg.pixelRatio);
+      renderer.setPixelRatio(adaptivePixelRatio);
+      renderer.setSize(window.innerWidth, window.innerHeight);
       renderer.shadowMap.enabled = cfg.shadows;
       sunLight.castShadow = cfg.shadows;
       e.target.textContent = "Качество графики: " + cfg.label;
@@ -5879,6 +5881,8 @@ const WORLD_CONFIG: WorldConfig = {
 
     let lastTime = performance.now();
     let chunkTimer = 0, hudTimer = 0, spawnTimer = 0, fpsFrames = 0, fpsTimer = 0;
+    let adaptiveSampleFrames = 0, adaptiveSampleTime = 0;
+    let adaptivePixelRatio = Math.min(window.devicePixelRatio || 1, 0.85);
 
     function animate(now) {
       requestAnimationFrame(animate);
@@ -5887,6 +5891,20 @@ const WORLD_CONFIG: WorldConfig = {
 
       fpsFrames++;
       fpsTimer += dt;
+      adaptiveSampleFrames++;
+      adaptiveSampleTime += dt;
+      if (GAME.graphicsQuality === "medium" && adaptiveSampleTime >= 3) {
+        const measuredFps = adaptiveSampleFrames / adaptiveSampleTime;
+        const previousRatio = adaptivePixelRatio;
+        if (measuredFps < 38) adaptivePixelRatio = Math.max(0.55, adaptivePixelRatio - 0.1);
+        else if (measuredFps > 56) adaptivePixelRatio = Math.min(Math.min(window.devicePixelRatio || 1, 0.9), adaptivePixelRatio + 0.05);
+        if (Math.abs(previousRatio - adaptivePixelRatio) >= 0.04) {
+          renderer.setPixelRatio(adaptivePixelRatio);
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        adaptiveSampleFrames = 0;
+        adaptiveSampleTime = 0;
+      }
       if (fpsTimer >= 0.5) {
         document.getElementById("f3-fps").textContent = `FPS: ${Math.round(fpsFrames / fpsTimer)}`;
         document.getElementById("f3-seed").textContent = `Seed: ${GAME.world?.seed || 0}`;
@@ -5901,7 +5919,7 @@ const WORLD_CONFIG: WorldConfig = {
       }
 
       // Smooth time-budgeted chunk building (eliminates micro-stutters)
-      processChunkMeshQueue(GAME.renderDist >= 24 ? 3 : 5);
+      processChunkMeshQueue(1);
 
       // Update break particles
       for (let i = breakParticles.length - 1; i >= 0; i--) {
