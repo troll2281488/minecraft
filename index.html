@@ -482,6 +482,9 @@
       outline: 2px solid #e0e0e0;
       z-index: 2;
     }
+    #inventory-cursor-stack{position:fixed;left:0;top:0;z-index:120;width:42px;height:42px;display:none;align-items:center;justify-content:center;pointer-events:none;transform:translate(-50%,-50%);filter:drop-shadow(2px 2px 1px #222)}
+    #inventory-cursor-stack img{width:30px;height:30px}
+    #inventory-cursor-stack .slot-count{right:-2px;bottom:-3px}
     .slot-count {
       position: absolute;
       right: 2px;
@@ -611,6 +614,7 @@
 </head>
 <body>
   <canvas id="game-canvas"></canvas>
+  <div id="inventory-cursor-stack" aria-hidden="true"></div>
   <div id="fire-overlay" class="hidden"></div>
   <div id="sleep-fade"></div>
 
@@ -2191,29 +2195,22 @@
       }
 
       buildStructures() {
-        // Spawn initial structures near spawn + Stronghold within 500 blocks
-        this.buildVillageAt(38, 32);
-        this.buildVillageAt(-95, 110);
-        this.buildVillageAt(140, -120);
-        this.buildPyramidAt(-58, 64);
-        this.buildPyramidAt(115, 95);
-        this.buildRuinedPortalAt(24, -36);
-        this.buildRuinedPortalAt(-75, -60);
+        // Structures are generated as the player explores distant regions.
         this.buildStronghold();
       }
 
       ensureStructuresInRegion(wx, wz) {
         if (this.dimension !== "overworld") return;
-        const rx = Math.floor(wx / 180);
-        const rz = Math.floor(wz / 180);
+        const rx = Math.floor(wx / 320);
+        const rz = Math.floor(wz / 320);
         const rKey = `${rx},${rz}`;
         if (this.generatedRegions.has(rKey)) return;
         this.generatedRegions.add(rKey);
         if (rx === 0 && rz === 0) return;
 
         const h = hash2(rx, rz, this.seed + 707);
-        const cx = rx * 180 + 60;
-        const cz = rz * 180 + 60;
+        const cx = rx * 320 + 150;
+        const cz = rz * 320 + 150;
         if (h < 0.45) {
           this.buildVillageAt(cx, cz);
           const vy = Math.max(27, this.getSurfaceHeight(cx, cz));
@@ -3440,13 +3437,7 @@
           const sl = document.createElement("div");
           sl.className = "inv-slot";
           renderSlot(sl, chestArr[i]);
-          sl.onclick = () => {
-            if (chestArr[i] && giveItem(chestArr[i].id, chestArr[i].count)) {
-              chestArr[i] = null;
-              SFX.click();
-              openGUI("chest", contextKey);
-            }
-          };
+          bindInventoryCursor(sl, () => chestArr[i], value => { chestArr[i] = value; });
           grid.appendChild(sl);
         }
         mainArea.appendChild(grid);
@@ -3455,56 +3446,40 @@
       refreshGuiGrids();
     }
 
-    let inventoryDragInProgress = false;
-    function bindInventoryDrag(slotEl, readStack, writeStack) {
-      slotEl.draggable = true;
-      slotEl.addEventListener("dragstart", e => {
-        if (!readStack()) {
-          e.preventDefault();
-          return;
-        }
-        inventoryDragInProgress = true;
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("text/plain", "minecraft-inventory-stack");
-      });
-      slotEl.addEventListener("dragover", e => {
-        if (inventoryDragInProgress) {
-          e.preventDefault();
-          e.dataTransfer.dropEffect = "move";
-        }
-      });
-      slotEl.addEventListener("drop", e => {
-        e.preventDefault();
-        const source = window.__minecraftDraggedStack;
-        if (!source || source === slotEl) return;
-        const from = source.__readStack();
-        const to = readStack();
-        if (!from) return;
-        if (to && String(to.id) === String(from.id)) {
-          const limit = getItemInfo(to.id).stack || 64;
-          const moved = Math.min(from.count, Math.max(0, limit - to.count));
-          if (moved <= 0) return;
-          to.count += moved;
-          from.count -= moved;
-          if (from.count <= 0) source.__writeStack(null);
-          else source.__writeStack(from);
-          writeStack(to);
-        } else {
-          writeStack(from);
-          source.__writeStack(to || null);
-        }
-        SFX.click();
-        refreshGuiGrids();
-        updateHotbarUI();
-      });
-      slotEl.addEventListener("dragend", () => {
-        window.__minecraftDraggedStack = null;
-        setTimeout(() => { inventoryDragInProgress = false; }, 80);
-      });
-      slotEl.__readStack = readStack;
-      slotEl.__writeStack = writeStack;
-      slotEl.addEventListener("dragstart", () => { window.__minecraftDraggedStack = slotEl; });
+    let carriedStack = null, rightDragActive = false, rightDragVisited = new Set();
+    function renderCarriedStack() {
+      const el=document.getElementById("inventory-cursor-stack"); if(!el)return;
+      el.innerHTML="";
+      if(!carriedStack||GAME.state!=="gui"){el.style.display="none";return;}
+      const info=getItemInfo(carriedStack.id);
+      if(info.icon){const img=document.createElement("img");img.src=info.icon;el.appendChild(img);}
+      if(carriedStack.count>1){const n=document.createElement("span");n.className="slot-count";n.textContent=carriedStack.count;el.appendChild(n);}
+      el.style.display="flex";
     }
+    window.addEventListener("mousemove",e=>{const el=document.getElementById("inventory-cursor-stack");if(el&&carriedStack&&GAME.state==="gui"){el.style.left=e.clientX+"px";el.style.top=e.clientY+"px";}});
+    function refreshAfterInventoryClick(){if(currentGuiType==="chest"&&activeChestKey)openGUI("chest",activeChestKey);else refreshGuiGrids();updateHotbarUI();renderCarriedStack();}
+    function applyInventorySlotClick(readStack,writeStack,button=0){
+      const target=readStack();
+      if(button===2){
+        if(!carriedStack){if(!target)return;const take=Math.ceil(target.count/2);carriedStack={id:target.id,count:take};target.count-=take;writeStack(target.count>0?target:null);}
+        else if(!target){writeStack({id:carriedStack.id,count:1});carriedStack.count--;if(carriedStack.count<=0)carriedStack=null;}
+        else if(String(target.id)===String(carriedStack.id)&&target.count<getItemInfo(target.id).stack){target.count++;carriedStack.count--;if(carriedStack.count<=0)carriedStack=null;writeStack(target);}else return;
+      }else{
+        if(!carriedStack){if(!target)return;carriedStack={id:target.id,count:target.count};writeStack(null);}
+        else if(!target){writeStack(carriedStack);carriedStack=null;}
+        else if(String(target.id)===String(carriedStack.id)){const cap=getItemInfo(target.id).stack||64;const moved=Math.min(carriedStack.count,Math.max(0,cap-target.count));if(!moved)return;target.count+=moved;carriedStack.count-=moved;writeStack(target);if(carriedStack.count<=0)carriedStack=null;}
+        else{writeStack(carriedStack);carriedStack={id:target.id,count:target.count};}
+      }
+      SFX.click();refreshAfterInventoryClick();
+    }
+    function bindInventoryCursor(el,readStack,writeStack){
+      el.draggable=false;
+      const placeOne=()=>{if(!carriedStack)return;const target=readStack();if(!target)writeStack({id:carriedStack.id,count:1});else if(String(target.id)===String(carriedStack.id)&&target.count<getItemInfo(target.id).stack){target.count++;writeStack(target);}else return;carriedStack.count--;if(carriedStack.count<=0)carriedStack=null;refreshAfterInventoryClick();};
+      el.addEventListener("mousedown",e=>{if(e.button!==0&&e.button!==2)return;e.preventDefault();e.stopPropagation();if(e.button===2&&carriedStack){rightDragActive=true;rightDragVisited=new Set([el]);placeOne();}else{rightDragActive=false;applyInventorySlotClick(readStack,writeStack,e.button);}});
+      el.addEventListener("mouseenter",e=>{if(rightDragActive&&(e.buttons&2)&&!rightDragVisited.has(el)){rightDragVisited.add(el);placeOne();}});
+      el.addEventListener("contextmenu",e=>e.preventDefault());
+    }
+    window.addEventListener("mouseup",e=>{if(e.button===2){rightDragActive=false;rightDragVisited.clear();}});
 
     function refreshGuiGrids() {
       const bp = document.getElementById("gui-backpack");
@@ -3514,41 +3489,13 @@
       hb.innerHTML = "";
       renderSlot(offSlot, PLAYER.offhand);
       bindInventoryDrag(offSlot, () => PLAYER.offhand, value => { PLAYER.offhand = value; });
-      offSlot.onclick = () => {
-        if (inventoryDragInProgress) return;
-        swapOffhandItem();
-      };
+      bindInventoryCursor(offSlot, () => PLAYER.offhand, value => { PLAYER.offhand = value; });
 
       const makeInvSlot = (idx) => {
         const sl = document.createElement("div");
         sl.className = "inv-slot";
         renderSlot(sl, PLAYER.inv[idx]);
-        bindInventoryDrag(sl, () => PLAYER.inv[idx], value => { PLAYER.inv[idx] = value; });
-        sl.onclick = () => {
-          if (inventoryDragInProgress) return;
-          if (currentGuiType === "chest" && activeChestKey && PLAYER.inv[idx]) {
-            const chestArr = GAME.world.chests.get(activeChestKey);
-            const empty = chestArr.findIndex(x => !x);
-            if (empty !== -1) {
-              chestArr[empty] = PLAYER.inv[idx];
-              PLAYER.inv[idx] = null;
-              SFX.click();
-              openGUI("chest", activeChestKey);
-              return;
-            }
-          }
-          if (idx >= 9) {
-            const tmp = PLAYER.inv[PLAYER.hotbarIdx];
-            PLAYER.inv[PLAYER.hotbarIdx] = PLAYER.inv[idx];
-            PLAYER.inv[idx] = tmp;
-            SFX.click();
-            refreshGuiGrids();
-            updateHotbarUI();
-          } else {
-            PLAYER.hotbarIdx = idx;
-            updateHotbarUI();
-          }
-        };
+        bindInventoryCursor(sl, () => PLAYER.inv[idx], value => { PLAYER.inv[idx] = value; });
         return sl;
       };
 
@@ -5217,18 +5164,10 @@
         giveItem(B.GRASS, 64);
         PLAYER.offhand = { id: "shield", count: 1 };
       } else {
-        giveItem("wood_axe", 1);
-        giveItem(B.TORCH, 4);
-        giveItem("bread", 3);
+        // A fresh survival world starts with an empty inventory.
       }
 
-      // Spawn Villagers in the nearby Village (38, 32) including the Fletcher!
-      const v0 = GAME.world.structures.villages[0];
-      if (v0) {
-        spawnMob("villager_fletcher", v0.x + 1, v0.y + 1, v0.z - 1);
-        spawnMob("villager_blacksmith", v0.x - 1, v0.y + 1, v0.z + 1);
-        spawnMob("villager_farmer", v0.x + 5, v0.y + 1, v0.z + 1);
-      }
+      // Villagers spawn alongside villages in distant generated regions.
 
       spawnMob("cow", 14, sy, 12);
       spawnMob("pig", 4, sy, 15);
@@ -5243,7 +5182,7 @@
       document.querySelectorAll(".screen-overlay").forEach(el => el.classList.add("hidden"));
       document.getElementById("hud").classList.remove("hidden");
       document.getElementById("chat-messages").innerHTML = "";
-      addChatLine(`[Мир "${cfg.name}"] Сид: ${numericSeed}. Деревня с Лучником рядом на X=38, Z=32!`, "#d6cf82");
+      addChatLine(`[Мир "${cfg.name}"] Сид: ${numericSeed}. Исследуй мир, чтобы найти деревни, пирамиды и порталы.`, "#d6cf82");
 
       GAME.state = "playing";
       requestLock();
