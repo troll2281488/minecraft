@@ -5493,7 +5493,14 @@ const WORLD_CONFIG: WorldConfig = {
       const ctx = canvas.getContext("2d", { willReadFrequently: true });
       ctx.imageSmoothingEnabled = false;
       ctx.clearRect(0, 0, 64, 64);
-      ctx.drawImage(image, 0, 0, 64, 64);
+      if (image.width === 64 && image.height === 32) {
+        ctx.drawImage(image, 0, 0, 64, 32);
+        // Convert the classic 64×32 layout into the modern 64×64 left-limb UV regions.
+        ctx.drawImage(canvas, 40, 16, 16, 16, 32, 48, 16, 16);
+        ctx.drawImage(canvas, 0, 16, 16, 16, 16, 48, 16, 16);
+      } else {
+        ctx.drawImage(image, 0, 0, 64, 64);
+      }
       const dataUrl = canvas.toDataURL("image/png");
       const sample = (x,y,w=4,h=4) => {
         const data = ctx.getImageData(x,y,w,h).data; let r=0,g=0,b=0,n=0;
