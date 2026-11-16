@@ -364,6 +364,27 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       gold_hoe: { name: "Золотая мотыга", cat: "tools", stack: 1, tool: "hoe", tier: 1 },
       gold_sword: { name: "Золотой меч", cat: "tools", stack: 1, damage: 4 },
       trident: { name: "Трезубец", cat: "tools", stack: 1, damage: 9, trident: true }
+    // Spawn eggs: each living mob implemented by spawnMob has its own survival item.
+    const SPAWN_EGG_TYPES = ['villager_fletcher', 'villager_farmer', 'villager_blacksmith', 'villager_cleric', 'cow', 'pig', 'sheep', 'chicken', 'rabbit', 'zombie', 'skeleton', 'wither_skeleton', 'creeper', 'enderman', 'blaze', 'dragon'];
+    for (const [type, name] of [      ["villager_fletcher", "Лучник"],
+      ["villager_farmer", "Фермер"],
+      ["villager_blacksmith", "Оружейник"],
+      ["villager_cleric", "Священник"],
+      ["cow", "Корова"],
+      ["pig", "Свинья"],
+      ["sheep", "Овца"],
+      ["chicken", "Курица"],
+      ["rabbit", "Кролик"],
+      ["zombie", "Зомби"],
+      ["skeleton", "Скелет"],
+      ["wither_skeleton", "Визер-скелет"],
+      ["creeper", "Крипер"],
+      ["enderman", "Эндермен"],
+      ["blaze", "Ифрит"],
+      ["dragon", "Дракон Края"]]) {
+      ITEMS["spawn_egg_" + type] = { name: "Яйцо призыва: " + name, cat: "misc", stack: 16, spawnMob: type };
+    }
+
     };
 
     const ATLAS = {
@@ -2961,10 +2982,29 @@ const WORLD_CONFIG: WorldConfig = {
           e.fuse = 0;
           e.mesh.scale.setScalar(1);
         }
+        // Endermen aggro when the player looks at their face, then teleport away.
+        if (e.type === "enderman" && dist < 18 && GAME.gamemode !== "creative" && GAME.gamemode !== "spectator") {
+          const eyeToMob = e.mesh.position.clone().add(new THREE.Vector3(0, 1.9, 0)).sub(getEyePos()).normalize();
+          e.gazedAt = getLookDir().dot(eyeToMob) > 0.965;
+          e.teleportCooldown = Math.max(0, (e.teleportCooldown || 0) - dt);
+          if (e.gazedAt && e.teleportCooldown <= 0) {
+            const away = PLAYER.pos.clone().sub(e.mesh.position); away.y = 0;
+            if (away.lengthSq() > 0.001) away.normalize();
+            const tx = e.mesh.position.x + away.x * (5 + Math.random() * 5) + (Math.random() - 0.5) * 3;
+            const tz = e.mesh.position.z + away.z * (5 + Math.random() * 5) + (Math.random() - 0.5) * 3;
+            const ty = GAME.world.dimension === "overworld" ? GAME.world.getSurfaceHeight(tx, tz) + 1 : e.mesh.position.y;
+            spawnParticles(e.mesh.position.x, e.mesh.position.y + 1, e.mesh.position.z, 0x9b4fd4, 12);
+            e.mesh.position.set(tx, ty, tz);
+            spawnParticles(tx, ty + 1, tz, 0x9b4fd4, 12);
+            e.teleportCooldown = 2.2 + Math.random() * 1.8;
+            showBanner("Эндермен телепортировался! Не смотри ему в глаза!");
+          }
+        }
 
         if (e.cfg.hostile && dist < 18 && GAME.gamemode !== "creative" && GAME.gamemode !== "spectator") {
           toPlayer.normalize();
-          moveMobWithCollision(e, toPlayer.x * 2.4 * dt, toPlayer.z * 2.4 * dt);
+          const chaseSpeed = e.type === "enderman" ? (e.gazedAt ? 3.8 : 3.0) : e.type === "zombie" ? 2.15 : 2.4;
+          moveMobWithCollision(e, toPlayer.x * chaseSpeed * dt, toPlayer.z * chaseSpeed * dt);
           e.mesh.rotation.y = Math.atan2(toPlayer.x, toPlayer.z);
           moving = true;
           if (dist < 1.45 && Math.random() < dt * 1.4) {
@@ -3013,6 +3053,7 @@ const WORLD_CONFIG: WorldConfig = {
         /gold/.test(String(id)) ? ["#e9c642","#fff09a","#9b721b"] :
         /iron|chainmail/.test(String(id)) ? ["#b9c2c8","#eef2f4","#66727a"] :
         /leather/.test(String(id)) ? ["#98633b","#c18a55","#55351f"] :
+        /spawn_egg/.test(String(id)) ? ["#63a94d","#e7e1bd","#6c4c9a"] :
         /food|apple|bread|meat|fish|carrot|potato|stew|cookie|melon|beetroot/.test(String(id)) ? ["#c58b42","#e8c477","#8c4b2d"] :
         ["#8a8a8a","#d0d0d0","#505050"];
       const icon = makePixelTex(ctx => {
@@ -3675,6 +3716,21 @@ const WORLD_CONFIG: WorldConfig = {
 
       // 1. Villager trading and milking cows.
       const hitEnt = findEntityUnderCrosshair(4.2);
+      // Spawn eggs place the matching mob on the targeted surface.
+      if (held && ITEMS[held.id] && ITEMS[held.id].spawnMob) {
+        const mobType = ITEMS[held.id].spawnMob;
+        const dir = getLookDir();
+        const sx = targetBlock ? targetBlock.x + 0.5 : PLAYER.pos.x + dir.x * 2.5;
+        const sz = targetBlock ? targetBlock.z + 0.5 : PLAYER.pos.z + dir.z * 2.5;
+        const sy = targetBlock ? targetBlock.y + 1 : Math.max(1, GAME.world.getSurfaceHeight(sx, sz) + 1);
+        const spawned = spawnMob(mobType, sx, sy, sz);
+        if (spawned) {
+          if (GAME.gamemode !== "creative") consumeHeld(1);
+          showBanner("Появился моб: " + spawned.cfg.name);
+          SFX.pickup();
+        } else showBanner("Это существо нельзя призвать в текущем режиме");
+        return;
+      }
       if (hitEnt?.type === "cow" && held?.id === "bucket") {
         giveItem("milk_bucket", 1);
         if (GAME.gamemode !== "creative") consumeHeld(1);
