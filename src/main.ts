@@ -5280,7 +5280,7 @@ const WORLD_CONFIG: WorldConfig = {
       clearAllEntities();
       if (GAME.world) GAME.world.clearAllMeshes();
       if (PLAYER.rig) scene.remove(PLAYER.rig.root);
-      PLAYER.rig = createHumanoidRig(GAME.skin, null, GAME.customSkinDataUrl);
+      PLAYER.rig = createHumanoidRig(GAME.skin, null, GAME.skin === "custom" ? GAME.customSkinDataUrl : null);
       GAME.world = new VoxelWorld(Number(save.seed) || 12345);
       GAME.world.buildStructures();
       for (const dim of ["overworld", "nether", "end"]) {
