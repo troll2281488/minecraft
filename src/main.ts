@@ -1598,9 +1598,9 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         const villageLog = biome === "Тайга" || biome === "Снежная тайга" ? (B.SPRUCE_LOG || B.OAK_LOG) :
           biome === "Джунгли" ? (B.JUNGLE_LOG || B.OAK_LOG) :
           biome === "Саванна" ? (B.ACACIA_LOG || B.OAK_LOG) : B.OAK_LOG;
-        const villageBase = biome === "Пустыня" || biome === "Бесплодные земли" ? (B.SANDSTONE || villageBase) :
-          biome === "Снежная тайга" || biome === "Ледяные пики" ? (B.SNOW_BLOCK || villageBase) :
-          biome === "Джунгли" || biome === "Болото" ? (B.MOSSY_COBBLESTONE || villageBase) : villageBase;
+        const villageBase = biome === "Пустыня" || biome === "Бесплодные земли" ? (B.SANDSTONE || B.COBBLESTONE) :
+          biome === "Снежная тайга" || biome === "Ледяные пики" ? (B.SNOW_BLOCK || B.COBBLESTONE) :
+          biome === "Джунгли" || biome === "Болото" ? (B.MOSSY_COBBLESTONE || B.COBBLESTONE) : B.COBBLESTONE;
         this.structures.villages.push({ x: vx, y: vy, z: vz, biome });
 
         // House 1: biome-themed blacksmith / Fletcher workshop
