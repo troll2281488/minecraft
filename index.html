@@ -716,7 +716,11 @@
       <div style="margin:12px 0;padding:12px;border:2px solid #6b5639;background:#24201b;">
         <label for="skin-upload" style="display:block;color:#e2c78b;margin-bottom:8px;">Загрузить PNG-скин Minecraft (64×64 или 64×32)</label>
         <input id="skin-upload" type="file" accept="image/png" style="max-width:100%;color:#ddd;">
-        <div style="font-size:13px;color:#aaa;margin-top:6px;">Можно выбрать файл скина, предварительно скачанный с сайта со скинами</div>
+        <div style="font-size:13px;color:#aaa;margin:6px 0;">Можно выбрать скачанный PNG-файл скина</div>
+        <label for="skin-url" style="display:block;color:#e2c78b;margin:10px 0 6px;">Или вставить прямую ссылку на PNG</label>
+        <input id="skin-url" type="url" placeholder="https://…/skin.png" style="width:100%;box-sizing:border-box;padding:9px;background:#171717;color:#fff;border:2px solid #746044;">
+        <button class="mc-btn" id="btn-skin-load-url" style="margin-top:8px;">Загрузить скин по ссылке</button>
+        <div style="font-size:12px;color:#aaa;margin-top:6px;">Для ссылок с сайтов, запрещающих загрузку изображений извне, скачай PNG и выбери его файлом</div>
       </div>
       <button class="mc-btn" id="btn-skin-back">Готово</button>
     </div>
