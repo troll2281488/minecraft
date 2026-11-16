@@ -850,6 +850,13 @@
         </div>
       </div>
 
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <span>Броня:</span>
+        <div class="inv-slot" id="armor-head-slot" title="Шлем"></div>
+        <div class="inv-slot" id="armor-chest-slot" title="Нагрудник / элитры"></div>
+        <div class="inv-slot" id="armor-legs-slot" title="Поножи"></div>
+        <div class="inv-slot" id="armor-feet-slot" title="Ботинки"></div>
+      </div>
       <div style="display:flex; align-items:center; gap:10px; font-size:18px;">
         <span>Вторая рука (F):</span>
         <div class="inv-slot" id="gui-offhand-slot"></div>
@@ -1063,6 +1070,18 @@
       iron_chestplate: { name: "Железный нагрудник", cat: "armor_food", stack: 1, armor: 6 },
       diamond_helmet: { name: "Алмазный шлем", cat: "armor_food", stack: 1, armor: 3 },
       diamond_chestplate: { name: "Алмазный нагрудник", cat: "armor_food", stack: 1, armor: 8 },
+      iron_leggings: { name: "Железные поножи", cat: "armor_food", stack: 1, armor: 5, equip: "legs" },
+      iron_boots: { name: "Железные ботинки", cat: "armor_food", stack: 1, armor: 2, equip: "feet" },
+      diamond_leggings: { name: "Алмазные поножи", cat: "armor_food", stack: 1, armor: 6, equip: "legs" },
+      diamond_boots: { name: "Алмазные ботинки", cat: "armor_food", stack: 1, armor: 3, equip: "feet" },
+      netherite_ingot: { name: "Незеритовый слиток", cat: "misc", stack: 64 },
+      netherite_helmet: { name: "Незеритовый шлем", cat: "armor_food", stack: 1, armor: 3, equip: "head", toughness: 3 },
+      netherite_chestplate: { name: "Незеритовый нагрудник", cat: "armor_food", stack: 1, armor: 8, equip: "chest", toughness: 3 },
+      netherite_leggings: { name: "Незеритовые поножи", cat: "armor_food", stack: 1, armor: 6, equip: "legs", toughness: 3 },
+      netherite_boots: { name: "Незеритовые ботинки", cat: "armor_food", stack: 1, armor: 3, equip: "feet", toughness: 3 },
+      elytra: { name: "Элитры", cat: "armor_food", stack: 1, equip: "chest", elytra: true },
+      netherite_pickaxe: { name: "Незеритовая кирка", cat: "tools", stack: 1, tool: "pickaxe", tier: 5, speed: 9.5 },
+      netherite_sword: { name: "Незеритовый меч", cat: "tools", stack: 1, damage: 9 },
       wood_pickaxe: { name: "Деревянная кирка", cat: "tools", stack: 1, tool: "pickaxe", tier: 1, speed: 2.2 },
       stone_pickaxe: { name: "Каменная кирка", cat: "tools", stack: 1, tool: "pickaxe", tier: 2, speed: 4.0 },
       iron_pickaxe: { name: "Железная кирка", cat: "tools", stack: 1, tool: "pickaxe", tier: 3, speed: 6.0 },
@@ -1515,6 +1534,18 @@
       { out: { id: "diamond_sword", count: 1 }, req: { diamond: 2, stick: 1 } },
       { out: { id: "diamond_helmet", count: 1 }, req: { diamond: 5 } },
       { out: { id: "diamond_chestplate", count: 1 }, req: { diamond: 8 } },
+      { out: { id: "iron_leggings", count: 1 }, req: { iron_ingot: 7 } },
+      { out: { id: "iron_boots", count: 1 }, req: { iron_ingot: 4 } },
+      { out: { id: "diamond_leggings", count: 1 }, req: { diamond: 7 } },
+      { out: { id: "diamond_boots", count: 1 }, req: { diamond: 4 } },
+      { out: { id: "netherite_ingot", count: 1 }, req: { gold_ingot: 4, diamond: 4 } },
+      { out: { id: "netherite_helmet", count: 1 }, req: { diamond: 1, netherite_ingot: 1 } },
+      { out: { id: "netherite_chestplate", count: 1 }, req: { diamond: 1, netherite_ingot: 1 } },
+      { out: { id: "netherite_leggings", count: 1 }, req: { diamond: 1, netherite_ingot: 1 } },
+      { out: { id: "netherite_boots", count: 1 }, req: { diamond: 1, netherite_ingot: 1 } },
+      { out: { id: "netherite_pickaxe", count: 1 }, req: { diamond: 1, netherite_ingot: 1, stick: 2 } },
+      { out: { id: "netherite_sword", count: 1 }, req: { diamond: 1, netherite_ingot: 1, stick: 1 } },
+      { out: { id: "elytra", count: 1 }, req: { string: 8, leather: 4 } },
       { out: { id: "flint_and_steel", count: 1 }, req: { iron_ingot: 1, [B.GRAVEL]: 1 } },
       { out: { id: "bread", count: 1 }, req: { wheat: 3 } },
       { out: { id: "golden_apple", count: 1 }, req: { apple: 1, gold_ingot: 8 } },
@@ -1882,9 +1913,13 @@
               if (hash2(wx, wz, 404) < 0.025) setLocal(lx, 37, lz, B.GLOWSTONE);
             } else if (this.dimension === "end") {
               const dist = Math.hypot(wx, wz);
-              if (dist < 34) {
-                const topY = 32 - Math.floor(dist * 0.12);
-                const botY = 22 + Math.floor(dist * 0.25);
+              const islandNoise = hash2(Math.floor(wx / 6), Math.floor(wz / 6), this.seed + 1907);
+              const onMainIsland = dist < 34;
+              const onOuterIsland = dist > 48 && dist < 155 && islandNoise > 0.28;
+              if (onMainIsland || onOuterIsland) {
+                const localDist = onMainIsland ? dist : Math.hypot((wx % 38) - 19, (wz % 38) - 19);
+                const topY = 32 - Math.floor(Math.min(localDist, 32) * 0.12);
+                const botY = 22 + Math.floor(Math.min(localDist, 32) * 0.25);
                 for (let y = botY; y <= topY; y++) setLocal(lx, y, lz, B.END_STONE);
               }
             }
@@ -2716,6 +2751,8 @@
       spawnPos: { dim: "overworld", x: 8.5, y: 36, z: 8.5 },
       hotbarIdx: 0,
       inv: new Array(36).fill(null),
+      offhand: null,      inv: new Array(36).fill(null),
+      armor: { head: null, chest: null, legs: null, feet: null },
       offhand: null,
       effects: { speed: 0, jump: 0, strength: 0, night_vision: 0 },
       bobTimer: 0,
@@ -3478,8 +3515,52 @@
       el.addEventListener("mousedown",e=>{if(e.button!==0&&e.button!==2)return;e.preventDefault();e.stopPropagation();if(e.button===2&&carriedStack){rightDragActive=true;rightDragVisited=new Set([el]);placeOne();}else{rightDragActive=false;applyInventorySlotClick(readStack,writeStack,e.button);}});
       el.addEventListener("mouseenter",e=>{if(rightDragActive&&(e.buttons&2)&&!rightDragVisited.has(el)){rightDragVisited.add(el);placeOne();}});
       el.addEventListener("contextmenu",e=>e.preventDefault());
+      el.addEventListener("dblclick", e => {
+        if (e.button !== 0 || !carriedStack) return;
+        e.preventDefault(); e.stopPropagation();
+        const wanted = carriedStack.id, cap = getItemInfo(wanted).stack || 64;
+        let space = Math.max(0, cap - carriedStack.count);
+        for (let i = 0; i < PLAYER.inv.length && space > 0; i++) {
+          const stack = PLAYER.inv[i];
+          if (!stack || String(stack.id) !== String(wanted)) continue;
+          const moved = Math.min(space, stack.count);
+          stack.count -= moved; space -= moved; carriedStack.count += moved;
+          if (stack.count <= 0) PLAYER.inv[i] = null;
+        }
+        if (currentGuiType === "chest" && activeChestKey) {
+          const chest = GAME.world.chests.get(activeChestKey);
+          if (chest) for (let i = 0; i < chest.length && space > 0; i++) {
+            const stack = chest[i];
+            if (!stack || String(stack.id) !== String(wanted)) continue;
+            const moved = Math.min(space, stack.count);
+            stack.count -= moved; space -= moved; carriedStack.count += moved;
+            if (stack.count <= 0) chest[i] = null;
+          }
+        }
+        SFX.click(); refreshAfterInventoryClick();
+      });
     }
     window.addEventListener("mouseup",e=>{if(e.button===2){rightDragActive=false;rightDragVisited.clear();}});
+
+    function bindArmorCursor(el, key) {
+      el.addEventListener("mousedown", e => {
+        if (e.button !== 0 && e.button !== 2) return;
+        e.preventDefault(); e.stopPropagation();
+        const current = PLAYER.armor[key];
+        const canEquip = item => !!ITEMS[item?.id] && ITEMS[item.id].equip === key;
+        if (!carriedStack) {
+          if (!current) return;
+          carriedStack = current; PLAYER.armor[key] = null;
+        } else if (!current) {
+          if (!canEquip(carriedStack)) return;
+          PLAYER.armor[key] = carriedStack; carriedStack = null;
+        } else if (canEquip(carriedStack)) {
+          PLAYER.armor[key] = carriedStack; carriedStack = current;
+        } else return;
+        refreshGuiGrids(); renderCarriedStack(); updateHUD();
+      });
+      el.addEventListener("contextmenu", e => e.preventDefault());
+    }
 
     function refreshGuiGrids() {
       const bp = document.getElementById("gui-backpack");
@@ -3491,6 +3572,11 @@
       hb.innerHTML = "";
       renderSlot(offSlot, PLAYER.offhand);
       bindInventoryCursor(offSlot, () => PLAYER.offhand, value => { PLAYER.offhand = value; });
+      for (const key of ["head", "chest", "legs", "feet"]) {
+        const slot = document.getElementById("armor-" + key + "-slot");
+        renderSlot(slot, PLAYER.armor[key]);
+        bindArmorCursor(slot, key);
+      }
 
       const makeInvSlot = (idx) => {
         const sl = document.createElement("div");
@@ -3913,6 +3999,9 @@
         return;
       }
 
+      const armorValue = Object.values(PLAYER.armor || {}).reduce((sum, stack) => sum + (stack ? (ITEMS[stack.id]?.armor || 0) : 0), 0);
+      const toughness = Object.values(PLAYER.armor || {}).reduce((sum, stack) => sum + (stack ? (ITEMS[stack.id]?.toughness || 0) : 0), 0);
+      amount *= 1 - Math.min(0.8, armorValue * 0.04 + Math.min(0.12, toughness * 0.015));
       PLAYER.invulnTimer = 0.55;
       PLAYER.health = Math.max(0, PLAYER.health - amount);
       SFX.hurt();
@@ -3934,6 +4023,12 @@
           if (PLAYER.offhand) {
             spawnDrop(PLAYER.pos.x, PLAYER.pos.y + 0.5, PLAYER.pos.z, PLAYER.offhand.id, PLAYER.offhand.count);
             PLAYER.offhand = null;
+          }          for (const key of ["head", "chest", "legs", "feet"]) {
+            const armorStack = PLAYER.armor[key];
+            if (armorStack) {
+              spawnDrop(PLAYER.pos.x, PLAYER.pos.y + 0.5, PLAYER.pos.z, armorStack.id, armorStack.count);
+              PLAYER.armor[key] = null;
+            }
           }
           PLAYER.xp = 0;
           PLAYER.level = 0;
