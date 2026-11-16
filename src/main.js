@@ -1217,11 +1217,25 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         this.setBlockRaw(hx + 1, hy + 1, hz + 2, B.BED_HEAD);
 
         // Wheat Farm
-        for (let fx = 0; fx < 5; fx++) {
-          for (let fz = 0; fz < 4; fz++) {
-            this.setBlockRaw(vx + 6 + fx, vy, vz + fz, fx === 2 ? B.WATER : B.FARMLAND);
-            if (fx !== 2) this.setBlockRaw(vx + 6 + fx, vy + 1, vz + fz, B.WHEAT_7);
+        for (let fx = 0; fx < 7; fx++) {
+          for (let fz = 0; fz < 6; fz++) {
+            this.setBlockRaw(vx + 6 + fx, vy, vz + fz, fx === 3 ? B.WATER : B.FARMLAND);
+            if (fx !== 3) this.setBlockRaw(vx + 6 + fx, vy + 1, vz + fz, B.WHEAT_7);
           }
+        }
+
+        // Extra village homes and profession workstations make the settlement larger and easier to recognize.
+        const cabins = [[vx + 13, vz - 5, B.CRAFTING_TABLE], [vx - 12, vz - 7, B.BOOKSHELF], [vx + 4, vz + 12, B.FURNACE]];
+        for (const [hx2, hz2, station] of cabins) {
+          const hy2 = Math.max(27, this.getSurfaceHeight(hx2, hz2));
+          for (let dx = -3; dx <= 3; dx++) for (let dz = -3; dz <= 3; dz++) {
+            this.setBlockRaw(hx2 + dx, hy2, hz2 + dz, B.COBBLESTONE);
+            for (let dy = 1; dy <= 3; dy++) this.setBlockRaw(hx2 + dx, hy2 + dy, hz2 + dz, (Math.abs(dx) === 3 || Math.abs(dz) === 3) ? B.OAK_PLANKS : B.AIR);
+            this.setBlockRaw(hx2 + dx, hy2 + 4, hz2 + dz, B.OAK_PLANKS);
+          }
+          this.setBlockRaw(hx2, hy2 + 1, hz2, station);
+          this.setBlockRaw(hx2, hy2 + 1, hz2 - 3, B.AIR);
+          this.setBlockRaw(hx2, hy2 + 2, hz2 - 3, B.AIR);
         }
       }
 
@@ -1447,6 +1461,10 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           const vy = Math.max(27, this.getSurfaceHeight(cx, cz));
           spawnMob("villager_fletcher", cx + 1, vy + 1, cz - 1);
           spawnMob("villager_blacksmith", cx - 1, vy + 1, cz + 1);
+          spawnMob("villager_cartographer", cx + 13, Math.max(27, this.getSurfaceHeight(cx + 13, cz - 5)) + 1, cz - 5);
+          spawnMob("villager_nitwit", cx - 12, Math.max(27, this.getSurfaceHeight(cx - 12, cz - 7)) + 1, cz - 7);
+          spawnMob("villager_farmer", cx + 7, vy + 1, cz + 2);
+          spawnMob("villager_cleric", cx + 4, Math.max(27, this.getSurfaceHeight(cx + 4, cz + 12)) + 1, cz + 12);
         } else if (h < 0.78) {
           this.buildPyramidAt(cx, cz);
         } else {
@@ -2393,8 +2411,8 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
     // 10. INVENTORY, OFF-HAND ('F'), CREATIVE CATALOG, CRAFTING & VILLAGER TRADE
     // =========================================================================
     function getItemInfo(id) {
-      if (typeof id === "number") return { name: BLOCK_PROPS[id]?.name || "Блок", icon: ATLAS.icons[id], stack: 64 };
-      return { name: ITEMS[id]?.name || id, icon: ATLAS.icons[id], stack: ITEMS[id]?.stack || 64 };
+      if (typeof id === "number") return { name: BLOCK_PROPS[id]?.name || "Блок", icon: ATLAS.icons[id] || null, stack: 64 };
+      return { name: ITEMS[id]?.name || id, icon: ATLAS.icons[id] || null, stack: ITEMS[id]?.stack || 64 };
     }
 
     function giveItem(id, count = 1) {
@@ -2449,7 +2467,16 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         img.src = info.icon;
         img.style.width = "28px";
         img.style.height = "28px";
+        img.alt = info.name;
+        img.onerror = () => { img.remove(); slotEl.textContent = String(info.name).slice(0, 2).toUpperCase(); };
         slotEl.appendChild(img);
+      } else {
+        const fallback = document.createElement("span");
+        fallback.className = "item-icon-fallback";
+        fallback.textContent = String(info.name).slice(0, 2).toUpperCase();
+        fallback.title = info.name;
+        fallback.style.cssText = "display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:4px;background:linear-gradient(135deg,#8a6b45,#3d5266);color:#fff;font-size:11px;font-weight:700;text-shadow:1px 1px #222;";
+        slotEl.appendChild(fallback);
       }
       if (stack.count > 1) {
         const cnt = document.createElement("span");
@@ -4219,7 +4246,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           addChatLine("/difficulty <peaceful|easy|normal|hard|0|1|2|3>");
           addChatLine("/give <предмет> [кол-во] • /tp <x> <y> <z> | spawn • /spawnpoint");
           addChatLine("/heal • /feed • /clear • /kill • /effect <speed|jump|strength|clear>");
-          addChatLine("/locate <village|pyramid|stronghold|mansion> • /seed");
+          addChatLine("/locate <village|pyramid|stronghold|mansion> • /mansion • /seed");
           break;
 
         case "gamerule":
@@ -4367,9 +4394,20 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
             logAndBroadcastCommand(`Найдена подземная крепость (Портал в Край): X=${s.x}, Y=${s.y}, Z=${s.z}`);
           } else if (a1 === "mansion") { const m=GAME.world.structures.woodlandMansions[0]; logAndBroadcastCommand(`Найден лесной особняк: X=${m.x}, Y=${m.y}, Z=${m.z}`);
           } else {
-            addChatLine("Использование: /locate <village|pyramid|stronghold>", "#c98b8b");
+            addChatLine("Использование: /locate <village|pyramid|stronghold|mansion>; /mansion — телепорт к особняку", "#c98b8b");
           }
           break;
+
+        case "mansion": {
+          const m = (GAME.world.structures.woodlandMansions || []).reduce((best, item) => !best || Math.hypot(item.x - PLAYER.pos.x, item.z - PLAYER.pos.z) < Math.hypot(best.x - PLAYER.pos.x, best.z - PLAYER.pos.z) ? item : best, null);
+          if (!m) { addChatLine("Особняк не найден.", "#c98b8b"); break; }
+          PLAYER.pos.set(m.x + 2.5, Math.max(m.y + 2, findSafeSurfaceY(m.x + 2, m.z + 2)), m.z + 2.5);
+          PLAYER.vel.set(0, 0, 0);
+          updateChunksAroundPlayer(true);
+          resolveStuckInBlocks();
+          logAndBroadcastCommand(`Телепортация к особняку: X=${m.x}, Y=${m.y}, Z=${m.z}`);
+          break;
+        }
 
         case "seed":
           addChatLine(`Сид мира: ${GAME.world.seed}`, "#a8c993");
@@ -5047,6 +5085,23 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
     ATLAS.materials[B.OBSERVER]=ATLAS.materials[B.STONE]; ATLAS.materials[B.SHULKER_BOX]=ATLAS.materials[B.OAK_PLANKS];
     ATLAS.icons[B.OBSERVER]=ATLAS.icons[B.STONE]; ATLAS.icons[B.SHULKER_BOX]=ATLAS.icons[B.CHEST];
     for(const [id,sourceId] of [["totem_of_undying","golden_apple"],["shulker_shell","quartz"],["iron_nugget","iron_ingot"],["paper","wheat"],["explorer_map_woodland","ender_eye"],["explorer_map_ocean","ender_eye"],["evoker_spawn_egg","ender_eye"],["vindicator_spawn_egg","ender_eye"],["vex_spawn_egg","ender_eye"],["llama_spawn_egg","ender_eye"]]){ATLAS.icons[id]=ATLAS.icons[sourceId];ATLAS.itemTextures[id]=ATLAS.itemTextures[sourceId];}
+    // Every registered item must have a visible catalogue icon, even if its custom art is missing.
+    for (const [id, info] of Object.entries(ITEMS)) {
+      if (!ATLAS.icons[id]) {
+        const icon = makePixelTex(ctx => {
+          const hue = Array.from(id).reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) >>> 0, 7) % 360;
+          ctx.fillStyle = `hsl(${hue}, 38%, 38%)`; ctx.fillRect(1, 1, 14, 14);
+          ctx.strokeStyle = "#e6dfc8"; ctx.strokeRect(1.5, 1.5, 13, 13);
+          ctx.fillStyle = "#fff"; ctx.font = "bold 7px sans-serif"; ctx.textAlign = "center";
+          ctx.fillText(String(info.name || id).slice(0, 2).toUpperCase(), 8, 10);
+        });
+        ATLAS.icons[id] = icon.dataUrl;
+        ATLAS.itemTextures[id] = icon.tex;
+      }
+    }
+    for (const id of [B.OBSERVER, B.SHULKER_BOX]) {
+      if (!ATLAS.icons[id]) ATLAS.icons[id] = ATLAS.icons[id === B.OBSERVER ? B.STONE : B.CHEST];
+    }
     GAME.world = new VoxelWorld(12345);
     const mansionSpawn=GAME.world.structures.woodlandMansions[0]; spawnMob("evoker",mansionSpawn.x+2,mansionSpawn.y+1,mansionSpawn.z+2); spawnMob("vindicator",mansionSpawn.x-3,mansionSpawn.y+1,mansionSpawn.z-2); spawnMob("vindicator",mansionSpawn.x+4,mansionSpawn.y+1,mansionSpawn.z-3);
     for (let dx = -2; dx <= 2; dx++) {
