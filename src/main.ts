@@ -4659,9 +4659,9 @@ const WORLD_CONFIG: WorldConfig = {
       GAME.world = new VoxelWorld(Number(save.seed) || 12345);
       GAME.world.buildStructures();
       for (const dim of ["overworld", "nether", "end"]) {
+        GAME.world.dimension = dim;
         const entries = save.modifications?.[dim] || [];
         const map = GAME.world.modifications[dim];
-        for (const [key, value] of entries) map.set(key, value);
         for (const [key, value] of entries) {
           const [x, y, z] = key.split(",").map(Number);
           GAME.world.setBlockRaw(x, y, z, value);
