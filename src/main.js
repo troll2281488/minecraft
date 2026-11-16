@@ -4392,15 +4392,26 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           } else if (a1 === "stronghold") {
             const s = GAME.world.structures.stronghold;
             logAndBroadcastCommand(`Найдена подземная крепость (Портал в Край): X=${s.x}, Y=${s.y}, Z=${s.z}`);
-          } else if (a1 === "mansion") { const m=GAME.world.structures.woodlandMansions[0]; logAndBroadcastCommand(`Найден лесной особняк: X=${m.x}, Y=${m.y}, Z=${m.z}`);
+          } else if (a1 === "mansion") {
+            const list = GAME.world.structures.woodlandMansions || [];
+            const m = list.reduce((best, item) => !best || Math.hypot(item.x - PLAYER.pos.x, item.z - PLAYER.pos.z) < Math.hypot(best.x - PLAYER.pos.x, best.z - PLAYER.pos.z) ? item : best, null);
+            if (!m) { addChatLine("Особняк ещё не найден в сгенерированных регионах. Используй /mansion, чтобы принудительно создать точку поиска.", "#c98b8b"); break; }
+            const distance = Math.round(Math.hypot(m.x - PLAYER.pos.x, m.z - PLAYER.pos.z));
+            logAndBroadcastCommand(`Ближайший лесной особняк: X=${m.x}, Y=${m.y}, Z=${m.z} (примерно ${distance} блоков). /mansion — телепорт.`);
           } else {
             addChatLine("Использование: /locate <village|pyramid|stronghold|mansion>; /mansion — телепорт к особняку", "#c98b8b");
           }
           break;
 
         case "mansion": {
-          const m = (GAME.world.structures.woodlandMansions || []).reduce((best, item) => !best || Math.hypot(item.x - PLAYER.pos.x, item.z - PLAYER.pos.z) < Math.hypot(best.x - PLAYER.pos.x, best.z - PLAYER.pos.z) ? item : best, null);
-          if (!m) { addChatLine("Особняк не найден.", "#c98b8b"); break; }
+          if (!GAME.world.structures.woodlandMansions?.length) {
+            const base = getMansionCoordinates(GAME.world.seed);
+            const ground = GAME.world.getSurfaceHeight(base.x, base.z);
+            const mansion = { x: base.x, y: Math.max(28, ground + 1), z: base.z };
+            GAME.world.structures.woodlandMansions.push(mansion);
+            GAME.world.buildWoodlandMansionAt?.(mansion.x, mansion.y, mansion.z);
+          }
+          const m = GAME.world.structures.woodlandMansions.reduce((best, item) => !best || Math.hypot(item.x - PLAYER.pos.x, item.z - PLAYER.pos.z) < Math.hypot(best.x - PLAYER.pos.x, best.z - PLAYER.pos.z) ? item : best, null);
           PLAYER.pos.set(m.x + 2.5, Math.max(m.y + 2, findSafeSurfaceY(m.x + 2, m.z + 2)), m.z + 2.5);
           PLAYER.vel.set(0, 0, 0);
           updateChunksAroundPlayer(true);
