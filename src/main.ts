@@ -255,7 +255,58 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       stone_sword: { name: "Каменный меч", cat: "tools", stack: 1, damage: 5 },
       iron_sword: { name: "Железный меч", cat: "tools", stack: 1, damage: 6 },
       diamond_sword: { name: "Алмазный меч", cat: "tools", stack: 1, damage: 8 },
-      wood_hoe: { name: "Деревянная мотыга", cat: "tools", stack: 1, tool: "hoe" }
+      wood_hoe: { name: "Деревянная мотыга", cat: "tools", stack: 1, tool: "hoe" },
+      wood_shovel: { name: "Деревянная лопата", cat: "tools", stack: 1, tool: "shovel", tier: 1 },
+      stone_shovel: { name: "Каменная лопата", cat: "tools", stack: 1, tool: "shovel", tier: 2 },
+      iron_shovel: { name: "Железная лопата", cat: "tools", stack: 1, tool: "shovel", tier: 3 },
+      diamond_shovel: { name: "Алмазная лопата", cat: "tools", stack: 1, tool: "shovel", tier: 4 },
+      netherite_shovel: { name: "Незеритовая лопата", cat: "tools", stack: 1, tool: "shovel", tier: 5 },
+      stone_hoe: { name: "Каменная мотыга", cat: "tools", stack: 1, tool: "hoe", tier: 2 },
+      iron_hoe: { name: "Железная мотыга", cat: "tools", stack: 1, tool: "hoe", tier: 3 },
+      diamond_hoe: { name: "Алмазная мотыга", cat: "tools", stack: 1, tool: "hoe", tier: 4 },
+      netherite_axe: { name: "Незеритовый топор", cat: "tools", stack: 1, tool: "axe", tier: 5, damage: 10 },
+      netherite_hoe: { name: "Незеритовая мотыга", cat: "tools", stack: 1, tool: "hoe", tier: 5 },
+      cooked_porkchop: { name: "Жареная свинина", cat: "armor_food", stack: 64, food: 8 },
+      porkchop: { name: "Сырая свинина", cat: "armor_food", stack: 64, food: 3 },
+      cooked_mutton: { name: "Жареная баранина", cat: "armor_food", stack: 64, food: 6 },
+      mutton: { name: "Сырая баранина", cat: "armor_food", stack: 64, food: 2 },
+      cooked_rabbit: { name: "Жареный кролик", cat: "armor_food", stack: 64, food: 5 },
+      rabbit: { name: "Сырой кролик", cat: "armor_food", stack: 64, food: 3 },
+      rabbit_stew: { name: "Тушёный кролик", cat: "armor_food", stack: 1, food: 10 },
+      mushroom_stew: { name: "Грибной суп", cat: "armor_food", stack: 1, food: 6 },
+      beetroot: { name: "Свёкла", cat: "armor_food", stack: 64, food: 1 },
+      beetroot_soup: { name: "Свекольный суп", cat: "armor_food", stack: 1, food: 6 },
+      cookie: { name: "Печенье", cat: "armor_food", stack: 64, food: 2 },
+      melon_slice: { name: "Ломтик арбуза", cat: "armor_food", stack: 64, food: 2 },
+      cooked_fish: { name: "Жареная рыба", cat: "armor_food", stack: 64, food: 5 },
+      raw_fish: { name: "Сырая рыба", cat: "armor_food", stack: 64, food: 2 },
+      cooked_salmon: { name: "Жареный лосось", cat: "armor_food", stack: 64, food: 6 },
+      raw_salmon: { name: "Сырой лосось", cat: "armor_food", stack: 64, food: 2 },
+      chorus_fruit: { name: "Плод хоруса", cat: "armor_food", stack: 64, food: 4 },
+      poisonous_potato: { name: "Ядовитый картофель", cat: "armor_food", stack: 64, food: 2 },
+      rotten_flesh: { name: "Гнилая плоть", cat: "armor_food", stack: 64, food: 4 },
+      spider_eye: { name: "Паучий глаз", cat: "misc", stack: 64 },
+      slime_ball: { name: "Слизь", cat: "misc", stack: 64 },
+      gunpowder: { name: "Порох", cat: "misc", stack: 64 },
+      flint: { name: "Кремень", cat: "misc", stack: 64 },
+      snowball: { name: "Снежок", cat: "misc", stack: 16 },
+      paper: { name: "Бумага", cat: "misc", stack: 64 },
+      book: { name: "Книга", cat: "misc", stack: 64 },
+      sugar: { name: "Сахар", cat: "misc", stack: 64 },
+      cocoa_beans: { name: "Какао-бобы", cat: "misc", stack: 64 },
+      saddle: { name: "Седло", cat: "misc", stack: 1 },
+      fishing_rod: { name: "Удочка", cat: "tools", stack: 1 },
+      shears: { name: "Ножницы", cat: "tools", stack: 1 },
+      compass: { name: "Компас", cat: "misc", stack: 64 },
+      clock: { name: "Часы", cat: "misc", stack: 64 },
+      lead: { name: "Поводок", cat: "misc", stack: 64 },
+      name_tag: { name: "Бирка", cat: "misc", stack: 64 },
+      experience_bottle: { name: "Пузырёк опыта", cat: "misc", stack: 64 },
+      prismarine_shard: { name: "Осколок призмарина", cat: "misc", stack: 64 },
+      rabbit_hide: { name: "Кроличья шкурка", cat: "misc", stack: 64 },
+      rabbit_foot: { name: "Кроличья лапка", cat: "misc", stack: 64 },
+      end_crystal: { name: "Кристалл Энда", cat: "misc", stack: 64 },
+      trident: { name: "Трезубец", cat: "tools", stack: 1, damage: 9, trident: true }
     };
 
     const ATLAS = {
@@ -993,7 +1044,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
     // =========================================================================
     const canvas = document.getElementById("game-canvas");
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -1918,11 +1969,22 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       const armRMesh = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.68, 0.2), new THREE.MeshLambertMaterial({ color: cfg.skin }));
       armRMesh.position.y = -0.32; armR.add(armRMesh);
 
+      const armorParts = {
+        head: new THREE.Mesh(new THREE.BoxGeometry(0.54,0.54,0.54), new THREE.MeshLambertMaterial({color:0x9da6ad})),
+        chest: new THREE.Mesh(new THREE.BoxGeometry(0.54,0.76,0.30), new THREE.MeshLambertMaterial({color:0x9da6ad})),
+        legs: new THREE.Mesh(new THREE.BoxGeometry(0.52,0.68,0.28), new THREE.MeshLambertMaterial({color:0x9da6ad})),
+        feet: new THREE.Mesh(new THREE.BoxGeometry(0.52,0.20,0.28), new THREE.MeshLambertMaterial({color:0x9da6ad}))
+      };
+      armorParts.head.position.y = 1.66;
+      armorParts.chest.position.y = 1.06;
+      armorParts.legs.position.y = 0.38;
+      armorParts.feet.position.y = 0.10;
+      Object.values(armorParts).forEach(m => { m.visible = false; root.add(m); });
       root.add(headPivot, torso, legL, legR, armL, armR);
       if (nametag) root.add(makeNameSprite(nametag));
       scene.add(root);
 
-      return { root, headPivot, torso, legL, legR, armL, armR, offShield, phase: 0 };
+      return { root, headPivot, torso, legL, legR, armL, armR, offShield, armorParts, phase: 0 };
     }
 
     function animateHumanoidRig(rig, dt, state) {
@@ -1932,6 +1994,18 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       else rig.phase = 0;
 
       const swing = Math.sin(rig.phase) * (state.sprinting ? 0.85 : 0.55);
+      if (rig.armorParts) {
+        const armorIds = state.armor || {};
+        for (const [slot, mesh] of Object.entries(rig.armorParts)) {
+          const armorId = armorIds[slot];
+          mesh.visible = !!armorId;
+          if (armorId) {
+            const tier = String(armorId).split("_")[0];
+            const colors = { leather: 0x98633b, chainmail: 0x9da6ad, gold: 0xe6c13d, iron: 0xbfc7cc, diamond: 0x48c8b6, netherite: 0x51464d };
+            mesh.material.color.setHex(colors[tier] || 0x9da6ad);
+          }
+        }
+      }
       rig.legL.rotation.x = swing;
       rig.legR.rotation.x = -swing;
 
@@ -2709,8 +2783,29 @@ const WORLD_CONFIG: WorldConfig = {
     // =========================================================================
     // 10. INVENTORY, OFF-HAND ('F'), CREATIVE CATALOG, CRAFTING & VILLAGER TRADE
     // =========================================================================
+    const generatedItemIcons = new Set();
+    function ensureItemIcon(id) {
+      if (ATLAS.icons[id] && ATLAS.itemTextures[id]) return;
+      if (generatedItemIcons.has(id)) return;
+      generatedItemIcons.add(id);
+      const palette = /netherite/.test(String(id)) ? ["#51464d","#8d7b80","#302b31"] :
+        /diamond/.test(String(id)) ? ["#42c9b5","#b4fff0","#237d78"] :
+        /gold/.test(String(id)) ? ["#e9c642","#fff09a","#9b721b"] :
+        /iron|chainmail/.test(String(id)) ? ["#b9c2c8","#eef2f4","#66727a"] :
+        /leather/.test(String(id)) ? ["#98633b","#c18a55","#55351f"] :
+        /food|apple|bread|meat|fish|carrot|potato|stew|cookie|melon|beetroot/.test(String(id)) ? ["#c58b42","#e8c477","#8c4b2d"] :
+        ["#8a8a8a","#d0d0d0","#505050"];
+      const icon = makePixelTex(ctx => {
+        ctx.clearRect(0,0,16,16); ctx.fillStyle=palette[2]; ctx.fillRect(3,3,10,10);
+        ctx.fillStyle=palette[0]; ctx.fillRect(4,2,8,12); ctx.fillRect(2,5,12,6);
+        ctx.fillStyle=palette[1]; ctx.fillRect(5,3,3,3); ctx.fillRect(9,7,2,3);
+      });
+      ATLAS.icons[id] = icon.dataUrl;
+      ATLAS.itemTextures[id] = icon.tex;
+    }
     function getItemInfo(id) {
       if (typeof id === "number") return { name: BLOCK_PROPS[id]?.name || "Блок", icon: ATLAS.icons[id], stack: 64 };
+      ensureItemIcon(id);
       return { name: ITEMS[id]?.name || id, icon: ATLAS.icons[id], stack: ITEMS[id]?.stack || 64 };
     }
 
@@ -3957,7 +4052,8 @@ const WORLD_CONFIG: WorldConfig = {
           blocking: PLAYER.blockingShield,
           aimingBow: PLAYER.isPullingBow,
           hasOffShield: PLAYER.offhand?.id === "shield",
-          pitch: PLAYER.pitch
+          pitch: PLAYER.pitch,
+          armor: Object.fromEntries(Object.entries(PLAYER.armor || {}).map(([slot, stack]) => [slot, stack?.id || null]))
         });
       }
 
@@ -4323,6 +4419,7 @@ const WORLD_CONFIG: WorldConfig = {
         await set(myRef, {
           name: MP.nickname,
           skin: GAME.skin,
+          armor: Object.fromEntries(Object.entries(PLAYER.armor || {}).map(([slot, stack]) => [slot, stack?.id || null])),
           dim: GAME.world.dimension,
           x: Number(PLAYER.pos.x.toFixed(2)),
           y: Number(PLAYER.pos.y.toFixed(2)),
@@ -4435,7 +4532,8 @@ const WORLD_CONFIG: WorldConfig = {
           blocking: !!rp.data.blocking,
           aimingBow: !!rp.data.aimingBow,
           hasOffShield: !!rp.data.hasOffShield,
-          pitch: rp.targetPitch
+          pitch: rp.targetPitch,
+          armor: rp.data.armor || {}
         });
       }
 
