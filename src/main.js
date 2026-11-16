@@ -27,6 +27,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
 
     const MP = {
       active: false,
+      isHost: false,
       roomId: null,
       playerId: "p_" + Math.random().toString(36).slice(2, 10),
       nickname: "Steve",
@@ -34,6 +35,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       remotePlayers: new Map(),
       unsubs: [],
       syncAccum: 0,
+      stateAccum: 0,
       sweepTimer: null,
       pingTimer: null
     };
@@ -3733,6 +3735,8 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         remove(ref(fbDb, `minecraft_game/rooms/${MP.roomId}/players/${MP.playerId}`));
       }
       MP.active = false;
+      MP.isHost = false;
+      MP.stateAccum = 0;
       MP.roomId = null;
       document.getElementById("hud-mp-status").classList.add("hidden");
       document.getElementById("btn-copy-room").classList.add("hidden");
@@ -3860,95 +3864,161 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
 
     async function joinMultiplayerRoom(roomId, isCreator = false) {
       if (!fbDb) { showBanner("Firebase не подключен!"); return; }
-      leaveMultiplayerRoom();
-      MP.nickname = document.getElementById("mp-nickname").value.trim() || "Steve";
-      MP.roomId = roomId.toUpperCase();
-      MP.active = true;
-
-      const roomRef = ref(fbDb, `minecraft_game/rooms/${MP.roomId}`);
-      let seedToUse = 77742;
-      if (isCreator) {
-        await set(roomRef, { seed: seedToUse, createdAt: Date.now() });
-      } else {
-        const snap = await get(roomRef);
-        if (snap.exists() && snap.val().seed) seedToUse = snap.val().seed;
-        else await set(roomRef, { seed: seedToUse, createdAt: Date.now() });
+      const normalizedRoomId = String(roomId || "").trim().toUpperCase();
+      if (!/^[A-Z0-9]{4,8}$/.test(normalizedRoomId)) {
+        showBanner("Код комнаты должен содержать 4–8 латинских букв или цифр.");
+        return;
       }
 
-      startNewWorld({
-        name: `Сервер ${MP.roomId}`,
-        seedInput: String(seedToUse),
-        gamemode: "survival",
-        difficulty: "normal",
-        bonusChest: isCreator,
-        keepInventory: false,
-        allowCheats: true,
-        doDaylightCycle: true
-      });
+      leaveMultiplayerRoom();
+      MP.nickname = document.getElementById("mp-nickname").value.trim().slice(0, 16) || "Steve";
+      MP.roomId = normalizedRoomId;
+      const roomRef = ref(fbDb, `minecraft_game/rooms/${MP.roomId}`);
 
-      document.getElementById("hud-mp-status").classList.remove("hidden");
-      document.getElementById("btn-copy-room").classList.remove("hidden");
-
-      const myRef = ref(fbDb, `minecraft_game/rooms/${MP.roomId}/players/${MP.playerId}`);
-      onDisconnect(myRef).remove();
-
-      await set(myRef, {
-        name: MP.nickname,
-        skin: GAME.skin,
-        dim: GAME.world.dimension,
-        x: Number(PLAYER.pos.x.toFixed(2)),
-        y: Number(PLAYER.pos.y.toFixed(2)),
-        z: Number(PLAYER.pos.z.toFixed(2)),
-        yaw: 0,
-        pitch: 0,
-        moving: false,
-        sprinting: false,
-        sneaking: false,
-        swinging: false,
-        blocking: false,
-        aimingBow: false,
-        hasOffShield: false,
-        ping: MP.pingMs,
-        lastSeen: Date.now()
-      });
-
-      const unsubPlayers = onValue(ref(fbDb, `minecraft_game/rooms/${MP.roomId}/players`), snap => {
-        applyPlayersSnapshot(snap.val());
-      });
-      MP.unsubs.push(unsubPlayers);
-
-      MP.sweepTimer = setInterval(async () => {
-        if (!MP.active || !fbDb || !MP.roomId) return;
-        try {
-          const snap = await get(ref(fbDb, `minecraft_game/rooms/${MP.roomId}/players`));
-          applyPlayersSnapshot(snap.val());
-        } catch (_) {}
-      }, 1500);
-
-      measureFirebasePing();
-      MP.pingTimer = setInterval(measureFirebasePing, 2000);
-
-      const unsubBlocks = onChildAdded(ref(fbDb, `minecraft_game/rooms/${MP.roomId}/blocks`), snap => {
-        const b = snap.val();
-        if (!b || b.by === MP.playerId) return;
-        if (GAME.world && b.dim === GAME.world.dimension) {
-          GAME.world.setBlock(b.x, b.y, b.z, b.id, false);
-        }
-      });
-      MP.unsubs.push(unsubBlocks);
-
-      const unsubChat = onChildAdded(ref(fbDb, `minecraft_game/rooms/${MP.roomId}/chat`), snap => {
-        const msg = snap.val();
-        if (!msg || msg.by === MP.playerId) return;
-        if (msg.isCmdLog) {
-          addChatLine(`[${msg.name}: ${msg.text}]`, "#a4a4a4", true);
+      try {
+        let roomData;
+        if (isCreator) {
+          const seedToUse = Math.floor(Math.random() * 2147483646) + 1;
+          roomData = {
+            schema: 2,
+            seed: seedToUse,
+            hostId: MP.playerId,
+            createdAt: Date.now(),
+            config: {
+              gamemode: "survival",
+              difficulty: "normal",
+              bonusChest: false,
+              keepInventory: false,
+              allowCheats: true,
+              doDaylightCycle: true
+            },
+            state: {
+              dimension: "overworld",
+              timeOfDay: 1800,
+              dayCount: 1,
+              weather: "clear",
+              gamemode: "survival",
+              difficulty: "normal",
+              keepInventory: false,
+              doDaylightCycle: true
+            }
+          };
+          await set(roomRef, roomData);
+          MP.isHost = true;
         } else {
-          addChatLine(`<${msg.name}> ${msg.text}`, "#dcdcdc");
+          const snap = await get(roomRef);
+          if (!snap.exists()) {
+            MP.roomId = null;
+            showBanner("Комната не найдена. Проверь код или обнови список.");
+            return;
+          }
+          roomData = snap.val();
+          if (!roomData || !Number.isFinite(Number(roomData.seed))) {
+            MP.roomId = null;
+            showBanner("У комнаты повреждены данные мира.");
+            return;
+          }
+          MP.isHost = roomData.hostId === MP.playerId;
         }
-      });
-      MP.unsubs.push(unsubChat);
 
-      addChatLine(`[Мультиплеер] Код комнаты: ${MP.roomId}. Удерживайте TAB для списка игроков и пинга.`, "#d6cf82");
+        const cfg = roomData.config || {};
+        startNewWorld({
+          name: `Сервер ${MP.roomId}`,
+          seedInput: String(roomData.seed),
+          gamemode: cfg.gamemode || "survival",
+          difficulty: cfg.difficulty || "normal",
+          bonusChest: !!cfg.bonusChest,
+          keepInventory: !!cfg.keepInventory,
+          allowCheats: cfg.allowCheats !== false,
+          doDaylightCycle: cfg.doDaylightCycle !== false
+        });
+
+        MP.active = true;
+        document.getElementById("hud-mp-status").classList.remove("hidden");
+        document.getElementById("btn-copy-room").classList.remove("hidden");
+
+        const myRef = ref(fbDb, `minecraft_game/rooms/${MP.roomId}/players/${MP.playerId}`);
+        await onDisconnect(myRef).remove();
+        await set(myRef, {
+          name: MP.nickname,
+          skin: GAME.skin,
+          dim: GAME.world.dimension,
+          x: Number(PLAYER.pos.x.toFixed(2)),
+          y: Number(PLAYER.pos.y.toFixed(2)),
+          z: Number(PLAYER.pos.z.toFixed(2)),
+          yaw: 0,
+          pitch: 0,
+          moving: false,
+          sprinting: false,
+          sneaking: false,
+          swinging: false,
+          blocking: false,
+          aimingBow: false,
+          hasOffShield: false,
+          ping: MP.pingMs,
+          lastSeen: Date.now()
+        });
+
+        const unsubPlayers = onValue(ref(fbDb, `minecraft_game/rooms/${MP.roomId}/players`), snap => {
+          applyPlayersSnapshot(snap.val());
+        });
+        MP.unsubs.push(unsubPlayers);
+
+        const unsubRoomState = onValue(ref(fbDb, `minecraft_game/rooms/${MP.roomId}/state`), snap => {
+          if (MP.isHost || !snap.exists() || !GAME.world) return;
+          const state = snap.val();
+          if (state.dimension && state.dimension !== GAME.world.dimension) {
+            switchDimension(state.dimension);
+          }
+          if (Number.isFinite(state.timeOfDay)) GAME.timeOfDay = state.timeOfDay;
+          if (Number.isFinite(state.dayCount)) GAME.dayCount = state.dayCount;
+          if (state.weather) GAME.weather = state.weather;
+          if (state.gamemode) GAME.gamemode = state.gamemode;
+          if (state.difficulty) GAME.difficulty = state.difficulty;
+          if (typeof state.keepInventory === "boolean") GAME.keepInventory = state.keepInventory;
+          if (typeof state.doDaylightCycle === "boolean") GAME.doDaylightCycle = state.doDaylightCycle;
+          updateEnvironment(0);
+          updateHUD();
+        });
+        MP.unsubs.push(unsubRoomState);
+
+        MP.sweepTimer = setInterval(async () => {
+          if (!MP.active || !fbDb || !MP.roomId) return;
+          try {
+            const snap = await get(ref(fbDb, `minecraft_game/rooms/${MP.roomId}/players`));
+            applyPlayersSnapshot(snap.val());
+          } catch (_) {}
+        }, 3000);
+
+        measureFirebasePing();
+        MP.pingTimer = setInterval(measureFirebasePing, 3000);
+
+        const unsubBlocks = onChildAdded(ref(fbDb, `minecraft_game/rooms/${MP.roomId}/blocks`), snap => {
+          const b = snap.val();
+          if (!b || b.by === MP.playerId) return;
+          if (GAME.world && b.dim === GAME.world.dimension) {
+            GAME.world.setBlock(b.x, b.y, b.z, b.id, false);
+          }
+        });
+        MP.unsubs.push(unsubBlocks);
+
+        const unsubChat = onChildAdded(ref(fbDb, `minecraft_game/rooms/${MP.roomId}/chat`), snap => {
+          const msg = snap.val();
+          if (!msg || msg.by === MP.playerId) return;
+          if (msg.isCmdLog) {
+            addChatLine(`[${msg.name}: ${msg.text}]`, "#a4a4a4", true);
+          } else {
+            addChatLine(`<${msg.name}> ${msg.text}`, "#dcdcdc");
+          }
+        });
+        MP.unsubs.push(unsubChat);
+
+        addChatLine(`[Мультиплеер] ${MP.isHost ? "Вы владелец мира. " : ""}Код комнаты: ${MP.roomId}. Удерживайте TAB для списка игроков и пинга.`, "#d6cf82");
+      } catch (err) {
+        console.error("Multiplayer join failed:", err);
+        leaveMultiplayerRoom();
+        showBanner(`Не удалось подключиться: ${err.message || "ошибка сети"}`);
+      }
     }
 
     function tickMultiplayer(dt) {
@@ -3968,6 +4038,21 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           hasOffShield: !!rp.data.hasOffShield,
           pitch: rp.targetPitch
         });
+      }
+
+      MP.stateAccum += dt;
+      if (MP.isHost && MP.stateAccum >= 1) {
+        MP.stateAccum = 0;
+        update(ref(fbDb, `minecraft_game/rooms/${MP.roomId}/state`), {
+          dimension: GAME.world.dimension,
+          timeOfDay: Number(GAME.timeOfDay.toFixed(2)),
+          dayCount: GAME.dayCount,
+          weather: GAME.weather,
+          gamemode: GAME.gamemode,
+          difficulty: GAME.difficulty,
+          keepInventory: GAME.keepInventory,
+          doDaylightCycle: GAME.doDaylightCycle
+        }).catch(() => {});
       }
 
       MP.syncAccum += dt;
