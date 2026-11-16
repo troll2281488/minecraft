@@ -3350,7 +3350,7 @@ const WORLD_CONFIG: WorldConfig = {
       // Survival hunger and natural regeneration.
       if (GAME.gamemode === "survival" && GAME.difficulty !== "peaceful") {
         const moving = keys["KeyW"] || keys["KeyA"] || keys["KeyS"] || keys["KeyD"];
-        PLAYER.hungerTick += dt * (PLAYER.sprinting && moving ? 1.8 : moving ? 0.65 : 0.12);
+        PLAYER.hungerTick += dt * (PLAYER.sprinting && moving ? 2.8 : moving ? 1.0 : 0.2);
         if (PLAYER.hungerTick >= 18) {
           PLAYER.hungerTick = 0;
           PLAYER.hunger = Math.max(0, PLAYER.hunger - 1);
@@ -3382,8 +3382,8 @@ const WORLD_CONFIG: WorldConfig = {
       if (keys["KeyD"]) strafe += 1;
 
       if (forward <= 0) doubleWSprint = false;
-      PLAYER.sneaking = !!(keys["KeyC"] || keys["AltLeft"] || keys["AltRight"]);
-      PLAYER.sprinting = !!((keys["ShiftLeft"] || keys["ShiftRight"] || doubleWSprint) && forward > 0 && !PLAYER.sneaking && !PLAYER.blockingShield && !PLAYER.isPullingBow);
+      PLAYER.sneaking = !!(keys["ShiftLeft"] || keys["ShiftRight"]);
+      PLAYER.sprinting = !!((keys["ControlLeft"] || keys["ControlRight"] || doubleWSprint) && forward > 0 && !PLAYER.sneaking && !PLAYER.blockingShield && !PLAYER.isPullingBow);
 
       let moveSpeed = (PLAYER.sneaking || PLAYER.blockingShield || PLAYER.isPullingBow) ? 2.1 : PLAYER.sprinting ? 6.4 : 4.4;
       if (PLAYER.flying) moveSpeed *= 1.8;
@@ -4563,6 +4563,145 @@ const WORLD_CONFIG: WorldConfig = {
       return GAME.world.getSurfaceHeight(ix, iz) + 1.5;
     }
 
+
+    // Local single-player world saves. World terrain is deterministic; only changed
+    // blocks and player/world state need to be stored in localStorage.
+    const WORLD_SAVES_KEY = "minecraft_web_world_saves_v1";
+    let activeSaveId = null;
+    let saveClock = 0;
+
+    function readWorldSaves() {
+      try { return JSON.parse(localStorage.getItem(WORLD_SAVES_KEY) || "[]"); }
+      catch (error) { console.warn("Не удалось прочитать сохранения:", error); return []; }
+    }
+
+    function saveCurrentWorld() {
+      if (!GAME.world || MP.active || GAME.state === "menu") return;
+      try {
+        const saves = readWorldSaves();
+        const id = activeSaveId || ("world_" + Date.now().toString(36));
+        activeSaveId = id;
+        const data = {
+          id,
+          name: GAME.worldName || "Мой мир",
+          seed: GAME.world.seed,
+          dimension: GAME.world.dimension,
+          modifications: Object.fromEntries(Object.entries(GAME.world.modifications).map(([dim, map]) => [dim, Array.from(map.entries())])),
+          player: {
+            pos: PLAYER.pos.toArray(), yaw: PLAYER.yaw, pitch: PLAYER.pitch,
+            health: PLAYER.health, hunger: PLAYER.hunger, air: PLAYER.air,
+            fireTicks: PLAYER.fireTicks, xp: PLAYER.xp, level: PLAYER.level,
+            spawnPos: PLAYER.spawnPos, inv: PLAYER.inv, offhand: PLAYER.offhand,
+            armor: PLAYER.armor, hotbarIdx: PLAYER.hotbarIdx, flying: PLAYER.flying
+          },
+          game: {
+            gamemode: GAME.gamemode, difficulty: GAME.difficulty,
+            keepInventory: GAME.keepInventory, allowCheats: GAME.allowCheats,
+            doDaylightCycle: GAME.doDaylightCycle, timeOfDay: GAME.timeOfDay,
+            dayCount: GAME.dayCount, weather: GAME.weather
+          },
+          updatedAt: Date.now()
+        };
+        const index = saves.findIndex(item => item.id === id);
+        if (index >= 0) saves[index] = data; else saves.unshift(data);
+        localStorage.setItem(WORLD_SAVES_KEY, JSON.stringify(saves));
+        renderSavedWorlds();
+      } catch (error) {
+        console.warn("Не удалось сохранить мир (возможно, закончилось место):", error);
+        showBanner("Не удалось сохранить мир: проверьте свободное место браузера");
+      }
+    }
+
+    function renderSavedWorlds() {
+      const list = document.getElementById("saved-world-list");
+      if (!list) return;
+      const saves = readWorldSaves();
+      list.innerHTML = "";
+      if (!saves.length) {
+        list.innerHTML = '<div style="color:#aaa;text-align:center;padding:12px;font-size:19px;">Сохранённых миров пока нет</div>';
+        return;
+      }
+      for (const save of saves) {
+        const row = document.createElement("div");
+        row.className = "room-item";
+        const info = document.createElement("div");
+        info.style.cssText = "display:flex;flex-direction:column;gap:2px;min-width:0";
+        const name = document.createElement("strong");
+        name.textContent = save.name || "Мир без названия";
+        const meta = document.createElement("span");
+        meta.style.cssText = "font-size:16px;color:#aaa";
+        meta.textContent = "Сид: " + save.seed + " • " + new Date(save.updatedAt || Date.now()).toLocaleString();
+        info.append(name, meta);
+        const actions = document.createElement("div");
+        actions.style.cssText = "display:flex;gap:5px;flex-shrink:0";
+        const play = document.createElement("button");
+        play.className = "mc-btn"; play.textContent = "Играть";
+        play.onclick = () => loadSavedWorld(save.id);
+        const del = document.createElement("button");
+        del.className = "mc-btn"; del.textContent = "Удалить";
+        del.onclick = () => {
+          if (!confirm('Удалить мир "' + (save.name || "Мир") + '"?')) return;
+          localStorage.setItem(WORLD_SAVES_KEY, JSON.stringify(readWorldSaves().filter(item => item.id !== save.id)));
+          renderSavedWorlds();
+        };
+        actions.append(play, del); row.append(info, actions); list.appendChild(row);
+      }
+    }
+
+    function loadSavedWorld(id) {
+      const save = readWorldSaves().find(item => item.id === id);
+      if (!save) { showBanner("Сохранение не найдено"); renderSavedWorlds(); return; }
+      leaveMultiplayerRoom();
+      clearAllEntities();
+      if (GAME.world) GAME.world.clearAllMeshes();
+      if (PLAYER.rig) scene.remove(PLAYER.rig.root);
+      PLAYER.rig = createHumanoidRig(GAME.skin);
+      GAME.world = new VoxelWorld(Number(save.seed) || 12345);
+      GAME.world.buildStructures();
+      for (const dim of ["overworld", "nether", "end"]) {
+        const entries = save.modifications?.[dim] || [];
+        const map = GAME.world.modifications[dim];
+        for (const [key, value] of entries) map.set(key, value);
+        for (const [key, value] of entries) {
+          const [x, y, z] = key.split(",").map(Number);
+          GAME.world.setBlockRaw(x, y, z, value);
+        }
+      }
+      GAME.world.dimension = save.dimension || "overworld";
+      const g = save.game || {};
+      GAME.gamemode = g.gamemode || "survival";
+      GAME.difficulty = g.difficulty || "normal";
+      GAME.keepInventory = !!g.keepInventory;
+      GAME.allowCheats = g.allowCheats !== false;
+      GAME.doDaylightCycle = g.doDaylightCycle !== false;
+      GAME.timeOfDay = Number(g.timeOfDay ?? 1800);
+      GAME.dayCount = Number(g.dayCount ?? 1);
+      GAME.weather = g.weather || "clear";
+      const p = save.player || {};
+      if (Array.isArray(p.pos)) PLAYER.pos.fromArray(p.pos);
+      PLAYER.yaw = Number(p.yaw || 0); PLAYER.pitch = Number(p.pitch || 0);
+      PLAYER.vel.set(0, 0, 0);
+      PLAYER.health = Number(p.health ?? 20); PLAYER.hunger = Number(p.hunger ?? 20);
+      PLAYER.air = Number(p.air ?? 300); PLAYER.fireTicks = Number(p.fireTicks || 0);
+      PLAYER.xp = Number(p.xp || 0); PLAYER.level = Number(p.level || 0);
+      PLAYER.spawnPos = p.spawnPos || {dim:"overworld",x:8.5,y:36,z:8.5};
+      PLAYER.inv = Array.isArray(p.inv) ? p.inv : new Array(36).fill(null);
+      PLAYER.offhand = p.offhand || null;
+      PLAYER.armor = p.armor || {head:null,chest:null,legs:null,feet:null};
+      PLAYER.hotbarIdx = Number(p.hotbarIdx || 0); PLAYER.flying = !!p.flying;
+      GAME.worldName = save.name || "Мой мир";
+      activeSaveId = save.id;
+      updateChunksAroundPlayer(true);
+      resolveStuckInBlocks();
+      updateHotbarUI(); updateHUD();
+      document.querySelectorAll(".screen-overlay").forEach(el => el.classList.add("hidden"));
+      document.getElementById("hud").classList.remove("hidden");
+      GAME.state = "playing";
+      addChatLine('[Мир "' + GAME.worldName + '"] Сохранение загружено.', "#d6cf82");
+      requestLock();
+      showBanner("Мир загружен • Автосохранение включено");
+    }
+
     function startNewWorld(cfg) {
       clearAllEntities();
       if (GAME.world) GAME.world.clearAllMeshes();
@@ -4570,6 +4709,8 @@ const WORLD_CONFIG: WorldConfig = {
       PLAYER.rig = createHumanoidRig(GAME.skin);
 
       const numericSeed = parseSeed(cfg.seedInput);
+      activeSaveId = "world_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6);
+      GAME.worldName = cfg.name || "Новый мир";
       GAME.gamemode = cfg.gamemode;
       GAME.difficulty = cfg.difficulty;
       GAME.keepInventory = cfg.keepInventory;
@@ -4635,7 +4776,8 @@ const WORLD_CONFIG: WorldConfig = {
 
       GAME.state = "playing";
       requestLock();
-      showBanner("Клик по экрану — захват мыши • F — предмет во вторую руку • E — инвентарь/креатив");
+      saveCurrentWorld();
+      showBanner("Клик по экрану — захват мыши • Ctrl — бег • Shift — присесть • F — предмет во вторую руку • E — инвентарь/креатив");
     }
 
     function requestLock() {
@@ -4643,6 +4785,16 @@ const WORLD_CONFIG: WorldConfig = {
     }
 
     // Menu Bindings
+    document.getElementById("btn-open-saves").onclick = () => {
+      SFX.click(); renderSavedWorlds();
+      document.getElementById("main-menu").classList.add("hidden");
+      document.getElementById("saved-worlds-screen").classList.remove("hidden");
+    };
+    document.getElementById("btn-saves-back").onclick = () => {
+      SFX.click();
+      document.getElementById("saved-worlds-screen").classList.add("hidden");
+      document.getElementById("main-menu").classList.remove("hidden");
+    };
     document.getElementById("btn-open-create").onclick = () => {
       SFX.click();
       document.getElementById("main-menu").classList.add("hidden");
@@ -4828,6 +4980,7 @@ const WORLD_CONFIG: WorldConfig = {
     };
     document.getElementById("btn-quit-menu").onclick = () => {
       SFX.click();
+      saveCurrentWorld();
       leaveMultiplayerRoom();
       GAME.state = "menu";
       document.getElementById("hud").classList.add("hidden");
@@ -4851,6 +5004,7 @@ const WORLD_CONFIG: WorldConfig = {
     };
     document.getElementById("btn-death-menu").onclick = () => {
       SFX.click();
+      saveCurrentWorld();
       leaveMultiplayerRoom();
       document.getElementById("death-screen").classList.add("hidden");
       document.getElementById("hud").classList.add("hidden");
@@ -5082,6 +5236,8 @@ const WORLD_CONFIG: WorldConfig = {
           if (qDropCooldown >= 0.18) { qDropCooldown = 0; dropHeldItem(1); }
         }
         tickPlayerPhysics(dt);
+        saveClock += dt;
+        if (saveClock >= 5) { saveClock = 0; saveCurrentWorld(); }
         updateRaycast();
         tickMining(dt);
         tickEntities(dt);
@@ -5130,4 +5286,6 @@ const WORLD_CONFIG: WorldConfig = {
       renderer.render(scene, camera);
     }
 
-    window.onload = () => requestAnimationFrame(animate);
+    window.addEventListener("pagehide", saveCurrentWorld);
+    window.addEventListener("beforeunload", saveCurrentWorld);
+    window.onload = () => { renderSavedWorlds(); requestAnimationFrame(animate); };
