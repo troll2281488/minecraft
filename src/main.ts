@@ -738,6 +738,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       { out: { id: "breeze_rod", count: 1 }, req: { blaze_rod: 2, quartz: 2 } },
       { out: { id: "heavy_core", count: 1 }, req: { iron_ingot: 4, netherite_ingot: 1 } },
       { out: { id: "mace", count: 1 }, req: { heavy_core: 1, breeze_rod: 1, stick: 1 } },
+      { out: { id: "wind_charge", count: 4 }, req: { breeze_rod: 1, gunpowder: 1 } },
       { out: { id: "elytra", count: 1 }, req: { string: 8, leather: 4 } },
       { out: { id: "flint_and_steel", count: 1 }, req: { iron_ingot: 1, [B.GRAVEL]: 1 } },
       { out: { id: "bread", count: 1 }, req: { wheat: 3 } },
