@@ -202,6 +202,13 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       blaze_powder: { name: "Огненный порошок", cat: "misc", stack: 64 },
       ender_eye: { name: "Око Края", cat: "misc", stack: 64 },
       apple: { name: "Яблоко", cat: "armor_food", stack: 64, food: 4 },
+      egg: { name: "Яйцо", cat: "misc", stack: 16 },
+      pumpkin: { name: "Тыква", cat: "misc", stack: 64 },
+      bowl: { name: "Миска", cat: "misc", stack: 64 },
+      milk_bucket: { name: "Ведро молока", cat: "misc", stack: 1 },
+      bucket: { name: "Пустое ведро", cat: "misc", stack: 16 },
+      red_mushroom: { name: "Красный гриб", cat: "misc", stack: 64 },
+      brown_mushroom: { name: "Коричневый гриб", cat: "misc", stack: 64 },
       bread: { name: "Хлеб", cat: "armor_food", stack: 64, food: 5 },
       cooked_beef: { name: "Жареная говядина", cat: "armor_food", stack: 64, food: 8 },
       raw_beef: { name: "Сырая говядина", cat: "armor_food", stack: 64, food: 3 },
@@ -1118,7 +1125,16 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       raw_chicken: "cooked_chicken",
       potato: "baked_potato",
       [B.COBBLESTONE]: B.STONE,
-      [B.SAND]: B.GLASS
+      [B.SAND]: B.GLASS,
+      raw_beef: "cooked_beef",
+      porkchop: "cooked_porkchop",
+      raw_porkchop: "cooked_porkchop",
+      mutton: "cooked_mutton",
+      raw_mutton: "cooked_mutton",
+      rabbit: "cooked_rabbit",
+      raw_rabbit: "cooked_rabbit",
+      raw_fish: "cooked_fish",
+      raw_salmon: "cooked_salmon"
     };
 
     // =========================================================================
@@ -1613,6 +1629,12 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         vChest[5] = { id: "potato", count: 4 };
         vChest[6] = { id: "beetroot", count: 3 };
         vChest[7] = { id: "melon_slice", count: 4 };
+        vChest[8] = { id: "pumpkin", count: 2 };
+        vChest[9] = { id: "egg", count: 3 };
+        vChest[10] = { id: "red_mushroom", count: 2 };
+        vChest[11] = { id: "brown_mushroom", count: 2 };
+        vChest[12] = { id: "sugar", count: 3 };
+        vChest[13] = { id: "bowl", count: 2 };
         this.chests.set(`overworld:${vx},${vy + 1},${vz + 2}`, vChest);
 
         // House 2: Oak Cottage
@@ -1855,6 +1877,9 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         const loot = new Array(27).fill(null);
         loot[0] = { id: kind === "igloo" ? "golden_apple" : kind === "witch_hut" ? "mushroom_stew" : "arrow", count: 2 };
         loot[1] = { id: "bread", count: 3 };
+        loot[2] = { id: "sweet_berries", count: 4 };
+        loot[3] = { id: "chorus_fruit", count: 1 };
+        loot[4] = { id: "poisonous_potato", count: 1 };
         this.chests.set(`overworld:${chestX},${y + 1},${chestZ}`, loot);
       }
 
@@ -2601,7 +2626,7 @@ const WORLD_CONFIG: WorldConfig = {
         sheep: { name: "Овца", hp: 8, hostile: false, w: 0.8, h: 1.2, drop: "mutton", dropExtra: B.WOOL_WHITE },
         chicken: { name: "Курица", hp: 4, hostile: false, w: 0.5, h: 0.7, drop: "raw_chicken", dropExtra: "feather" },
         rabbit: { name: "Кролик", hp: 6, hostile: false, w: 0.45, h: 0.55, drop: "rabbit", dropExtra: "rabbit_hide" },
-        zombie: { name: "Зомби", hp: 20, hostile: true, w: 0.65, h: 1.85, dmg: 3, drop: "iron_ingot" },
+        zombie: { name: "Зомби", hp: 20, hostile: true, w: 0.65, h: 1.85, dmg: 3, drop: "rotten_flesh" },
         skeleton: { name: "Скелет", hp: 20, hostile: true, w: 0.65, h: 1.85, dmg: 3, drop: "bone" },
         wither_skeleton: { name: "Визер-скелет", hp: 24, hostile: true, w: 0.7, h: 2.2, dmg: 5, drop: "wither_skull" },
         creeper: { name: "Крипер", hp: 20, hostile: true, w: 0.65, h: 1.75, dmg: 8, drop: "gunpowder" },
@@ -2669,6 +2694,7 @@ const WORLD_CONFIG: WorldConfig = {
             spawnDrop(ent.mesh.position.x, ent.mesh.position.y + 0.5, ent.mesh.position.z, ent.cfg.drop, 1);
           }
           if (ent.cfg.dropExtra) spawnDrop(ent.mesh.position.x + 0.2, ent.mesh.position.y + 0.5, ent.mesh.position.z, ent.cfg.dropExtra, 1);
+          if (ent.type === "chicken" && Math.random() < 0.65) spawnDrop(ent.mesh.position.x + 0.35, ent.mesh.position.y + 0.5, ent.mesh.position.z, "egg", 1);
           PLAYER.xp += 18;
           updateXP();
         }
@@ -3645,8 +3671,15 @@ const WORLD_CONFIG: WorldConfig = {
       const held = PLAYER.inv[PLAYER.hotbarIdx];
       const off = PLAYER.offhand;
 
-      // 1. Villager Trading on Right-Click
+      // 1. Villager trading and milking cows.
       const hitEnt = findEntityUnderCrosshair(4.2);
+      if (hitEnt?.type === "cow" && held?.id === "bucket") {
+        giveItem("milk_bucket", 1);
+        if (GAME.gamemode !== "creative") consumeHeld(1);
+        showBanner("Ты надоил ведро молока!");
+        SFX.pickup();
+        return;
+      }
       if (hitEnt && hitEnt.cfg.passiveVillager) {
         openGUI("trade", hitEnt.cfg.passiveVillager);
         return;
