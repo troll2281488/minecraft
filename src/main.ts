@@ -648,6 +648,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         breeze_rod: ctx => { ctx.fillStyle = "#b7d8c4"; ctx.fillRect(7, 2, 3, 12); ctx.fillStyle = "#e6f5dd"; ctx.fillRect(5, 4, 7, 2); ctx.fillRect(4, 9, 7, 2); },
         heavy_core: ctx => { ctx.fillStyle = "#5d5a58"; ctx.fillRect(3, 3, 10, 10); ctx.fillStyle = "#b0a79c"; ctx.fillRect(5, 5, 6, 6); ctx.fillStyle = "#383638"; ctx.fillRect(7, 7, 2, 2); },
         mace: ctx => { ctx.fillStyle = "#76543a"; ctx.fillRect(7, 7, 2, 8); ctx.fillStyle = "#b9a58d"; ctx.fillRect(4, 2, 8, 6); ctx.fillStyle = "#e2d5c0"; ctx.fillRect(5, 3, 6, 2); },
+        wind_charge: ctx => { ctx.fillStyle = "#a9c7c0"; ctx.fillRect(4, 4, 8, 8); ctx.fillStyle = "#e1f1df"; ctx.fillRect(6, 2, 4, 3); ctx.fillRect(2, 7, 3, 3); ctx.fillRect(10, 9, 4, 3); },
         wither_skull: ctx => { ctx.fillStyle = "#242424"; ctx.fillRect(3, 3, 10, 10); ctx.fillStyle = "#7a7a7a"; ctx.fillRect(5, 6, 2, 2); ctx.fillRect(9, 6, 2, 2); },
         bed: ctx => { ctx.fillStyle = "#9e3333"; ctx.fillRect(2, 6, 12, 6); ctx.fillStyle = "#d9d9d9"; ctx.fillRect(2, 6, 4, 4); ctx.fillStyle = "#6e4e2a"; ctx.fillRect(2, 12, 2, 2); ctx.fillRect(12, 12, 2, 2); },
         coal: ctx => { ctx.fillStyle = "#262626"; ctx.fillRect(4, 4, 8, 8); ctx.fillStyle = "#3b3b3b"; ctx.fillRect(5, 5, 3, 3); },
