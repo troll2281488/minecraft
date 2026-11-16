@@ -2,7 +2,7 @@
 import * as THREE from "three";
 
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded, onDisconnect } from "firebase/database";
+import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded, onDisconnect, runTransaction } from "firebase/database";
 
     // =========================================================================
     // 1. FIREBASE REALTIME DATABASE MULTIPLAYER SETUP
@@ -173,6 +173,15 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       [B.SOUL_SOIL]: { name: "Почва душ", solid: true, hardness: 0.5, mat: "grass", drop: B.SOUL_SOIL }
     };
 
+    // Legacy 1.12-era creative blocks: real numeric block IDs with collision and fallback pixel materials.
+    const LEGACY_BLOCKS = [["GRANITE","Гранит","stone"],["POLISHED_GRANITE","Полированный гранит","stone"],["DIORITE","Диорит","stone"],["POLISHED_DIORITE","Полированный диорит","stone"],["ANDESITE","Андезит","stone"],["POLISHED_ANDESITE","Полированный андезит","stone"],["COARSE_DIRT","Каменистая земля","earth"],["PODZOL","Подзол","earth"],["MYCELIUM","Мицелий","earth"],["GRASS_PATH","Тропа","earth"],["CLAY","Глина","earth"],["SPONGE","Губка","earth"],["WET_SPONGE","Мокрая губка","earth"],["SNOW_BLOCK","Снежный блок","ice"],["PACKED_ICE","Плотный лёд","ice"],["SPRUCE_LOG","Еловое бревно","wood"],["BIRCH_LOG","Берёзовое бревно","wood"],["JUNGLE_LOG","Тропическое бревно","wood"],["ACACIA_LOG","Акациевое бревно","wood"],["DARK_OAK_LOG","Бревно тёмного дуба","wood"],["SPRUCE_PLANKS","Еловые доски","wood"],["BIRCH_PLANKS","Берёзовые доски","wood"],["JUNGLE_PLANKS","Тропические доски","wood"],["ACACIA_PLANKS","Акациевые доски","wood"],["DARK_OAK_PLANKS","Доски тёмного дуба","wood"],["SPRUCE_LEAVES","Еловая листва","leaf"],["BIRCH_LEAVES","Берёзовая листва","leaf"],["JUNGLE_LEAVES","Тропическая листва","leaf"],["ACACIA_LEAVES","Акациевая листва","leaf"],["DARK_OAK_LEAVES","Листва тёмного дуба","leaf"],["SPRUCE_SAPLING","Саженец ели","leaf"],["BIRCH_SAPLING","Саженец берёзы","leaf"],["JUNGLE_SAPLING","Саженец тропического дерева","leaf"],["ACACIA_SAPLING","Саженец акации","leaf"],["DARK_OAK_SAPLING","Саженец тёмного дуба","leaf"],["MOSSY_COBBLESTONE","Замшелый булыжник","stone"],["MOSSY_STONE_BRICKS","Замшелый каменный кирпич","stone"],["CRACKED_STONE_BRICKS","Потрескавшийся каменный кирпич","stone"],["CHISELED_STONE_BRICKS","Резной каменный кирпич","stone"],["PRISMARINE","Призмарин","ocean"],["PRISMARINE_BRICKS","Призмариновые кирпичи","ocean"],["DARK_PRISMARINE","Тёмный призмарин","ocean"],["SEA_LANTERN","Морской фонарь","glow"],["RED_SAND","Красный песок","earth"],["RED_SANDSTONE","Красный песчаник","earth"],["SMOOTH_RED_SANDSTONE","Гладкий красный песчаник","earth"],["CHISELED_RED_SANDSTONE","Резной красный песчаник","earth"],["QUARTZ_BLOCK","Кварцевый блок","quartz"],["QUARTZ_PILLAR","Кварцевая колонна","quartz"],["CHISELED_QUARTZ","Резной кварцевый блок","quartz"],["SMOOTH_QUARTZ","Гладкий кварц","quartz"],["COAL_BLOCK","Угольный блок","ore"],["IRON_BLOCK","Железный блок","ore"],["DIAMOND_BLOCK","Алмазный блок","gem"],["EMERALD_BLOCK","Изумрудный блок","gem"],["LAPIS_BLOCK","Лазуритовый блок","gem"],["REDSTONE_BLOCK","Редстоуновый блок","ore"],["SPONGE_BLOCK","Блок губки","earth"],["HARDENED_CLAY","Обожжённая глина","earth"],["WHITE_TERRACOTTA","Белая керамика","earth"],["WHITE_WOOL","Белая шерсть","wool"],["ORANGE_WOOL","Оранжевая шерсть","wool"],["MAGENTA_WOOL","Пурпурная шерсть","wool"],["LIGHT_BLUE_WOOL","Голубая шерсть","wool"],["YELLOW_WOOL","Жёлтая шерсть","wool"],["LIME_WOOL","Лаймовая шерсть","wool"],["PINK_WOOL","Розовая шерсть","wool"],["GRAY_WOOL","Серая шерсть","wool"],["LIGHT_GRAY_WOOL","Светло-серая шерсть","wool"],["CYAN_WOOL","Бирюзовая шерсть","wool"],["PURPLE_WOOL","Фиолетовая шерсть","wool"],["BLUE_WOOL","Синяя шерсть","wool"],["BROWN_WOOL","Коричневая шерсть","wool"],["GREEN_WOOL","Зелёная шерсть","wool"],["RED_WOOL","Красная шерсть","wool"],["BLACK_WOOL","Чёрная шерсть","wool"],["WHITE_CONCRETE","Белый бетон","wool"],["ORANGE_CONCRETE","Оранжевый бетон","wool"],["MAGENTA_CONCRETE","Пурпурный бетон","wool"],["LIGHT_BLUE_CONCRETE","Голубой бетон","wool"],["YELLOW_CONCRETE","Жёлтый бетон","wool"],["LIME_CONCRETE","Лаймовый бетон","wool"],["PINK_CONCRETE","Розовый бетон","wool"],["GRAY_CONCRETE","Серый бетон","wool"],["CYAN_CONCRETE","Бирюзовый бетон","wool"],["PURPLE_CONCRETE","Фиолетовый бетон","wool"],["BLUE_CONCRETE","Синий бетон","wool"],["BROWN_CONCRETE","Коричневый бетон","wool"],["GREEN_CONCRETE","Зелёный бетон","wool"],["RED_CONCRETE","Красный бетон","wool"],["BLACK_CONCRETE","Чёрный бетон","wool"],["WHITE_STAINED_GLASS","Белое стекло","glass"],["ORANGE_STAINED_GLASS","Оранжевое стекло","glass"],["MAGENTA_STAINED_GLASS","Пурпурное стекло","glass"],["LIGHT_BLUE_STAINED_GLASS","Голубое стекло","glass"],["YELLOW_STAINED_GLASS","Жёлтое стекло","glass"],["LIME_STAINED_GLASS","Лаймовое стекло","glass"],["PINK_STAINED_GLASS","Розовое стекло","glass"],["GRAY_STAINED_GLASS","Серое стекло","glass"],["CYAN_STAINED_GLASS","Бирюзовое стекло","glass"],["PURPLE_STAINED_GLASS","Фиолетовое стекло","glass"],["BLUE_STAINED_GLASS","Синее стекло","glass"],["BROWN_STAINED_GLASS","Коричневое стекло","glass"],["GREEN_STAINED_GLASS","Зелёное стекло","glass"],["RED_STAINED_GLASS","Красное стекло","glass"],["BLACK_STAINED_GLASS","Чёрное стекло","glass"],["PURPUR_BLOCK","Пурпурный блок","purpur"],["PURPUR_PILLAR","Пурпурная колонна","purpur"],["END_ROD_BLOCK","Стержень Края","glow"],["CHORUS_BLOCK","Блок хоруса","purpur"],["MAGMA_BLOCK","Блок магмы","nether"],["NETHER_WART_BLOCK","Блок адского нароста","nether"],["RED_NETHER_BRICKS","Красные незерские кирпичи","nether"],["BONE_BLOCK","Костяной блок","bone"],["OBSERVER","Наблюдатель","tech"],["SLIME_BLOCK","Слизневый блок","slime"],["HAY_BALE","Тюк сена","earth"],["COMMAND_BLOCK","Командный блок","tech"],["BEACON","Маяк","glow"],["ENCHANTING_TABLE","Стол зачаровывания","tech"],["BREWING_STAND_BLOCK","Зельеварка","tech"],["CAULDRON","Котёл","tech"],["ANVIL","Наковальня","iron"],["HOPPER","Воронка","iron"],["DISPENSER","Раздатчик","tech"],["DROPPER","Выбрасыватель","tech"],["NOTE_BLOCK","Нотный блок","wood"],["JUKEBOX","Проигрыватель","wood"],["FENCE","Дубовый забор","wood"],["COBBLESTONE_WALL","Булыжная ограда","stone"],["IRON_BARS","Железные прутья","iron"],["LADDER","Лестница","wood"],["TRAPDOOR","Люк","wood"],["IRON_TRAPDOOR","Железный люк","iron"],["DAYLIGHT_SENSOR","Датчик дневного света","tech"],["TNT_BLOCK","Блок динамита","nether"],["END_STONE_BRICKS","Кирпичи Края","stone"]];
+    for (const [key, name, palette] of LEGACY_BLOCKS) {
+      if (B[key] !== undefined) continue;
+      const id = Math.max(...Object.values(B).filter(v => typeof v === "number")) + 1;
+      B[key] = id;
+      BLOCK_PROPS[id] = { name, solid: true, hardness: palette === "glass" ? 0.3 : 1.2, mat: palette === "wood" ? "wood" : "stone", drop: id, legacyPalette: palette };
+    }
+
     const ITEMS = {
       stick: { name: "Палка", cat: "misc", stack: 64 },
       emerald: { name: "Изумруд", cat: "misc", stack: 64 },
@@ -306,6 +315,41 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       rabbit_hide: { name: "Кроличья шкурка", cat: "misc", stack: 64 },
       rabbit_foot: { name: "Кроличья лапка", cat: "misc", stack: 64 },
       end_crystal: { name: "Кристалл Энда", cat: "misc", stack: 64 },
+      trident: { name: "Трезубец", cat: "tools", stack: 1, damage: 9, trident: true },
+      enchanted_golden_apple: { name: "Зачарованное золотое яблоко", cat: "armor_food", stack: 64, food: 8 },
+      cake: { name: "Торт", cat: "armor_food", stack: 1, food: 14 },
+      melon: { name: "Арбуз", cat: "armor_food", stack: 64, food: 2 },
+      cooked_porkchop: { name: "Жареная свинина", cat: "armor_food", stack: 64, food: 8 },
+      raw_porkchop: { name: "Сырая свинина", cat: "armor_food", stack: 64, food: 3 },
+      cooked_mutton: { name: "Жареная баранина", cat: "armor_food", stack: 64, food: 6 },
+      raw_mutton: { name: "Сырая баранина", cat: "armor_food", stack: 64, food: 2 },
+      cooked_rabbit: { name: "Жареный кролик", cat: "armor_food", stack: 64, food: 5 },
+      raw_rabbit: { name: "Сырой кролик", cat: "armor_food", stack: 64, food: 3 },
+      rabbit_stew: { name: "Тушёный кролик", cat: "armor_food", stack: 1, food: 10 },
+      mushroom_stew: { name: "Грибной суп", cat: "armor_food", stack: 1, food: 6 },
+      beetroot: { name: "Свёкла", cat: "armor_food", stack: 64, food: 1 },
+      beetroot_soup: { name: "Свекольный суп", cat: "armor_food", stack: 1, food: 6 },
+      cookie: { name: "Печенье", cat: "armor_food", stack: 64, food: 2 },
+      melon_slice: { name: "Ломтик арбуза", cat: "armor_food", stack: 64, food: 2 },
+      cooked_fish: { name: "Жареная рыба", cat: "armor_food", stack: 64, food: 5 },
+      raw_fish: { name: "Сырая рыба", cat: "armor_food", stack: 64, food: 2 },
+      cooked_salmon: { name: "Жареный лосось", cat: "armor_food", stack: 64, food: 6 },
+      raw_salmon: { name: "Сырой лосось", cat: "armor_food", stack: 64, food: 2 },
+      clownfish: { name: "Рыба-клоун", cat: "armor_food", stack: 64, food: 1 },
+      pufferfish: { name: "Иглобрюх", cat: "armor_food", stack: 64, food: 1 },
+      chorus_fruit: { name: "Плод хоруса", cat: "armor_food", stack: 64, food: 4 },
+      poisonous_potato: { name: "Ядовитый картофель", cat: "armor_food", stack: 64, food: 2 },
+      rotten_flesh: { name: "Гнилая плоть", cat: "armor_food", stack: 64, food: 4 },
+      sweet_berries: { name: "Сладкие ягоды", cat: "armor_food", stack: 64, food: 2 },
+      netherite_sword: { name: "Незеритовый меч", cat: "tools", stack: 1, damage: 9 },
+      netherite_axe: { name: "Незеритовый топор", cat: "tools", stack: 1, tool: "axe", tier: 5, damage: 10 },
+      netherite_hoe: { name: "Незеритовая мотыга", cat: "tools", stack: 1, tool: "hoe", tier: 5 },
+      netherite_shovel: { name: "Незеритовая лопата", cat: "tools", stack: 1, tool: "shovel", tier: 5 },
+      stone_sword: { name: "Каменный меч", cat: "tools", stack: 1, damage: 5 },
+      iron_sword: { name: "Железный меч", cat: "tools", stack: 1, damage: 6 },
+      diamond_sword: { name: "Алмазный меч", cat: "tools", stack: 1, damage: 8 },
+      wood_sword: { name: "Деревянный меч", cat: "tools", stack: 1, damage: 4 },
+      crossbow: { name: "Арбалет", cat: "tools", stack: 1, damage: 7 },
       trident: { name: "Трезубец", cat: "tools", stack: 1, damage: 9, trident: true }
     };
 
@@ -674,6 +718,29 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       for (const [id, t] of simple) {
         ATLAS.materials[id] = mat(t);
         ATLAS.icons[id] = t.dataUrl;
+      }
+      const legacyColors = {
+        stone: ["#777777", "#929292", "#555555"], earth: ["#8b633d", "#a17b52", "#67472d"],
+        wood: ["#795631", "#a17a4a", "#50371f"], leaf: ["#426d2c", "#65963b", "#294d20"],
+        ice: ["#a6d9e8", "#d8f4f7", "#6b9eae"], ocean: ["#3d9b91", "#68c7b4", "#276e72"],
+        glow: ["#b9a96b", "#f1e5a2", "#6c6745"], quartz: ["#ddd6c8", "#f5eee0", "#aaa18f"],
+        ore: ["#4e4e4e", "#777777", "#2b2b2b"], gem: ["#3caa8e", "#73e1c0", "#26705e"],
+        wool: ["#a7a09a", "#d2cbc4", "#68615b"], glass: ["#80b9bd", "#c5e8e8", "#4c7d82"],
+        purpur: ["#8b648f", "#b28bb5", "#604465"], nether: ["#713b35", "#a55b4d", "#492725"],
+        bone: ["#c6bfa6", "#e8e1c9", "#89836e"], tech: ["#6d777c", "#a6b1b3", "#41494d"],
+        slime: ["#62a84c", "#9bdc70", "#39702e"], iron: ["#9da7ad", "#d4dcdf", "#5c666b"]
+      };
+      for (const [key, name, palette] of LEGACY_BLOCKS) {
+        const id = B[key], colors = legacyColors[palette] || legacyColors.stone;
+        const tile = makePixelTex(ctx => {
+          noiseFill(ctx, colors[0], colors.slice(1), 0.42);
+          ctx.fillStyle = colors[2];
+          ctx.fillRect(2, 4, 3, 1); ctx.fillRect(10, 11, 4, 1);
+          ctx.fillStyle = colors[1];
+          ctx.fillRect(5, 2, 2, 1); ctx.fillRect(12, 6, 2, 2);
+        });
+        ATLAS.materials[id] = mat(tile, palette === "glass" ? { transparent: true, opacity: 0.62 } : {});
+        ATLAS.icons[id] = tile.dataUrl;
       }
 
       ATLAS.materials[B.ANCIENT_DEBRIS] = mat(ancientDebris);
@@ -2571,14 +2638,26 @@ const WORLD_CONFIG: WorldConfig = {
           const dist = e.mesh.position.distanceTo(PLAYER.pos.clone().add(new THREE.Vector3(0, 0.8, 0)));
           if (dist < 2.2 && e.age > 0.35) {
             e.mesh.position.lerp(PLAYER.pos.clone().add(new THREE.Vector3(0, 0.8, 0)), dt * 10);
-            if (dist < 0.75 && giveItem(e.id, e.count)) {
-              SFX.pickup();
+            if (dist < 0.75 && !e.pickupPending) {
               if (e.netId && MP.active && fbDb && MP.roomId) {
-                remove(ref(fbDb, `minecraft_game/rooms/${MP.roomId}/drops/${e.netId}`)).catch(() => {});
+                e.pickupPending = true;
+                const dropRef = ref(fbDb, `minecraft_game/rooms/${MP.roomId}/drops/${e.netId}`);
+                runTransaction(dropRef, current => current ? null : undefined).then(result => {
+                  if (result.committed && giveItem(e.id, e.count)) {
+                    SFX.pickup();
+                    scene.remove(e.mesh);
+                    const at = entities.indexOf(e);
+                    if (at >= 0) entities.splice(at, 1);
+                  } else {
+                    e.pickupPending = false;
+                  }
+                }).catch(() => { e.pickupPending = false; });
+              } else if (giveItem(e.id, e.count)) {
+                SFX.pickup();
+                scene.remove(e.mesh);
+                entities.splice(i, 1);
+                continue;
               }
-              scene.remove(e.mesh);
-              entities.splice(i, 1);
-              continue;
             }
           }
           continue;
@@ -5746,7 +5825,7 @@ const WORLD_CONFIG: WorldConfig = {
       }
 
       // Smooth time-budgeted chunk building (eliminates micro-stutters)
-      processChunkMeshQueue(2);
+      processChunkMeshQueue(GAME.renderDist >= 24 ? 3 : 5);
 
       // Update break particles
       for (let i = breakParticles.length - 1; i >= 0; i--) {
