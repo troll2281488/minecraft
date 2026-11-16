@@ -138,7 +138,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       [B.GLASS]: { name: "Стекло", solid: true, transparent: true, hardness: 0.3, mat: "stone", drop: null },
       [B.WATER]: { name: "Вода", solid: false, transparent: true, fluid: true, hardness: -1 },
       [B.LAVA]: { name: "Лава", solid: false, transparent: true, fluid: true, hardness: -1 },
-      [B.OBSIDIAN]: { name: "Обсидиан", solid: true, hardness: 8.5, mat: "stone", tool: "pickaxe", minTier: 4, drop: B.OBSIDIAN },
+      [B.OBSIDIAN]: { name: "Обсидиан", solid: true, hardness: 8.5, blastResistance: 1200, mat: "stone", tool: "pickaxe", minTier: 4, drop: B.OBSIDIAN },
       [B.NETHERRACK]: { name: "Незерак", solid: true, hardness: 0.5, mat: "stone", tool: "pickaxe", minTier: 1, drop: B.NETHERRACK },
       [B.SOUL_SAND]: { name: "Песок душ", solid: true, hardness: 0.5, mat: "grass", drop: B.SOUL_SAND },
       [B.GLOWSTONE]: { name: "Светокамень", solid: true, hardness: 0.4, mat: "stone", drop: B.GLOWSTONE },
@@ -165,7 +165,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       [B.GOLD_BLOCK]: { name: "Золотой блок", solid: true, hardness: 2.5, mat: "stone", tool: "pickaxe", minTier: 2, drop: B.GOLD_BLOCK },
       [B.BED_FOOT]: { name: "Кровать (низ)", solid: true, hardness: 0.3, mat: "wood", drop: "bed", interactive: "bed" },
       [B.BED_HEAD]: { name: "Кровать (изголовье)", solid: true, hardness: 0.3, mat: "wood", drop: "bed", interactive: "bed" },
-      [B.CRYING_OBSIDIAN]: { name: "Плачущий обсидиан", solid: true, hardness: 8.5, mat: "stone", tool: "pickaxe", minTier: 4, drop: B.CRYING_OBSIDIAN },
+      [B.CRYING_OBSIDIAN]: { name: "Плачущий обсидиан", solid: true, hardness: 8.5, blastResistance: 1200, mat: "stone", tool: "pickaxe", minTier: 4, drop: B.CRYING_OBSIDIAN },
       [B.ANCIENT_DEBRIS]: { name: "Древние обломки", solid: true, hardness: 30, blastResistance: 1200, mat: "stone", tool: "pickaxe", minTier: 4, drop: "ancient_debris" },
       [B.NETHER_GOLD_ORE]: { name: "Незерская золотая руда", solid: true, hardness: 3, mat: "stone", tool: "pickaxe", minTier: 1, drop: "gold_ingot" },
       [B.BASALT]: { name: "Базальт", solid: true, hardness: 1.25, mat: "stone", tool: "pickaxe", minTier: 1, drop: B.BASALT },
@@ -2383,6 +2383,21 @@ const WORLD_CONFIG: WorldConfig = {
         const dist = toPlayer.length();
         let moving = false;
 
+        if (e.type === "creeper" && dist < 3.2 && GAME.gamemode !== "creative" && GAME.gamemode !== "spectator") {
+          e.fuse = (e.fuse || 0) + dt;
+          const pulse = 1 + Math.sin(e.fuse * 24) * 0.07;
+          e.mesh.scale.setScalar(pulse);
+          if (e.fuse >= 1.45) {
+            triggerExplosion(e.mesh.position.x, e.mesh.position.y, e.mesh.position.z, 4, "Взорвался крипер");
+            scene.remove(e.mesh);
+            entities.splice(i, 1);
+            continue;
+          }
+        } else if (e.type === "creeper") {
+          e.fuse = 0;
+          e.mesh.scale.setScalar(1);
+        }
+
         if (e.cfg.hostile && dist < 18 && GAME.gamemode !== "creative" && GAME.gamemode !== "spectator") {
           toPlayer.normalize();
           moveMobWithCollision(e, toPlayer.x * 2.4 * dt, toPlayer.z * 2.4 * dt);
@@ -2983,7 +2998,7 @@ const WORLD_CONFIG: WorldConfig = {
           for (let dz = -radius; dz <= radius; dz++) {
             if (dx * dx + dy * dy + dz * dz <= radius * radius) {
               const id = GAME.world.getBlock(cx + dx, cy + dy, cz + dz);
-              if (id !== B.AIR && id !== B.BEDROCK) {
+              if (id !== B.AIR && id !== B.BEDROCK && (BLOCK_PROPS[id]?.blastResistance || 0) < radius * 10) {
                 GAME.world.setBlock(cx + dx, cy + dy, cz + dz, B.AIR, true);
               }
             }
@@ -3149,7 +3164,12 @@ const WORLD_CONFIG: WorldConfig = {
       }
 
       if (held.id === "flint_and_steel") {
-        tryIgniteNetherPortal(b.px, b.py, b.pz);
+        if (b.id === B.TNT) {
+          GAME.world.setBlock(b.x, b.y, b.z, B.AIR, true);
+          triggerExplosion(b.x, b.y, b.z, 4, "Взорвался блок TNT");
+        } else {
+          tryIgniteNetherPortal(b.px, b.py, b.pz);
+        }
         return;
       }
 
