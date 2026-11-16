@@ -4227,6 +4227,7 @@ const WORLD_CONFIG: WorldConfig = {
 
       for (const [id, pData] of Object.entries(all)) {
         if (!pData) continue;
+        if (pData.skin === "custom" && pData.skinColors) SKIN_PRESETS.custom = pData.skinColors;
         if (id !== MP.playerId && pData.lastSeen && now - pData.lastSeen > 12000) {
           remove(ref(fbDb, `minecraft_game/rooms/${MP.roomId}/players/${id}`)).catch(() => {});
           continue;
@@ -4419,6 +4420,7 @@ const WORLD_CONFIG: WorldConfig = {
         await set(myRef, {
           name: MP.nickname,
           skin: GAME.skin,
+          skinColors: GAME.skin === "custom" ? (GAME.customSkinColors || SKIN_PRESETS.custom || null) : null,
           armor: Object.fromEntries(Object.entries(PLAYER.armor || {}).map(([slot, stack]) => [slot, stack?.id || null])),
           dim: GAME.world.dimension,
           x: Number(PLAYER.pos.x.toFixed(2)),
@@ -5338,6 +5340,36 @@ const WORLD_CONFIG: WorldConfig = {
         GAME.skin = btn.dataset.skin;
         document.getElementById("skin-current-label").textContent = `Текущий скин: ${SKIN_PRESETS[GAME.skin].name}`;
       };
+    });
+    document.getElementById("skin-upload").addEventListener("change", event => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      if (file.type !== "image/png") { showBanner("Нужен PNG-файл скина"); return; }
+      const image = new Image();
+      image.onload = () => {
+        if (![64, 128].includes(image.width) || ![32, 64, 128].includes(image.height) || image.width !== image.height) {
+          if (!(image.width === 64 && image.height === 32)) { showBanner("Поддерживается PNG 64×64 или 64×32"); return; }
+        }
+        const canvas = document.createElement("canvas"); canvas.width = 64; canvas.height = 64;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        ctx.drawImage(image, 0, 0, 64, 64);
+        const sample = (x,y,w=4,h=4) => {
+          const data = ctx.getImageData(x,y,w,h).data; let r=0,g=0,b=0,n=0;
+          for(let i=0;i<data.length;i+=4) if(data[i+3]>32){r+=data[i];g+=data[i+1];b+=data[i+2];n++;}
+          return n ? (Math.round(r/n)<<16)|(Math.round(g/n)<<8)|Math.round(b/n) : 0x888888;
+        };
+        SKIN_PRESETS.custom = {
+          name: file.name.replace(/\.png$/i,"") || "Мой скин",
+          skin: sample(8,8), hair: sample(40,0), shirt: sample(20,20), pants: sample(4,20)
+        };
+        GAME.skin = "custom";
+        GAME.customSkinColors = SKIN_PRESETS.custom;
+        document.getElementById("skin-current-label").textContent = "Текущий скин: " + SKIN_PRESETS.custom.name;
+        showBanner("Скин загружен! Цвета персонажа обновлены");
+        URL.revokeObjectURL(image.src);
+      };
+      image.onerror = () => showBanner("Не удалось прочитать PNG-скин");
+      image.src = URL.createObjectURL(file);
     });
 
     const modesOrder = ["survival", "creative", "adventure", "spectator"];
