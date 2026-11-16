@@ -39,3 +39,13 @@ This checklist records the previously implemented game, not every vanilla Minecr
 
 ## Regression rule
 A CI check runs before deployment and fails if a core implementation anchor listed in `scripts/check-features.mjs` disappears.
+
+
+## Minecraft Java 1.11 — initial Exploration Update batch
+- Added Observer and Shulker Box registry entries, plus recipes for both and Iron Nuggets.
+- Added Shulker Shell, Totem of Undying, Iron Nugget, explorer map and new spawn-egg catalogue entries.
+- Added Cartographer and Nitwit villager professions and map trade entries.
+- Added a generated three-storey woodland mansion landmark, defenders, and `/locate mansion`.
+- Added Evoker, Vindicator, Vex and Llama entity definitions/models; Evokers launch a ranged fang-like projectile.
+- Added Totem of Undying revival with temporary absorption and fire clearing.
+- This is an initial playable feature batch, not complete vanilla 1.11 parity. Remaining work includes persistent shulker-box inventory, observer redstone pulses, authentic mansion room templates and loot, full explorer-map rendering, llama caravan/spit behavior, and remaining balance/edge cases.
