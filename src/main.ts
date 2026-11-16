@@ -326,8 +326,20 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
     }
 
     function initTextures() {
-      const grassTop = makePixelTex(ctx => noiseFill(ctx, "#5d8731", ["#527a2b", "#679238", "#4b7026"], 0.55));
-      const dirt = makePixelTex(ctx => noiseFill(ctx, "#79553a", ["#684830", "#876043", "#5c3f29"], 0.5));
+      const grassTop = makePixelTex(ctx => {
+        noiseFill(ctx, "#5d8731", ["#527a2b", "#679238", "#4b7026"], 0.55);
+        ctx.fillStyle = "#78a943";
+        [[2,3],[5,10],[9,4],[13,8],[7,14],[12,2]].forEach(([x,y]) => ctx.fillRect(x,y,1,1));
+        ctx.fillStyle = "#3e6124";
+        [[1,8],[4,5],[10,12],[14,5],[6,2]].forEach(([x,y]) => ctx.fillRect(x,y,1,1));
+      });
+      const dirt = makePixelTex(ctx => {
+        noiseFill(ctx, "#79553a", ["#684830", "#876043", "#5c3f29"], 0.5);
+        ctx.fillStyle = "#a17a52";
+        [[2,4],[9,2],[13,10],[5,13]].forEach(([x,y]) => ctx.fillRect(x,y,2,1));
+        ctx.fillStyle = "#4f3828";
+        [[4,7],[11,5],[7,11],[14,14]].forEach(([x,y]) => ctx.fillRect(x,y,1,2));
+      });
       const grassSide = makePixelTex(ctx => {
         noiseFill(ctx, "#79553a", ["#684830", "#876043"], 0.45);
         ctx.fillStyle = "#5d8731";
@@ -338,7 +350,13 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           ctx.fillRect(x, 3, 1, drop);
         }
       });
-      const stone = makePixelTex(ctx => noiseFill(ctx, "#7c7c7c", ["#6e6e6e", "#8a8a8a", "#636363"], 0.5));
+      const stone = makePixelTex(ctx => {
+        noiseFill(ctx, "#7c7c7c", ["#6e6e6e", "#8a8a8a", "#636363"], 0.5);
+        ctx.fillStyle = "#555555";
+        ctx.fillRect(3,4,3,1); ctx.fillRect(5,5,1,2); ctx.fillRect(11,10,2,1); ctx.fillRect(10,11,1,2);
+        ctx.fillStyle = "#a0a0a0";
+        ctx.fillRect(2,3,2,1); ctx.fillRect(10,9,2,1); ctx.fillRect(6,13,3,1);
+      });
       const cobble = makePixelTex(ctx => {
         noiseFill(ctx, "#747474", ["#5e5e5e", "#8a8a8a", "#525252"], 0.65);
         ctx.fillStyle = "#484848";
@@ -350,6 +368,10 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         noiseFill(ctx, "#634b2e", ["#523d24", "#735837"], 0.45);
         ctx.fillStyle = "#45331d";
         for (let x = 2; x < 16; x += 4) ctx.fillRect(x, 0, 1, 16);
+        ctx.fillStyle = "#98744a";
+        ctx.fillRect(1,3,1,5); ctx.fillRect(8,1,1,4); ctx.fillRect(12,9,1,5);
+        ctx.fillStyle = "#3c2b1a";
+        ctx.fillRect(4,7,2,1); ctx.fillRect(10,5,2,1);
       });
       const oakTop = makePixelTex(ctx => {
         ctx.fillStyle = "#634b2e"; ctx.fillRect(0, 0, 16, 16);
@@ -362,6 +384,10 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         ctx.fillStyle = "#66502d";
         ctx.fillRect(0, 3, 16, 1); ctx.fillRect(0, 7, 16, 1);
         ctx.fillRect(0, 11, 16, 1); ctx.fillRect(0, 15, 16, 1);
+        ctx.fillStyle = "#c1a16a";
+        ctx.fillRect(2,1,5,1); ctx.fillRect(9,5,4,1); ctx.fillRect(3,9,6,1);
+        ctx.fillStyle = "#725833";
+        ctx.fillRect(11,1,2,1); ctx.fillRect(5,5,2,1); ctx.fillRect(12,9,2,1);
       });
       const leaves = makePixelTex(ctx => {
         ctx.fillStyle = "#486e23";
@@ -375,7 +401,13 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           }
         }
       });
-      const sand = makePixelTex(ctx => noiseFill(ctx, "#cfc695", ["#c2b886", "#dbd2a2"], 0.45));
+      const sand = makePixelTex(ctx => {
+        noiseFill(ctx, "#cfc695", ["#c2b886", "#dbd2a2"], 0.45);
+        ctx.fillStyle = "#e5d9a8";
+        ctx.fillRect(1,4,5,1); ctx.fillRect(9,11,5,1);
+        ctx.fillStyle = "#b6a978";
+        ctx.fillRect(4,5,6,1); ctx.fillRect(0,13,4,1);
+      });
       const sandstone = makePixelTex(ctx => {
         noiseFill(ctx, "#c7bd8b", ["#b8ae7d", "#d4ca98"], 0.45);
         ctx.fillStyle = "#a3996b";
@@ -877,11 +909,25 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
     scene.add(sunMesh, moonMesh);
 
     const cloudGroup = new THREE.Group();
-    const cloudMat = new THREE.MeshBasicMaterial({ color: 0xebebeb, transparent: true, opacity: 0.8 });
+    const cloudMat = new THREE.MeshLambertMaterial({ color: 0xf2f4f4, transparent: true, opacity: 0.92 });
+    const cloudShadeMat = new THREE.MeshLambertMaterial({ color: 0xd9e0e5, transparent: true, opacity: 0.82 });
     for (let i = 0; i < 18; i++) {
-      const cm = new THREE.Mesh(new THREE.BoxGeometry(10 + (i % 3) * 6, 1.1, 6 + (i % 2) * 4), cloudMat);
-      cm.position.set((i - 9) * 14, 62, ((i * 19) % 120) - 60);
-      cloudGroup.add(cm);
+      const cloud = new THREE.Group();
+      const width = 7 + (i % 3) * 2;
+      const depth = 4 + (i % 2) * 2;
+      const pieces = [
+        [0, 0, 0, width, 1.15, depth],
+        [-width * 0.28, 0.48, 0, width * 0.48, 1.0, depth * 0.82],
+        [width * 0.22, 0.35, 0, width * 0.52, 0.9, depth * 0.78],
+        [0, 0.72, -depth * 0.12, width * 0.42, 0.7, depth * 0.6]
+      ];
+      pieces.forEach(([x,y,z,w,h,d], index) => {
+        const puff = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), index === 0 ? cloudShadeMat : cloudMat);
+        puff.position.set(x,y,z);
+        cloud.add(puff);
+      });
+      cloud.position.set((i - 9) * 14, 62 + (i % 3) * 0.6, ((i * 19) % 120) - 60);
+      cloudGroup.add(cloud);
     }
     scene.add(cloudGroup);
 
