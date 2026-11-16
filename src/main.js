@@ -4745,6 +4745,10 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
     }
 
     // Menu Bindings
+    document.getElementById("btn-load-local-world").onclick = () => {
+      SFX.click();
+      if (!loadWorldLocal()) showBanner("Сохранение не найдено или повреждено. Создай новый мир.");
+    };
     document.getElementById("btn-open-create").onclick = () => {
       SFX.click();
       document.getElementById("main-menu").classList.add("hidden");
