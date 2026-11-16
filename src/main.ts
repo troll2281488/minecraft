@@ -829,7 +829,33 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         ATLAS.icons[id] = base + file;
       }
 
-      // Vanilla's ten progressive destroy-stage overlays (stage 1..10).
+      // Vanilla item sprites replace the hand-made icons when available; procedural art remains as fallback.
+      const vanillaItemFiles = {
+        wood_pickaxe: "wooden_pickaxe.png", stone_pickaxe: "stone_pickaxe.png", iron_pickaxe: "iron_pickaxe.png",
+        diamond_pickaxe: "diamond_pickaxe.png", netherite_pickaxe: "netherite_pickaxe.png",
+        wood_axe: "wooden_axe.png", stone_axe: "stone_axe.png", iron_axe: "iron_axe.png", diamond_axe: "diamond_axe.png",
+        wood_sword: "wooden_sword.png", stone_sword: "stone_sword.png", iron_sword: "iron_sword.png",
+        diamond_sword: "diamond_sword.png", netherite_sword: "netherite_sword.png", wood_hoe: "wooden_hoe.png",
+        apple: "apple.png", bread: "bread.png", cooked_beef: "cooked_beef.png", raw_chicken: "chicken.png",
+        cooked_chicken: "cooked_chicken.png", potato: "potato.png", baked_potato: "baked_potato.png",
+        carrot: "carrot.png", pumpkin_pie: "pumpkin_pie.png", golden_carrot: "golden_carrot.png",
+        golden_apple: "golden_apple.png", stick: "stick.png", coal: "coal.png", iron_ingot: "iron_ingot.png",
+        gold_ingot: "gold_ingot.png", diamond: "diamond.png", emerald: "emerald.png", redstone: "redstone.png",
+        lapis: "lapis_lazuli.png", bow: "bow.png", arrow: "arrow.png", shield: "shield.png",
+        flint_and_steel: "flint_and_steel.png", ender_pearl: "ender_pearl.png", ender_eye: "ender_eye.png",
+        blaze_rod: "blaze_rod.png", blaze_powder: "blaze_powder.png", wheat: "wheat.png",
+        wheat_seeds: "wheat_seeds.png", feather: "feather.png", bone: "bone.png", string: "string.png",
+        netherite_ingot: "netherite_ingot.png", netherite_scrap: "netherite_scrap.png"
+      };
+      for (const [id, file] of Object.entries(vanillaItemFiles)) {
+        loader.load(`https://mcasset.cloud/${version}/assets/minecraft/textures/item/${file}`, texture => {
+          configureTexture(texture);
+          ATLAS.itemTextures[id] = texture;
+          ATLAS.icons[id] = texture.image?.src || ATLAS.icons[id];
+        }, undefined, () => console.warn("Vanilla item texture unavailable:", file));
+      }
+
+      // Vanilla destroy-stage overlays (stage 1..10).
       for (let stage = 1; stage <= 10; stage++) {
         loadTexture(`destroy_stage_${stage - 1}.png`, texture => {
           const material = new THREE.MeshBasicMaterial({
@@ -962,9 +988,9 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x88aae0);
-    scene.fog = new THREE.Fog(0x88aae0, 34, 96);
+    scene.fog = new THREE.Fog(0x88aae0, 90000, 100000);
 
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 160);
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 560);
     camera.rotation.order = "YXZ";
     camera.rotation.z = 0;
 
@@ -1027,10 +1053,14 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
     camera.add(fpGroup);
     scene.add(camera);
 
-    const fpArm = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.55, 0.18), new THREE.MeshLambertMaterial({ color: 0xb58665 }));
-    fpArm.position.set(0.46, -0.44, -0.75);
-    fpArm.rotation.set(0.45, -0.25, -0.15);
+    const fpArm = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.58, 0.22), new THREE.MeshLambertMaterial({ color: 0xb58665 }));
+    fpArm.position.set(0.50, -0.49, -0.64);
+    fpArm.rotation.set(0.12, -0.22, -0.12);
     fpGroup.add(fpArm);
+    const fpHand = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.20, 0.22), new THREE.MeshLambertMaterial({ color: 0xc99a78 }));
+    fpHand.position.set(0.49, -0.77, -0.72);
+    fpHand.rotation.set(0.12, -0.22, -0.12);
+    fpGroup.add(fpHand);
 
     const fpBlock = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.32, 0.32), new THREE.MeshLambertMaterial({ color: 0xffffff }));
     fpBlock.position.set(0.48, -0.38, -0.78);
@@ -2139,7 +2169,7 @@ const WORLD_CONFIG: WorldConfig = {
       allowCheats: true,
       doDaylightCycle: true,
       weather: "clear",
-      renderDist: 4,
+      renderDist: 32,
       fov: 75,
       mouseSens: 1.0,
       graphicsQuality: "medium",
@@ -3859,8 +3889,8 @@ const WORLD_CONFIG: WorldConfig = {
       } else {
         scene.background.copy(skyCol);
         scene.fog.color.copy(skyCol);
-        scene.fog.near = 26;
-        scene.fog.far = GAME.renderDist * 16 + 10;
+        scene.fog.near = 90000;
+        scene.fog.far = 100000;
       }
 
       ambientLight.intensity = 0.3 + dayFactor * 0.42;
@@ -3935,7 +3965,12 @@ const WORLD_CONFIG: WorldConfig = {
 
         // Main Hand (Right)
         const held = PLAYER.inv[PLAYER.hotbarIdx];
-        fpArm.visible = false;
+        fpArm.visible = true;
+        fpHand.visible = true;
+        fpArm.position.set(0.50 + bobX, -0.49 + bobY - equipDrop, -0.64);
+        fpArm.rotation.set(0.12 + swingCycle * 0.28, -0.22, -0.12 - swingCycle * 0.18);
+        fpHand.position.set(0.49 + bobX, -0.77 + bobY - equipDrop, -0.72);
+        fpHand.rotation.copy(fpArm.rotation);
         fpBlock.visible = false;
         fpItemSprite.visible = false;
         fpMainShield.visible = false;
@@ -3970,9 +4005,10 @@ const WORLD_CONFIG: WorldConfig = {
             fpItemSprite.rotation.set(0.1 + swingCycle * 0.95, -0.4, 0.15 - swingCycle * 0.5);
           }
         } else {
-          fpArm.visible = true;
-          fpArm.position.set(0.46 + bobX - swingCycle * 0.28, -0.44 + bobY - swingCycle * 0.18 - equipDrop, -0.75 - swingCycle * 0.14);
-          fpArm.rotation.set(0.45 + swingCycle * 1.15, -0.25, -0.15 - swingCycle * 0.55);
+          fpArm.position.set(0.50 + bobX - swingCycle * 0.10, -0.49 + bobY - equipDrop, -0.64 - swingCycle * 0.08);
+          fpArm.rotation.set(0.12 + swingCycle * 0.28, -0.22, -0.12 - swingCycle * 0.18);
+          fpHand.position.set(0.49 + bobX, -0.77 + bobY - equipDrop, -0.72 - swingCycle * 0.08);
+          fpHand.rotation.copy(fpArm.rotation);
         }
 
         // Off-Hand (Left)
@@ -4835,6 +4871,7 @@ const WORLD_CONFIG: WorldConfig = {
 
       for (let dx = -r; dx <= r; dx++) {
         for (let dz = -r; dz <= r; dz++) {
+          if (dx * dx + dz * dz > r * r) continue;
           const cx = pcx + dx, cz = pcz + dz;
           const key = GAME.world.chunkKey(cx, cz);
           needed.add(key);
@@ -5275,8 +5312,8 @@ const WORLD_CONFIG: WorldConfig = {
     };
     document.getElementById("btn-set-render").onclick = (e) => {
       SFX.click();
-      GAME.renderDist = GAME.renderDist >= 8 ? 3 : GAME.renderDist + 1;
-      e.target.textContent = `Дальность прорисовки: ${GAME.renderDist} чанка`;
+      GAME.renderDist = GAME.renderDist >= 32 ? 8 : Math.min(32, GAME.renderDist + 4);
+      e.target.textContent = `Дальность прорисовки: ${GAME.renderDist} чанков`;
       updateChunksAroundPlayer();
     };
     document.getElementById("btn-set-fov").onclick = (e) => {
@@ -5300,14 +5337,13 @@ const WORLD_CONFIG: WorldConfig = {
       const levels = ["low", "medium", "high"];
       GAME.graphicsQuality = levels[(levels.indexOf(GAME.graphicsQuality) + 1) % levels.length];
       const cfg = {
-        low: { pixelRatio: 0.85, shadows: false, renderDist: Math.min(GAME.renderDist, 4), label: "Низкое" },
-        medium: { pixelRatio: 1.15, shadows: true, renderDist: Math.min(GAME.renderDist, 6), label: "Среднее" },
-        high: { pixelRatio: 1.5, shadows: true, renderDist: Math.max(GAME.renderDist, 6), label: "Высокое" }
+        low: { pixelRatio: 0.85, shadows: false, label: "Низкое" },
+        medium: { pixelRatio: 1.0, shadows: true, label: "Среднее" },
+        high: { pixelRatio: 1.2, shadows: true, label: "Высокое" }
       }[GAME.graphicsQuality];
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, cfg.pixelRatio));
       renderer.shadowMap.enabled = cfg.shadows;
       sunLight.castShadow = cfg.shadows;
-      GAME.renderDist = cfg.renderDist;
       e.target.textContent = "Качество графики: " + cfg.label;
       updateChunksAroundPlayer(true);
       showBanner("Графика: " + cfg.label.toLowerCase());
