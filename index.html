@@ -2899,7 +2899,7 @@
         villager_farmer: { name: "Фермер", hp: 20, passiveVillager: "farmer", w: 0.65, h: 1.9 },
         villager_blacksmith: { name: "Оружейник", hp: 20, passiveVillager: "blacksmith", w: 0.65, h: 1.9 },
         villager_cleric: { name: "Священник", hp: 20, passiveVillager: "cleric", w: 0.65, h: 1.9 },
-        cow: { name: "Корова", hp: 10, hostile: false, w: 0.85, h: 1.25, drop: "cooked_beef" },
+        cow: { name: "Корова", hp: 10, hostile: false, w: 0.85, h: 1.25, drop: "cooked_beef", dropExtra: "leather" },
         pig: { name: "Свинья", hp: 10, hostile: false, w: 0.75, h: 0.95, drop: "apple" },
         sheep: { name: "Овца", hp: 8, hostile: false, w: 0.8, h: 1.2, drop: B.WOOL_WHITE },
         chicken: { name: "Курица", hp: 4, hostile: false, w: 0.5, h: 0.7, drop: "arrow" },
@@ -2970,6 +2970,7 @@
           } else {
             spawnDrop(ent.mesh.position.x, ent.mesh.position.y + 0.5, ent.mesh.position.z, ent.cfg.drop, 1);
           }
+          if (ent.cfg.dropExtra) spawnDrop(ent.mesh.position.x + 0.2, ent.mesh.position.y + 0.5, ent.mesh.position.z, ent.cfg.dropExtra, 1);
           PLAYER.xp += 18;
           updateXP();
         }
