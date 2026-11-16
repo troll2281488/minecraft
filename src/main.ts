@@ -753,6 +753,96 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       }
     }
 
+    // Load the unmodified vanilla block atlas textures from the public Minecraft asset mirror.
+    // Procedural textures remain as an offline fallback if the asset host is unavailable.
+    function loadVanillaBlockTextures() {
+      const version = "1.21.11";
+      const base = `https://mcasset.cloud/${version}/assets/minecraft/textures/block/`;
+      const loader = new THREE.TextureLoader();
+      loader.setCrossOrigin("anonymous");
+
+      const blockFaces = new Map([
+        [B.GRASS, ["grass_block_side.png", "grass_block_side.png", "grass_block_top.png", "dirt.png", "grass_block_side.png", "grass_block_side.png"]],
+        [B.OAK_LOG, ["oak_log.png", "oak_log.png", "oak_log_top.png", "oak_log_top.png", "oak_log.png", "oak_log.png"]],
+        [B.CRAFTING_TABLE, ["crafting_table_side.png", "crafting_table_side.png", "crafting_table_top.png", "oak_planks.png", "crafting_table_side.png", "crafting_table_side.png"]],
+        [B.FURNACE, ["furnace_side.png", "furnace_side.png", "furnace_top.png", "furnace_top.png", "furnace_front.png", "furnace_side.png"]],
+        [B.CHEST, ["chest.png", "chest.png", "chest.png", "chest.png", "chest.png", "chest.png"]],
+        [B.BOOKSHELF, ["bookshelf.png", "bookshelf.png", "oak_planks.png", "oak_planks.png", "bookshelf.png", "bookshelf.png"]],
+        [B.TNT, ["tnt_side.png", "tnt_side.png", "tnt_top.png", "tnt_bottom.png", "tnt_side.png", "tnt_side.png"]],
+        [B.BED_FOOT, ["red_wool.png", "red_wool.png", "red_wool.png", "oak_planks.png", "red_wool.png", "red_wool.png"]],
+        [B.BED_HEAD, ["red_wool.png", "red_wool.png", "red_wool.png", "oak_planks.png", "red_wool.png", "red_wool.png"]],
+        [B.SANDSTONE, ["sandstone.png", "sandstone.png", "sandstone_top.png", "sandstone_bottom.png", "sandstone.png", "sandstone.png"]],
+        [B.HAY_BLOCK, ["hay_block_side.png", "hay_block_side.png", "hay_block_top.png", "hay_block_top.png", "hay_block_side.png", "hay_block_side.png"]],
+        [B.END_PORTAL_FRAME, ["end_portal_frame_side.png", "end_portal_frame_side.png", "end_portal_frame_top.png", "end_stone.png", "end_portal_frame_side.png", "end_portal_frame_side.png"]],
+        [B.END_PORTAL_FRAME_EYE, ["end_portal_frame_side.png", "end_portal_frame_side.png", "end_portal_frame_eye.png", "end_stone.png", "end_portal_frame_side.png", "end_portal_frame_side.png"]]
+      ]);
+      const blockFiles = new Map([
+        [B.DIRT, "dirt.png"], [B.STONE, "stone.png"], [B.COBBLESTONE, "cobblestone.png"],
+        [B.BEDROCK, "bedrock.png"], [B.OAK_PLANKS, "oak_planks.png"], [B.OAK_LEAVES, "oak_leaves.png"],
+        [B.SAND, "sand.png"], [B.GRAVEL, "gravel.png"], [B.COAL_ORE, "coal_ore.png"],
+        [B.IRON_ORE, "iron_ore.png"], [B.GOLD_ORE, "gold_ore.png"], [B.DIAMOND_ORE, "diamond_ore.png"],
+        [B.REDSTONE_ORE, "redstone_ore.png"], [B.LAPIS_ORE, "lapis_ore.png"], [B.GLASS, "glass.png"],
+        [B.OBSIDIAN, "obsidian.png"], [B.NETHERRACK, "netherrack.png"], [B.SOUL_SAND, "soul_sand.png"],
+        [B.GLOWSTONE, "glowstone.png"], [B.END_STONE, "end_stone.png"], [B.FARMLAND, "farmland.png"],
+        [B.STONE_BRICKS, "stone_bricks.png"], [B.DRAGON_EGG, "dragon_egg.png"], [B.WOOL_WHITE, "white_wool.png"],
+        [B.BRICKS, "bricks.png"], [B.NETHER_BRICKS, "nether_bricks.png"], [B.QUARTZ_ORE, "nether_quartz_ore.png"],
+        [B.GOLD_BLOCK, "gold_block.png"], [B.CRYING_OBSIDIAN, "crying_obsidian.png"],
+        [B.ANCIENT_DEBRIS, "ancient_debris_side.png"], [B.NETHER_GOLD_ORE, "nether_gold_ore.png"],
+        [B.BASALT, "basalt_side.png"], [B.BLACKSTONE, "blackstone.png"], [B.SOUL_SOIL, "soul_soil.png"],
+        [B.POPPY, "poppy.png"], [B.DANDELION, "dandelion.png"], [B.WHEAT_1, "wheat_stage0.png"],
+        [B.WHEAT_7, "wheat_stage7.png"], [B.TORCH, "torch.png"], [B.WATER, "water_still.png"],
+        [B.LAVA, "lava_still.png"], [B.NETHER_PORTAL, "nether_portal.png"], [B.END_PORTAL, "end_portal.png"]
+      ]);
+
+      const configureTexture = texture => {
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.magFilter = THREE.NearestFilter;
+        texture.minFilter = THREE.NearestFilter;
+        texture.generateMipmaps = false;
+        texture.needsUpdate = true;
+      };
+      const loadTexture = (file, onLoad) => loader.load(base + file, texture => {
+        configureTexture(texture);
+        onLoad(texture);
+      }, undefined, () => console.warn("Vanilla texture unavailable:", file));
+
+      for (const [id, files] of blockFaces) {
+        const materials = ATLAS.materials[id];
+        if (!Array.isArray(materials)) continue;
+        files.forEach((file, face) => loadTexture(file, texture => {
+          materials[face].map = texture;
+          materials[face].needsUpdate = true;
+        }));
+        ATLAS.icons[id] = base + files[2];
+      }
+      for (const [id, file] of blockFiles) {
+        const material = ATLAS.materials[id];
+        if (!material) continue;
+        loadTexture(file, texture => {
+          const targets = Array.isArray(material) ? material : [material];
+          targets.forEach(faceMaterial => {
+            faceMaterial.map = texture;
+            faceMaterial.needsUpdate = true;
+          });
+        });
+        ATLAS.icons[id] = base + file;
+      }
+
+      // Vanilla's ten progressive destroy-stage overlays (stage 1..10).
+      for (let stage = 1; stage <= 10; stage++) {
+        loadTexture(`destroy_stage_${stage - 1}.png`, texture => {
+          const material = new THREE.MeshBasicMaterial({
+            map: texture, transparent: true, opacity: 0.88,
+            depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1
+          });
+          crackStageMaterials[stage] = material;
+          if (crackMesh.visible && Math.min(10, Math.floor(miningState.progress * 10)) === stage) {
+            crackMesh.material = material;
+          }
+        });
+      }
+    }
+
     // =========================================================================
     // 4. RECIPES, SMELTING & VILLAGER TRADES (FLETCHER, FARMER, BLACKSMITH, CLERIC)
     // =========================================================================
@@ -1006,9 +1096,17 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
     crackMesh.visible = false;
     scene.add(crackMesh);
 
+    const crackStageMaterials = new Array(11).fill(null);
+    const crackFallbackMaterial = crackMesh.material;
     function updateCrackStage(stage) {
       if (stage <= 0) { crackMesh.visible = false; return; }
       crackMesh.visible = true;
+      const stageMaterial = crackStageMaterials[stage];
+      if (stageMaterial) {
+        crackMesh.material = stageMaterial;
+        return;
+      }
+      crackMesh.material = crackFallbackMaterial;
       crackCtx.clearRect(0, 0, 16, 16);
       crackCtx.fillStyle = "rgba(18,18,18,0.72)";
       for (let i = 0; i < stage * 5; i++) {
@@ -5435,6 +5533,7 @@ const WORLD_CONFIG: WorldConfig = {
     // 18. INITIALIZATION & MAIN LOOP
     // =========================================================================
     initTextures();
+    loadVanillaBlockTextures();
 
     GAME.world = new VoxelWorld(12345);
     for (let dx = -2; dx <= 2; dx++) {
