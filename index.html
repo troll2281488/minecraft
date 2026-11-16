@@ -2662,7 +2662,7 @@
       seedInput: "",
       gamemode: "survival",
       difficulty: "normal",
-      bonusChest: true,
+      bonusChest: false,
       keepInventory: false,
       allowCheats: true,
       doDaylightCycle: true
@@ -3504,8 +3504,24 @@
     }
 
     function closeGUI() {
+      if (carriedStack) {
+        let left = carriedStack.count;
+        const cap = getItemInfo(carriedStack.id).stack || 64;
+        for (let i = 0; i < 36 && left > 0; i++) {
+          const s = PLAYER.inv[i];
+          if (s && String(s.id) === String(carriedStack.id) && s.count < cap) {
+            const moved = Math.min(left, cap - s.count); s.count += moved; left -= moved;
+          }
+        }
+        for (let i = 0; i < 36 && left > 0; i++) if (!PLAYER.inv[i]) {
+          const moved = Math.min(left, cap); PLAYER.inv[i] = { id: carriedStack.id, count: moved }; left -= moved;
+        }
+        if (left > 0) { carriedStack.count = left; showBanner("Освободи место в инвентаре, чтобы убрать предмет с курсора!"); return; }
+        carriedStack = null; updateHotbarUI();
+      }
       document.getElementById("gui-screen").classList.add("hidden");
       GAME.state = "playing";
+      renderCarriedStack();
       requestLock();
     }
 
