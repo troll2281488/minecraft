@@ -2826,7 +2826,7 @@ const WORLD_CONFIG: WorldConfig = {
 ;
     }
     window.addEventListener("mouseup",e=>{
-      if(e.button===2){rightDragActive=false;rightDragVisited.clear();refreshAfterInventoryClick();}
+      if(e.button===2){const wasDragging=rightDragActive;rightDragActive=false;rightDragVisited.clear();if(wasDragging)refreshAfterInventoryClick();}
       if(e.button===0&&leftDragState){
         const state=leftDragState;leftDragState=null;
         if(!state.moved)state.commit();
