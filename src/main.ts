@@ -2731,18 +2731,16 @@ const WORLD_CONFIG: WorldConfig = {
       const start = source.mesh.position.clone().add(new THREE.Vector3(0, 0.8, 0));
       const target = PLAYER.pos.clone().add(new THREE.Vector3(0, 1.0, 0));
       const direction = target.sub(start).normalize();
-      const color = kind === "dragon_breath" ? 0x9b42d6 : 0xff8a24;
-      const mesh = new THREE.Mesh(
-        new THREE.SphereGeometry(kind === "dragon_breath" ? 0.34 : 0.22, 8, 8),
-        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.92 })
-      );
+      const color = kind === "dragon_breath" ? 0x9b42d6 : kind === "skeleton_arrow" ? 0xb99a62 : 0xff8a24;
+      const geometry = kind === "skeleton_arrow" ? new THREE.BoxGeometry(0.07, 0.07, 0.62) : new THREE.SphereGeometry(kind === "dragon_breath" ? 0.34 : 0.22, 8, 8);
+      const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.92 }));
       mesh.position.copy(start);
       scene.add(mesh);
       entities.push({
         type: "hostile_projectile", kind, mesh,
-        vel: direction.multiplyScalar(kind === "dragon_breath" ? 8 : 10),
+        vel: direction.multiplyScalar(kind === "dragon_breath" ? 8 : kind === "skeleton_arrow" ? 15 : 10),
         life: kind === "dragon_breath" ? 5 : 4,
-        damage: kind === "dragon_breath" ? 5 : 4
+        damage: kind === "dragon_breath" ? 5 : kind === "skeleton_arrow" ? 3 : 4
       });
     }
 
@@ -2869,7 +2867,7 @@ const WORLD_CONFIG: WorldConfig = {
           e.mesh.rotation.x += dt * 4;
           const blockAt = GAME.world.getBlock(e.mesh.position.x, e.mesh.position.y, e.mesh.position.z);
           const hitPlayer = e.mesh.position.distanceTo(PLAYER.pos.clone().add(new THREE.Vector3(0, 0.9, 0))) < 0.85;
-          if (hitPlayer) damagePlayer(e.damage, e.kind === "dragon_breath" ? "Дыхание Дракона" : "Огненный шар Ифрита");
+          if (hitPlayer) damagePlayer(e.damage, e.kind === "dragon_breath" ? "Дыхание Дракона" : e.kind === "skeleton_arrow" ? "Стрела скелета" : "Огненный шар Ифрита");
           if (hitPlayer || BLOCK_PROPS[blockAt]?.solid || e.life <= 0) {
             if (e.kind === "dragon_breath" && hitPlayer) PLAYER.fireTicks = Math.max(PLAYER.fireTicks, 2.5);
             scene.remove(e.mesh);
@@ -2911,6 +2909,14 @@ const WORLD_CONFIG: WorldConfig = {
         if (e.type === "crystal") {
           e.mesh.rotation.y += dt * 1.5;
           continue;
+        }
+
+        if (e.type === "skeleton") {
+          e.shootCooldown = (e.shootCooldown || 1.4) - dt;
+          if (dist > 4 && dist < 15 && e.shootCooldown <= 0 && GAME.gamemode === "survival") {
+            launchHostileProjectile(e, "skeleton_arrow");
+            e.shootCooldown = 2.0 + Math.random() * 1.2;
+          }
         }
 
         if (e.type === "blaze") {
@@ -5104,7 +5110,7 @@ const WORLD_CONFIG: WorldConfig = {
           break;
 
         case "summon": {
-          const allowed = ["zombie", "skeleton", "creeper", "enderman", "cow", "pig", "sheep", "chicken", "villager_fletcher", "blaze"];
+          const allowed = ["zombie", "skeleton", "creeper", "enderman", "cow", "pig", "sheep", "chicken", "rabbit", "villager_fletcher", "villager_farmer", "villager_blacksmith", "villager_cleric", "wither_skeleton", "blaze", "dragon"];
           const type = a1 || "pig";
           if (!allowed.includes(type)) { addChatLine(`Неизвестный тип существа: ${type}`, "#c98b8b"); break; }
           const dir = getLookDir();
