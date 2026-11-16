@@ -1061,6 +1061,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       { out: { id: "flint_and_steel", count: 1 }, req: { iron_ingot: 1, [B.GRAVEL]: 1 } },
       { out: { id: "bread", count: 1 }, req: { wheat: 3 } },
       { out: { id: "fishing_rod", count: 1 }, req: { stick: 3, string: 2 } },
+      { out: { id: "bucket", count: 1 }, req: { iron_ingot: 3 } },
       { out: { id: "cookie", count: 8 }, req: { wheat: 2, cocoa_beans: 1 } },
       { out: { id: "pumpkin_pie", count: 1 }, req: { pumpkin: 1, sugar: 1, egg: 1 } },
       { out: { id: "golden_carrot", count: 1 }, req: { carrot: 1, gold_ingot: 8 } },
@@ -1597,12 +1598,15 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         const villageLog = biome === "Тайга" || biome === "Снежная тайга" ? (B.SPRUCE_LOG || B.OAK_LOG) :
           biome === "Джунгли" ? (B.JUNGLE_LOG || B.OAK_LOG) :
           biome === "Саванна" ? (B.ACACIA_LOG || B.OAK_LOG) : B.OAK_LOG;
+        const villageBase = biome === "Пустыня" || biome === "Бесплодные земли" ? (B.SANDSTONE || villageBase) :
+          biome === "Снежная тайга" || biome === "Ледяные пики" ? (B.SNOW_BLOCK || villageBase) :
+          biome === "Джунгли" || biome === "Болото" ? (B.MOSSY_COBBLESTONE || villageBase) : villageBase;
         this.structures.villages.push({ x: vx, y: vy, z: vz, biome });
 
         // House 1: biome-themed blacksmith / Fletcher workshop
         for (let dx = -4; dx <= 4; dx++) {
           for (let dz = -4; dz <= 4; dz++) {
-            this.setBlockRaw(vx + dx, vy, vz + dz, B.COBBLESTONE);
+            this.setBlockRaw(vx + dx, vy, vz + dz, villageBase);
             for (let dy = 1; dy <= 4; dy++) this.setBlockRaw(vx + dx, vy + dy, vz + dz, B.AIR);
           }
         }
@@ -1610,7 +1614,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           for (let dz = -3; dz <= 3; dz++) {
             this.setBlockRaw(vx + dx, vy + 4, vz + dz, villagePlanks);
             if (Math.abs(dx) === 3 || Math.abs(dz) === 3) {
-              for (let dy = 1; dy <= 3; dy++) this.setBlockRaw(vx + dx, vy + dy, vz + dz, B.COBBLESTONE);
+              for (let dy = 1; dy <= 3; dy++) this.setBlockRaw(vx + dx, vy + dy, vz + dz, villageBase);
             }
           }
         }
@@ -1635,6 +1639,8 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         vChest[11] = { id: "brown_mushroom", count: 2 };
         vChest[12] = { id: "sugar", count: 3 };
         vChest[13] = { id: "bowl", count: 2 };
+        vChest[14] = { id: "cocoa_beans", count: 3 };
+        vChest[15] = { id: "melon", count: 2 };
         this.chests.set(`overworld:${vx},${vy + 1},${vz + 2}`, vChest);
 
         // House 2: Oak Cottage
@@ -1642,7 +1648,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         const hy = Math.max(27, this.getSurfaceHeight(hx, hz));
         for (let dx = -3; dx <= 3; dx++) {
           for (let dz = -3; dz <= 3; dz++) {
-            this.setBlockRaw(hx + dx, hy, hz + dz, B.COBBLESTONE);
+            this.setBlockRaw(hx + dx, hy, hz + dz, villageBase);
             for (let dy = 1; dy <= 4; dy++) this.setBlockRaw(hx + dx, hy + dy, hz + dz, B.AIR);
             this.setBlockRaw(hx + dx, hy + 4, hz + dz, villageLog);
             if (Math.abs(dx) === 3 || Math.abs(dz) === 3) {
@@ -1701,6 +1707,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           loot[1] = { id: "emerald", count: 2 + idx };
           loot[2] = { id: "gold_ingot", count: 4 };
           loot[3] = { id: "ender_pearl", count: 1 };
+          if (idx === 1) loot[5] = { id: "enchanted_golden_apple", count: 1 };
           if (idx === 0) loot[4] = { id: "golden_apple", count: 1 };
           this.chests.set(`overworld:${px + ox},${py - 5},${pz + oz}`, loot);
         });
@@ -1910,19 +1917,14 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         if (biome === "Пустыня" || biome === "Бесплодные земли") {
           if (h < 0.76) this.buildPyramidAt(cx, cz);
           else this.buildRuinedPortalAt(cx, cz);
-        } else if (biome === "Снежная тайга" || biome === "Ледяные пики") {
-          this.buildBiomeStructureAt(cx, cz, "igloo");
-        } else if (biome === "Болото") {
-          this.buildBiomeStructureAt(cx, cz, "witch_hut");
-        } else if (biome === "Джунгли") {
-          this.buildBiomeStructureAt(cx, cz, "jungle_temple");
-        } else {
-          this.buildVillageAt(cx, cz, biome);
-          const vy = Math.max(27, this.getSurfaceHeight(cx, cz));
-          spawnMob("villager_farmer", cx + 1, vy + 1, cz - 1);
-          spawnMob("villager_fletcher", cx - 1, vy + 1, cz + 1);
-          spawnMob("villager_blacksmith", cx + 2, vy + 1, cz + 2);
-        }
+        } else if (biome === "Снежная тайга" || biome === "Ледяные пики") this.buildBiomeStructureAt(cx, cz, "igloo");
+        else if (biome === "Болото") this.buildBiomeStructureAt(cx, cz, "witch_hut");
+        else if (biome === "Джунгли") this.buildBiomeStructureAt(cx, cz, "jungle_temple");
+        this.buildVillageAt(cx, cz, biome);
+        const vy = Math.max(27, this.getSurfaceHeight(cx, cz));
+        spawnMob("villager_farmer", cx + 1, vy + 1, cz - 1);
+        spawnMob("villager_fletcher", cx - 1, vy + 1, cz + 1);
+        spawnMob("villager_blacksmith", cx + 2, vy + 1, cz + 2);
       }
 
       spawnBonusChestNear(px, pz) {
