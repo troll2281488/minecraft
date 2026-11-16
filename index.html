@@ -4731,7 +4731,12 @@
       "/give obsidian 16",
       "/give flint_and_steel 1",
       "/tp spawn",
+      "/tp ~ ~ ~",
+      "/teleport 100 70 100",
       "/spawnpoint",
+      "/setworldspawn",
+      "/summon zombie",
+      "/summon cow",
       "/heal",
       "/feed",
       "/clear",
@@ -4865,27 +4870,42 @@
         }
 
         case "tp":
-          if (a1 === "spawn") {
-            PLAYER.pos.set(PLAYER.spawnPos.x, PLAYER.spawnPos.y, PLAYER.spawnPos.z);
-            PLAYER.vel.set(0, 0, 0);
-            updateChunksAroundPlayer(true);
-            resolveStuckInBlocks();
-            logAndBroadcastCommand(`Телепортация на точку возрождения`);
-          } else if (!isNaN(Number(a1)) && !isNaN(Number(a2)) && !isNaN(Number(a3))) {
-            PLAYER.pos.set(Number(a1), Number(a2), Number(a3));
-            PLAYER.vel.set(0, 0, 0);
-            updateChunksAroundPlayer(true);
-            resolveStuckInBlocks();
-            logAndBroadcastCommand(`Телепортация в координаты ${a1}, ${a2}, ${a3}`);
-          } else {
-            addChatLine("Использование: /tp <x> <y> <z> или /tp spawn", "#c98b8b");
+        case "teleport": {
+          if (a1 === "spawn") PLAYER.pos.set(PLAYER.spawnPos.x, PLAYER.spawnPos.y, PLAYER.spawnPos.z);
+          else {
+            const base = [PLAYER.pos.x, PLAYER.pos.y, PLAYER.pos.z];
+            const coords = [a1, a2, a3].map((v, i) => v.startsWith("~") ? base[i] + (v.length > 1 ? (Number(v.slice(1)) || 0) : 0) : Number(v));
+            if (coords.some(v => !Number.isFinite(v))) { addChatLine("Использование: /tp <x> <y> <z>, /tp ~ ~ ~ или /tp spawn", "#c98b8b"); break; }
+            PLAYER.pos.set(coords[0], coords[1], coords[2]);
           }
+          PLAYER.vel.set(0, 0, 0);
+          updateChunksAroundPlayer(true);
+          resolveStuckInBlocks();
+          logAndBroadcastCommand(`Телепортация в ${Math.floor(PLAYER.pos.x)}, ${Math.floor(PLAYER.pos.y)}, ${Math.floor(PLAYER.pos.z)}`);
           break;
+        }
 
         case "spawnpoint":
           PLAYER.spawnPos = { dim: GAME.world.dimension, x: PLAYER.pos.x, y: PLAYER.pos.y, z: PLAYER.pos.z };
           logAndBroadcastCommand(`Точка возрождения установлена в ${Math.round(PLAYER.pos.x)}, ${Math.round(PLAYER.pos.y)}, ${Math.round(PLAYER.pos.z)}`);
           break;
+
+        case "setworldspawn":
+          PLAYER.spawnPos = { dim: "overworld", x: PLAYER.pos.x, y: PLAYER.pos.y, z: PLAYER.pos.z };
+          logAndBroadcastCommand("Мировая точка появления установлена");
+          break;
+
+        case "summon": {
+          const allowed = ["zombie", "skeleton", "creeper", "enderman", "cow", "pig", "sheep", "chicken", "villager_fletcher", "blaze"];
+          const type = a1 || "pig";
+          if (!allowed.includes(type)) { addChatLine(`Неизвестный тип существа: ${type}`, "#c98b8b"); break; }
+          const dir = getLookDir();
+          const x = PLAYER.pos.x + dir.x * 3, z = PLAYER.pos.z + dir.z * 3;
+          const y = GAME.world.dimension === "overworld" ? Math.max(1, GAME.world.getSurfaceHeight(x, z) + 1) : PLAYER.pos.y;
+          spawnMob(type, x, y, z);
+          logAndBroadcastCommand(`Создано существо: ${type}`);
+          break;
+        }
 
         case "heal":
           PLAYER.health = 20;
