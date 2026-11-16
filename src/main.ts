@@ -2014,7 +2014,7 @@ const WORLD_CONFIG: WorldConfig = {
       document.getElementById("boss-bar-wrap").classList.add("hidden");
     }
 
-    function spawnDrop(x, y, z, id, count = 1) {
+    function spawnDrop(x, y, z, id, count = 1, networkId = null, fromNetwork = false) {
       if (!id || count <= 0) return;
       const isBlock = typeof id === "number" && ATLAS.materials[id];
       const mat = isBlock
@@ -2026,11 +2026,20 @@ const WORLD_CONFIG: WorldConfig = {
       );
       mesh.position.set(x, y, z);
       scene.add(mesh);
+      let netId = networkId;
+      if (!fromNetwork && MP.active && fbDb && MP.roomId && GAME.world) {
+        const dropRef = push(ref(fbDb, `minecraft_game/rooms/${MP.roomId}/drops`));
+        netId = dropRef.key;
+        set(dropRef, { id, count, x, y, z, dim: GAME.world.dimension, by: MP.playerId, createdAt: Date.now() }).catch(err => console.warn("Drop sync failed:", err));
+      }
       entities.push({
         type: "drop",
         id,
         count,
         mesh,
+        netId,
+        fromNetwork,
+        dim: GAME.world?.dimension || "overworld",
         vel: new THREE.Vector3((Math.random() - 0.5) * 2, 2.8, (Math.random() - 0.5) * 2),
         age: 0
       });
@@ -2249,6 +2258,9 @@ const WORLD_CONFIG: WorldConfig = {
             e.mesh.position.lerp(PLAYER.pos.clone().add(new THREE.Vector3(0, 0.8, 0)), dt * 10);
             if (dist < 0.75 && giveItem(e.id, e.count)) {
               SFX.pickup();
+              if (e.netId && MP.active && fbDb && MP.roomId) {
+                remove(ref(fbDb, `minecraft_game/rooms/${MP.roomId}/drops/${e.netId}`)).catch(() => {});
+              }
               scene.remove(e.mesh);
               entities.splice(i, 1);
               continue;
@@ -4115,6 +4127,24 @@ const WORLD_CONFIG: WorldConfig = {
         measureFirebasePing();
         MP.pingTimer = setInterval(measureFirebasePing, 3000);
 
+        const unsubDrops = onValue(ref(fbDb, `minecraft_game/rooms/${MP.roomId}/drops`), snap => {
+          const allDrops = snap.val() || {};
+          const activeKeys = new Set();
+          for (const [dropKey, drop] of Object.entries(allDrops)) {
+            if (!drop || !drop.id || drop.dim !== GAME.world?.dimension) continue;
+            activeKeys.add(dropKey);
+            const existing = entities.find(entity => entity.type === "drop" && entity.netId === dropKey);
+            if (!existing) spawnDrop(Number(drop.x) || 0, Number(drop.y) || 0, Number(drop.z) || 0, drop.id, Math.max(1, Number(drop.count) || 1), dropKey, true);
+          }
+          for (let idx = entities.length - 1; idx >= 0; idx--) {
+            const entity = entities[idx];
+            if (entity.type === "drop" && entity.fromNetwork && entity.netId && !activeKeys.has(entity.netId)) {
+              scene.remove(entity.mesh);
+              entities.splice(idx, 1);
+            }
+          }
+        });
+        MP.unsubs.push(unsubDrops);
         const unsubBlocks = onChildAdded(ref(fbDb, `minecraft_game/rooms/${MP.roomId}/blocks`), snap => {
           const b = snap.val();
           if (!b || b.by === MP.playerId) return;
