@@ -475,6 +475,13 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         ctx.fillRect(3, 4, 2, 4); ctx.fillRect(11, 7, 2, 5);
       });
       const netherrack = makePixelTex(ctx => noiseFill(ctx, "#662929", ["#541f1f", "#783232", "#451717"], 0.55));
+      const ancientDebris = makePixelTex(ctx => {
+        noiseFill(ctx, "#493b35", ["#342b29", "#665047", "#2b2422"], 0.5);
+        ctx.fillStyle = "#b27b3d";
+        ctx.fillRect(3, 4, 3, 2); ctx.fillRect(10, 9, 3, 3); ctx.fillRect(6, 13, 2, 1);
+        ctx.fillStyle = "#d0a05a";
+        ctx.fillRect(4, 4, 1, 1); ctx.fillRect(11, 9, 1, 1);
+      });
       const soulSand = makePixelTex(ctx => noiseFill(ctx, "#4a392e", ["#3b2d24", "#594639"], 0.5));
       const glowstone = makePixelTex(ctx => noiseFill(ctx, "#cfa946", ["#9e7929", "#e0c46c", "#7a5919"], 0.6));
       const portal = makePixelTex(ctx => noiseFill(ctx, "#6b2ca3", ["#8441bf", "#511c80"], 0.5));
@@ -552,6 +559,8 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         ATLAS.icons[id] = t.dataUrl;
       }
 
+      ATLAS.materials[B.ANCIENT_DEBRIS] = mat(ancientDebris);
+      ATLAS.icons[B.ANCIENT_DEBRIS] = ancientDebris.dataUrl;
       ATLAS.materials[B.OAK_LEAVES] = mat(leaves, { alphaTest: 0.4, side: THREE.DoubleSide });
       ATLAS.icons[B.OAK_LEAVES] = leaves.dataUrl;
 
