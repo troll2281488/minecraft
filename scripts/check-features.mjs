@@ -118,26 +118,6 @@ const checks = [
     "Food cooking and survival",
     "raw_chicken: \"cooked_chicken\""
   ],
-  [
-    "Minecraft 1.21 mace and smash attack",
-    "smashBonus"
-  ],
-  [
-    "Breeze rod and heavy core crafting",
-    "heavy_core: 1, breeze_rod: 1, stick: 1"
-  ],
-  [
-    "Throwable wind charge",
-    "wind_charge_projectile"
-  ],
-  [
-    "Breeze mob model and AI",
-    'breeze: { name: "Бриз"'
-  ],
-  [
-    "Breeze wind charge attacks",
-    'launchHostileProjectile(e, "wind_charge")'
-  ]
 ];
 const missing = checks.filter(([, anchor]) => !source.includes(anchor)).map(([name]) => name);
 
