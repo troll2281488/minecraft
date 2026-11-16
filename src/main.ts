@@ -2223,7 +2223,7 @@ const WORLD_CONFIG: WorldConfig = {
       const start = source.mesh.position.clone().add(new THREE.Vector3(0, 0.8, 0));
       const target = PLAYER.pos.clone().add(new THREE.Vector3(0, 1.0, 0));
       const direction = target.sub(start).normalize();
-      const color = kind === "dragon_breath" ? 0x9b42d6 : 0xff8a24;
+      const color = kind === "dragon_breath" ? 0x9b42d6 : kind === "wind_charge" ? 0xb9e4dc : 0xff8a24;
       const mesh = new THREE.Mesh(
         new THREE.SphereGeometry(kind === "dragon_breath" ? 0.34 : 0.22, 8, 8),
         new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.92 })
@@ -2232,9 +2232,9 @@ const WORLD_CONFIG: WorldConfig = {
       scene.add(mesh);
       entities.push({
         type: "hostile_projectile", kind, mesh,
-        vel: direction.multiplyScalar(kind === "dragon_breath" ? 8 : 10),
+        vel: direction.multiplyScalar(kind === "dragon_breath" ? 8 : kind === "wind_charge" ? 12 : 10),
         life: kind === "dragon_breath" ? 5 : 4,
-        damage: kind === "dragon_breath" ? 5 : 4
+        damage: kind === "dragon_breath" ? 5 : kind === "wind_charge" ? 1 : 4
       });
     }
 
@@ -2456,7 +2456,7 @@ const WORLD_CONFIG: WorldConfig = {
             r.mesh.position.x = Math.cos(a) * 0.52;
             r.mesh.position.z = Math.sin(a) * 0.52;
           });
-          e.mesh.position.y += Math.sin(e.walkPhase * 1.4) * dt * 0.5;
+          if (e.parts.body) e.parts.body.position.y = 1.0 + Math.sin(e.walkPhase * 1.4) * 0.08;
           e.shootCooldown = (e.shootCooldown || 1.8) - dt;
           const breezeDistance = e.mesh.position.distanceTo(PLAYER.pos);
           if (breezeDistance < 16 && breezeDistance > 3 && e.shootCooldown <= 0 && GAME.gamemode === "survival") {
