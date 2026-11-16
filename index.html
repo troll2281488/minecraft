@@ -2907,6 +2907,25 @@
       }
     }
 
+    function launchHostileProjectile(source, kind = "fireball") {
+      const start = source.mesh.position.clone().add(new THREE.Vector3(0, 0.8, 0));
+      const target = PLAYER.pos.clone().add(new THREE.Vector3(0, 1.0, 0));
+      const direction = target.sub(start).normalize();
+      const color = kind === "dragon_breath" ? 0x9b42d6 : 0xff8a24;
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(kind === "dragon_breath" ? 0.34 : 0.22, 8, 8),
+        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.92 })
+      );
+      mesh.position.copy(start);
+      scene.add(mesh);
+      entities.push({
+        type: "hostile_projectile", kind, mesh,
+        vel: direction.multiplyScalar(kind === "dragon_breath" ? 8 : 10),
+        life: kind === "dragon_breath" ? 5 : 4,
+        damage: kind === "dragon_breath" ? 5 : 4
+      });
+    }
+
     function tickEntities(dt) {
       for (let i = entities.length - 1; i >= 0; i--) {
         const e = entities[i];
@@ -2942,6 +2961,21 @@
               SFX.breakBlock("stone");
               spawnParticles(e.mesh.position.x, e.mesh.position.y, e.mesh.position.z, 0x48ba7b, 10);
             }
+            scene.remove(e.mesh);
+            entities.splice(i, 1);
+          }
+          continue;
+        }
+
+        if (e.type === "hostile_projectile") {
+          e.life -= dt;
+          e.mesh.position.addScaledVector(e.vel, dt);
+          e.mesh.rotation.x += dt * 4;
+          const blockAt = GAME.world.getBlock(e.mesh.position.x, e.mesh.position.y, e.mesh.position.z);
+          const hitPlayer = e.mesh.position.distanceTo(PLAYER.pos.clone().add(new THREE.Vector3(0, 0.9, 0))) < 0.85;
+          if (hitPlayer) damagePlayer(e.damage, e.kind === "dragon_breath" ? "Дыхание Дракона" : "Огненный шар Ифрита");
+          if (hitPlayer || BLOCK_PROPS[blockAt]?.solid || e.life <= 0) {
+            if (e.kind === "dragon_breath" && hitPlayer) PLAYER.fireTicks = Math.max(PLAYER.fireTicks, 2.5);
             scene.remove(e.mesh);
             entities.splice(i, 1);
           }
@@ -2990,6 +3024,12 @@
             r.mesh.position.x = Math.cos(a) * 0.55;
             r.mesh.position.z = Math.sin(a) * 0.55;
           });
+          e.shootCooldown = (e.shootCooldown || 1.2) - dt;
+          const blazeDistance = e.mesh.position.distanceTo(PLAYER.pos);
+          if (blazeDistance < 18 && blazeDistance > 3 && e.shootCooldown <= 0 && GAME.gamemode === "survival") {
+            launchHostileProjectile(e, "fireball");
+            e.shootCooldown = 2.8 + Math.random() * 1.4;
+          }
         }
 
         if (e.type === "dragon") {
@@ -3007,6 +3047,11 @@
             const flap = Math.sin(e.timer * 8) * 0.45;
             e.parts.wings[0].rotation.z = flap;
             e.parts.wings[1].rotation.z = -flap;
+          }
+          e.breathCooldown = (e.breathCooldown || 3) - dt;
+          if (e.breathCooldown <= 0 && e.mesh.position.distanceTo(PLAYER.pos) < 30 && GAME.gamemode === "survival") {
+            launchHostileProjectile(e, "dragon_breath");
+            e.breathCooldown = 4.5;
           }
           if (e.mesh.position.distanceTo(PLAYER.pos) < 4.5 && Math.random() < dt * 1.5) {
             damagePlayer(4, "Убит Драконом Края");
