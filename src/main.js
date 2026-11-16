@@ -1,7 +1,7 @@
 import * as THREE from "three";
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded, onDisconnect } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import { initializeApp } from "firebase/app";
+import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded, onDisconnect } from "firebase/database";
 
     // =========================================================================
     // 1. FIREBASE REALTIME DATABASE MULTIPLAYER SETUP
