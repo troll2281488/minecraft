@@ -2240,6 +2240,17 @@ const WORLD_CONFIG: WorldConfig = {
       SFX.eyeLaunch();
     }
 
+    function launchWindCharge() {
+      const dir = getLookDir();
+      const origin = getEyePos().addScaledVector(dir, 0.65);
+      const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), new THREE.MeshBasicMaterial({ color: 0xb9d8d0 }));
+      mesh.position.copy(origin);
+      scene.add(mesh);
+      entities.push({ type: "wind_charge_projectile", mesh, vel: dir.multiplyScalar(18), life: 2.2 });
+      consumeHeld(1);
+      SFX.eyeLaunch();
+    }
+
     function moveMobWithCollision(entity, dx, dz) {
       const width = entity.cfg?.w || 0.6;
       const height = entity.cfg?.h || 1.8;
@@ -3160,6 +3171,10 @@ const WORLD_CONFIG: WorldConfig = {
       // Main-hand actions take priority over off-hand shield blocking.
       if (held?.id === "ender_pearl") {
         launchEnderPearl();
+        return;
+      }
+      if (held?.id === "wind_charge") {
+        launchWindCharge();
         return;
       }
 
