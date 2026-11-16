@@ -4613,6 +4613,57 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       return GAME.world.getSurfaceHeight(ix, iz) + 1.5;
     }
 
+    const LOCAL_WORLD_SAVE_KEY = "voxelcraft:world:v1";
+    let localSaveClock = 0;
+    function saveWorldLocal() {
+      if (!GAME.world || MP.active) return false;
+      try {
+        const payload = {
+          version: 1, seed: GAME.world.seed, dimension: GAME.world.dimension,
+          modifications: Object.fromEntries(Object.entries(GAME.world.modifications).map(([dim, map]) => [dim, [...map.entries()]])),
+          generatedRegions: [...GAME.world.generatedRegions],
+          structures: GAME.world.structures,
+          game: { gamemode: GAME.gamemode, difficulty: GAME.difficulty, keepInventory: GAME.keepInventory, allowCheats: GAME.allowCheats, doDaylightCycle: GAME.doDaylightCycle, weather: GAME.weather, timeOfDay: GAME.timeOfDay, dayCount: GAME.dayCount },
+          player: { pos: PLAYER.pos.toArray(), vel: PLAYER.vel.toArray(), yaw: PLAYER.yaw, pitch: PLAYER.pitch, health: PLAYER.health, hunger: PLAYER.hunger, air: PLAYER.air, inv: PLAYER.inv, offhand: PLAYER.offhand, hotbarIdx: PLAYER.hotbarIdx, spawnPos: PLAYER.spawnPos, flying: PLAYER.flying }
+        };
+        localStorage.setItem(LOCAL_WORLD_SAVE_KEY, JSON.stringify(payload));
+        return true;
+      } catch (error) { console.warn("Local world save failed", error); return false; }
+    }
+
+    function loadWorldLocal() {
+      try {
+        const data = JSON.parse(localStorage.getItem(LOCAL_WORLD_SAVE_KEY) || "null");
+        if (!data || data.version !== 1 || !data.player || !Array.isArray(data.player.pos)) return false;
+        clearAllEntities();
+        if (GAME.world) GAME.world.clearAllMeshes();
+        if (PLAYER.rig) scene.remove(PLAYER.rig.root);
+        PLAYER.rig = createHumanoidRig(GAME.skin);
+        GAME.world = new VoxelWorld(Number(data.seed));
+        for (const dim of ["overworld", "nether", "end"]) GAME.world.modifications[dim] = new Map(data.modifications?.[dim] || []);
+        GAME.world.generatedRegions = new Set(data.generatedRegions || []);
+        if (data.structures) GAME.world.structures = data.structures;
+        GAME.world.dimension = data.dimension || "overworld";
+        Object.assign(GAME, data.game || {});
+        const p = data.player;
+        PLAYER.pos.fromArray(p.pos); PLAYER.vel.fromArray(p.vel || [0,0,0]);
+        PLAYER.yaw = p.yaw || 0; PLAYER.pitch = p.pitch || 0;
+        PLAYER.health = p.health ?? 20; PLAYER.hunger = p.hunger ?? 20; PLAYER.air = p.air ?? 300;
+        PLAYER.inv = Array.isArray(p.inv) ? p.inv : Array(36).fill(null);
+        PLAYER.offhand = p.offhand || null; PLAYER.hotbarIdx = p.hotbarIdx || 0;
+        PLAYER.spawnPos = p.spawnPos || {dim:"overworld",x:8.5,y:36,z:8.5};
+        PLAYER.flying = !!p.flying;
+        GAME.world.getChunk(0,0);
+        GAME.world.buildStructures();
+        updateChunksAroundPlayer(true); resolveStuckInBlocks(); updateHotbarUI(); updateHUD();
+        document.querySelectorAll(".screen-overlay").forEach(el => el.classList.add("hidden"));
+        document.getElementById("hud").classList.remove("hidden");
+        GAME.state = "playing";
+        addChatLine("Локальный мир загружен из сохранения.", "#a8c993");
+        return true;
+      } catch (error) { console.warn("Local world load failed", error); return false; }
+    }
+
     function startNewWorld(cfg) {
       clearAllEntities();
       if (GAME.world) GAME.world.clearAllMeshes();
@@ -4684,6 +4735,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       addChatLine(`[Мир "${cfg.name}"] Сид: ${numericSeed}. Исследуй мир, чтобы найти деревни, пирамиды и порталы.`, "#d6cf82");
 
       GAME.state = "playing";
+      saveWorldLocal();
       requestLock();
       showBanner("Клик по экрану — захват мыши • F — предмет во вторую руку • E — инвентарь/креатив");
     }
@@ -4878,6 +4930,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
     };
     document.getElementById("btn-quit-menu").onclick = () => {
       SFX.click();
+      saveWorldLocal();
       leaveMultiplayerRoom();
       GAME.state = "menu";
       document.getElementById("hud").classList.add("hidden");
@@ -4901,6 +4954,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
     };
     document.getElementById("btn-death-menu").onclick = () => {
       SFX.click();
+      saveWorldLocal();
       leaveMultiplayerRoom();
       document.getElementById("death-screen").classList.add("hidden");
       document.getElementById("hud").classList.add("hidden");
@@ -5114,6 +5168,8 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
     function animate(now) {
       requestAnimationFrame(animate);
       const dt = Math.min(0.05, (now - lastTime) / 1000);
+      localSaveClock += dt;
+      if (localSaveClock >= 15) { localSaveClock = 0; if (GAME.state === "playing" && !MP.active) saveWorldLocal(); }
       if (PLAYER.absorptionTimer > 0) { PLAYER.absorptionTimer -= dt; if (PLAYER.absorptionTimer <= 0) PLAYER.absorption = 0; }
       lastTime = now;
 
