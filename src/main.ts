@@ -845,7 +845,22 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         flint_and_steel: "flint_and_steel.png", ender_pearl: "ender_pearl.png", ender_eye: "ender_eye.png",
         blaze_rod: "blaze_rod.png", blaze_powder: "blaze_powder.png", wheat: "wheat.png",
         wheat_seeds: "wheat_seeds.png", feather: "feather.png", bone: "bone.png", string: "string.png",
-        netherite_ingot: "netherite_ingot.png", netherite_scrap: "netherite_scrap.png"
+        netherite_ingot: "netherite_ingot.png", netherite_scrap: "netherite_scrap.png",
+        bucket_water: "water_bucket.png", bucket_lava: "lava_bucket.png", bed: "red_bed.png",
+        wither_skull: "wither_skeleton_skull.png", quartz: "quartz.png", ancient_debris: "ancient_debris.png",
+        leather_helmet: "leather_helmet.png", leather_chestplate: "leather_chestplate.png",
+        leather_leggings: "leather_leggings.png", leather_boots: "leather_boots.png",
+        chainmail_helmet: "chainmail_helmet.png", chainmail_chestplate: "chainmail_chestplate.png",
+        chainmail_leggings: "chainmail_leggings.png", chainmail_boots: "chainmail_boots.png",
+        gold_helmet: "golden_helmet.png", gold_chestplate: "golden_chestplate.png",
+        gold_leggings: "golden_leggings.png", gold_boots: "golden_boots.png",
+        iron_helmet: "iron_helmet.png", iron_chestplate: "iron_chestplate.png",
+        iron_leggings: "iron_leggings.png", iron_boots: "iron_boots.png",
+        diamond_helmet: "diamond_helmet.png", diamond_chestplate: "diamond_chestplate.png",
+        diamond_leggings: "diamond_leggings.png", diamond_boots: "diamond_boots.png",
+        netherite_helmet: "netherite_helmet.png", netherite_chestplate: "netherite_chestplate.png",
+        netherite_leggings: "netherite_leggings.png", netherite_boots: "netherite_boots.png",
+        elytra: "elytra.png", trident: "trident.png"
       };
       for (const [id, file] of Object.entries(vanillaItemFiles)) {
         loader.load(`https://mcasset.cloud/${version}/assets/minecraft/textures/item/${file}`, texture => {
@@ -4899,7 +4914,7 @@ const WORLD_CONFIG: WorldConfig = {
       }
     }
 
-    function processChunkMeshQueue(maxPerFrame = 2) {
+    function processChunkMeshQueue(maxPerFrame = GAME.renderDist >= 24 ? 6 : 2) {
       if (!GAME.world || GAME.world.meshQueue.length === 0) return;
       let built = 0;
       while (built < maxPerFrame && GAME.world.meshQueue.length > 0) {
