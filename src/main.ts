@@ -2175,6 +2175,31 @@ const WORLD_CONFIG: WorldConfig = {
       SFX.eyeLaunch();
     }
 
+    function moveMobWithCollision(entity, dx, dz) {
+      const width = entity.cfg?.w || 0.6;
+      const height = entity.cfg?.h || 1.8;
+      const canOccupy = (x, z) => {
+        const minX = Math.floor(x - width * 0.35);
+        const maxX = Math.floor(x + width * 0.35);
+        const minZ = Math.floor(z - width * 0.35);
+        const maxZ = Math.floor(z + width * 0.35);
+        const minY = Math.floor(entity.mesh.position.y + 0.05);
+        const maxY = Math.floor(entity.mesh.position.y + height - 0.05);
+        for (let bx = minX; bx <= maxX; bx++) {
+          for (let by = minY; by <= maxY; by++) {
+            for (let bz = minZ; bz <= maxZ; bz++) {
+              if (BLOCK_PROPS[GAME.world.getBlock(bx, by, bz)]?.solid) return false;
+            }
+          }
+        }
+        return true;
+      };
+      const nextX = entity.mesh.position.x + dx;
+      if (canOccupy(nextX, entity.mesh.position.z)) entity.mesh.position.x = nextX;
+      const nextZ = entity.mesh.position.z + dz;
+      if (canOccupy(entity.mesh.position.x, nextZ)) entity.mesh.position.z = nextZ;
+    }
+
     function tickEntities(dt) {
       for (let i = entities.length - 1; i >= 0; i--) {
         const e = entities[i];
@@ -2342,8 +2367,7 @@ const WORLD_CONFIG: WorldConfig = {
 
         if (e.cfg.hostile && dist < 18 && GAME.gamemode !== "creative" && GAME.gamemode !== "spectator") {
           toPlayer.normalize();
-          e.mesh.position.x += toPlayer.x * 2.4 * dt;
-          e.mesh.position.z += toPlayer.z * 2.4 * dt;
+          moveMobWithCollision(e, toPlayer.x * 2.4 * dt, toPlayer.z * 2.4 * dt);
           e.mesh.rotation.y = Math.atan2(toPlayer.x, toPlayer.z);
           moving = true;
           if (dist < 1.45 && Math.random() < dt * 1.4) {
@@ -2358,8 +2382,7 @@ const WORLD_CONFIG: WorldConfig = {
           }
           const vx = Math.cos(e.wandAng || 0) * (e.cfg.passiveVillager ? 0.5 : 0.9);
           const vz = Math.sin(e.wandAng || 0) * (e.cfg.passiveVillager ? 0.5 : 0.9);
-          e.mesh.position.x += vx * dt;
-          e.mesh.position.z += vz * dt;
+          moveMobWithCollision(e, vx * dt, vz * dt);
           e.mesh.rotation.y = Math.atan2(vx, vz);
           moving = true;
         }
@@ -3350,9 +3373,10 @@ const WORLD_CONFIG: WorldConfig = {
       // Survival hunger and natural regeneration.
       if (GAME.gamemode === "survival" && GAME.difficulty !== "peaceful") {
         const moving = keys["KeyW"] || keys["KeyA"] || keys["KeyS"] || keys["KeyD"];
-        PLAYER.hungerTick += dt * (PLAYER.sprinting && moving ? 2.8 : moving ? 1.0 : 0.2);
-        if (PLAYER.hungerTick >= 18) {
-          PLAYER.hungerTick = 0;
+        // Exhaustion: make hunger loss noticeable during normal play.
+        PLAYER.hungerTick += dt * (PLAYER.sprinting && moving ? 2.4 : moving ? 0.8 : 0.08);
+        if (PLAYER.hungerTick >= 12) {
+          PLAYER.hungerTick -= 12;
           PLAYER.hunger = Math.max(0, PLAYER.hunger - 1);
           updateHUD();
         }
@@ -3457,7 +3481,11 @@ const WORLD_CONFIG: WorldConfig = {
         }
         PLAYER.vel.y = 0;
       } else {
-        if (PLAYER.onGround && PLAYER.vel.y < 0) PLAYER.fallStartY = PLAYER.pos.y;
+        // Track the highest point of a fall, including after a jump apex.
+        if (PLAYER.vel.y < 0) {
+          if (PLAYER.fallStartY === null) PLAYER.fallStartY = PLAYER.pos.y;
+          else PLAYER.fallStartY = Math.max(PLAYER.fallStartY, PLAYER.pos.y);
+        }
         PLAYER.onGround = false;
       }
 
