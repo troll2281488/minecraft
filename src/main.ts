@@ -1889,6 +1889,18 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           const lm = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.42, 0.2), new THREE.MeshLambertMaterial({ color: col }));
           lm.position.y = -0.21; lp.add(lm); g.add(lp); parts.legs.push(lp);
         }
+      } else if (type === "breeze") {
+        const core = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.65, 0.5), new THREE.MeshLambertMaterial({ color: 0xb9d9d1 }));
+        core.position.y = 1.0;
+        g.add(core);
+        parts.body = core;
+        for (let i = 0; i < 4; i++) {
+          const ring = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.72, 0.12), new THREE.MeshBasicMaterial({ color: 0xe5f4ee }));
+          const ang = (i / 4) * Math.PI * 2;
+          ring.position.set(Math.cos(ang) * 0.48, 0.85 + (i % 2) * 0.18, Math.sin(ang) * 0.48);
+          g.add(ring);
+          parts.rods.push({ mesh: ring, ang });
+        }
       } else if (type === "blaze") {
         const head = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.46, 0.46), new THREE.MeshLambertMaterial({ color: 0xd99b26 }));
         head.position.y = 1.2;
