@@ -89,6 +89,34 @@ const checks = [
   [
     "Multiplayer shared world state",
     "/state`"
+  ],
+  [
+    "Ancient debris and Nether gold ore generation",
+    "B.ANCIENT_DEBRIS"
+  ],
+  [
+    "Explosion resistance for ancient debris",
+    "blastResistance: 1200"
+  ],
+  [
+    "Creeper fuse and explosion",
+    "e.fuse >= 1.45"
+  ],
+  [
+    "TNT ignition",
+    "Взорвался блок TNT"
+  ],
+  [
+    "Multiplayer dropped item synchronization",
+    "/drops`"
+  ],
+  [
+    "Graphics quality presets",
+    "btn-set-quality"
+  ],
+  [
+    "Food cooking and survival",
+    "raw_chicken: \"cooked_chicken\""
   ]
 ];
 const missing = checks.filter(([, anchor]) => !source.includes(anchor)).map(([name]) => name);
