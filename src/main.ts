@@ -5055,7 +5055,7 @@ const WORLD_CONFIG: WorldConfig = {
       consumeHeld(count);
     }
     window.addEventListener("keydown", e => {
-      if ((e.ctrlKey || e.metaKey) && ["KeyS", "KeyD", "KeyP", "KeyR", "KeyF", "KeyG", "KeyU", "KeyH", "KeyJ"].includes(e.code)) {
+      if ((e.ctrlKey || e.metaKey) && ["KeyS", "KeyD", "KeyP", "KeyR", "KeyF", "KeyG", "KeyU", "KeyH", "KeyJ", "KeyW"].includes(e.code)) {
         e.preventDefault();
       }
       if (e.code === "Tab") {
