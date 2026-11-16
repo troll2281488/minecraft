@@ -648,7 +648,7 @@
       <div class="menu-grid-2">
         <button class="mc-btn" id="btn-cfg-gamemode">Режим: Выживание</button>
         <button class="mc-btn" id="btn-cfg-difficulty">Сложность: Нормальная</button>
-        <button class="mc-btn" id="btn-cfg-bonus-chest">Бонусный сундук: ВКЛ</button>
+        <button class="mc-btn" id="btn-cfg-bonus-chest">Бонусный сундук: ВЫКЛ</button>
         <button class="mc-btn" id="btn-cfg-keep-inv">Сохранять инвентарь: ВЫКЛ</button>
         <button class="mc-btn" id="btn-cfg-cheats">Читы и команды: ВКЛ</button>
         <button class="mc-btn" id="btn-cfg-daycycle">Смена дня/ночи: ВКЛ</button>
@@ -3484,12 +3484,13 @@
     function refreshGuiGrids() {
       const bp = document.getElementById("gui-backpack");
       const hb = document.getElementById("gui-hotbar");
-      const offSlot = document.getElementById("gui-offhand-slot");
+      const oldOffSlot = document.getElementById("gui-offhand-slot");
+      const offSlot = oldOffSlot.cloneNode(false);
+      oldOffSlot.replaceWith(offSlot);
       bp.innerHTML = "";
       hb.innerHTML = "";
       renderSlot(offSlot, PLAYER.offhand);
-      bindInventoryDrag(offSlot, () => PLAYER.offhand, value => { PLAYER.offhand = value; });
-      bindInventoryCursor(offSlot, () => PLAYER.offhand, value => { PLAYER.offhand = value; });
+remove stale drag handler      bindInventoryCursor(offSlot, () => PLAYER.offhand, value => { PLAYER.offhand = value; });
 
       const makeInvSlot = (idx) => {
         const sl = document.createElement("div");
