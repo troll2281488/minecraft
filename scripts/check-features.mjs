@@ -134,6 +134,14 @@ const checks = [
     "Layered voxel clouds",
     "cloudShadeMat"
   ],
+  [
+    "Vanilla block texture loader",
+    "function loadVanillaBlockTextures"
+  ],
+  [
+    "Vanilla destroy-stage crack overlays",
+    "destroy_stage_"
+  ],
 ];
 const missing = checks.filter(([, anchor]) => !source.includes(anchor)).map(([name]) => name);
 
