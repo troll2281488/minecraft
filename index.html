@@ -3455,6 +3455,57 @@
       refreshGuiGrids();
     }
 
+    let inventoryDragInProgress = false;
+    function bindInventoryDrag(slotEl, readStack, writeStack) {
+      slotEl.draggable = true;
+      slotEl.addEventListener("dragstart", e => {
+        if (!readStack()) {
+          e.preventDefault();
+          return;
+        }
+        inventoryDragInProgress = true;
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", "minecraft-inventory-stack");
+      });
+      slotEl.addEventListener("dragover", e => {
+        if (inventoryDragInProgress) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+        }
+      });
+      slotEl.addEventListener("drop", e => {
+        e.preventDefault();
+        const source = window.__minecraftDraggedStack;
+        if (!source || source === slotEl) return;
+        const from = source.__readStack();
+        const to = readStack();
+        if (!from) return;
+        if (to && String(to.id) === String(from.id)) {
+          const limit = getItemInfo(to.id).stack || 64;
+          const moved = Math.min(from.count, Math.max(0, limit - to.count));
+          if (moved <= 0) return;
+          to.count += moved;
+          from.count -= moved;
+          if (from.count <= 0) source.__writeStack(null);
+          else source.__writeStack(from);
+          writeStack(to);
+        } else {
+          writeStack(from);
+          source.__writeStack(to || null);
+        }
+        SFX.click();
+        refreshGuiGrids();
+        updateHotbarUI();
+      });
+      slotEl.addEventListener("dragend", () => {
+        window.__minecraftDraggedStack = null;
+        setTimeout(() => { inventoryDragInProgress = false; }, 80);
+      });
+      slotEl.__readStack = readStack;
+      slotEl.__writeStack = writeStack;
+      slotEl.addEventListener("dragstart", () => { window.__minecraftDraggedStack = slotEl; });
+    }
+
     function refreshGuiGrids() {
       const bp = document.getElementById("gui-backpack");
       const hb = document.getElementById("gui-hotbar");
@@ -3462,13 +3513,19 @@
       bp.innerHTML = "";
       hb.innerHTML = "";
       renderSlot(offSlot, PLAYER.offhand);
-      offSlot.onclick = () => swapOffhandItem();
+      bindInventoryDrag(offSlot, () => PLAYER.offhand, value => { PLAYER.offhand = value; });
+      offSlot.onclick = () => {
+        if (inventoryDragInProgress) return;
+        swapOffhandItem();
+      };
 
       const makeInvSlot = (idx) => {
         const sl = document.createElement("div");
         sl.className = "inv-slot";
         renderSlot(sl, PLAYER.inv[idx]);
+        bindInventoryDrag(sl, () => PLAYER.inv[idx], value => { PLAYER.inv[idx] = value; });
         sl.onclick = () => {
+          if (inventoryDragInProgress) return;
           if (currentGuiType === "chest" && activeChestKey && PLAYER.inv[idx]) {
             const chestArr = GAME.world.chests.get(activeChestKey);
             const empty = chestArr.findIndex(x => !x);
