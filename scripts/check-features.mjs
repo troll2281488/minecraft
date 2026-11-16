@@ -118,6 +118,22 @@ const checks = [
     "Food cooking and survival",
     "raw_chicken: \"cooked_chicken\""
   ],
+  [
+    "High-detail pixel texture pipeline",
+    "c.width = 32"
+  ],
+  [
+    "Color-managed pixel rendering",
+    "renderer.outputColorSpace = THREE.SRGBColorSpace"
+  ],
+  [
+    "Enhanced voxel lighting and shadows",
+    "new THREE.HemisphereLight"
+  ],
+  [
+    "Layered voxel clouds",
+    "cloudShadeMat"
+  ],
 ];
 const missing = checks.filter(([, anchor]) => !source.includes(anchor)).map(([name]) => name);
 
