@@ -243,10 +243,6 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       netherite_pickaxe: { name: "Незеритовая кирка", cat: "tools", stack: 1, tool: "pickaxe", tier: 5, speed: 9.5 },
       netherite_sword: { name: "Незеритовый меч", cat: "tools", stack: 1, damage: 9 },
       trident: { name: "Трезубец", cat: "tools", stack: 1, damage: 9, trident: true },
-      breeze_rod: { name: "Стержень бриза", cat: "misc", stack: 64 },
-      heavy_core: { name: "Тяжёлое ядро", cat: "misc", stack: 64 },
-      mace: { name: "Булава", cat: "tools", stack: 1, damage: 7, mace: true },
-      wind_charge: { name: "Заряд ветра", cat: "misc", stack: 16 },
       wood_pickaxe: { name: "Деревянная кирка", cat: "tools", stack: 1, tool: "pickaxe", tier: 1, speed: 2.2 },
       stone_pickaxe: { name: "Каменная кирка", cat: "tools", stack: 1, tool: "pickaxe", tier: 2, speed: 4.0 },
       iron_pickaxe: { name: "Железная кирка", cat: "tools", stack: 1, tool: "pickaxe", tier: 3, speed: 6.0 },
@@ -645,10 +641,6 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         ancient_debris: ctx => { ctx.fillStyle = "#493b35"; ctx.fillRect(3, 4, 10, 8); ctx.fillStyle = "#b27b3d"; ctx.fillRect(5, 5, 3, 2); ctx.fillRect(9, 9, 2, 2); },
         netherite_scrap: ctx => { ctx.fillStyle = "#51464d"; ctx.fillRect(4, 4, 8, 8); ctx.fillStyle = "#8d766d"; ctx.fillRect(5, 5, 3, 2); },
         netherite_ingot: ctx => { ctx.fillStyle = "#51464d"; ctx.fillRect(3, 5, 10, 6); ctx.fillStyle = "#a18a78"; ctx.fillRect(4, 6, 8, 2); },
-        breeze_rod: ctx => { ctx.fillStyle = "#b7d8c4"; ctx.fillRect(7, 2, 3, 12); ctx.fillStyle = "#e6f5dd"; ctx.fillRect(5, 4, 7, 2); ctx.fillRect(4, 9, 7, 2); },
-        heavy_core: ctx => { ctx.fillStyle = "#5d5a58"; ctx.fillRect(3, 3, 10, 10); ctx.fillStyle = "#b0a79c"; ctx.fillRect(5, 5, 6, 6); ctx.fillStyle = "#383638"; ctx.fillRect(7, 7, 2, 2); },
-        mace: ctx => { ctx.fillStyle = "#76543a"; ctx.fillRect(7, 7, 2, 8); ctx.fillStyle = "#b9a58d"; ctx.fillRect(4, 2, 8, 6); ctx.fillStyle = "#e2d5c0"; ctx.fillRect(5, 3, 6, 2); },
-        wind_charge: ctx => { ctx.fillStyle = "#a9c7c0"; ctx.fillRect(4, 4, 8, 8); ctx.fillStyle = "#e1f1df"; ctx.fillRect(6, 2, 4, 3); ctx.fillRect(2, 7, 3, 3); ctx.fillRect(10, 9, 4, 3); },
         wither_skull: ctx => { ctx.fillStyle = "#242424"; ctx.fillRect(3, 3, 10, 10); ctx.fillStyle = "#7a7a7a"; ctx.fillRect(5, 6, 2, 2); ctx.fillRect(9, 6, 2, 2); },
         bed: ctx => { ctx.fillStyle = "#9e3333"; ctx.fillRect(2, 6, 12, 6); ctx.fillStyle = "#d9d9d9"; ctx.fillRect(2, 6, 4, 4); ctx.fillStyle = "#6e4e2a"; ctx.fillRect(2, 12, 2, 2); ctx.fillRect(12, 12, 2, 2); },
         coal: ctx => { ctx.fillStyle = "#262626"; ctx.fillRect(4, 4, 8, 8); ctx.fillStyle = "#3b3b3b"; ctx.fillRect(5, 5, 3, 3); },
@@ -736,10 +728,6 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       { out: { id: "netherite_boots", count: 1 }, req: { diamond: 1, netherite_ingot: 1 } },
       { out: { id: "netherite_pickaxe", count: 1 }, req: { diamond: 1, netherite_ingot: 1, stick: 2 } },
       { out: { id: "netherite_sword", count: 1 }, req: { diamond: 1, netherite_ingot: 1, stick: 1 } },
-      { out: { id: "breeze_rod", count: 1 }, req: { blaze_rod: 2, quartz: 2 } },
-      { out: { id: "heavy_core", count: 1 }, req: { iron_ingot: 4, netherite_ingot: 1 } },
-      { out: { id: "mace", count: 1 }, req: { heavy_core: 1, breeze_rod: 1, stick: 1 } },
-      { out: { id: "wind_charge", count: 4 }, req: { breeze_rod: 1, gunpowder: 1 } },
       { out: { id: "elytra", count: 1 }, req: { string: 8, leather: 4 } },
       { out: { id: "flint_and_steel", count: 1 }, req: { iron_ingot: 1, [B.GRAVEL]: 1 } },
       { out: { id: "bread", count: 1 }, req: { wheat: 3 } },
@@ -1889,18 +1877,6 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           const lm = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.42, 0.2), new THREE.MeshLambertMaterial({ color: col }));
           lm.position.y = -0.21; lp.add(lm); g.add(lp); parts.legs.push(lp);
         }
-      } else if (type === "breeze") {
-        const core = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.65, 0.5), new THREE.MeshLambertMaterial({ color: 0xb9d9d1 }));
-        core.position.y = 1.0;
-        g.add(core);
-        parts.body = core;
-        for (let i = 0; i < 4; i++) {
-          const ring = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.72, 0.12), new THREE.MeshBasicMaterial({ color: 0xe5f4ee }));
-          const ang = (i / 4) * Math.PI * 2;
-          ring.position.set(Math.cos(ang) * 0.48, 0.85 + (i % 2) * 0.18, Math.sin(ang) * 0.48);
-          g.add(ring);
-          parts.rods.push({ mesh: ring, ang });
-        }
       } else if (type === "blaze") {
         const head = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.46, 0.46), new THREE.MeshLambertMaterial({ color: 0xd99b26 }));
         head.position.y = 1.2;
@@ -2147,7 +2123,6 @@ const WORLD_CONFIG: WorldConfig = {
         creeper: { name: "Крипер", hp: 20, hostile: true, w: 0.65, h: 1.75, dmg: 8, drop: "coal" },
         enderman: { name: "Эндермен", hp: 30, hostile: true, w: 0.65, h: 2.6, dmg: 5, drop: "ender_pearl" },
         blaze: { name: "Ифрит", hp: 20, hostile: true, w: 0.75, h: 1.7, dmg: 4, drop: "blaze_rod" },
-        breeze: { name: "Бриз", hp: 24, hostile: true, w: 0.65, h: 1.8, dmg: 2, drop: "wind_charge", dropExtra: "breeze_rod" },
         crystal: { name: "Кристалл Края", hp: 1, hostile: false, w: 1.2, h: 1.4 },
         dragon: { name: "Дракон Края", hp: 120, maxHp: 120, hostile: true, w: 3.6, h: 2.2, dmg: 6 }
       };
@@ -2223,7 +2198,7 @@ const WORLD_CONFIG: WorldConfig = {
       const start = source.mesh.position.clone().add(new THREE.Vector3(0, 0.8, 0));
       const target = PLAYER.pos.clone().add(new THREE.Vector3(0, 1.0, 0));
       const direction = target.sub(start).normalize();
-      const color = kind === "dragon_breath" ? 0x9b42d6 : kind === "wind_charge" ? 0xb9e4dc : 0xff8a24;
+      const color = kind === "dragon_breath" ? 0x9b42d6 : 0xff8a24;
       const mesh = new THREE.Mesh(
         new THREE.SphereGeometry(kind === "dragon_breath" ? 0.34 : 0.22, 8, 8),
         new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.92 })
@@ -2232,9 +2207,9 @@ const WORLD_CONFIG: WorldConfig = {
       scene.add(mesh);
       entities.push({
         type: "hostile_projectile", kind, mesh,
-        vel: direction.multiplyScalar(kind === "dragon_breath" ? 8 : kind === "wind_charge" ? 12 : 10),
+        vel: direction.multiplyScalar(kind === "dragon_breath" ? 8 : 10),
         life: kind === "dragon_breath" ? 5 : 4,
-        damage: kind === "dragon_breath" ? 5 : kind === "wind_charge" ? 1 : 4
+        damage: kind === "dragon_breath" ? 5 : 4
       });
     }
 
@@ -2249,17 +2224,6 @@ const WORLD_CONFIG: WorldConfig = {
       mesh.position.copy(start);
       scene.add(mesh);
       entities.push({ type: "thrown_pearl", mesh, vel: velocity, life: 3.5 });
-      consumeHeld(1);
-      SFX.eyeLaunch();
-    }
-
-    function launchWindCharge() {
-      const dir = getLookDir();
-      const origin = getEyePos().addScaledVector(dir, 0.65);
-      const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), new THREE.MeshBasicMaterial({ color: 0xb9d8d0 }));
-      mesh.position.copy(origin);
-      scene.add(mesh);
-      entities.push({ type: "wind_charge_projectile", mesh, vel: dir.multiplyScalar(18), life: 2.2 });
       consumeHeld(1);
       SFX.eyeLaunch();
     }
@@ -2360,46 +2324,9 @@ const WORLD_CONFIG: WorldConfig = {
           e.mesh.rotation.x += dt * 4;
           const blockAt = GAME.world.getBlock(e.mesh.position.x, e.mesh.position.y, e.mesh.position.z);
           const hitPlayer = e.mesh.position.distanceTo(PLAYER.pos.clone().add(new THREE.Vector3(0, 0.9, 0))) < 0.85;
-          if (hitPlayer && e.kind === "wind_charge") {
-            const away = PLAYER.pos.clone().sub(e.mesh.position).setY(0.8).normalize();
-            PLAYER.vel.addScaledVector(away, 8);
-            PLAYER.vel.y = Math.max(PLAYER.vel.y, 5);
-            spawnParticles(e.mesh.position.x, e.mesh.position.y, e.mesh.position.z, 0xc5e6df, 14);
-          } else if (hitPlayer) {
-            damagePlayer(e.damage, e.kind === "dragon_breath" ? "Дыхание Дракона" : "Огненный шар Ифрита");
-          }
+          if (hitPlayer) damagePlayer(e.damage, e.kind === "dragon_breath" ? "Дыхание Дракона" : "Огненный шар Ифрита");
           if (hitPlayer || BLOCK_PROPS[blockAt]?.solid || e.life <= 0) {
             if (e.kind === "dragon_breath" && hitPlayer) PLAYER.fireTicks = Math.max(PLAYER.fireTicks, 2.5);
-            scene.remove(e.mesh);
-            entities.splice(i, 1);
-          }
-          continue;
-        }
-
-        if (e.type === "wind_charge_projectile") {
-          e.life -= dt;
-          e.mesh.position.addScaledVector(e.vel, dt);
-          const blockHit = BLOCK_PROPS[GAME.world.getBlock(e.mesh.position.x, e.mesh.position.y, e.mesh.position.z)]?.solid;
-          let hit = false;
-          for (const target of entities) {
-            if (!target.cfg || target === e) continue;
-            const center = target.mesh.position.clone().add(new THREE.Vector3(0, (target.cfg.h || 1) * 0.5, 0));
-            if (center.distanceTo(e.mesh.position) < Math.max(0.8, (target.cfg.w || 0.5) * 0.9)) {
-              damageEntity(target, 3);
-              const push = target.mesh.position.clone().sub(e.mesh.position).setY(0.8).normalize();
-              target.mesh.position.addScaledVector(push, 2.8);
-              hit = true;
-              break;
-            }
-          }
-          if (blockHit || hit || e.life <= 0) {
-            spawnParticles(e.mesh.position.x, e.mesh.position.y, e.mesh.position.z, 0xc5e6df, 18);
-            const push = PLAYER.pos.clone().sub(e.mesh.position);
-            if (push.length() < 4.5 && push.length() > 0.01) {
-              push.normalize();
-              PLAYER.vel.addScaledVector(push, 7);
-              PLAYER.vel.y = Math.max(PLAYER.vel.y, 5);
-            }
             scene.remove(e.mesh);
             entities.splice(i, 1);
           }
@@ -2456,21 +2383,6 @@ const WORLD_CONFIG: WorldConfig = {
           }
         }
 
-        if (e.type === "breeze") {
-          e.walkPhase += dt * 4;
-          e.parts.rods.forEach((r, idx) => {
-            const a = r.ang + e.walkPhase * (idx % 2 ? -1 : 1);
-            r.mesh.position.x = Math.cos(a) * 0.52;
-            r.mesh.position.z = Math.sin(a) * 0.52;
-          });
-          if (e.parts.body) e.parts.body.position.y = 1.0 + Math.sin(e.walkPhase * 1.4) * 0.08;
-          e.shootCooldown = (e.shootCooldown || 1.8) - dt;
-          const breezeDistance = e.mesh.position.distanceTo(PLAYER.pos);
-          if (breezeDistance < 16 && breezeDistance > 3 && e.shootCooldown <= 0 && GAME.gamemode === "survival") {
-            launchHostileProjectile(e, "wind_charge");
-            e.shootCooldown = 2.5 + Math.random() * 1.2;
-          }
-        }
         if (e.type === "dragon") {
           e.timer += dt * 0.7;
           const hasCrystal = entities.some(x => x.type === "crystal");
@@ -3036,7 +2948,7 @@ const WORLD_CONFIG: WorldConfig = {
       const origin = getEyePos();
       const dir = getLookDir();
       for (const e of entities) {
-        if (e.type === "drop" || e.type === "arrow" || e.type === "wind_charge_projectile" || e.type === "thrown_eye") continue;
+        if (e.type === "drop" || e.type === "arrow" || e.type === "thrown_eye") continue;
         const center = e.mesh.position.clone().add(new THREE.Vector3(0, e.cfg.h * 0.5, 0));
         const toEnt = center.sub(origin);
         const proj = toEnt.dot(dir);
@@ -3077,16 +2989,6 @@ const WORLD_CONFIG: WorldConfig = {
         const held = PLAYER.inv[PLAYER.hotbarIdx];
         let dmg = (held && ITEMS[held.id]?.damage) ? ITEMS[held.id].damage : 2;
         if (PLAYER.effects.strength > 0) dmg += 4;
-        if (held && ITEMS[held.id]?.mace) {
-          const fallingDistance = !PLAYER.onGround && PLAYER.fallStartY !== null ? Math.max(0, PLAYER.fallStartY - PLAYER.pos.y) : 0;
-          if (fallingDistance > 1.5) {
-            const smashBonus = Math.min(18, Math.floor((fallingDistance - 1.5) * 3));
-            dmg += smashBonus;
-            PLAYER.vel.y = Math.max(PLAYER.vel.y, 2.2);
-            spawnParticles(hitEnt.mesh.position.x, hitEnt.mesh.position.y + 0.8, hitEnt.mesh.position.z, 0xd9c7a6, 12);
-            showBanner(`Сокрушительный удар булавой! +${smashBonus} урона`);
-          }
-        }
         damageEntity(hitEnt, dmg);
       }
     }
@@ -3236,10 +3138,6 @@ const WORLD_CONFIG: WorldConfig = {
       // Main-hand actions take priority over off-hand shield blocking.
       if (held?.id === "ender_pearl") {
         launchEnderPearl();
-        return;
-      }
-      if (held?.id === "wind_charge") {
-        launchWindCharge();
         return;
       }
 
@@ -4544,7 +4442,7 @@ const WORLD_CONFIG: WorldConfig = {
           break;
 
         case "summon": {
-          const allowed = ["zombie", "skeleton", "creeper", "enderman", "cow", "pig", "sheep", "chicken", "villager_fletcher", "blaze", "breeze"];
+          const allowed = ["zombie", "skeleton", "creeper", "enderman", "cow", "pig", "sheep", "chicken", "villager_fletcher", "blaze"];
           const type = a1 || "pig";
           if (!allowed.includes(type)) { addChatLine(`Неизвестный тип существа: ${type}`, "#c98b8b"); break; }
           const dir = getLookDir();
@@ -5532,7 +5430,7 @@ const WORLD_CONFIG: WorldConfig = {
             const sy = GAME.world.getSurfaceHeight(sx, sz);
             if (sy >= 27) {
               if (isNight && GAME.difficulty !== "peaceful") {
-                const hostiles = ["zombie", "skeleton", "creeper", "enderman", "breeze"];
+                const hostiles = ["zombie", "skeleton", "creeper", "enderman"];
                 spawnMob(hostiles[Math.floor(Math.random() * hostiles.length)], sx, sy + 1, sz);
               } else {
                 const passives = ["cow", "pig", "sheep", "chicken"];
