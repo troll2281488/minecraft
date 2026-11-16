@@ -2756,7 +2756,7 @@ const WORLD_CONFIG: WorldConfig = {
       refreshGuiGrids();
     }
 
-    let carriedStack = null, rightDragActive = false, rightDragVisited = new Set();
+    let carriedStack = null, rightDragActive = false, rightDragVisited = new Set(), leftDragState = null;
     function renderCarriedStack() {
       const el=document.getElementById("inventory-cursor-stack"); if(!el)return;
       el.innerHTML="";
@@ -2784,7 +2784,7 @@ const WORLD_CONFIG: WorldConfig = {
     }
     function bindInventoryCursor(el,readStack,writeStack){
       el.draggable=false;
-      const placeOne=()=>{if(!carriedStack)return;const target=readStack();if(!target)writeStack({id:carriedStack.id,count:1});else if(String(target.id)===String(carriedStack.id)&&target.count<getItemInfo(target.id).stack){target.count++;writeStack(target);}else return;carriedStack.count--;if(carriedStack.count<=0)carriedStack=null;refreshAfterInventoryClick();};
+      const placeOne=(refresh=true)=>{if(!carriedStack)return false;const target=readStack();if(!target)writeStack({id:carriedStack.id,count:1});else if(String(target.id)===String(carriedStack.id)&&target.count<getItemInfo(target.id).stack){target.count++;writeStack(target);}else return false;carriedStack.count--;if(carriedStack.count<=0)carriedStack=null;if(refresh)refreshAfterInventoryClick();return true;};
       el.addEventListener("mousedown",e=>{
         if(e.button!==0&&e.button!==2)return;
         e.preventDefault();e.stopPropagation();
@@ -2807,14 +2807,32 @@ const WORLD_CONFIG: WorldConfig = {
           }
           SFX.click();refreshAfterInventoryClick();return;
         }
-        if(e.button===2&&carriedStack){rightDragActive=true;rightDragVisited=new Set([el]);placeOne();}
-        else{rightDragActive=false;applyInventorySlotClick(readStack,writeStack,e.button);}
+        if(e.button===2&&carriedStack){rightDragActive=true;rightDragVisited=new Set([el]);placeOne(false);}
+        else if(e.button===0&&carriedStack){
+          rightDragActive=false;
+          leftDragState={source:el,moved:false,visited:new Set([el]),commit:()=>applyInventorySlotClick(readStack,writeStack,0),placeOne};
+        } else {rightDragActive=false;leftDragState=null;applyInventorySlotClick(readStack,writeStack,e.button);}
       });
-      el.addEventListener("mouseenter",e=>{if(rightDragActive&&(e.buttons&2)&&!rightDragVisited.has(el)){rightDragVisited.add(el);placeOne();}});
+      el.addEventListener("mouseenter",e=>{
+        if(rightDragActive&&(e.buttons&2)&&!rightDragVisited.has(el)){rightDragVisited.add(el);placeOne(false);}
+        if(leftDragState&&(e.buttons&1)&&el!==leftDragState.source&&!leftDragState.visited.has(el)){
+          leftDragState.visited.add(el);
+          if(!leftDragState.moved){leftDragState.placeOne(false);leftDragState.moved=true;}
+          placeOne(false);
+          renderCarriedStack();
+        }
+      });
       el.addEventListener("contextmenu",e=>e.preventDefault());
 ;
     }
-    window.addEventListener("mouseup",e=>{if(e.button===2){rightDragActive=false;rightDragVisited.clear();}});
+    window.addEventListener("mouseup",e=>{
+      if(e.button===2){rightDragActive=false;rightDragVisited.clear();refreshAfterInventoryClick();}
+      if(e.button===0&&leftDragState){
+        const state=leftDragState;leftDragState=null;
+        if(!state.moved)state.commit();
+        else refreshAfterInventoryClick();
+      }
+    });
 
     function bindArmorCursor(el, key) {
       el.addEventListener("mousedown", e => {
