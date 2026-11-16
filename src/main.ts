@@ -2441,6 +2441,7 @@ const WORLD_CONFIG: WorldConfig = {
 
     function spawnDrop(x, y, z, id, count = 1, networkId = null, fromNetwork = false) {
       if (!id || count <= 0) return;
+      if (typeof id !== "number") ensureItemIcon(id);
       const isBlock = typeof id === "number" && ATLAS.materials[id];
       const mat = isBlock
         ? (Array.isArray(ATLAS.materials[id]) ? ATLAS.materials[id][0] : ATLAS.materials[id])
@@ -4682,9 +4683,10 @@ const WORLD_CONFIG: WorldConfig = {
       if (MP.syncAccum >= 0.06) {
         MP.syncAccum = 0;
         const held = PLAYER.inv[PLAYER.hotbarIdx];
-        set(ref(fbDb, `minecraft_game/rooms/${MP.roomId}/players/${MP.playerId}`), {
+        update(ref(fbDb, `minecraft_game/rooms/${MP.roomId}/players/${MP.playerId}`), {
           name: MP.nickname,
           skin: GAME.skin,
+          armor: Object.fromEntries(Object.entries(PLAYER.armor || {}).map(([slot, stack]) => [slot, stack?.id || null])),
           dim: GAME.world.dimension,
           x: Number(PLAYER.pos.x.toFixed(2)),
           y: Number(PLAYER.pos.y.toFixed(2)),
