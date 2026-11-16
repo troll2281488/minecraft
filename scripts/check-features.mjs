@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-const source = readFileSync(new URL("../src/main.js", import.meta.url), "utf8");
+const source = readFileSync(new URL("../src/main.ts", import.meta.url), "utf8");
 const checks = [
   [
     "Three.js renderer",
