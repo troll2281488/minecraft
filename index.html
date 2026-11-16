@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Minecraft Java Edition — Classic 3D WebGL</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" />
@@ -626,10 +627,20 @@
       <div id="splash-text" class="mc-splash">Деревни, пирамиды и Край!</div>
     </div>
     <div class="menu-stack">
-      <button class="mc-btn" id="btn-open-create">Одиночная игра (Создать мир)</button>
+      <button class="mc-btn" id="btn-open-create">Создать новый мир</button>
+      <button class="mc-btn" id="btn-open-saves">Мои сохранённые миры</button>
       <button class="mc-btn" id="btn-open-multiplayer">Сетевая игра / Друзья</button>
       <button class="mc-btn" id="btn-open-skin">Выбор скина персонажа</button>
       <button class="mc-btn" id="btn-open-settings">Настройки</button>
+    </div>
+  </div>
+
+
+  <div id="saved-worlds-screen" class="screen-overlay dirt-screen hidden">
+    <div class="panel-box">
+      <h2 class="panel-title">Сохранённые миры</h2>
+      <div id="saved-world-list" class="room-list" style="max-height:55vh;"></div>
+      <button class="mc-btn" id="btn-saves-back">Назад</button>
     </div>
   </div>
 
@@ -758,7 +769,7 @@
       <div id="hud-coords">XYZ: 8 / 36 / 8</div>
       <div id="hud-rules" style="color:#b8b8b8; font-size:17px;">KeepInv: ВЫКЛ • Режим: Выживание</div>
       <div id="hud-mp-status" class="hidden" style="color:#c8c4a0; font-size:17px;">Комната: — • Игроков: 1</div>
-      <div style="color:#9e9e9e; font-size:15px;">Shift/2xW: бег • C: присесть • F: 2-я рука • Tab: игроки • /: команды</div>
+      <div style="color:#9e9e9e; font-size:15px;">Ctrl/2xW: бег • Shift: присесть • F: 2-я рука • Tab: игроки • /: команды</div>
     </div>
 
     <!-- TAB PLAYER LIST OVERLAY -->
