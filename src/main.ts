@@ -1996,7 +1996,43 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       return sp;
     }
 
-    function createHumanoidRig(skinKey = "steve", nametag = null) {
+    function applySkinAtlasToRig(rig, dataUrl) {
+      if (!rig || !dataUrl) return;
+      const image = new Image();
+      image.onload = () => {
+        const makeFace = (rect) => {
+          const canvas = document.createElement("canvas");
+          canvas.width = 32; canvas.height = 32;
+          const ctx = canvas.getContext("2d");
+          ctx.imageSmoothingEnabled = false;
+          ctx.clearRect(0, 0, 32, 32);
+          ctx.drawImage(image, rect[0], rect[1], rect[2], rect[3], 0, 0, 32, 32);
+          const tex = new THREE.CanvasTexture(canvas);
+          tex.colorSpace = THREE.SRGBColorSpace;
+          tex.magFilter = THREE.NearestFilter;
+          tex.minFilter = THREE.NearestFilter;
+          tex.generateMipmaps = false;
+          return new THREE.MeshLambertMaterial({ map: tex, transparent: true });
+        };
+        const apply = (mesh, faces) => {
+          if (!mesh) return;
+          if (Array.isArray(mesh.material)) mesh.material.forEach(m => m.map?.dispose());
+          else mesh.material?.map?.dispose();
+          mesh.material = faces.map(makeFace);
+        };
+        // Three.js BoxGeometry material order: +X, -X, +Y, -Y, +Z(front), -Z(back).
+        apply(rig.headMesh, [[0,8,8,8],[16,8,8,8],[8,0,8,8],[16,0,8,8],[8,8,8,8],[24,8,8,8]]);
+        apply(rig.torsoMesh, [[16,20,4,12],[28,20,4,12],[20,16,8,4],[28,16,8,4],[20,20,8,12],[32,20,8,12]]);
+        apply(rig.armRMesh, [[44,20,4,12],[48,20,4,12],[44,16,4,4],[48,16,4,4],[40,20,4,12],[52,20,4,12]]);
+        apply(rig.armLMesh, [[36,52,4,12],[40,52,4,12],[36,48,4,4],[40,48,4,4],[32,52,4,12],[44,52,4,12]]);
+        apply(rig.legRMesh, [[0,20,4,12],[8,20,4,12],[4,16,4,4],[8,16,4,4],[4,20,4,12],[12,20,4,12]]);
+        apply(rig.legLMesh, [[16,52,4,12],[24,52,4,12],[20,48,4,4],[24,48,4,4],[20,52,4,12],[28,52,4,12]]);
+      };
+      image.onerror = () => console.warn("Minecraft skin texture could not be decoded");
+      image.src = dataUrl;
+    }
+
+    function createHumanoidRig(skinKey = "steve", nametag = null, skinDataUrl = null) {
       const cfg = SKIN_PRESETS[skinKey] || SKIN_PRESETS.steve;
       const root = new THREE.Group();
 
@@ -2051,7 +2087,9 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       if (nametag) root.add(makeNameSprite(nametag));
       scene.add(root);
 
-      return { root, headPivot, torso, legL, legR, armL, armR, offShield, armorParts, phase: 0 };
+      const rig = { root, headPivot, headMesh: head, torso, torsoMesh: torso, legL, legR, legLMesh, legRMesh, armL, armR, armLMesh, armRMesh, offShield, armorParts, phase: 0 };
+      applySkinAtlasToRig(rig, skinDataUrl || (skinKey === "custom" ? GAME.customSkinDataUrl : null));
+      return rig;
     }
 
     function animateHumanoidRig(rig, dt, state) {
@@ -2336,8 +2374,13 @@ const WORLD_CONFIG: WorldConfig = {
       swingTimer: 0,
       equipAnim: 0,
       cameraMode: 0,
-      skin: "steve"
+      skin: "steve",
+      customSkinDataUrl: null
     };
+    try {
+      GAME.customSkinDataUrl = localStorage.getItem("minecraft-custom-skin-v1") || null;
+      if (GAME.customSkinDataUrl) GAME.skin = "custom";
+    } catch (_) {}
 
     const PLAYER = {
       pos: new THREE.Vector3(8.5, 36, 8.5),
@@ -4315,7 +4358,7 @@ const WORLD_CONFIG: WorldConfig = {
         if (id === MP.playerId) continue;
 
         if (!MP.remotePlayers.has(id)) {
-          const rig = createHumanoidRig(pData.skin || "steve", pData.name || "Друг");
+          const rig = createHumanoidRig(pData.skin || "steve", pData.name || "Друг", pData.skinDataUrl || null);
           rig.root.position.set(pData.x || 8, pData.y || 32, pData.z || 8);
           MP.remotePlayers.set(id, {
             rig,
@@ -4327,6 +4370,7 @@ const WORLD_CONFIG: WorldConfig = {
           addChatLine(`[Сервер] Игрок ${pData.name || "Друг"} присоединился!`, "#b8c9a3");
         } else {
           const rp = MP.remotePlayers.get(id);
+          if (pData.skinDataUrl && rp.data.skinDataUrl !== pData.skinDataUrl) applySkinAtlasToRig(rp.rig, pData.skinDataUrl);
           rp.data = pData;
           rp.targetPos.set(pData.x, pData.y, pData.z);
           rp.targetYaw = pData.yaw || 0;
@@ -4499,6 +4543,7 @@ const WORLD_CONFIG: WorldConfig = {
         await set(myRef, {
           name: MP.nickname,
           skin: GAME.skin,
+          skinDataUrl: GAME.skin === "custom" ? GAME.customSkinDataUrl : null,
           skinColors: GAME.skin === "custom" ? (GAME.customSkinColors || SKIN_PRESETS.custom || null) : null,
           armor: Object.fromEntries(Object.entries(PLAYER.armor || {}).map(([slot, stack]) => [slot, stack?.id || null])),
           dim: GAME.world.dimension,
@@ -5217,7 +5262,7 @@ const WORLD_CONFIG: WorldConfig = {
       clearAllEntities();
       if (GAME.world) GAME.world.clearAllMeshes();
       if (PLAYER.rig) scene.remove(PLAYER.rig.root);
-      PLAYER.rig = createHumanoidRig(GAME.skin);
+      PLAYER.rig = createHumanoidRig(GAME.skin, null, GAME.customSkinDataUrl);
       GAME.world = new VoxelWorld(Number(save.seed) || 12345);
       GAME.world.buildStructures();
       for (const dim of ["overworld", "nether", "end"]) {
@@ -5420,35 +5465,66 @@ const WORLD_CONFIG: WorldConfig = {
         document.getElementById("skin-current-label").textContent = `Текущий скин: ${SKIN_PRESETS[GAME.skin].name}`;
       };
     });
+    function acceptMinecraftSkin(image) {
+      if (![64, 128].includes(image.width) || ![32, 64, 128].includes(image.height) ||
+          !(image.width === image.height || (image.width === 64 && image.height === 32))) {
+        showBanner("Поддерживается PNG-скин 64×64 или классический 64×32");
+        return;
+      }
+      const canvas = document.createElement("canvas"); canvas.width = 64; canvas.height = 64;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      ctx.imageSmoothingEnabled = false;
+      ctx.clearRect(0, 0, 64, 64);
+      ctx.drawImage(image, 0, 0, 64, 64);
+      const dataUrl = canvas.toDataURL("image/png");
+      const sample = (x,y,w=4,h=4) => {
+        const data = ctx.getImageData(x,y,w,h).data; let r=0,g=0,b=0,n=0;
+        for(let i=0;i<data.length;i+=4) if(data[i+3]>32){r+=data[i];g+=data[i+1];b+=data[i+2];n++;}
+        return n ? (Math.round(r/n)<<16)|(Math.round(g/n)<<8)|Math.round(b/n) : 0x888888;
+      };
+      SKIN_PRESETS.custom = { name: "Мой скин", skin: sample(8,8), hair: sample(40,0), shirt: sample(20,20), pants: sample(4,20) };
+      GAME.skin = "custom";
+      GAME.customSkinDataUrl = dataUrl;
+      GAME.customSkinColors = SKIN_PRESETS.custom;
+      try { localStorage.setItem("minecraft-custom-skin-v1", dataUrl); } catch (_) {}
+      if (PLAYER.rig) applySkinAtlasToRig(PLAYER.rig, dataUrl);
+      const label = document.getElementById("skin-current-label");
+      if (label) label.textContent = "Текущий скин: Мой скин";
+      if (MP.active && fbDb && MP.roomId) {
+        update(ref(fbDb, `minecraft_game/rooms/${MP.roomId}/players/${MP.playerId}`), {
+          skin: "custom", skinDataUrl: dataUrl, skinColors: SKIN_PRESETS.custom
+        }).catch(err => console.warn("Skin sync failed:", err));
+      }
+      showBanner("Полный пиксельный скин применён к модели персонажа");
+    }
     document.getElementById("skin-upload").addEventListener("change", event => {
       const file = event.target.files?.[0];
       if (!file) return;
       if (file.type !== "image/png") { showBanner("Нужен PNG-файл скина"); return; }
-      const image = new Image();
-      image.onload = () => {
-        if (![64, 128].includes(image.width) || ![32, 64, 128].includes(image.height) || image.width !== image.height) {
-          if (!(image.width === 64 && image.height === 32)) { showBanner("Поддерживается PNG 64×64 или 64×32"); return; }
-        }
-        const canvas = document.createElement("canvas"); canvas.width = 64; canvas.height = 64;
-        const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        ctx.drawImage(image, 0, 0, 64, 64);
-        const sample = (x,y,w=4,h=4) => {
-          const data = ctx.getImageData(x,y,w,h).data; let r=0,g=0,b=0,n=0;
-          for(let i=0;i<data.length;i+=4) if(data[i+3]>32){r+=data[i];g+=data[i+1];b+=data[i+2];n++;}
-          return n ? (Math.round(r/n)<<16)|(Math.round(g/n)<<8)|Math.round(b/n) : 0x888888;
-        };
-        SKIN_PRESETS.custom = {
-          name: file.name.replace(/\.png$/i,"") || "Мой скин",
-          skin: sample(8,8), hair: sample(40,0), shirt: sample(20,20), pants: sample(4,20)
-        };
-        GAME.skin = "custom";
-        GAME.customSkinColors = SKIN_PRESETS.custom;
-        document.getElementById("skin-current-label").textContent = "Текущий скин: " + SKIN_PRESETS.custom.name;
-        showBanner("Скин загружен! Цвета персонажа обновлены");
-        URL.revokeObjectURL(image.src);
+      const reader = new FileReader();
+      reader.onload = () => {
+        const image = new Image();
+        image.onload = () => acceptMinecraftSkin(image);
+        image.onerror = () => showBanner("Не удалось прочитать PNG-скин");
+        image.src = String(reader.result);
       };
-      image.onerror = () => showBanner("Не удалось прочитать PNG-скин");
-      image.src = URL.createObjectURL(file);
+      reader.readAsDataURL(file);
+    });
+    document.getElementById("btn-skin-load-url")?.addEventListener("click", () => {
+      const url = document.getElementById("skin-url")?.value.trim();
+      if (!url) return;
+      try {
+        const parsed = new URL(url);
+        if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("invalid protocol");
+        const image = new Image();
+        image.crossOrigin = "anonymous";
+        image.onload = () => {
+          try { acceptMinecraftSkin(image); }
+          catch (_) { showBanner("Сайт запретил загрузку изображения. Скачай PNG и выбери файл."); }
+        };
+        image.onerror = () => showBanner("Не удалось загрузить скин по ссылке. Попробуй прямую ссылку на PNG или загрузи файл.");
+        image.src = parsed.href;
+      } catch (_) { showBanner("Введи корректную HTTP/HTTPS-ссылку на PNG-скин"); }
     });
 
     const modesOrder = ["survival", "creative", "adventure", "spectator"];
