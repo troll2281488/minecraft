@@ -246,6 +246,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       breeze_rod: { name: "Стержень бриза", cat: "misc", stack: 64 },
       heavy_core: { name: "Тяжёлое ядро", cat: "misc", stack: 64 },
       mace: { name: "Булава", cat: "tools", stack: 1, damage: 7, mace: true },
+      wind_charge: { name: "Заряд ветра", cat: "misc", stack: 16 },
       wood_pickaxe: { name: "Деревянная кирка", cat: "tools", stack: 1, tool: "pickaxe", tier: 1, speed: 2.2 },
       stone_pickaxe: { name: "Каменная кирка", cat: "tools", stack: 1, tool: "pickaxe", tier: 2, speed: 4.0 },
       iron_pickaxe: { name: "Железная кирка", cat: "tools", stack: 1, tool: "pickaxe", tier: 3, speed: 6.0 },
