@@ -7,13 +7,15 @@
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "check:features": "node scripts/check-features.mjs"
+    "check:features": "node scripts/check-features.mjs",
+    "check:types": "tsc --noEmit"
   },
   "dependencies": {
     "three": "^0.180.0",
     "firebase": "^10.12.2"
   },
   "devDependencies": {
-    "vite": "^6.4.1"
+    "vite": "^6.4.1",
+    "typescript": "^5.8.3"
   }
 }
