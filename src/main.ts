@@ -2360,7 +2360,14 @@ const WORLD_CONFIG: WorldConfig = {
           e.mesh.rotation.x += dt * 4;
           const blockAt = GAME.world.getBlock(e.mesh.position.x, e.mesh.position.y, e.mesh.position.z);
           const hitPlayer = e.mesh.position.distanceTo(PLAYER.pos.clone().add(new THREE.Vector3(0, 0.9, 0))) < 0.85;
-          if (hitPlayer) damagePlayer(e.damage, e.kind === "dragon_breath" ? "Дыхание Дракона" : "Огненный шар Ифрита");
+          if (hitPlayer && e.kind === "wind_charge") {
+            const away = PLAYER.pos.clone().sub(e.mesh.position).setY(0.8).normalize();
+            PLAYER.vel.addScaledVector(away, 8);
+            PLAYER.vel.y = Math.max(PLAYER.vel.y, 5);
+            spawnParticles(e.mesh.position.x, e.mesh.position.y, e.mesh.position.z, 0xc5e6df, 14);
+          } else if (hitPlayer) {
+            damagePlayer(e.damage, e.kind === "dragon_breath" ? "Дыхание Дракона" : "Огненный шар Ифрита");
+          }
           if (hitPlayer || BLOCK_PROPS[blockAt]?.solid || e.life <= 0) {
             if (e.kind === "dragon_breath" && hitPlayer) PLAYER.fireTicks = Math.max(PLAYER.fireTicks, 2.5);
             scene.remove(e.mesh);
@@ -4537,7 +4544,7 @@ const WORLD_CONFIG: WorldConfig = {
           break;
 
         case "summon": {
-          const allowed = ["zombie", "skeleton", "creeper", "enderman", "cow", "pig", "sheep", "chicken", "villager_fletcher", "blaze"];
+          const allowed = ["zombie", "skeleton", "creeper", "enderman", "cow", "pig", "sheep", "chicken", "villager_fletcher", "blaze", "breeze"];
           const type = a1 || "pig";
           if (!allowed.includes(type)) { addChatLine(`Неизвестный тип существа: ${type}`, "#c98b8b"); break; }
           const dir = getLookDir();
@@ -5525,7 +5532,7 @@ const WORLD_CONFIG: WorldConfig = {
             const sy = GAME.world.getSurfaceHeight(sx, sz);
             if (sy >= 27) {
               if (isNight && GAME.difficulty !== "peaceful") {
-                const hostiles = ["zombie", "skeleton", "creeper", "enderman"];
+                const hostiles = ["zombie", "skeleton", "creeper", "enderman", "breeze"];
                 spawnMob(hostiles[Math.floor(Math.random() * hostiles.length)], sx, sy + 1, sz);
               } else {
                 const passives = ["cow", "pig", "sheep", "chicken"];
