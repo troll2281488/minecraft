@@ -1066,10 +1066,10 @@
       bow: { name: "Лук", cat: "tools", stack: 1 },
       arrow: { name: "Стрела", cat: "tools", stack: 64 },
       shield: { name: "Щит", cat: "armor_food", stack: 1 },
-      iron_helmet: { name: "Железный шлем", cat: "armor_food", stack: 1, armor: 2 },
-      iron_chestplate: { name: "Железный нагрудник", cat: "armor_food", stack: 1, armor: 6 },
-      diamond_helmet: { name: "Алмазный шлем", cat: "armor_food", stack: 1, armor: 3 },
-      diamond_chestplate: { name: "Алмазный нагрудник", cat: "armor_food", stack: 1, armor: 8 },
+      iron_helmet: { name: "Железный шлем", cat: "armor_food", stack: 1, armor: 2, equip: "head" },
+      iron_chestplate: { name: "Железный нагрудник", cat: "armor_food", stack: 1, armor: 6, equip: "chest" },
+      diamond_helmet: { name: "Алмазный шлем", cat: "armor_food", stack: 1, armor: 3, equip: "head" },
+      diamond_chestplate: { name: "Алмазный нагрудник", cat: "armor_food", stack: 1, armor: 8, equip: "chest" },
       iron_leggings: { name: "Железные поножи", cat: "armor_food", stack: 1, armor: 5, equip: "legs" },
       iron_boots: { name: "Железные ботинки", cat: "armor_food", stack: 1, armor: 2, equip: "feet" },
       diamond_leggings: { name: "Алмазные поножи", cat: "armor_food", stack: 1, armor: 6, equip: "legs" },
@@ -3512,33 +3512,34 @@
     function bindInventoryCursor(el,readStack,writeStack){
       el.draggable=false;
       const placeOne=()=>{if(!carriedStack)return;const target=readStack();if(!target)writeStack({id:carriedStack.id,count:1});else if(String(target.id)===String(carriedStack.id)&&target.count<getItemInfo(target.id).stack){target.count++;writeStack(target);}else return;carriedStack.count--;if(carriedStack.count<=0)carriedStack=null;refreshAfterInventoryClick();};
-      el.addEventListener("mousedown",e=>{if(e.button!==0&&e.button!==2)return;e.preventDefault();e.stopPropagation();if(e.button===2&&carriedStack){rightDragActive=true;rightDragVisited=new Set([el]);placeOne();}else{rightDragActive=false;applyInventorySlotClick(readStack,writeStack,e.button);}});
+      el.addEventListener("mousedown",e=>{
+        if(e.button!==0&&e.button!==2)return;
+        e.preventDefault();e.stopPropagation();
+        if(e.button===0&&e.detail>=2&&carriedStack){
+          const wanted=carriedStack.id,cap=getItemInfo(wanted).stack||64;
+          let space=Math.max(0,cap-carriedStack.count);
+          for(let i=0;i<PLAYER.inv.length&&space>0;i++){
+            const stack=PLAYER.inv[i];
+            if(!stack||String(stack.id)!==String(wanted))continue;
+            const moved=Math.min(space,stack.count);stack.count-=moved;space-=moved;carriedStack.count+=moved;
+            if(stack.count<=0)PLAYER.inv[i]=null;
+          }
+          if(currentGuiType==="chest"&&activeChestKey){
+            const chest=GAME.world.chests.get(activeChestKey);
+            if(chest)for(let i=0;i<chest.length&&space>0;i++){
+              const stack=chest[i];if(!stack||String(stack.id)!==String(wanted))continue;
+              const moved=Math.min(space,stack.count);stack.count-=moved;space-=moved;carriedStack.count+=moved;
+              if(stack.count<=0)chest[i]=null;
+            }
+          }
+          SFX.click();refreshAfterInventoryClick();return;
+        }
+        if(e.button===2&&carriedStack){rightDragActive=true;rightDragVisited=new Set([el]);placeOne();}
+        else{rightDragActive=false;applyInventorySlotClick(readStack,writeStack,e.button);}
+      });
       el.addEventListener("mouseenter",e=>{if(rightDragActive&&(e.buttons&2)&&!rightDragVisited.has(el)){rightDragVisited.add(el);placeOne();}});
       el.addEventListener("contextmenu",e=>e.preventDefault());
-      el.addEventListener("dblclick", e => {
-        if (e.button !== 0 || !carriedStack) return;
-        e.preventDefault(); e.stopPropagation();
-        const wanted = carriedStack.id, cap = getItemInfo(wanted).stack || 64;
-        let space = Math.max(0, cap - carriedStack.count);
-        for (let i = 0; i < PLAYER.inv.length && space > 0; i++) {
-          const stack = PLAYER.inv[i];
-          if (!stack || String(stack.id) !== String(wanted)) continue;
-          const moved = Math.min(space, stack.count);
-          stack.count -= moved; space -= moved; carriedStack.count += moved;
-          if (stack.count <= 0) PLAYER.inv[i] = null;
-        }
-        if (currentGuiType === "chest" && activeChestKey) {
-          const chest = GAME.world.chests.get(activeChestKey);
-          if (chest) for (let i = 0; i < chest.length && space > 0; i++) {
-            const stack = chest[i];
-            if (!stack || String(stack.id) !== String(wanted)) continue;
-            const moved = Math.min(space, stack.count);
-            stack.count -= moved; space -= moved; carriedStack.count += moved;
-            if (stack.count <= 0) chest[i] = null;
-          }
-        }
-        SFX.click(); refreshAfterInventoryClick();
-      });
+;
     }
     window.addEventListener("mouseup",e=>{if(e.button===2){rightDragActive=false;rightDragVisited.clear();}});
 
@@ -3573,7 +3574,9 @@
       renderSlot(offSlot, PLAYER.offhand);
       bindInventoryCursor(offSlot, () => PLAYER.offhand, value => { PLAYER.offhand = value; });
       for (const key of ["head", "chest", "legs", "feet"]) {
-        const slot = document.getElementById("armor-" + key + "-slot");
+        const oldSlot = document.getElementById("armor-" + key + "-slot");
+        const slot = oldSlot.cloneNode(false);
+        oldSlot.replaceWith(slot);
         renderSlot(slot, PLAYER.armor[key]);
         bindArmorCursor(slot, key);
       }
@@ -4194,7 +4197,14 @@
         PLAYER.vel.y = Math.max(-3.0, PLAYER.vel.y - 8 * dt);
         if (keys["Space"]) PLAYER.vel.y = 4.2;
       } else {
-        PLAYER.vel.y -= 26 * dt;
+        const gliding = PLAYER.armor.chest?.id === "elytra" && !PLAYER.onGround && PLAYER.pos.y > 4 && keys["Space"];
+        PLAYER.vel.y -= (gliding ? 4.2 : 26) * dt;
+        if (gliding) {
+          const forward = new THREE.Vector3(-Math.sin(PLAYER.yaw), 0, -Math.cos(PLAYER.yaw));
+          PLAYER.vel.x += forward.x * 5.5 * dt;
+          PLAYER.vel.z += forward.z * 5.5 * dt;
+          PLAYER.vel.y = Math.max(PLAYER.vel.y, -3.2);
+        }
         if (keys["Space"] && PLAYER.onGround) {
           PLAYER.vel.y = PLAYER.effects.jump > 0 ? 11.5 : 8.4;
           PLAYER.onGround = false;
