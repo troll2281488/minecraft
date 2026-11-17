@@ -27,11 +27,13 @@ Over 13,000 lines of JavaScript and 220 tests in a hand-written browser harness.
 | **Blocks and mining** | ~80 blocks carrying their real vanilla hardness, tool, and harvest-level values. The real `ceil(hardness x 1.5 / speed x 20)` mining formula, 10-stage crack overlay, tool durability consumed on break. Slabs and stairs render and collide from one shared box list. |
 | **Inventory and crafting** | Full inventory GUI with the vanilla slot layout and click rules. 2x2 personal grid, 3x3 crafting table, shaped / shapeless / tag (`#mc:planks`) recipe matching, tools and weapons across all six tiers, searchable creative block picker. |
 | **Saves** | Versioned `.mcw` files plus IndexedDB. Ordered migration chain, autosave every 30 s and on chunk unload, export and import including drag-and-drop. |
-| **Menus** | Title screen, world create / load / delete / export, pause menu, F3 debug overlay. |\n| **Survival food (new)** | Food level, saturation, exhaustion from sprinting and jumping, natural regeneration, and normal-difficulty starvation. Food restoration items are not wired yet. |
+| **Menus** | Title screen, world create / load / delete / export, pause menu, F3 debug overlay. |
+| **Survival food (new)** | Food level, saturation, exhaustion from sprinting and jumping, natural regeneration, and normal-difficulty starvation. Food restoration items are not wired yet. |
 
 **Partial:** mob simulation currently includes simple sheep, pigs and zombies with basic wandering,
 fleeing and zombie pursuit/attacks; models are procedural low-poly shapes, not vanilla rigs.
-\n**Not built:** food restoration/consumption, full survival damage and death flow, combat tools,
+
+**Not built:** food restoration/consumption, full survival damage and death flow, combat tools,
 fluid flow, weather, furnaces and chests, redstone, enchanting, dimensions, structures and audio.
 Water renders and blocks movement but does not flow.
 
@@ -42,7 +44,13 @@ it has been verified against a documented vanilla value - "the number is typed i
 
 ---
 
-## Development approach\n\nThe target is broad feature coverage up to Java Edition 1.12.2, not a claim of complete parity today.\nWork proceeds system by system: implement a real mechanic, add regression tests, then document\nwhat is working and what remains.\n\n## What this is
+## Development approach
+
+The target is broad feature coverage up to Java Edition 1.12.2, not a claim of complete parity today.
+Work proceeds system by system: implement a real mechanic, add regression tests, then document
+what is working and what remains.
+
+## What this is
 
 | | |
 |---|---|
