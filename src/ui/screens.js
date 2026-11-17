@@ -32,9 +32,9 @@ export const ScreensMixin = {
     byId('btn-mp-save-nick').onclick = () => {
       const name = byId('mp-nickname').value.trim().slice(0, 20);
       if (!name) return;
-      this.multiplayer.nickname = name;
-      localStorage.setItem('mc_nick', name);
-      this.ui.toast('Ник сохранён');
+      this.multiplayer.setNickname(name)
+        .then(() => this.ui.toast('Ник сохранён'))
+        .catch((error) => this.ui.toast(`Не удалось обновить ник: ${error.message}`, { error: true }));
     };
     byId('btn-mp-create-room').onclick = () => this.multiplayer.createRoom().catch((e) => this.ui.toast(e.message, { error: true }));
     byId('btn-mp-join-room').onclick = () => this.multiplayer.joinRoom(byId('mp-room-code').value).catch((e) => this.ui.toast(e.message, { error: true }));
