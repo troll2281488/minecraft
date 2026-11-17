@@ -54,11 +54,15 @@ export class UI {
       el.classList.toggle('hidden', key !== name);
     }
     this.current = name;
+    // Keep the DOM overlay above the WebGL canvas and make the input target
+    // unambiguous while any menu/dialog is open (including the title panorama).
+    document.body.classList.toggle('menu-active', name !== null);
   }
 
   hideAllScreens() {
     for (const el of Object.values(this.screens)) el.classList.add('hidden');
     this.current = null;
+    document.body.classList.remove('menu-active');
   }
 
   setHudVisible(visible) {
