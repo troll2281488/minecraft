@@ -326,7 +326,7 @@ ITEM_TAGS.define('#mc:coals', ['mc:coal', 'mc:charcoal']);
 // ---------------------------------------------------------------------------
 
 /** Every block gets an item form unless it is unobtainable. */
-const NO_ITEM = new Set(['mc:air', 'mc:water']);
+const NO_ITEM = new Set(['mc:air', 'mc:water', 'mc:wheat']);
 for (const block of BLOCKS.blocks.values()) {
   if (NO_ITEM.has(block.id)) continue;
   ITEMS.defineBlockItem(block.id, {
@@ -357,6 +357,7 @@ const MATERIALS = [
   ['mc:leather', {}],
   ['mc:feather', {}],
   ['mc:wheat_seeds', {}],
+  ['mc:wheat', {}],
 ];
 for (const [id, opts] of MATERIALS) ITEMS.define(id, opts);
 
