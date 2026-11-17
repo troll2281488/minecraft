@@ -61,12 +61,12 @@ export const BlockActionsMixin = {
     const survival = this.player.gamemode === GAMEMODE.SURVIVAL;
 
     // Hoe grass/dirt from the top face to prepare a planting bed.
-    if (survival && held.item?.tool === 'hoe' && this.hit.face?.dy === 1 &&
+    if (held.item?.tool === 'hoe' && this.hit.face?.dy === 1 &&
         ['mc:grass_block', 'mc:dirt', 'mc:coarse_dirt'].includes(id)) {
       const farmland = BLOCKS.get('mc:farmland').defaultState;
       if (this.world.setBlock(x, y, z, farmland)) {
         this.multiplayer?.pushBlockChange(x, y, z, farmland);
-        this.inventory.damageHeld(1);
+        if (survival) this.inventory.damageHeld(1);
         this.ui.toast('Farmland');
       }
       return true;
