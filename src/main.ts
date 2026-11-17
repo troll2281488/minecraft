@@ -2283,39 +2283,6 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       rig.headPivot.rotation.x = -(state.pitch || 0);
     }
 
-    // Small 16x16 pixel-art skins: each mob gets its own palette and blocky noise pattern.
-    const MOB_PIXEL_TEXTURES = new Map();
-    function getMobPixelTexture(type) {
-      if (MOB_PIXEL_TEXTURES.has(type)) return MOB_PIXEL_TEXTURES.get(type);
-      const palettes = {
-        zombie:["#397878","#4b783c","#263f42"], skeleton:["#c7c7c7","#eeeeea","#777b80"],
-        wither_skeleton:["#262626","#454545","#111111"], enderman:["#181818","#34233f","#b852d9"],
-        creeper:["#488c38","#70ad4d","#285c2b"], cow:["#543924","#cfcfcf","#3a2418"],
-        pig:["#d48a94","#f0b0b7","#a95f6b"], sheep:["#d6d6d6","#f4f0e8","#bfa38e"],
-        chicken:["#dedede","#d49b28","#b52b2b"], rabbit:["#b69a7b","#e2d0b7","#80644d"],
-        blaze:["#d99b26","#f6d34c","#a94c1c"], dragon:["#1b1724","#3a294c","#c952c9"],
-        villager_fletcher:["#593d28","#b58665","#87613e"], villager_farmer:["#72502e","#b58665","#4f7133"],
-        villager_blacksmith:["#454545","#b58665","#777777"], villager_cleric:["#6d3e82","#b58665","#d6c4e3"]
-      };
-      const p = palettes[type] || ["#777777","#aaaaaa","#444444"];
-      const canvas = document.createElement("canvas"); canvas.width = 16; canvas.height = 16;
-      const ctx = canvas.getContext("2d");
-      ctx.fillStyle = p[0]; ctx.fillRect(0,0,16,16);
-      let seed = [...type].reduce((n,c)=>((n*31+c.charCodeAt(0))>>>0),17);
-      for (let y=0;y<16;y++) for (let x=0;x<16;x++) {
-        seed = (seed * 1664525 + 1013904223) >>> 0;
-        const v = seed / 4294967296;
-        if (v > 0.62) { ctx.fillStyle = v > 0.91 ? p[2] : p[1]; ctx.fillRect(x,y,1,1); }
-      }
-      // Deliberate 2px highlights keep the texture legible at Minecraft-like pixel scale.
-      ctx.fillStyle = p[2]; for(let y=0;y<16;y+=4) ctx.fillRect(0,y,16,1);
-      const tex = new THREE.CanvasTexture(canvas);
-      tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = THREE.NearestFilter;
-      tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false; tex.needsUpdate = true;
-      MOB_PIXEL_TEXTURES.set(type,tex);
-      return tex;
-    }
-
     function buildDetailedMobModel(type) {
       const g = new THREE.Group();
       const parts = { legs: [], wings: [], rods: [], head: null, body: null };
@@ -2496,17 +2463,6 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         parts.wings.push(wingL, wingR);
       }
 
-      // Reuse the same crisp pixel-art treatment as block textures across every mob part.
-      if (type !== "crystal") {
-        const skin = getMobPixelTexture(type);
-        g.traverse(o => {
-          if (!o.isMesh || !o.material || !o.material.isMeshLambertMaterial) return;
-          o.material = o.material.clone();
-          o.material.map = skin;
-          o.material.color.setHex(0xffffff);
-          o.material.needsUpdate = true;
-        });
-      }
       return { group: g, parts };
     }
 
