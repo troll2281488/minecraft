@@ -22,7 +22,7 @@ export const InputMixin = {
       canvas.classList.toggle('locked', locked);
       // Losing the lock mid-game means the player pressed Escape, so pause
       // rather than leaving them unable to look around with no explanation.
-      if (!locked && this.running && !this.paused && !this.inventoryOpen) this._pause();
+      if (!locked && this.running && !this.paused && !this.inventoryOpen && !this.chatOpen) this._pause();
     });
 
     document.addEventListener('mousemove', (e) => {
@@ -99,6 +99,7 @@ export const InputMixin = {
     if (e.code === 'KeyT' && !this.inventoryOpen) {
       e.preventDefault();
       const chat = document.getElementById('chat-entry');
+      this.chatOpen = true;
       chat.classList.remove('hidden');
       document.exitPointerLock?.();
       chat.focus();
