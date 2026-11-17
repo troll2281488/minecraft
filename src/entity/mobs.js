@@ -76,6 +76,17 @@ export class MobSystem {
       const dz = mob.z - player.z;
       const distance = Math.hypot(dx, dy, dz);
       if (distance <= 0.001 || distance > bestDistance) continue;
+      // A solid block between the player's eye and the creature blocks melee
+      // and interaction; do not let the aim cone hit through walls.
+      const blockHit = this.game.hit;
+      if (blockHit) {
+        const blockDistance = Math.hypot(
+          blockHit.x + 0.5 - player.x,
+          blockHit.y + 0.5 - player.eyeY,
+          blockHit.z + 0.5 - player.z,
+        );
+        if (blockDistance + 0.35 < distance) continue;
+      }
       const dot = (dx * look[0] + dy * look[1] + dz * look[2]) / distance;
       if (dot < 0.82) continue;
       best = mob;
