@@ -3020,6 +3020,91 @@ const WORLD_CONFIG: WorldConfig = {
         const dist = toPlayer.length();
         let moving = false;
 
+        // Individual vanilla-inspired traits for every mob currently implemented.
+        if (e.type === "zombie" && GAME.world.dimension === "overworld" && GAME.timeOfDay < 12000) {
+          const bx = Math.floor(e.mesh.position.x), by = Math.floor(e.mesh.position.y + e.cfg.h + 0.2), bz = Math.floor(e.mesh.position.z);
+          const exposedToSky = GAME.world.getBlock(bx, by, bz) === B.AIR;
+          e.sunBurnCooldown = (e.sunBurnCooldown || 0) - dt;
+          if (exposedToSky && exposedToSky && e.sunBurnCooldown <= 0) {
+            damageEntity(e, 1);
+            e.sunBurnCooldown = 1;
+            spawnParticles(e.mesh.position.x,e.mesh.position.y+1.4,e.mesh.position.z,0xffa33a,2);
+          }
+        }
+
+        if (e.type === "wither_skeleton" && dist < 1.8 && GAME.gamemode === "survival") {
+          e.witherCooldown = (e.witherCooldown || 0) - dt;
+          if (e.witherCooldown <= 0) {
+            damagePlayer(2, "Иссушение от визер-скелета");
+            e.witherCooldown = 1.25;
+            spawnParticles(PLAYER.pos.x,PLAYER.pos.y+1,PLAYER.pos.z,0x292329,5);
+          }
+        }
+
+        if (e.type === "blaze") {
+          const bx=Math.floor(e.mesh.position.x), by=Math.floor(e.mesh.position.y), bz=Math.floor(e.mesh.position.z);
+          const inWater=[GAME.world.getBlock(bx,by,bz),GAME.world.getBlock(bx,by+1,bz)].includes(B.WATER);
+          if (inWater) {
+            e.waterCooldown=(e.waterCooldown||0)-dt;
+            if(e.waterCooldown<=0){damageEntity(e,2);e.waterCooldown=1;}
+          }
+          e.mesh.position.y += Math.sin((e.walkPhase||0)*0.4)*dt*0.35;
+        }
+
+        if (e.type === "chicken") {
+          e.eggTimer = (e.eggTimer ?? (18 + Math.random()*12)) - dt;
+          if (e.eggTimer <= 0) {
+            spawnDrop(e.mesh.position.x,e.mesh.position.y+0.25,e.mesh.position.z,"egg",1);
+            e.eggTimer = 24 + Math.random()*12;
+            SFX.tone(760,"sine",0.08,0.035,680);
+          }
+        }
+
+        if (e.type === "rabbit") {
+          e.hopCooldown = (e.hopCooldown || Math.random()*1.5) - dt;
+          if (e.hopCooldown <= 0) {
+            e.mesh.position.y += 0.28;
+            e.hopCooldown = 1.1 + Math.random()*0.8;
+            e.wandAng = Math.atan2(e.mesh.position.x-PLAYER.pos.x,e.mesh.position.z-PLAYER.pos.z) + (Math.random()-0.5)*0.9;
+          }
+        }
+
+        if (e.type === "sheep") {
+          e.grazeCooldown = (e.grazeCooldown || 0) - dt;
+          if (e.grazeCooldown <= 0) {
+            const gx=Math.floor(e.mesh.position.x), gy=Math.floor(e.mesh.position.y-0.15), gz=Math.floor(e.mesh.position.z);
+            if (GAME.world.getBlock(gx,gy,gz) === B.GRASS) {
+              GAME.world.setBlock(gx,gy,gz,B.DIRT,true);
+              spawnParticles(gx+0.5,gy+0.8,gz+0.5,0x6b9c42,4);
+              e.grazeCooldown=18;
+            } else e.grazeCooldown=4;
+          }
+        }
+
+        if (e.cfg.passiveVillager) {
+          let danger = null, dangerDist = 7;
+          for (const other of entities) {
+            if (!other.cfg?.hostile) continue;
+            const d=other.mesh.position.distanceTo(e.mesh.position);
+            if(d<dangerDist){danger=other;dangerDist=d;}
+          }
+          if(danger){
+            const flee=new THREE.Vector3(e.mesh.position.x-danger.mesh.position.x,0,e.mesh.position.z-danger.mesh.position.z).normalize();
+            e.wandAng=Math.atan2(flee.z,flee.x);
+            e.timer=0.3;
+            moving=true;
+            moveMobWithCollision(e,flee.x*2.8*dt,flee.z*2.8*dt);
+          }
+        }
+
+        if (e.type === "pig") {
+          const heldId=PLAYER.inv[PLAYER.hotbarIdx]?.id;
+          if(["carrot","potato","beetroot"].includes(heldId) && dist<9){
+            const lure=PLAYER.pos.clone().sub(e.mesh.position); lure.y=0;
+            if(lure.lengthSq()>0.01){lure.normalize();moveMobWithCollision(e,lure.x*0.8*dt,lure.z*0.8*dt);e.mesh.rotation.y=Math.atan2(lure.x,lure.z);moving=true;}
+          }
+        }
+
         if (e.type === "creeper" && (dist < 3.2 || e.ignited) && GAME.gamemode !== "creative" && GAME.gamemode !== "spectator") {
           e.fuse = (e.fuse || 0) + dt;
           const pulse = 1 + Math.sin(e.fuse * 24) * 0.07;
