@@ -21,6 +21,8 @@ This is the compatibility checklist for the game that already exists. Future wor
 
 ## Mobs and combat
 - Passive/hostile mobs, villagers, drops, melee/ranged combat, bows, hostile projectiles.
+- Individual 16x16 pixel-art mob skins matching the block texture style.
+- Creeper proximity fuse and flint-and-steel ignition; Enderman gaze-triggered teleport, water damage/escape, and arrow immunity.
 - Ender Dragon, End crystals, boss UI, particles, procedural sound effects.
 
 ## Commands and interface
