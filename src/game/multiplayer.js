@@ -22,7 +22,7 @@ const CONFIG = {
   appId: '1:761197257675:web:53dc596cf349d0cd474c4e',
 };
 
-const safeName = (value) => String(value || 'Игрок').replace(/[.#$\[\]/]/g, '').slice(0, 20) || 'Игрок';
+const safeName = (value) => String(value || 'Игрок').replace(/[.#$]/g, '').replaceAll('[', '').replaceAll(']', '').replaceAll('/', '').slice(0, 20) || 'Игрок';
 const roomCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
 
 export class Multiplayer {
