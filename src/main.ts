@@ -2430,8 +2430,7 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         parts.head = head;
       } else if (type === "cow") {
         makeQuadruped(0x543924, [0.75, 0.68, 1.15], 0x4a311e, [0.46, 0.46, 0.44], 0.55, (head, body) => {
-          const patch = new THREE.Mesh(new THREE.BoxGeometry(0.77, 0.35, 0.45), new THREE.MeshLambertMaterial({ color: 0xcfcfcf }));
-          body.add(patch);
+          // The dedicated cow coat texture already contains the dark patches.
           const snout = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.2, 0.1), new THREE.MeshLambertMaterial({ color: 0xb89c8a }));
           snout.position.set(0, -0.1, 0.24);
           const hornL = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.18, 0.07), new THREE.MeshLambertMaterial({ color: 0xd4d0c5 }));
@@ -2568,8 +2567,10 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         parts.wings.push(wingL, wingR);
       }
 
-      // Restore the mob skins only; world and block lighting remain unchanged.
-      if (type !== "crystal") {
+      // Passive animals already have dedicated species textures applied by makeQuadruped.
+      // Never overwrite them with the generic noisy mob skin.
+      const hasDedicatedAnimalSkin = ["cow", "pig", "sheep", "chicken", "rabbit"].includes(type);
+      if (type !== "crystal" && !hasDedicatedAnimalSkin) {
         const skin = getMobPixelTexture(type);
         g.traverse(o => {
           if (!o.isMesh || !o.material || !o.material.isMeshLambertMaterial) return;
