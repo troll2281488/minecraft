@@ -45,9 +45,11 @@ export const ScreensMixin = {
       if (event.code === 'Enter') {
         this.multiplayer.sendChat(chat.value);
         chat.value = '';
+        this.chatOpen = false;
         chat.classList.add('hidden');
         if (this.running && !this.paused) this._requestPointerLock();
       } else if (event.code === 'Escape') {
+        this.chatOpen = false;
         chat.classList.add('hidden');
         if (this.running && !this.paused) this._requestPointerLock();
       }
