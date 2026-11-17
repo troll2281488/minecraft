@@ -21,6 +21,7 @@ export const SessionMixin = {
     this.ui.showScreen('loading');
     this.ui.setLoadingProgress(0, 'Starting terrain workers...');
 
+    this._stopTitlePreview?.();
     this.world?.dispose();
     this.chunkRenderer.dispose();
 
@@ -111,6 +112,7 @@ export const SessionMixin = {
     this.entities?.reset();
     this.chunkRenderer.dispose();
     this.ui.showScreen('title');
+    this._startTitlePreview?.();
   },
 
   async _save(showToast) {
