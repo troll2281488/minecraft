@@ -1,25 +1,119 @@
-const canvas=document.getElementById('title-world-bg');
-if(canvas){
- const ctx=canvas.getContext('2d');let w=0,h=0,t=0;
- const cells=[];
- for(let z=-8;z<=8;z++)for(let x=-8;x<=8;x++)cells.push({x,z,y:Math.max(0,Math.round(1.3+1.5*Math.sin(x*.48)*Math.cos(z*.37)+.8*Math.sin((x+z)*.31)))});
- const trees=[[-5,-3],[-2,4],[4,-5],[6,2],[1,6],[-7,3]];
- function resize(){const d=Math.min(devicePixelRatio||1,2);w=canvas.clientWidth;h=canvas.clientHeight;canvas.width=w*d;canvas.height=h*d;ctx.setTransform(d,0,0,d,0,0);}
- function p(x,y,z,a,cy,s){const X=x*Math.cos(a)-z*Math.sin(a),Z=x*Math.sin(a)+z*Math.cos(a),d=Z+24,f=s*19;return{x:w/2+X*f/d,y:h*.58+(cy-y)*f/d,d};}
- function poly(v,c){ctx.beginPath();v.forEach((q,i)=>i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y));ctx.closePath();ctx.fillStyle=c;ctx.fill();ctx.strokeStyle='rgba(20,35,20,.2)';ctx.stroke();}
- function draw(){
-  t+=1/60;const d=Math.min(devicePixelRatio||1,2);if(canvas.width!==Math.round(canvas.clientWidth*d)||canvas.height!==Math.round(canvas.clientHeight*d))resize();
-  const sky=ctx.createLinearGradient(0,0,0,h);sky.addColorStop(0,'#65b5ec');sky.addColorStop(.65,'#c0e7f3');sky.addColorStop(1,'#d5e7c2');ctx.fillStyle=sky;ctx.fillRect(0,0,w,h);
-  ctx.fillStyle='#fff0a0';ctx.fillRect(w*.78,h*.13,52,52);
-  for(let i=0;i<9;i++){const x=((i*137-t*8)%(w+180))-90,y=h*.43+(i%3)*13;ctx.fillStyle=['#7fae83','#6f9e75','#8db78a'][i%3];ctx.fillRect(x,y,170,h-y);}
-  const a=t*.12,s=Math.min(w,h)/24,cy=8.5+Math.sin(t*.22)*.25,items=[];
-  for(const {x,z,y} of cells){
-   const A=p(x,y,z,a,cy,s),B=p(x+1,y,z,a,cy,s),C=p(x+1,y,z+1,a,cy,s),D=p(x,y,z+1,a,cy,s);
-   const F=p(x+1,y-1,z,a,cy,s),G=p(x+1,y-1,z+1,a,cy,s),Q=p(x,y-1,z+1,a,cy,s);
-   items.push({d:(A.d+B.d+C.d+D.d)/4,fn:()=>{poly([A,B,C,D],'#68a94b');poly([D,C,G,Q],'#795536');poly([B,C,G,F],'#5e442d');}});
+// Cinematic title panorama: a softly orbiting camera over a continuous voxel-world landscape.
+// This is a menu-only scene; it never allocates or mutates gameplay chunks.
+const canvas = document.getElementById('title-world-bg');
+if (canvas) {
+  const ctx = canvas.getContext('2d', { alpha: false });
+  let width = 0, height = 0, time = 0, last = 0;
+  const trees = Array.from({ length: 25 }, (_, i) => ({
+    x: ((i * 173) % 1900) - 950,
+    depth: 0.22 + ((i * 37) % 70) / 100,
+    size: 0.65 + ((i * 19) % 70) / 100,
+    pine: i % 3 !== 0,
+  }));
+  const clouds = Array.from({ length: 7 }, (_, i) => ({
+    x: (i * 257) % 1500, y: 0.12 + (i % 3) * 0.085, scale: 0.65 + (i % 4) * 0.16,
+  }));
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    width = canvas.clientWidth; height = canvas.clientHeight;
+    canvas.width = Math.max(1, Math.floor(width * dpr));
+    canvas.height = Math.max(1, Math.floor(height * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
-  for(const [x,z] of trees){const y=cells.find(v=>v.x===x&&v.z===z)?.y||2,P=p(x+.5,y,z+.5,a,cy,s),T=p(x+.5,y+3,z+.5,a,cy,s),r=Math.max(5,s*25/P.d);items.push({d:P.d,fn:()=>{ctx.fillStyle='#76502f';ctx.fillRect(P.x-r*.18,P.y,r*.36,T.y-P.y);ctx.fillStyle='#286b35';ctx.fillRect(T.x-r,T.y-r*.6,r*2,r*1.2);ctx.fillStyle='#388747';ctx.fillRect(T.x-r*.7,T.y-r*1.35,r*1.4,r*.85);}});}
-  items.sort((u,v)=>v.d-u.d).forEach(v=>v.fn());requestAnimationFrame(draw);
- }
- resize();addEventListener('resize',resize,{passive:true});requestAnimationFrame(draw);
+  function path(points, fill) {
+    ctx.beginPath();
+    points.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+    ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
+  }
+  function hill(y, amp, phase, color) {
+    ctx.beginPath(); ctx.moveTo(0, height);
+    for (let x = 0; x <= width + 8; x += 8) {
+      const nx = x / width;
+      const yy = y + Math.sin(nx * 7.2 + phase) * amp + Math.sin(nx * 15 + phase * 1.7) * amp * .23;
+      ctx.lineTo(x, yy);
+    }
+    ctx.lineTo(width, height); ctx.closePath(); ctx.fillStyle = color; ctx.fill();
+  }
+  function tree(x, ground, scale, pine, far) {
+    const s = scale * (0.55 + far * .6);
+    ctx.save(); ctx.translate(x, ground); ctx.scale(s, s);
+    ctx.fillStyle = '#503b2b'; ctx.beginPath(); ctx.moveTo(-8,0); ctx.lineTo(-5,-72); ctx.lineTo(5,-72); ctx.lineTo(9,0); ctx.fill();
+    ctx.fillStyle = '#73513a'; ctx.fillRect(-3,-68,3,55);
+    if (pine) {
+      for (let i=0;i<4;i++) {
+        const y=-130+i*24, half=39-i*5;
+        path([[-half,y+35],[0,y-25],[half,y+35]], ['#244d32','#2d6239','#347344','#3d8047'][i]);
+        ctx.fillStyle='rgba(145,185,103,.12)'; ctx.fillRect(-half*.5,y+7,half*.5,3);
+      }
+    } else {
+      const blobs=[[-23,-92,31], [12,-104,35],[-5,-132,32],[30,-80,26],[-34,-72,25]];
+      for (let i=0;i<blobs.length;i++) {
+        const [bx,by,r]=blobs[i];
+        ctx.beginPath();ctx.arc(bx,by,r,0,Math.PI*2);ctx.fillStyle=['#28603a','#347947','#3d8748','#2e6d3e','#43864b'][i];ctx.fill();
+      }
+      ctx.fillStyle='rgba(180,205,116,.15)';ctx.beginPath();ctx.arc(-10,-130,14,0,Math.PI*2);ctx.fill();
+    }
+    ctx.restore();
+  }
+  function draw(now) {
+    requestAnimationFrame(draw);
+    const dt = last ? Math.min(.05,(now-last)/1000) : 0; last=now; time += dt;
+    const d = Math.min(window.devicePixelRatio || 1, 2);
+    if (canvas.width !== Math.max(1,Math.floor(canvas.clientWidth*d)) || canvas.height !== Math.max(1,Math.floor(canvas.clientHeight*d))) resize();
+    const w=width,h=height, orbit=Math.sin(time*.075), drift=time*8;
+    const sky=ctx.createLinearGradient(0,0,0,h);
+    sky.addColorStop(0,'#579bd0'); sky.addColorStop(.48,'#a9d5df'); sky.addColorStop(1,'#e6d8ad');
+    ctx.fillStyle=sky;ctx.fillRect(0,0,w,h);
+    const sunX=w*(.76+orbit*.035),sunY=h*.19;
+    const glow=ctx.createRadialGradient(sunX,sunY,4,sunX,sunY,Math.max(w,h)*.34);
+    glow.addColorStop(0,'rgba(255,238,177,.38)');glow.addColorStop(1,'rgba(255,238,177,0)');
+    ctx.fillStyle=glow;ctx.fillRect(0,0,w,h);
+    ctx.fillStyle='#fff0bc';ctx.beginPath();ctx.arc(sunX,sunY,Math.max(17,h*.027),0,Math.PI*2);ctx.fill();
+    for(const c of clouds){
+      const x=((c.x-drift*.22)%(w+240)+w+240)%(w+240)-120;
+      const y=c.y*h;
+      ctx.save();ctx.translate(x,y);ctx.scale(c.scale, c.scale*.58);
+      ctx.fillStyle='rgba(246,249,238,.46)';
+      for(const p of [[0,0,31],[27,-8,26],[53,0,34],[79,4,24]]){ctx.beginPath();ctx.arc(p[0],p[1],p[2],0,Math.PI*2);ctx.fill();}
+      ctx.restore();
+    }
+    hill(h*.49,h*.055,1.2,'#789d8b');
+    hill(h*.55,h*.07,3.4,'#527b69');
+    // Distant ridgelines and a forest valley give the camera a real landscape horizon.
+    hill(h*.62,h*.055,5.1,'#385e4b');
+    const lakeY=h*.72;
+    ctx.beginPath();ctx.moveTo(w*.31,lakeY);ctx.bezierCurveTo(w*.42,h*.65,w*.65,h*.68,w*.82,h*.76);ctx.lineTo(w*.95,h*.88);ctx.lineTo(w*.2,h*.86);ctx.closePath();
+    const water=ctx.createLinearGradient(0,lakeY,0,h*.9);water.addColorStop(0,'#639c9b');water.addColorStop(1,'#315e5c');ctx.fillStyle=water;ctx.fill();
+    for(let i=0;i<18;i++){const yy=lakeY+12+i*5;const xx=w*(.39+((i*17)%40)/100);ctx.strokeStyle='rgba(218,231,190,'+(0.16-i*.006)+')';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(xx,yy);ctx.lineTo(xx+w*(.04+(i%4)*.018),yy+Math.sin(time+i)*1.5);ctx.stroke();}
+    // Camera orbit shifts the foreground independently from the distant hills.
+    const sorted=trees.slice().sort((a,b)=>a.depth-b.depth);
+    for(const tr of sorted){
+      const x=((tr.x + orbit*150*tr.depth - drift*(.03+tr.depth*.08))%(w+260)+w+260)%(w+260)-130;
+      const ground=h*(.69+tr.depth*.23)+Math.sin((x/w)*5+time*.05)*h*.018;
+      tree(x,ground,tr.size*(.72+tr.depth*.55),tr.pine,tr.depth);
+    }
+    // Foreground rolling meadow: continuous surfaces, grass tufts, stones and flowers.
+    ctx.beginPath();ctx.moveTo(0,h*.79);
+    for(let x=0;x<=w+4;x+=4){const y=h*(.82+Math.sin(x/w*5+orbit*.4)*.035+Math.sin(x/w*11+1)*.012);ctx.lineTo(x,y);}
+    ctx.lineTo(w,h);ctx.lineTo(0,h);ctx.closePath();
+    const meadow=ctx.createLinearGradient(0,h*.78,0,h);meadow.addColorStop(0,'#63934b');meadow.addColorStop(.35,'#47753b');meadow.addColorStop(1,'#263f2d');ctx.fillStyle=meadow;ctx.fill();
+    for(let i=0;i<150;i++){
+      const x=((i*83+drift*1.5)%(w+20))-10;
+      const y=h*(.84+((i*29)%15)/100);
+      const len=3+(i%5)*1.5;
+      ctx.strokeStyle=i%3?'rgba(172,197,103,.55)':'rgba(218,203,125,.72)';
+      ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-2+(i%5),y-len);ctx.stroke();
+      if(i%13===0){ctx.fillStyle='#e8d58a';ctx.beginPath();ctx.arc(x,y-len,2.2,0,Math.PI*2);ctx.fill();}
+    }
+    for(let i=0;i<12;i++){
+      const x=((i*137+orbit*45)%(w+40))-20,y=h*(.88+((i*11)%8)/100),r=3+(i%4)*2;
+      ctx.fillStyle='#716e62';ctx.beginPath();ctx.ellipse(x,y,r*1.5,r*.7,-.2,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='rgba(210,208,174,.3)';ctx.beginPath();ctx.ellipse(x-r*.3,y-r*.2,r*.6,r*.22,-.2,0,Math.PI*2);ctx.fill();
+    }
+    // Soft vignette and subtle film grain-like scanlines.
+    const vignette=ctx.createRadialGradient(w*.53,h*.48,Math.min(w,h)*.22,w*.5,h*.5,Math.max(w,h)*.72);
+    vignette.addColorStop(0,'rgba(0,0,0,0)');vignette.addColorStop(1,'rgba(8,17,13,.38)');
+    ctx.fillStyle=vignette;ctx.fillRect(0,0,w,h);
+  }
+  resize();window.addEventListener('resize',resize,{passive:true});requestAnimationFrame(draw);
 }
