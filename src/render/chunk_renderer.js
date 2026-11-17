@@ -83,9 +83,12 @@ export class ChunkRenderer {
         const { cx, cz } = parseChunkKey(key);
         const dx = (cx + 0.5) * CHUNK_SIZE - cameraX;
         const dz = (cz + 0.5) * CHUNK_SIZE - cameraZ;
-        return { key, cx, cz, distanceSq: dx * dx + dz * dz };
+        // A generated chunk without a GPU mesh is a visible hole in terrain.
+        // Build missing meshes before refreshing already-visible stale meshes.
+        const missing = this.meshes.has(key) ? 0 : 1;
+        return { key, cx, cz, missing, distanceSq: dx * dx + dz * dz };
       })
-      .sort((a, b) => a.distanceSq - b.distanceSq);
+      .sort((a, b) => b.missing - a.missing || a.distanceSq - b.distanceSq);
 
     for (const entry of queue) {
       if (performance.now() - started > budgetMs) break;
