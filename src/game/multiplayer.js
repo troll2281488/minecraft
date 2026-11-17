@@ -5,7 +5,7 @@
  */
 import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import {
-  getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded, onDisconnect,
+  getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded, onChildChanged, onDisconnect,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 import { BLOCKS } from '../world/block.js';
 import * as storage from '../save/storage.js';
@@ -34,6 +34,7 @@ export class Multiplayer {
     this.nickname = safeName(localStorage.getItem('mc_nick') || `Игрок_${Math.floor(100 + Math.random() * 900)}`);
     this.roomId = null;
     this.remotePlayers = new Map();
+    this.pendingBlocks = new Map();
     this.unsubscribers = [];
     this.syncElapsed = 0;
     this.applyingRemoteBlock = false;
@@ -164,15 +165,14 @@ export class Multiplayer {
         this.remotePlayers.set(uid, current);
       }
     });
-    this._listen(onChildAdded, ref(this.db, `minecraft_game/rooms/${code}/blocks`), (snap) => {
+    const applyBlockSnapshot = (snap) => {
       const block = snap.val();
-      if (!block || !this.game.world || !Number.isInteger(block.x) || !Number.isInteger(block.y) || !Number.isInteger(block.z)) return;
-      const definition = BLOCKS.get(block.id);
-      if (!definition) return;
-      this.applyingRemoteBlock = true;
-      try { this.game.world.setBlock(block.x, block.y, block.z, definition.defaultState, { relight: false }); }
-      finally { this.applyingRemoteBlock = false; }
-    });
+      if (!block || !Number.isInteger(block.x) || !Number.isInteger(block.y) || !Number.isInteger(block.z)) return;
+      this.pendingBlocks.set(`${block.x},${block.y},${block.z}`, block);
+      this._applyPendingBlocks();
+    };
+    this._listen(onChildAdded, ref(this.db, `minecraft_game/rooms/${code}/blocks`), applyBlockSnapshot);
+    this._listen(onChildChanged, ref(this.db, `minecraft_game/rooms/${code}/blocks`), applyBlockSnapshot);
     this._listen(onChildAdded, ref(this.db, `minecraft_game/rooms/${code}/chat`), (snap) => {
       const msg = snap.val();
       if (msg?.text) this.addChat(`<${safeName(msg.sender)}> ${String(msg.text).slice(0, 240)}`);
@@ -181,6 +181,18 @@ export class Multiplayer {
     document.getElementById('hud-room').classList.remove('hidden');
     document.getElementById('mp-screen').classList.add('hidden');
     this.game.ui.toast(`Подключено к комнате ${code}`);
+  }
+
+  _applyPendingBlocks() {
+    if (!this.game.world || !this.pendingBlocks.size) return;
+    this.applyingRemoteBlock = true;
+    try {
+      for (const [key, block] of this.pendingBlocks) {
+        const definition = BLOCKS.get(block.id);
+        if (!definition) { this.pendingBlocks.delete(key); continue; }
+        if (this.game.world.setBlock(block.x, block.y, block.z, definition.defaultState, { relight: false })) this.pendingBlocks.delete(key);
+      }
+    } finally { this.applyingRemoteBlock = false; }
   }
 
   _playerPayload() {
@@ -194,6 +206,7 @@ export class Multiplayer {
   }
 
   tick(dt) {
+    this._applyPendingBlocks();
     for (const p of this.remotePlayers.values()) {
       const alpha = Math.min(1, dt * 12);
       p.x += (p.targetX - p.x) * alpha;
@@ -248,6 +261,7 @@ export class Multiplayer {
     }
     this.roomId = null;
     this.remotePlayers.clear();
+    this.pendingBlocks.clear();
     document.getElementById('hud-room')?.classList.add('hidden');
     if (markOffline && this.db) {
       await update(ref(this.db, `minecraft_game/players/${this.uid}`), { online: false, room: '' }).catch(() => {});
