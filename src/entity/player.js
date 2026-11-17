@@ -14,6 +14,7 @@
 
 import { PHYSICS, SPEED, SLIPPERINESS, TICKS_PER_SECOND, MAX_HEALTH, MIN_Y } from '../core/constants.js';
 import { AABB } from '../core/math.js';
+import { PlayerVitals } from './vitals.js';
 import { collisionBoxes } from '../world/shapes.js';
 
 /** Blocks per second converted to blocks per tick. */
@@ -49,6 +50,7 @@ export class Player {
 
     this.gamemode = GAMEMODE.SURVIVAL;
     this.health = MAX_HEALTH;
+    this.vitals = new PlayerVitals();
 
     this.fallDistance = 0;
 
@@ -94,9 +96,13 @@ export class Player {
 
     this.inWater = this._isInWater(world);
 
+    const oldX = this.x, oldZ = this.z;
+    const jumped = this.input.jump && this.onGround;
+
     if (this.flying) {
       this._tickFlying();
       this._move(world);
+      this.vitals.tick(this, Math.hypot(this.x - oldX, this.z - oldZ), false, false);
       return;
     }
 
@@ -109,6 +115,7 @@ export class Player {
     this._applyInput(slipperiness);
     this._move(world);
     this._applyGravityAndFriction(slipperiness);
+    this.vitals.tick(this, Math.hypot(this.x - oldX, this.z - oldZ), this.sprinting, jumped);
   }
 
   _tickFlying() {
@@ -412,6 +419,7 @@ export class Player {
       pos: { x: this.x, y: this.y, z: this.z },
       rot: { yaw: this.yaw, pitch: this.pitch },
       health: this.health,
+      vitals: this.vitals.toJSON(),
       gamemode: this.gamemode,
       flying: this.flying,
     };
@@ -422,6 +430,7 @@ export class Player {
     if (json.pos) { this.x = json.pos.x; this.y = json.pos.y; this.z = json.pos.z; }
     if (json.rot) { this.yaw = json.rot.yaw; this.pitch = json.rot.pitch; }
     this.health = json.health ?? MAX_HEALTH;
+    this.vitals.loadFrom(json.vitals);
     this.gamemode = json.gamemode ?? GAMEMODE.SURVIVAL;
     this.flying = json.flying ?? false;
     return this;
