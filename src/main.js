@@ -26,7 +26,8 @@ import { buildTextures, buildBlockTextureTable, TILE_SIZE } from './render/atlas
 import { buildItemIconCache } from './render/item_icons.js';
 import { createContext, createTextureArray } from './render/gl.js';
 
-import { GAMEMODE } from './entity/player.js';
+import { GAMEMODE, Player } from './entity/player.js';
+import { World } from './world/world.js';
 import { Inventory, CraftingGrid } from './game/inventory.js';
 import { RECIPES } from './game/recipes.js';
 import { raycast, MiningState } from './game/interaction.js';
@@ -130,10 +131,54 @@ class Game {
     this._setupScreens();
   }
 
+  _startTitlePreview() {
+    if (this.running || this._titlePreviewActive) return;
+    this._titlePreviewActive = true;
+    this.titlePreviewWorld = new World({ seed: 'title-panorama-112', textureTable: this.textureTable });
+    this.world = this.titlePreviewWorld;
+    this.player = new Player();
+    this.player.teleport(0, 90, 0);
+    this.player.pitch = 13;
+    this.world.requestAround(0, 0, 8, 12);
+    this.titlePreviewAngle = 0;
+    const fallback = document.getElementById('title-world-bg');
+    if (fallback) fallback.style.display = 'none';
+    const orbit = () => {
+      if (!this._titlePreviewActive || this.running || this.world !== this.titlePreviewWorld) return;
+      this.titlePreviewAngle += 0.00042;
+      const centerX = 0, centerZ = 0, radius = 17;
+      const x = centerX + Math.cos(this.titlePreviewAngle) * radius;
+      const z = centerZ + Math.sin(this.titlePreviewAngle) * radius;
+      const ground = this.world.getHeight(Math.floor(x), Math.floor(z));
+      const targetY = ground > -60 ? ground + 5.5 : 78;
+      this.player.x = x;
+      this.player.y = targetY;
+      this.player.z = z;
+      this.player.yaw = Math.atan2(centerX - x, centerZ - z) * 180 / Math.PI;
+      this.player.pitch = 12;
+      this._render();
+      requestAnimationFrame(orbit);
+    };
+    requestAnimationFrame(orbit);
+  },
+
+  _stopTitlePreview() {
+    this._titlePreviewActive = false;
+    if (this.world === this.titlePreviewWorld) {
+      this.titlePreviewWorld?.dispose();
+      this.world = null;
+      this.player = null;
+    }
+    this.titlePreviewWorld = null;
+    const fallback = document.getElementById('title-world-bg');
+    if (fallback) fallback.style.display = '';
+  },
+
   /** Show the title screen and ask the browser not to evict saved worlds. */
   async start() {
     this.ui.showScreen('title');
     this.ui.setHudVisible(false);
+    this._startTitlePreview();
 
     // Without persistence, a browser low on disk may silently discard
     // IndexedDB -- which for this project means deleting someone's world. The
