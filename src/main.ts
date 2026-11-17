@@ -1068,6 +1068,632 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       }
     }
 
+function referenceHash2(x, y, s) {
+  let n = Math.sin(x * 127.1 + y * 311.7 + s * 74.7) * 43758.5453;
+  return n - Math.floor(n);
+}
+
+function referenceCanvas16(drawFn) {
+  const c = document.createElement('canvas');
+  c.width = 16; c.height = 16;
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  drawFn(ctx);
+  return c;
+}
+
+function getAvgHex(canvas) {
+  const data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+  let r = 0, g = 0, b = 0, cnt = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i+3] > 20) { r += data[i]; g += data[i+1]; b += data[i+2]; cnt++; }
+  }
+  if (!cnt) return '#000000';
+  const toH = v => Math.round(v / cnt).toString(16).padStart(2, '0');
+  return '#' + toH(r) + toH(g) + toH(b);
+}
+
+function referencePx(ctx, x, y, col) {
+  ctx.fillStyle = col;
+  ctx.fillRect(x, y, 1, 1);
+}
+
+function referenceFillNoise(ctx, palette, seed) {
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      const idx = Math.floor(referenceHash2(x, y, seed) * palette.length);
+      referencePx(ctx, x, y, palette[idx]);
+    }
+  }
+}
+const REF_TEX = {};
+
+function initReferenceTextures() {
+  const dirtPal = ['#593d29', '#66462f', '#4d3422', '#734f36', '#422c1d'];
+  REF_TEX.dirt = referenceCanvas16(ctx => {
+    referenceFillNoise(ctx, dirtPal, 11);
+    for (let i = 0; i < 18; i++) {
+      const x = Math.floor(referenceHash2(i, 1, 12)*16), y = Math.floor(referenceHash2(i, 2, 12)*16);
+      referencePx(ctx, x, y, '#6e6e6e');
+    }
+  });
+
+  const grassTopPal = ['#4a7a26', '#416e20', '#53872c', '#39611b', '#5b9131'];
+  REF_TEX.grass_top = referenceCanvas16(ctx => referenceFillNoise(ctx, grassTopPal, 21));
+
+  REF_TEX.grass_side = referenceCanvas16(ctx => {
+    ctx.drawImage(REF_TEX.dirt, 0, 0);
+    const depths = [3,4,3,2,4,5,3,2,3,4,3,2,4,3,2,3];
+    for (let x = 0; x < 16; x++) {
+      for (let y = 0; y < depths[x]; y++) {
+        referencePx(ctx, x, y, grassTopPal[Math.floor(referenceHash2(x, y, 22)*grassTopPal.length)]);
+      }
+      referencePx(ctx, x, depths[x], '#362316');
+    }
+  });
+
+  const stonePal = ['#5c5c5c', '#636363', '#545454', '#6b6b6b', '#4b4b4b'];
+  REF_TEX.stone = referenceCanvas16(ctx => {
+    referenceFillNoise(ctx, stonePal, 31);
+    for (let y = 0; y < 16; y += 2) {
+      for (let x = 0; x < 15; x++) {
+        if (referenceHash2(x, y, 32) > 0.65) { referencePx(ctx, x, y, '#474747'); referencePx(ctx, x+1, y, '#474747'); }
+      }
+    }
+  });
+
+  REF_TEX.cobblestone = referenceCanvas16(ctx => {
+    ctx.fillStyle = '#3b3b3b'; ctx.fillRect(0,0,16,16);
+    const stones = [
+      [1,1,5,4,'#5e5e5e'], [7,1,4,3,'#545454'], [12,1,3,5,'#666666'],
+      [1,6,4,4,'#525252'], [6,5,5,5,'#636363'], [12,7,3,4,'#555555'],
+      [1,11,6,4,'#616161'], [8,11,7,4,'#575757']
+    ];
+    stones.forEach(([x,y,w,h,c]) => {
+      ctx.fillStyle = c; ctx.fillRect(x,y,w,h);
+      ctx.fillStyle = '#737373'; ctx.fillRect(x,y,w-1,1);
+      ctx.fillStyle = '#454545'; ctx.fillRect(x+1,y+h-1,w-1,1);
+    });
+  });
+
+  REF_TEX.mossy_cobble = referenceCanvas16(ctx => {
+    ctx.drawImage(REF_TEX.cobblestone, 0, 0);
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      if (referenceHash2(x, y, 39) > 0.68) referencePx(ctx, x, y, referenceHash2(x,y,40)>0.5 ? '#43692c' : '#335220');
+    }
+  });
+
+  REF_TEX.bedrock = referenceCanvas16(ctx => referenceFillNoise(ctx, ['#222222','#363636','#4a4a4a','#141414','#595959'], 44));
+
+  function makeOre(dots, light, dark, seed) {
+    return referenceCanvas16(ctx => {
+      ctx.drawImage(REF_TEX.stone, 0, 0);
+      dots.forEach(([x, y]) => {
+        referencePx(ctx, x, y, light);
+        if (x+1 < 16) referencePx(ctx, x+1, y, dark);
+        if (y+1 < 16 && referenceHash2(x,y,seed) > 0.35) referencePx(ctx, x, y+1, dark);
+      });
+    });
+  }
+  const oreSpots = [[2,3],[6,2],[11,3],[4,7],[9,6],[13,8],[2,11],[7,12],[12,12]];
+  REF_TEX.coal_ore = makeOre(oreSpots, '#262626', '#141414', 51);
+  REF_TEX.iron_ore = makeOre(oreSpots, '#b89278', '#91705a', 52);
+  REF_TEX.gold_ore = makeOre(oreSpots, '#d4c43b', '#ab851d', 53);
+  REF_TEX.redstone_ore = makeOre(oreSpots, '#cc2222', '#870b0b', 54);
+  REF_TEX.lapis_ore = makeOre([[3,3],[8,3],[5,8],[11,7],[4,12],[10,12]], '#2147a8', '#132b70', 55);
+  REF_TEX.diamond_ore = makeOre([[3,3],[10,3],[6,7],[12,8],[3,12],[9,12]], '#4ec9ba', '#239c8e', 56);
+  REF_TEX.emerald_ore = makeOre([[4,3],[11,4],[7,8],[3,11],[11,12]], '#34c76b', '#13873d', 57);
+
+  function makeMineralBlock(c1, c2, c3, border) {
+    return referenceCanvas16(ctx => {
+      ctx.fillStyle = border; ctx.fillRect(0,0,16,16);
+      ctx.fillStyle = c2; ctx.fillRect(1,1,14,14);
+      ctx.fillStyle = c1; ctx.fillRect(2,2,11,11);
+      ctx.fillStyle = c3; ctx.fillRect(2,2,4,4);
+    });
+  }
+  REF_TEX.iron_block = makeMineralBlock('#a8a8a8', '#999999', '#bdbdbd', '#6e6e6e');
+  REF_TEX.gold_block = makeMineralBlock('#cca61d', '#b89416', '#deba2b', '#82660b');
+  REF_TEX.diamond_block = makeMineralBlock('#42b8aa', '#339e92', '#5ecfc2', '#1e6e65');
+  REF_TEX.emerald_block = makeMineralBlock('#3ec26d', '#25a351', '#6ee096', '#136b32');
+  REF_TEX.redstone_block = makeMineralBlock('#b52119', '#941610', '#d6453c', '#5e0a06');
+  REF_TEX.lapis_block = makeMineralBlock('#20479e', '#17367a', '#3d68c7', '#0e224f');
+
+  function makePlanks(cMain, cLight, cDark, cSeam) {
+    return referenceCanvas16(ctx => {
+      for (let row = 0; row < 4; row++) {
+        const y0 = row * 4;
+        ctx.fillStyle = cMain; ctx.fillRect(0, y0, 16, 4);
+        ctx.fillStyle = cLight; ctx.fillRect(0, y0, 16, 1);
+        ctx.fillStyle = cSeam; ctx.fillRect(0, y0+3, 16, 1);
+        const vSeam = (row * 5 + 3) % 15;
+        referencePx(ctx, vSeam, y0+1, cSeam); referencePx(ctx, vSeam, y0+2, cSeam);
+        for (let x = 0; x < 16; x++) {
+          if (referenceHash2(x, row, 71) > 0.72) referencePx(ctx, x, y0+1, cDark);
+        }
+      }
+    });
+  }
+  REF_TEX.oak_planks = makePlanks('#7d6138', '#8f7042', '#6b522e', '#4f3b1f');
+  REF_TEX.spruce_planks = makePlanks('#594025', '#694b2c', '#4a351e', '#362614');
+  REF_TEX.birch_planks = makePlanks('#9e8f5c', '#ab9b65', '#8c7e4f', '#6e623b');
+  REF_TEX.jungle_planks = makePlanks('#875e41', '#966949', '#755137', '#573b27');
+  REF_TEX.acacia_planks = makePlanks('#99502b', '#ab5a31', '#824323', '#613018');
+  REF_TEX.dark_oak_planks = makePlanks('#382412', '#452d17', '#2b1b0d', '#1c1108');
+
+  function makeLogSide(c1, c2, c3, birch) {
+    return referenceCanvas16(ctx => {
+      for (let x = 0; x < 16; x++) {
+        const col = x % 3 === 0 ? c2 : (x % 2 === 0 ? c1 : c3);
+        for (let y = 0; y < 16; y++) {
+          referencePx(ctx, x, y, referenceHash2(x,y,81) > 0.7 ? c2 : col);
+        }
+      }
+      if (birch) {
+        [[2,3,4],[9,2,5],[5,7,6],[1,11,5],[10,12,4]].forEach(([x,y,w]) => {
+          ctx.fillStyle = '#262626'; ctx.fillRect(x,y,w,1);
+          ctx.fillStyle = '#4f4f4f'; ctx.fillRect(x+1,y+1,Math.max(1,w-2),1);
+        });
+      }
+    });
+  }
+  function makeLogTop(bark, ring1, ring2) {
+    return referenceCanvas16(ctx => {
+      ctx.fillStyle = bark; ctx.fillRect(0,0,16,16);
+      ctx.fillStyle = ring1; ctx.fillRect(2,2,12,12);
+      ctx.fillStyle = ring2; ctx.fillRect(4,4,8,8);
+      ctx.fillStyle = ring1; ctx.fillRect(6,6,4,4);
+      ctx.fillStyle = ring2; ctx.fillRect(7,7,2,2);
+    });
+  }
+  REF_TEX.oak_log_side = makeLogSide('#574429','#42331e','#665031', false);
+  REF_TEX.oak_log_top = makeLogTop('#4a3922','#8f7042','#6b522e');
+  REF_TEX.birch_log_side = makeLogSide('#bdbcb7','#a8a7a2','#c9c8c3', true);
+  REF_TEX.birch_log_top = makeLogTop('#b0afa9','#9e8f5c','#7d7046');
+  REF_TEX.spruce_log_side = makeLogSide('#332110','#24160a','#402a15', false);
+  REF_TEX.spruce_log_top = makeLogTop('#2b1b0d','#694b2c','#4a351e');
+
+  REF_TEX.leaves = referenceCanvas16(ctx => {
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const r = referenceHash2(x, y, 91);
+      if (r < 0.22) continue;
+      referencePx(ctx, x, y, r < 0.5 ? '#315c1c' : (r < 0.8 ? '#3f7325' : '#244714'));
+    }
+  });
+
+  REF_TEX.sand = referenceCanvas16(ctx => referenceFillNoise(ctx, ['#b5ad7e','#bfb786','#a8a072','#c7bf8d'], 101));
+  REF_TEX.gravel = referenceCanvas16(ctx => referenceFillNoise(ctx, ['#5e5b5b','#4f4c4c','#6b6868','#423f3f','#757272'], 102));
+
+  REF_TEX.bricks = referenceCanvas16(ctx => {
+    ctx.fillStyle = '#8f8b83'; ctx.fillRect(0,0,16,16);
+    const bCols = ['#7a372b','#6b2f24','#873f32'];
+    for (let row = 0; row < 4; row++) {
+      const y = row * 4;
+      const off = (row % 2) * 4;
+      for (let bx = -4; bx < 16; bx += 8) {
+        ctx.fillStyle = bCols[(row + Math.abs(bx)) % 3];
+        ctx.fillRect(bx + off, y, 7, 3);
+      }
+    }
+  });
+
+  REF_TEX.stone_bricks = referenceCanvas16(ctx => {
+    ctx.drawImage(REF_TEX.stone, 0, 0);
+    ctx.fillStyle = '#3d3d3d';
+    ctx.fillRect(0,7,16,1); ctx.fillRect(0,15,16,1);
+    ctx.fillRect(7,0,1,7); ctx.fillRect(15,8,1,7);
+    ctx.fillStyle = '#757575';
+    ctx.fillRect(0,8,16,1); ctx.fillRect(0,0,16,1);
+  });
+
+  REF_TEX.obsidian = referenceCanvas16(ctx => referenceFillNoise(ctx, ['#14101d','#1e172b','#2d2142','#0d0a14','#3d2b59'], 111));
+  REF_TEX.glowstone = referenceCanvas16(ctx => referenceFillNoise(ctx, ['#c79c38','#a6771e','#dbaf46','#78500d','#b88825'], 112));
+  REF_TEX.netherrack = referenceCanvas16(ctx => referenceFillNoise(ctx, ['#5e2424','#4a1a1a','#702d2d','#3b1313','#803636'], 113));
+  REF_TEX.end_stone = referenceCanvas16(ctx => referenceFillNoise(ctx, ['#b0b57e','#a1a670','#bdc28a','#919662'], 114));
+  REF_TEX.slime_block = referenceCanvas16(ctx => {
+    ctx.fillStyle = '#589e43'; ctx.fillRect(0,0,16,16);
+    ctx.fillStyle = '#71bd5b'; ctx.fillRect(1,1,14,14);
+    ctx.fillStyle = '#448231'; ctx.fillRect(4,4,8,8);
+  });
+
+  REF_TEX.glass = referenceCanvas16(ctx => {
+    ctx.fillStyle = 'rgba(180,215,225,0.22)'; ctx.fillRect(0,0,16,16);
+    ctx.fillStyle = '#a8cad4';
+    ctx.fillRect(0,0,16,1); ctx.fillRect(0,15,16,1);
+    ctx.fillRect(0,0,1,16); ctx.fillRect(15,0,1,16);
+    referencePx(ctx,2,2,'#dceef2'); referencePx(ctx,3,2,'#dceef2'); referencePx(ctx,2,3,'#dceef2');
+    referencePx(ctx,12,12,'#dceef2'); referencePx(ctx,13,13,'#dceef2');
+  });
+
+  REF_TEX.crafting_top = referenceCanvas16(ctx => {
+    ctx.drawImage(REF_TEX.oak_planks, 0, 0);
+    ctx.fillStyle = '#4a3118'; ctx.fillRect(1,1,14,14);
+    ctx.fillStyle = '#73502c'; ctx.fillRect(2,2,12,12);
+    ctx.fillStyle = '#4a3118';
+    ctx.fillRect(5,2,1,12); ctx.fillRect(10,2,1,12);
+    ctx.fillRect(2,5,12,1); ctx.fillRect(2,10,12,1);
+  });
+  REF_TEX.crafting_side = referenceCanvas16(ctx => {
+    ctx.drawImage(REF_TEX.oak_planks, 0, 0);
+    ctx.fillStyle = '#4a3118'; ctx.fillRect(0,0,16,3);
+    ctx.fillStyle = '#737373'; ctx.fillRect(3,5,3,5);
+    ctx.fillStyle = '#3d2814'; ctx.fillRect(4,10,1,4);
+    ctx.fillStyle = '#949494'; ctx.fillRect(10,5,3,3);
+    ctx.fillStyle = '#3d2814'; ctx.fillRect(11,8,1,6);
+  });
+
+  REF_TEX.furnace_front = referenceCanvas16(ctx => {
+    ctx.drawImage(REF_TEX.cobblestone, 0, 0);
+    ctx.fillStyle = '#1f1f1f'; ctx.fillRect(3,3,10,4);
+    ctx.fillStyle = '#141414'; ctx.fillRect(4,10,8,5);
+  });
+
+  REF_TEX.tnt_side = referenceCanvas16(ctx => {
+    ctx.fillStyle = '#b5291f'; ctx.fillRect(0,0,16,16);
+    for (let x = 0; x < 16; x += 2) { ctx.fillStyle = '#941d15'; ctx.fillRect(x,0,1,16); }
+    ctx.fillStyle = '#cfcfcf'; ctx.fillRect(0,5,16,6);
+    ctx.fillStyle = '#1a1a1a';
+    ctx.fillRect(2,6,3,1); ctx.fillRect(3,6,1,4);
+    ctx.fillRect(6,6,1,4); ctx.fillRect(7,7,1,2); ctx.fillRect(8,6,1,4);
+    ctx.fillRect(10,6,3,1); ctx.fillRect(11,6,1,4);
+  });
+  REF_TEX.tnt_top = referenceCanvas16(ctx => {
+    ctx.fillStyle = '#b5291f'; ctx.fillRect(0,0,16,16);
+    ctx.fillStyle = '#3b3b3b'; ctx.fillRect(6,6,4,4);
+    ctx.fillStyle = '#c7c7c7'; ctx.fillRect(7,7,2,2);
+  });
+
+  REF_TEX.bookshelf = referenceCanvas16(ctx => {
+    ctx.drawImage(REF_TEX.oak_planks, 0, 0);
+    ctx.fillStyle = '#24190d'; ctx.fillRect(1,2,14,5); ctx.fillRect(1,9,14,5);
+    const cols = ['#8c2929','#294b8c','#2c7532','#a38022','#632b75'];
+    for (let x = 2; x < 14; x += 2) {
+      ctx.fillStyle = cols[x % cols.length]; ctx.fillRect(x,2,2,5);
+      ctx.fillStyle = cols[(x+2) % cols.length]; ctx.fillRect(x,9,2,5);
+    }
+  });
+
+  REF_TEX.water = referenceCanvas16(ctx => referenceFillNoise(ctx, ['#2851b5','#315ec9','#21459c','#3a6ad9'], 131));
+  REF_TEX.lava = referenceCanvas16(ctx => referenceFillNoise(ctx, ['#c74d12','#db7318','#ab360a','#e09524'], 132));
+}
+
+
+function makeReferenceItemCanvas(type, c1, c2, c3) {
+  return referenceCanvas16(ctx => {
+    if (type === 'sword') {
+      for (let i = 0; i < 9; i++) {
+        referencePx(ctx, 13-i, 2+i, c1); referencePx(ctx, 12-i, 2+i, c3); referencePx(ctx, 13-i, 3+i, c2);
+      }
+      referencePx(ctx, 14, 1, c3); referencePx(ctx, 13, 1, c1); referencePx(ctx, 14, 2, c2);
+      referencePx(ctx, 3, 9, '#4f361d'); referencePx(ctx, 4, 10, '#4f361d'); referencePx(ctx, 5, 11, '#4f361d'); referencePx(ctx, 6, 12, '#4f361d');
+      referencePx(ctx, 3, 12, '#6e4d2b'); referencePx(ctx, 2, 13, '#6e4d2b'); referencePx(ctx, 1, 14, c2);
+    } else if (type === 'pickaxe') {
+      for (let i = 4; i <= 12; i++) { referencePx(ctx, i, 15-i, '#5c4023'); referencePx(ctx, i-1, 15-i, '#785530'); }
+      ctx.fillStyle = c1;
+      ctx.fillRect(4, 2, 7, 2); ctx.fillRect(11, 3, 2, 2); ctx.fillRect(12, 5, 2, 5);
+      referencePx(ctx, 5, 2, c3); referencePx(ctx, 8, 2, c3); referencePx(ctx, 13, 6, c2);
+    } else if (type === 'axe') {
+      for (let i = 4; i <= 13; i++) { referencePx(ctx, i, 16-i, '#5c4023'); referencePx(ctx, i-1, 16-i, '#785530'); }
+      ctx.fillStyle = c1;
+      ctx.fillRect(7, 2, 5, 5); ctx.fillRect(6, 3, 2, 4);
+      referencePx(ctx, 8, 2, c3); referencePx(ctx, 11, 6, c2);
+    } else if (type === 'shovel') {
+      for (let i = 3; i <= 10; i++) { referencePx(ctx, i, 15-i, '#5c4023'); referencePx(ctx, i-1, 15-i, '#785530'); }
+      ctx.fillStyle = c1;
+      ctx.fillRect(10, 2, 4, 4); referencePx(ctx, 11, 2, c3); referencePx(ctx, 13, 5, c2);
+    } else if (type === 'hoe') {
+      for (let i = 4; i <= 12; i++) { referencePx(ctx, i, 15-i, '#5c4023'); referencePx(ctx, i-1, 15-i, '#785530'); }
+      ctx.fillStyle = c1;
+      ctx.fillRect(6, 2, 6, 2); ctx.fillRect(11, 3, 2, 2);
+      referencePx(ctx, 7, 2, c3);
+    } else if (type === 'bow') {
+      ctx.fillStyle = '#6e4d2b';
+      ctx.fillRect(4, 2, 2, 2); ctx.fillRect(6, 2, 3, 1); ctx.fillRect(9, 3, 2, 2);
+      ctx.fillRect(11, 5, 1, 5); ctx.fillRect(9, 10, 2, 2); ctx.fillRect(6, 12, 3, 1); ctx.fillRect(4, 11, 2, 2);
+      ctx.fillStyle = '#cfcfcf';
+      for (let y = 3; y <= 11; y++) referencePx(ctx, 4, y, '#cfcfcf');
+    } else if (type === 'arrow') {
+      for (let i = 3; i <= 12; i++) referencePx(ctx, i, 15-i, '#785530');
+      ctx.fillStyle = '#b0b0b0';
+      ctx.fillRect(11, 2, 3, 2); ctx.fillRect(12, 2, 2, 3);
+      ctx.fillStyle = '#e6e6e6';
+      ctx.fillRect(2, 11, 2, 3); ctx.fillRect(3, 12, 3, 2);
+    } else if (type === 'shield') {
+      ctx.fillStyle = '#8c8c8c'; ctx.fillRect(3, 1, 10, 14);
+      ctx.fillStyle = '#73502c'; ctx.fillRect(4, 2, 8, 12);
+      ctx.fillStyle = '#5c4023'; ctx.fillRect(6, 2, 1, 12); ctx.fillRect(9, 2, 1, 12);
+      ctx.fillStyle = '#b5b5b5'; ctx.fillRect(7, 6, 2, 4);
+    } else if (type === 'fishing_rod') {
+      for (let i = 2; i <= 11; i++) referencePx(ctx, i, 14-i, '#6e4d2b');
+      ctx.fillStyle = '#d9d9d9';
+      for (let y = 3; y <= 12; y++) referencePx(ctx, 11, y, '#d9d9d9');
+      ctx.fillStyle = '#b5291f'; ctx.fillRect(10, 11, 2, 2);
+    } else if (type === 'flint_and_steel') {
+      ctx.fillStyle = '#b5b5b5'; ctx.fillRect(7, 3, 5, 2); ctx.fillRect(10, 5, 2, 5); ctx.fillRect(8, 9, 3, 2);
+      ctx.fillStyle = '#363636'; ctx.fillRect(3, 6, 5, 6);
+      ctx.fillStyle = '#636363'; ctx.fillRect(4, 7, 2, 2);
+    } else if (type === 'potion') {
+      ctx.fillStyle = '#785530'; ctx.fillRect(7, 1, 2, 2);
+      ctx.fillStyle = '#b8d8e6'; ctx.fillRect(6, 3, 4, 2); ctx.fillRect(4, 5, 8, 9);
+      ctx.fillStyle = c1; ctx.fillRect(5, 7, 6, 6);
+      ctx.fillStyle = c3; ctx.fillRect(5, 7, 2, 2);
+    } else if (type === 'spectral_arrow') {
+      for (let i = 3; i <= 12; i++) referencePx(ctx, i, 15-i, '#d4af37');
+      ctx.fillStyle = '#ffea61';
+      ctx.fillRect(11, 2, 3, 2); ctx.fillRect(12, 2, 2, 3);
+      ctx.fillStyle = '#fff5b8';
+      ctx.fillRect(2, 11, 2, 3); ctx.fillRect(3, 12, 3, 2);
+    } else if (type === 'tnt_item') {
+      ctx.drawImage(REF_TEX.tnt_side, 2, 2, 12, 12);
+    }
+    // === ВСЕ ВИДЫ ЕДЫ 1.12.2 ===
+    else if (type === 'apple') {
+      ctx.fillStyle = '#5c3d1e'; ctx.fillRect(7, 2, 2, 3);
+      ctx.fillStyle = '#3a7a23'; ctx.fillRect(9, 2, 3, 2);
+      ctx.fillStyle = c2; ctx.fillRect(4, 5, 8, 9); ctx.fillRect(3, 6, 10, 7);
+      ctx.fillStyle = c1; ctx.fillRect(4, 5, 7, 8);
+      ctx.fillStyle = c3; ctx.fillRect(5, 6, 2, 3);
+    } else if (type === 'bread') {
+      ctx.fillStyle = '#693f16'; ctx.fillRect(2, 6, 12, 6); ctx.fillRect(3, 5, 10, 7);
+      ctx.fillStyle = '#b5762d'; ctx.fillRect(3, 6, 10, 4);
+      ctx.fillStyle = '#d49546'; ctx.fillRect(4, 6, 2, 2); ctx.fillRect(8, 6, 2, 2);
+    } else if (type === 'steak') {
+      ctx.fillStyle = c2; ctx.fillRect(3, 4, 10, 8); ctx.fillRect(2, 5, 12, 6);
+      ctx.fillStyle = c1; ctx.fillRect(4, 5, 8, 6);
+      ctx.fillStyle = c3; ctx.fillRect(4, 5, 3, 2); referencePx(ctx, 9, 8, c3);
+    } else if (type === 'porkchop') {
+      ctx.fillStyle = c2; ctx.fillRect(3, 4, 10, 8); ctx.fillRect(4, 3, 8, 10);
+      ctx.fillStyle = c1; ctx.fillRect(4, 5, 8, 6);
+      ctx.fillStyle = c3; ctx.fillRect(5, 5, 4, 2);
+    } else if (type === 'chicken_food') {
+      ctx.fillStyle = '#e3d5c3'; ctx.fillRect(2, 10, 4, 3);
+      ctx.fillStyle = c2; ctx.fillRect(5, 4, 8, 8);
+      ctx.fillStyle = c1; ctx.fillRect(6, 5, 6, 6);
+      ctx.fillStyle = c3; ctx.fillRect(7, 5, 3, 2);
+    } else if (type === 'mutton') {
+      ctx.fillStyle = c2; ctx.fillRect(3, 5, 10, 7);
+      ctx.fillStyle = c1; ctx.fillRect(4, 6, 8, 5);
+      ctx.fillStyle = '#e8dfd5'; ctx.fillRect(3, 7, 3, 3);
+    } else if (type === 'rabbit_food') {
+      ctx.fillStyle = '#d9ccb8'; ctx.fillRect(3, 11, 3, 3);
+      ctx.fillStyle = c2; ctx.fillRect(5, 4, 7, 8);
+      ctx.fillStyle = c1; ctx.fillRect(6, 5, 5, 6);
+    } else if (type === 'fish') {
+      ctx.fillStyle = c2; ctx.fillRect(3, 5, 8, 6); ctx.fillRect(11, 4, 3, 8);
+      ctx.fillStyle = c1; ctx.fillRect(4, 6, 6, 4);
+      referencePx(ctx, 4, 7, '#1a1a1a');
+      ctx.fillStyle = c3; ctx.fillRect(6, 6, 3, 2);
+    } else if (type === 'pufferfish') {
+      ctx.fillStyle = '#c9a628'; ctx.fillRect(4, 4, 8, 8);
+      ctx.fillStyle = '#e8c743'; ctx.fillRect(5, 5, 6, 6);
+      ctx.fillStyle = '#8fa8b5'; ctx.fillRect(5, 8, 6, 3);
+      referencePx(ctx, 3, 4, '#fff2a6'); referencePx(ctx, 12, 4, '#fff2a6'); referencePx(ctx, 3, 11, '#fff2a6'); referencePx(ctx, 12, 11, '#fff2a6');
+      referencePx(ctx, 5, 6, '#1a1a1a'); referencePx(ctx, 10, 6, '#1a1a1a');
+    } else if (type === 'carrot') {
+      ctx.fillStyle = '#3a7a23'; ctx.fillRect(10, 2, 4, 3); ctx.fillRect(11, 5, 2, 2);
+      ctx.fillStyle = c2;
+      for (let i = 0; i < 8; i++) ctx.fillRect(3+i, 11-i, 3, 3);
+      ctx.fillStyle = c1;
+      for (let i = 1; i < 7; i++) ctx.fillRect(3+i, 11-i, 2, 2);
+    } else if (type === 'potato') {
+      ctx.fillStyle = c2; ctx.fillRect(4, 4, 8, 9); ctx.fillRect(3, 5, 10, 7);
+      ctx.fillStyle = c1; ctx.fillRect(5, 5, 6, 7);
+      referencePx(ctx, 6, 7, c3); referencePx(ctx, 9, 9, c3);
+    } else if (type === 'beetroot') {
+      ctx.fillStyle = '#3a7a23'; ctx.fillRect(6, 1, 4, 4);
+      ctx.fillStyle = c2; ctx.fillRect(4, 5, 8, 8); ctx.fillRect(5, 13, 6, 2);
+      ctx.fillStyle = c1; ctx.fillRect(5, 6, 6, 6);
+    } else if (type === 'melon_slice') {
+      ctx.fillStyle = '#3a7a23'; ctx.fillRect(2, 10, 12, 2); ctx.fillRect(4, 12, 8, 2);
+      ctx.fillStyle = '#b8322c'; ctx.fillRect(3, 6, 10, 4); ctx.fillRect(5, 4, 6, 2);
+      referencePx(ctx, 5, 7, '#1a1a1a'); referencePx(ctx, 8, 6, '#1a1a1a'); referencePx(ctx, 10, 8, '#1a1a1a');
+    } else if (type === 'cookie') {
+      ctx.fillStyle = '#8c5828'; ctx.fillRect(4, 3, 8, 10); ctx.fillRect(3, 4, 10, 8);
+      ctx.fillStyle = '#b57638'; ctx.fillRect(4, 4, 8, 8);
+      referencePx(ctx, 5, 6, '#361f0d'); referencePx(ctx, 9, 5, '#361f0d'); referencePx(ctx, 7, 9, '#361f0d'); referencePx(ctx, 10, 9, '#361f0d');
+    } else if (type === 'pumpkin_pie') {
+      ctx.fillStyle = '#9c6631'; ctx.fillRect(2, 8, 12, 5);
+      ctx.fillStyle = '#c96f24'; ctx.fillRect(3, 5, 10, 4);
+      ctx.fillStyle = '#e68a39'; ctx.fillRect(4, 5, 8, 2);
+    } else if (type === 'cake') {
+      ctx.fillStyle = '#8c5828'; ctx.fillRect(2, 9, 12, 5);
+      ctx.fillStyle = '#e6e6e6'; ctx.fillRect(2, 6, 12, 3);
+      referencePx(ctx, 4, 9, '#e6e6e6'); referencePx(ctx, 8, 9, '#e6e6e6'); referencePx(ctx, 11, 9, '#e6e6e6');
+      referencePx(ctx, 5, 7, '#b5291f'); referencePx(ctx, 9, 7, '#b5291f'); referencePx(ctx, 7, 6, '#b5291f');
+    } else if (type === 'bowl_stew') {
+      ctx.fillStyle = '#694422'; ctx.fillRect(2, 8, 12, 4); ctx.fillRect(4, 12, 8, 2);
+      ctx.fillStyle = c1; ctx.fillRect(3, 6, 10, 3);
+      referencePx(ctx, 5, 7, c3); referencePx(ctx, 9, 7, c2);
+    } else if (type === 'chorus_fruit') {
+      ctx.fillStyle = '#633d6e'; ctx.fillRect(5, 4, 6, 8); ctx.fillRect(4, 5, 8, 6);
+      ctx.fillStyle = '#8a5999'; ctx.fillRect(6, 5, 4, 6);
+      ctx.fillStyle = '#472b4f'; ctx.fillRect(7, 2, 2, 2);
+    } else if (type === 'rotten_flesh') {
+      ctx.fillStyle = '#6e3523'; ctx.fillRect(3, 4, 10, 8);
+      ctx.fillStyle = '#8f4730'; ctx.fillRect(4, 5, 8, 6);
+      ctx.fillStyle = '#476e2b'; ctx.fillRect(5, 6, 3, 3); referencePx(ctx, 9, 8, '#476e2b');
+    } else if (type === 'spider_eye') {
+      ctx.fillStyle = '#5c1428'; ctx.fillRect(4, 4, 8, 8);
+      ctx.fillStyle = '#8c1d3b'; ctx.fillRect(5, 5, 6, 6);
+      ctx.fillStyle = '#41b868'; ctx.fillRect(6, 6, 2, 2);
+    } else if (type === 'milk_bucket') {
+      ctx.fillStyle = '#737373'; ctx.fillRect(4, 5, 8, 9); ctx.fillRect(5, 14, 6, 1);
+      ctx.fillStyle = '#9c9c9c'; ctx.fillRect(5, 6, 6, 7);
+      ctx.fillStyle = '#e6e6e6'; ctx.fillRect(5, 4, 6, 3);
+    }
+    // === РЕСУРСЫ И БРОНЯ ===
+    else if (type === 'ingot') {
+      ctx.fillStyle = c2; ctx.fillRect(3, 6, 10, 5);
+      ctx.fillStyle = c1; ctx.fillRect(4, 5, 8, 5);
+      ctx.fillStyle = c3; ctx.fillRect(5, 5, 5, 2);
+    } else if (type === 'gem') {
+      ctx.fillStyle = c2; ctx.fillRect(4, 3, 8, 10); ctx.fillRect(3, 5, 10, 6);
+      ctx.fillStyle = c1; ctx.fillRect(5, 4, 6, 8); ctx.fillRect(4, 6, 8, 4);
+      ctx.fillStyle = c3; ctx.fillRect(5, 5, 3, 3);
+    } else if (type === 'pearl') {
+      ctx.fillStyle = '#0d3d36'; ctx.fillRect(4, 4, 8, 8); ctx.fillRect(3, 5, 10, 6);
+      ctx.fillStyle = '#1e786b'; ctx.fillRect(5, 5, 6, 6);
+      ctx.fillStyle = '#5ecfc2'; ctx.fillRect(6, 5, 2, 2);
+    } else if (type === 'armor_helmet') {
+      ctx.fillStyle = c2; ctx.fillRect(3, 4, 10, 8);
+      ctx.fillStyle = c1; ctx.fillRect(4, 5, 8, 6);
+      ctx.fillStyle = '#141619'; ctx.fillRect(5, 8, 6, 4);
+      ctx.fillStyle = c3; ctx.fillRect(5, 5, 3, 2);
+    } else if (type === 'armor_chest') {
+      ctx.fillStyle = c2; ctx.fillRect(2, 3, 12, 10);
+      ctx.fillStyle = c1; ctx.fillRect(3, 4, 10, 8);
+      ctx.fillStyle = '#141619'; ctx.fillRect(6, 3, 4, 2);
+      ctx.fillStyle = c3; ctx.fillRect(4, 5, 2, 4);
+    } else if (type === 'armor_legs') {
+      ctx.fillStyle = c2; ctx.fillRect(3, 2, 10, 12);
+      ctx.fillStyle = c1; ctx.fillRect(4, 3, 8, 10);
+      ctx.fillStyle = '#141619'; ctx.fillRect(7, 7, 2, 7);
+      ctx.fillStyle = c3; ctx.fillRect(5, 4, 2, 4);
+    } else if (type === 'armor_boots') {
+      ctx.fillStyle = c2; ctx.fillRect(2, 7, 5, 7); ctx.fillRect(9, 7, 5, 7);
+      ctx.fillStyle = c1; ctx.fillRect(3, 8, 3, 5); ctx.fillRect(10, 8, 3, 5);
+      ctx.fillStyle = c3; ctx.fillRect(3, 8, 2, 2); ctx.fillRect(10, 8, 2, 2);
+    } else if (type === 'elytra') {
+      ctx.fillStyle = '#636675'; ctx.fillRect(4, 2, 3, 11); ctx.fillRect(9, 2, 3, 11);
+      ctx.fillStyle = '#8c90a3'; ctx.fillRect(3, 4, 3, 8); ctx.fillRect(10, 4, 3, 8);
+      ctx.fillStyle = '#b4b8cc'; ctx.fillRect(5, 3, 1, 6); ctx.fillRect(10, 3, 1, 6);
+    }
+  });
+}
+
+
+
+    // Reference atlas imported from maksik.txt: this replaces the previous atlas rather than layering over it.
+    function referenceMaterial(canvas, extra = {}) {
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.magFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.NearestMipmapNearestFilter;
+      tex.generateMipmaps = true;
+      tex.needsUpdate = true;
+      return new THREE.MeshLambertMaterial({ map: tex, ...extra });
+    }
+    function applyReferenceAtlas() {
+      initReferenceTextures();
+      const assign = (id, top, side = top, bottom = top, extra = {}) => {
+        ATLAS.materials[id] = [referenceMaterial(side,extra),referenceMaterial(side,extra),referenceMaterial(top,extra),referenceMaterial(bottom,extra),referenceMaterial(side,extra),referenceMaterial(side,extra)];
+        ATLAS.icons[id] = top.toDataURL("image/png");
+      };
+      assign(B.GRASS,REF_TEX.grass_top,REF_TEX.grass_side,REF_TEX.dirt);
+      assign(B.DIRT,REF_TEX.dirt); assign(B.STONE,REF_TEX.stone); assign(B.COBBLESTONE,REF_TEX.cobblestone);
+      assign(B.BEDROCK,REF_TEX.bedrock); assign(B.OAK_LOG,REF_TEX.oak_log_top,REF_TEX.oak_log_side,REF_TEX.oak_log_top);
+      assign(B.OAK_PLANKS,REF_TEX.oak_planks); assign(B.OAK_LEAVES,REF_TEX.leaves,REF_TEX.leaves,REF_TEX.leaves,{transparent:true,alphaTest:0.18});
+      assign(B.SAND,REF_TEX.sand); assign(B.GRAVEL,REF_TEX.gravel);
+      assign(B.COAL_ORE,REF_TEX.coal_ore); assign(B.IRON_ORE,REF_TEX.iron_ore); assign(B.GOLD_ORE,REF_TEX.gold_ore);
+      assign(B.DIAMOND_ORE,REF_TEX.diamond_ore); assign(B.REDSTONE_ORE,REF_TEX.redstone_ore); assign(B.LAPIS_ORE,REF_TEX.lapis_ore);
+      assign(B.CRAFTING_TABLE,REF_TEX.crafting_top,REF_TEX.crafting_side,REF_TEX.oak_planks);
+      assign(B.FURNACE,REF_TEX.stone,REF_TEX.cobblestone,REF_TEX.stone);
+      assign(B.CHEST,REF_TEX.oak_planks,REF_TEX.oak_planks,REF_TEX.oak_planks);
+      assign(B.TORCH,REF_TEX.leaves,REF_TEX.leaves,REF_TEX.leaves,{transparent:true});
+      assign(B.GLASS,REF_TEX.glass,REF_TEX.glass,REF_TEX.glass,{transparent:true,opacity:0.65});
+      assign(B.WATER,REF_TEX.water,REF_TEX.water,REF_TEX.water,{transparent:true,opacity:0.82});
+      assign(B.LAVA,REF_TEX.lava);
+      assign(B.OBSIDIAN,REF_TEX.obsidian); assign(B.NETHERRACK,REF_TEX.netherrack); assign(B.SOUL_SAND,REF_TEX.dirt);
+      assign(B.GLOWSTONE,REF_TEX.glowstone); assign(B.NETHER_PORTAL,REF_TEX.obsidian,REF_TEX.obsidian,REF_TEX.obsidian,{transparent:true,opacity:0.75});
+      assign(B.END_STONE,REF_TEX.end_stone); assign(B.END_PORTAL_FRAME,REF_TEX.stone,REF_TEX.stone,REF_TEX.end_stone);
+      assign(B.END_PORTAL_FRAME_EYE,REF_TEX.emerald_block,REF_TEX.stone,REF_TEX.end_stone);
+      assign(B.END_PORTAL,REF_TEX.obsidian,REF_TEX.obsidian,REF_TEX.obsidian,{transparent:true,opacity:0.8});
+      assign(B.FARMLAND,REF_TEX.dirt); assign(B.WHEAT_1,REF_TEX.leaves,REF_TEX.leaves,REF_TEX.leaves,{transparent:true});
+      assign(B.WHEAT_7,REF_TEX.leaves,REF_TEX.leaves,REF_TEX.leaves,{transparent:true});
+      assign(B.POPPY,REF_TEX.leaves,REF_TEX.leaves,REF_TEX.leaves,{transparent:true});
+      assign(B.DANDELION,REF_TEX.leaves,REF_TEX.leaves,REF_TEX.leaves,{transparent:true});
+      assign(B.STONE_BRICKS,REF_TEX.stone_bricks); assign(B.DRAGON_EGG,REF_TEX.obsidian);
+      assign(B.BOOKSHELF,REF_TEX.bookshelf,REF_TEX.bookshelf,REF_TEX.oak_planks);
+      assign(B.WOOL_WHITE,REF_TEX.leaves); assign(B.BRICKS,REF_TEX.bricks); assign(B.TNT,REF_TEX.tnt_top,REF_TEX.tnt_side,REF_TEX.tnt_top);
+      assign(B.HAY_BLOCK,REF_TEX.oak_planks); assign(B.SANDSTONE,REF_TEX.sand,REF_TEX.sand,REF_TEX.sand);
+      assign(B.NETHER_BRICKS,REF_TEX.bricks); assign(B.QUARTZ_ORE,REF_TEX.iron_ore);
+      assign(B.GOLD_BLOCK,REF_TEX.gold_block); assign(B.BED_FOOT,REF_TEX.oak_planks); assign(B.BED_HEAD,REF_TEX.oak_planks);
+      assign(B.CRYING_OBSIDIAN,REF_TEX.obsidian); assign(B.ANCIENT_DEBRIS,REF_TEX.iron_ore);
+      assign(B.NETHER_GOLD_ORE,REF_TEX.gold_ore); assign(B.BASALT,REF_TEX.stone); assign(B.BLACKSTONE,REF_TEX.cobblestone);
+      assign(B.SOUL_SOIL,REF_TEX.dirt);
+      const legacy = {stone:REF_TEX.stone,earth:REF_TEX.dirt,wood:REF_TEX.oak_planks,leaf:REF_TEX.leaves,ice:REF_TEX.glass,ocean:REF_TEX.water,glow:REF_TEX.glowstone,quartz:REF_TEX.sand,ore:REF_TEX.iron_ore,gem:REF_TEX.diamond_block,wool:REF_TEX.oak_planks,glass:REF_TEX.glass,purpur:REF_TEX.obsidian,nether:REF_TEX.netherrack,bone:REF_TEX.sand,tech:REF_TEX.stone,slime:REF_TEX.leaves,iron:REF_TEX.stone};
+      for (const [key,,palette] of LEGACY_BLOCKS) if (B[key] !== undefined) assign(B[key],legacy[palette]||REF_TEX.stone);
+      const tier = {wood:['#8f7042','#5c4524','#b38f59'],stone:['#7d7d7d','#4d4d4d','#a8a8a8'],iron:['#c9c9c9','#858585','#f0f0f0'],gold:['#e3c22b','#9c7c14','#fff28c'],diamond:['#4ec9ba','#1e877b','#9ef7ec'],netherite:['#71636a','#423b40','#a18a92']};
+      const itemType = id => {
+        const k=String(id).toLowerCase();
+        if(k.includes('spawn_egg'))return 'spawn_egg';
+        if(k.includes('sword'))return 'sword'; if(k.includes('pickaxe'))return 'pickaxe'; if(k.includes('axe'))return 'axe';
+        if(k.includes('shovel'))return 'shovel'; if(k.includes('hoe'))return 'hoe'; if(k.includes('bow'))return 'bow';
+        if(k.includes('arrow'))return k.includes('spectral')?'spectral_arrow':'arrow'; if(k.includes('shield'))return 'shield';
+        if(k.includes('fishing_rod'))return 'fishing_rod'; if(k.includes('flint_and_steel'))return 'flint_and_steel';
+        if(k.includes('potion'))return 'potion'; if(k.includes('golden_apple')||k==='apple')return 'apple';
+        if(k.includes('bread'))return 'bread'; if(k.includes('beef'))return 'steak'; if(k.includes('pork'))return 'porkchop';
+        if(k.includes('chicken'))return 'chicken_food'; if(k.includes('mutton'))return 'mutton'; if(k.includes('rabbit'))return 'rabbit_food';
+        if(k.includes('fish')||k.includes('salmon'))return 'fish'; if(k.includes('carrot'))return 'carrot'; if(k.includes('potato'))return 'potato';
+        if(k.includes('beetroot'))return 'beetroot'; if(k.includes('melon'))return 'melon_slice'; if(k.includes('cookie'))return 'cookie';
+        if(k.includes('pumpkin_pie'))return 'pumpkin_pie'; if(k.includes('cake'))return 'cake'; if(k.includes('stew')||k.includes('soup'))return 'bowl_stew';
+        if(k.includes('chorus'))return 'chorus_fruit'; if(k.includes('rotten_flesh'))return 'rotten_flesh'; if(k.includes('spider_eye'))return 'spider_eye';
+        if(k.includes('bucket'))return 'milk_bucket'; if(k.includes('ingot')||k.includes('scrap'))return 'ingot';
+        if(k.includes('diamond')||k.includes('emerald')||k.includes('gem'))return 'gem'; if(k.includes('pearl')||k.includes('eye'))return 'pearl';
+        if(k.includes('helmet'))return 'armor_helmet'; if(k.includes('chestplate'))return 'armor_chest';
+        if(k.includes('leggings'))return 'armor_legs'; if(k.includes('boots'))return 'armor_boots'; if(k.includes('elytra'))return 'elytra';
+        if(k.includes('tnt'))return 'tnt_item'; if(k.includes('coal'))return 'gem'; if(k.includes('bone'))return 'ingot';
+        return 'gem';
+      };
+      for (const id of Object.keys(ITEMS)) {
+        const t=itemType(id), tierKey=Object.keys(tier).find(k=>id.includes(k))||'iron';
+        const foodColors = {
+          apple:['#b5291f','#6e140e','#e3594f'],golden_apple:['#e3c22b','#9c7c14','#fff28c'],
+          bread:['#b5762d','#693f16','#d49546'],raw_beef:['#a83232','#631717','#d97373'],cooked_beef:['#733c26','#421f12','#b88c72'],
+          raw_porkchop:['#cf6f6f','#8c3f3f','#f0a8a8'],cooked_porkchop:['#a66b3c','#663c1c','#d49e6e'],
+          raw_chicken:['#cf8a82','#8c524b','#f0bdb6'],cooked_chicken:['#9e5c2b','#5e3313','#cc8852'],
+          raw_mutton:['#9e3434','#5e1919','#cf6b6b'],cooked_mutton:['#753f29','#422012','#ab6e52'],
+          raw_rabbit:['#c97973','#85443f','#eba6a0'],cooked_rabbit:['#99592e','#593014','#c78354'],
+          raw_fish:['#6b8c99','#3e5761','#9ec2cf'],cooked_fish:['#8c6e46','#523e24','#ba9b70'],
+          carrot:['#d46b1c','#8c410b','#f09348'],golden_carrot:['#e3c22b','#9c7c14','#fff28c'],
+          potato:['#ba954e','#785c29','#dec07c'],baked_potato:['#9e7334','#5e4017','#cc9f58'],
+          poisonous_potato:['#7d8c3a','#4a541d','#a8b85c'],beetroot:['#8c2432','#4f0e17','#b84857']
+        };
+        const colors=foodColors[id]||tier[tierKey];
+        const canvas = t==='spawn_egg' ? referenceCanvas16(ctx=>{ctx.fillStyle='#e5dfc7';ctx.fillRect(4,2,8,12);ctx.fillStyle='#6b9b4a';ctx.fillRect(5,4,6,5);ctx.fillStyle='#3d6634';ctx.fillRect(6,5,3,2);}) : makeReferenceItemCanvas(t,...colors);
+        const tex = new THREE.CanvasTexture(canvas); tex.colorSpace=THREE.SRGBColorSpace; tex.magFilter=THREE.NearestFilter; tex.minFilter=THREE.NearestMipmapNearestFilter; tex.generateMipmaps=true;
+        ATLAS.icons[id]=canvas.toDataURL('image/png'); ATLAS.itemTextures[id]=tex;
+      }
+      // Common world drops and hand-held resources use the same reference sprites.
+      for (const id of ['coal','redstone','lapis','quartz','stick','bone','string','feather','leather','egg','gunpowder','blaze_rod','blaze_powder','ender_pearl','ender_eye','wheat','wheat_seeds','bucket_water','bucket_lava','netherite_scrap','netherite_ingot','wither_skull']) {
+        if (ATLAS.itemTextures[id]) continue;
+        const type=itemType(id), colors=tier.iron;
+        const canvas=makeReferenceItemCanvas(type,...colors),tex=new THREE.CanvasTexture(canvas);tex.colorSpace=THREE.SRGBColorSpace;tex.magFilter=THREE.NearestFilter;tex.minFilter=THREE.NearestMipmapNearestFilter;tex.generateMipmaps=true;
+        ATLAS.icons[id]=canvas.toDataURL('image/png');ATLAS.itemTextures[id]=tex;
+      }
+    }
+    const REF_MOB_TEXTURES = new Map();
+    function getReferenceMobTexture(type) {
+      if(REF_MOB_TEXTURES.has(type)) return REF_MOB_TEXTURES.get(type);
+      const palettes = {
+        cow:['#45362b','#bfb8b2'],pig:['#d98f8c','#b06663'],sheep:['#d6d6d6','#bf8c86'],chicken:['#e0e0e0','#c72424'],rabbit:['#b69a78','#8c7258'],
+        wolf:['#b8b2ad','#4a4542'],creeper:['#48a83b','#1b2619'],zombie:['#48733b','#2e828c'],skeleton:['#c9c9c9','#757575'],
+        wither_skeleton:['#262626','#4b4b4b'],spider:['#362e2b','#b81d1d'],enderman:['#161616','#cc49f5'],ghast:['#d9d9d9','#999999'],
+        blaze:['#d9a11e','#7a2b0a'],slime:['#4fa13b','#316923'],shulker:['#825882','#d6cc96'],iron_golem:['#bfb4a8','#45732f'],
+        dragon:['#1a181c','#b53dd6'],wither:['#242424','#5c7c9c'],
+        villager_fletcher:['#75604a','#8a6a45'],villager_farmer:['#6b7c3b','#b59a52'],villager_blacksmith:['#55585a','#777777'],villager_cleric:['#8d4e8b','#b58ab2'],villager_skin:['#b98662','#e0b28c']
+      };
+      const [base,accent]=palettes[type]||['#806b54','#493c32'];
+      const canvas=referenceCanvas16(ctx=>{
+        ctx.fillStyle=base;ctx.fillRect(0,0,16,16);
+        for(let y=0;y<16;y++)for(let x=0;x<16;x++){
+          const h=referenceHash2(x,y,type.length*17);
+          if(type==='cow' && h>0.68){ctx.fillStyle=accent;ctx.fillRect(x,y,1,1);}
+          else if(type==='sheep' && h>0.64){ctx.fillStyle=h>0.84?'#f1eee5':accent;ctx.fillRect(x,y,1,1);}
+          else if(type==='pig' && h>0.74){ctx.fillStyle=accent;ctx.fillRect(x,y,1,1);}
+          else if(type==='chicken' && h>0.72){ctx.fillStyle=accent;ctx.fillRect(x,y,1,1);}
+          else if(type.startsWith('villager_') && (y<3 || (x+y)%7===0)){ctx.fillStyle=accent;ctx.fillRect(x,y,1,1);}
+          else if(h>0.79){ctx.fillStyle=accent;ctx.fillRect(x,y,1,1);}
+        }
+        if(type==='cow'){ctx.fillStyle=accent;ctx.fillRect(2,2,4,3);ctx.fillRect(10,10,4,3);}
+        if(type==='pig'){ctx.fillStyle='#efb1b0';ctx.fillRect(5,6,6,4);}
+        if(type==='chicken'){ctx.fillStyle='#f5f1e7';ctx.fillRect(3,3,10,8);}
+        if(type.startsWith('villager_')){ctx.fillStyle=base;ctx.fillRect(0,0,16,16);ctx.fillStyle=accent;ctx.fillRect(0,0,16,3);ctx.fillRect(2,7,12,2);}
+      });
+      const tex=new THREE.CanvasTexture(canvas);tex.colorSpace=THREE.SRGBColorSpace;tex.magFilter=THREE.NearestFilter;tex.minFilter=THREE.NearestMipmapNearestFilter;tex.generateMipmaps=true;tex.needsUpdate=true;
+      REF_MOB_TEXTURES.set(type,tex);return tex;
+    }
+
     // =========================================================================
     // 4. RECIPES, SMELTING & VILLAGER TRADES (FLETCHER, FARMER, BLACKSMITH, CLERIC)
     // =========================================================================
@@ -2415,9 +3041,9 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       if (type.startsWith("villager_")) {
         const profKey = type.replace("villager_", "");
         const prof = VILLAGER_PROFESSIONS[profKey] || VILLAGER_PROFESSIONS.fletcher;
-        const robe = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.15, 0.32), new THREE.MeshLambertMaterial({ color: 0x593d28 }));
+        const robe = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.15, 0.32), referenceMaterial(referenceCanvas16(ctx => { ctx.fillStyle = prof.hatColor ? "#" + prof.hatColor.toString(16).padStart(6,"0") : "#75604a"; ctx.fillRect(0,0,16,16); for(let y=2;y<16;y+=4){ctx.fillStyle="rgba(0,0,0,0.18)";ctx.fillRect(0,y,16,1);} })));
         robe.position.y = 0.72;
-        const head = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.56, 0.46), new THREE.MeshLambertMaterial({ color: 0xb58665 }));
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.56, 0.46), referenceMaterial(getReferenceMobTexture("villager_skin")));
         head.position.y = 1.56;
         const nose = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.22, 0.14), new THREE.MeshLambertMaterial({ color: 0x9c6e4e }));
         nose.position.set(0, -0.08, 0.27);
@@ -2580,6 +3206,19 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           o.material.needsUpdate = true;
         });
       }
+      // Apply the reference 16x16 species skin to every substantial body mesh.
+      // Tiny facial details (eyes, nose, beak) keep their own vanilla colours.
+      const mobSkin = getReferenceMobTexture(type);
+      if (!type.startsWith("villager_")) g.traverse(o => {
+        if (!o.isMesh || !o.material || !o.material.isMeshLambertMaterial) return;
+        const box = new THREE.Box3().setFromObject(o);
+        const size = new THREE.Vector3(); box.getSize(size);
+        if (Math.max(size.x,size.y,size.z) < 0.14) return;
+        o.material = o.material.clone();
+        o.material.map = mobSkin;
+        o.material.color.setHex(0xffffff);
+        o.material.needsUpdate = true;
+      });
       return { group: g, parts };
     }
 
@@ -3357,23 +3996,12 @@ const WORLD_CONFIG: WorldConfig = {
     const generatedItemIcons = new Set();
     function ensureItemIcon(id) {
       if (ATLAS.icons[id] && ATLAS.itemTextures[id]) return;
-      if (generatedItemIcons.has(id)) return;
-      generatedItemIcons.add(id);
-      const palette = /netherite/.test(String(id)) ? ["#51464d","#8d7b80","#302b31"] :
-        /diamond/.test(String(id)) ? ["#42c9b5","#b4fff0","#237d78"] :
-        /gold/.test(String(id)) ? ["#e9c642","#fff09a","#9b721b"] :
-        /iron|chainmail/.test(String(id)) ? ["#b9c2c8","#eef2f4","#66727a"] :
-        /leather/.test(String(id)) ? ["#98633b","#c18a55","#55351f"] :
-        /spawn_egg/.test(String(id)) ? ["#63a94d","#e7e1bd","#6c4c9a"] :
-        /food|apple|bread|meat|fish|carrot|potato|stew|cookie|melon|beetroot/.test(String(id)) ? ["#c58b42","#e8c477","#8c4b2d"] :
-        ["#8a8a8a","#d0d0d0","#505050"];
-      const icon = makePixelTex(ctx => {
-        ctx.clearRect(0,0,16,16); ctx.fillStyle=palette[2]; ctx.fillRect(3,3,10,10);
-        ctx.fillStyle=palette[0]; ctx.fillRect(4,2,8,12); ctx.fillRect(2,5,12,6);
-        ctx.fillStyle=palette[1]; ctx.fillRect(5,3,3,3); ctx.fillRect(9,7,2,3);
-      });
-      ATLAS.icons[id] = icon.dataUrl;
-      ATLAS.itemTextures[id] = icon.tex;
+      const t = String(id).toLowerCase();
+      const colors = t.includes("diamond") ? ['#4ec9ba','#1e877b','#9ef7ec'] : t.includes("gold") ? ['#e3c22b','#9c7c14','#fff28c'] : t.includes("wood") ? ['#8f7042','#5c4524','#b38f59'] : ['#c9c9c9','#858585','#f0f0f0'];
+      const type = t.includes("sword") ? "sword" : t.includes("pickaxe") ? "pickaxe" : t.includes("axe") ? "axe" : t.includes("shovel") ? "shovel" : t.includes("hoe") ? "hoe" : t.includes("bow") ? "bow" : t.includes("arrow") ? "arrow" : t.includes("shield") ? "shield" : t.includes("apple") ? "apple" : t.includes("bread") ? "bread" : t.includes("beef") ? "steak" : t.includes("pork") ? "porkchop" : t.includes("chicken") ? "chicken_food" : t.includes("carrot") ? "carrot" : t.includes("potato") ? "potato" : "gem";
+      const canvas = makeReferenceItemCanvas(type,...colors);
+      const tex = new THREE.CanvasTexture(canvas); tex.colorSpace=THREE.SRGBColorSpace; tex.magFilter=THREE.NearestFilter; tex.minFilter=THREE.NearestMipmapNearestFilter; tex.generateMipmaps=true;
+      ATLAS.icons[id]=canvas.toDataURL("image/png"); ATLAS.itemTextures[id]=tex;
     }
     function getItemInfo(id) {
       if (typeof id === "number") return { name: BLOCK_PROPS[id]?.name || "Блок", icon: ATLAS.icons[id], stack: 64 };
@@ -6513,8 +7141,9 @@ const WORLD_CONFIG: WorldConfig = {
     // =========================================================================
     // 18. INITIALIZATION & MAIN LOOP
     // =========================================================================
-    initTextures();
-    loadVanillaBlockTextures();
+    applyReferenceAtlas();
+    createIsometricBlockIcons();
+    // Do not load modern remote textures: maksik.txt is the single visual source of truth.
 
     GAME.world = new VoxelWorld(12345);
     for (let dx = -2; dx <= 2; dx++) {
