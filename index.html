@@ -250,6 +250,18 @@
   #settings-screen .sub { margin-top:14px; }
   @media(max-width:640px) { #title-screen .panel { margin:0 auto; align-self:center; padding:22px; } #title-screen .version { right:10px; bottom:8px; } }
 
+
+  .overlay:not(#title-screen) { background:radial-gradient(ellipse at 50% 35%,rgba(43,65,51,.66),rgba(4,9,8,.91)); backdrop-filter:blur(8px); }
+  .overlay:not(#title-screen) .panel { width:min(540px,calc(100vw - 28px)); min-width:0; max-width:540px; padding:clamp(20px,4vw,34px); border:1px solid rgba(222,232,207,.2); border-radius:4px; background:linear-gradient(145deg,rgba(24,34,29,.97),rgba(13,20,19,.97)); box-shadow:0 24px 70px rgba(0,0,0,.5),inset 0 1px rgba(255,255,255,.07); }
+  .overlay:not(#title-screen) .panel h1 { color:#edf1df; font-family:Georgia,serif; font-size:1.7rem; }
+  .overlay:not(#title-screen) .panel h2 { color:#a8b99e; }
+  .overlay:not(#title-screen) button { border-radius:3px; border:1px solid rgba(220,231,210,.17); background:linear-gradient(180deg,#607b50,#3e5a3a); box-shadow:inset 0 1px rgba(255,255,255,.14),0 3px 8px rgba(0,0,0,.2); }
+  .overlay:not(#title-screen) button.secondary { background:#26352d; }
+  .overlay:not(#title-screen) button:hover:not(:disabled) { background:#78965f; }
+  .world-entry { background:#26372e; border:1px solid #52634e; border-radius:3px; }
+  .world-entry.selected { background:#405a3e; border-color:#dce8c8; }
+  .world-entry .meta { color:#bdcbb7; }
+
 </style>
 </head>
 <body>
@@ -301,7 +313,7 @@
 <!-- Multiplayer lobby -->
 <div id="mp-screen" class="overlay hidden">
   <div class="panel">
-    <h1>Сетевая игра</h1><h2>Firebase · комнаты и друзья</h2>
+    <h1>Сетевая игра</h1><h2>Комнаты и игроки онлайн</h2>
     <label for="mp-nickname">Никнейм</label><input type="text" id="mp-nickname" maxlength="20" value="Игрок">
     <button id="btn-mp-save-nick" class="secondary">Сохранить ник</button>
     <button id="btn-mp-create-room">Создать комнату</button>
@@ -316,40 +328,40 @@
 <!-- World list -->
 <div id="worlds-screen" class="overlay hidden">
   <div class="panel">
-    <h1>Select World</h1>
+    <h1>Миры</h1>
     <div class="world-list" id="world-list"></div>
-    <button id="btn-play">Play Selected World</button>
-    <button id="btn-new-world" class="secondary">Create New World</button>
+    <button id="btn-play">Играть в выбранном мире</button>
+    <button id="btn-new-world" class="secondary">Создать новый мир</button>
     <div class="row">
-      <button id="btn-export-world" class="secondary" disabled>Export</button>
-      <button id="btn-delete-world" class="secondary" disabled>Delete</button>
+      <button id="btn-export-world" class="secondary" disabled>Экспорт</button>
+      <button id="btn-delete-world" class="secondary" disabled>Удалить</button>
     </div>
-    <button id="btn-worlds-back" class="secondary">Back</button>
+    <button id="btn-worlds-back" class="secondary">Назад</button>
   </div>
 </div>
 
 <!-- Create world -->
 <div id="create-screen" class="overlay hidden">
   <div class="panel">
-    <h1>Create New World</h1>
-    <label for="world-name">World Name</label>
+    <h1>Создать новый мир</h1>
+    <label for="world-name">Название мира</label>
     <input type="text" id="world-name" value="New World" maxlength="48">
-    <label for="world-seed">Seed (blank for random)</label>
-    <input type="text" id="world-seed" placeholder="leave blank for random" maxlength="64">
+    <label for="world-seed">Ключ генерации (пусто — случайный)</label>
+    <input type="text" id="world-seed" placeholder="Оставь пустым для случайного мира" maxlength="64">
     <p class="sub" style="margin-top:.9rem">
-      Text seeds are hashed the same way Minecraft does, so a named seed gives
-      the same world it would there.
+      Текстовый ключ преобразуется так же, как в Minecraft: одинаковый ключ создаёт
+      одинаковый мир при каждом создании.
     </p>
-    <button id="btn-create">Create World</button>
-    <button id="btn-create-back" class="secondary">Back</button>
+    <button id="btn-create">Создать мир</button>
+    <button id="btn-create-back" class="secondary">Назад</button>
   </div>
 </div>
 
 <!-- Loading -->
 <div id="loading-screen" class="overlay hidden">
   <div class="panel">
-    <h1>Building terrain</h1>
-    <h2 id="loading-detail">Generating chunks&hellip;</h2>
+    <h1>Создание мира</h1>
+    <h2 id="loading-detail">Генерация чанков…</h2>
     <div id="loading-bar"><div></div></div>
   </div>
 </div>
@@ -359,11 +371,11 @@
   <div class="panel">
     <h1>Paused</h1>
     <h2 id="pause-world-name"></h2>
-    <button id="btn-resume">Back to Game</button>
-    <button id="btn-save" class="secondary">Save Now</button>
-    <button id="btn-export" class="secondary">Export World (.mcw)</button>
-    <button id="btn-gamemode" class="secondary">Toggle Creative Mode</button>
-    <button id="btn-quit" class="secondary">Save and Quit to Title</button>
+    <button id="btn-resume">Вернуться в игру</button>
+    <button id="btn-save" class="secondary">Сохранить сейчас</button>
+    <button id="btn-export" class="secondary">Экспорт мира (.mcw)</button>
+    <button id="btn-gamemode" class="secondary">Сменить режим игры</button>
+    <button id="btn-quit" class="secondary">Сохранить и выйти в меню</button>
     <p class="sub" style="margin-top:1rem;margin-bottom:0">
       <kbd>WASD</kbd> move &nbsp; <kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> sneak<br>
       <kbd>E</kbd> inventory &nbsp; <kbd>F3</kbd> debug &nbsp; <kbd>F</kbd> fly (creative)<br>
