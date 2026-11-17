@@ -54,6 +54,14 @@ const TOOL_SHAPES = {
         [7,5]],
     H: [[7,5],[7,6],[6,7],[6,8],[5,9],[5,10],[4,11],[4,12],[3,13]],
   },
+  shears: {
+    M: [[4,3],[5,2],[6,2],[7,3],[8,4],[9,5],[10,6],[11,7],[12,8],[13,9],[12,10],[11,11],[10,12],[9,13], [3,4],[2,5],[2,6],[3,7],[4,8],[5,9],[6,10],[7,11],[8,12],[9,13]],
+    H: [[6,7],[7,8],[8,9]],
+  },
+  fishing_rod: {
+    M: [[12,1],[11,2],[10,3],[9,4],[8,5],[7,6],[6,7]],
+    H: [[6,7],[5,8],[4,9],[3,10],[2,11],[2,12],[3,13]],
+  },
   sword: {
     M: [[10,2],[11,2],[12,2],
         [9,3],[10,3],[11,3],
@@ -103,6 +111,13 @@ const BLOB_SHAPES = {
 
 const ITEM_ICON_SPEC = {
   'mc:stick':        { shape: 'stick', colors: HANDLE },
+  'mc:raw_cod':      { shape: 'chunk', colors: ['#b6c8d0', '#738e9b'] },
+  'mc:raw_salmon':   { shape: 'chunk', colors: ['#ed9b78', '#bd6654'] },
+  'mc:pufferfish':   { shape: 'chunk', colors: ['#e7cf52', '#b68e36'] },
+  'mc:tropical_fish':{ shape: 'chunk', colors: ['#e58d38', '#a84c34'] },
+  'mc:string':       { shape: 'stick', colors: ['#eee6d2', '#b9ad95'] },
+  'mc:bone':         { shape: 'stick', colors: ['#eee8d8', '#bdb5a2'] },
+  'mc:leather':      { shape: 'chunk', colors: ['#9b633b', '#633b27'] },
   'mc:coal':         { shape: 'chunk', colors: ['#2c2c2c', '#141414'] },
   'mc:charcoal':     { shape: 'chunk', colors: ['#3a332c', '#1e1a16'] },
   'mc:raw_iron':     { shape: 'chunk', colors: ['#d8a582', '#a97e5f'] },
@@ -150,6 +165,17 @@ export function generateItemIcon(item) {
 
   const icon = blankIcon();
 
+  if (item.id === 'mc:fishing_rod') {
+    const icon = blankIcon();
+    plot(icon, TOOL_SHAPES.fishing_rod.M, '#b7a17b', '#826b4c');
+    plot(icon, TOOL_SHAPES.fishing_rod.H, HANDLE[0], HANDLE[1]);
+    return icon;
+  }
+  if (item.tool === 'shears') {
+    plot(icon, TOOL_SHAPES.shears.M, '#c9d0d6', '#858e98');
+    plot(icon, TOOL_SHAPES.shears.H, '#b7a17b', '#826b4c');
+    return icon;
+  }
   if (item.tool && TOOL_SHAPES[item.tool]) {
     const prefix = item.id.slice('mc:'.length).split('_')[0];
     const colors = TIER_COLOR[prefix] ?? TIER_COLOR.stone;
