@@ -3,10 +3,8 @@
  * Data is namespaced under minecraft_game/ to remain compatible with the
  * uploaded reference game. No Three.js objects or globals are used here.
  */
-import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import {
-  getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded, onChildChanged, onDisconnect,
-} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+let initializeApp, getApps, getDatabase, ref, set, get, update, push, remove;
+let onValue, onChildAdded, onChildChanged, onDisconnect;
 import { BLOCKS, parseStateString } from '../world/block.js';
 import * as storage from '../save/storage.js';
 import { GENERATOR_VERSION } from '../world/gen/terrain.js';
@@ -43,6 +41,12 @@ export class Multiplayer {
 
   async init() {
     try {
+      if (!initializeApp) {
+        const appSdk = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
+        const dbSdk = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
+        ({ initializeApp, getApps } = appSdk);
+        ({ getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded, onChildChanged, onDisconnect } = dbSdk);
+      }
       this.app = getApps().find((app) => app.name === 'minecraft-web') ||
         initializeApp(CONFIG, 'minecraft-web');
       this.db = getDatabase(this.app);
