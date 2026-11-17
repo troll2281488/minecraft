@@ -258,18 +258,38 @@ export const RendererMixin = {
   _drawPlayers() {
     const gl = this.gl;
     const { program, uniforms } = this.avatarProgram;
-    const parts = [
-      // center offset, scale, colour
-      [[0, 1.68, 0], [0.28, 0.32, 0.28], [0.78, 0.62, 0.46, 1]], // head
-      [[0, 1.05, 0], [0.48, 0.78, 0.26], [0.16, 0.42, 0.78, 1]], // torso
-      [[-0.34, 1.08, 0], [0.20, 0.72, 0.22], [0.78, 0.62, 0.46, 1]], // left arm
-      [[0.34, 1.08, 0], [0.20, 0.72, 0.22], [0.78, 0.62, 0.46, 1]], // right arm
-      [[-0.13, 0.36, 0], [0.24, 0.72, 0.25], [0.20, 0.24, 0.55, 1]], // left leg
-      [[0.13, 0.36, 0], [0.24, 0.72, 0.25], [0.20, 0.24, 0.55, 1]], // right leg
+    const human = [
+      [[0, 1.68, 0], [0.28, 0.32, 0.28], [0.78, 0.62, 0.46, 1]],
+      [[0, 1.05, 0], [0.48, 0.78, 0.26], [0.16, 0.42, 0.78, 1]],
+      [[-0.34, 1.08, 0], [0.20, 0.72, 0.22], [0.78, 0.62, 0.46, 1]],
+      [[0.34, 1.08, 0], [0.20, 0.72, 0.22], [0.78, 0.62, 0.46, 1]],
+      [[-0.13, 0.36, 0], [0.24, 0.72, 0.25], [0.20, 0.24, 0.55, 1]],
+      [[0.13, 0.36, 0], [0.24, 0.72, 0.25], [0.20, 0.24, 0.55, 1]],
     ];
-    const draw = (x, y, z, yaw) => {
+    const zombie = human.map(([o, size, color], i) => [
+      o, size, i === 0 || i === 2 || i === 3 ? [0.28, 0.62, 0.25, 1] :
+        i === 1 ? [0.12, 0.34, 0.20, 1] : [0.12, 0.22, 0.58, 1],
+    ]);
+    const sheep = [
+      [[0, 0.83, 0], [0.82, 0.72, 1.05], [0.88, 0.86, 0.78, 1]],
+      [[0, 1.13, 0.58], [0.42, 0.42, 0.42], [0.82, 0.72, 0.62, 1]],
+      [[-0.25, 0.28, -0.32], [0.18, 0.56, 0.18], [0.38, 0.34, 0.30, 1]],
+      [[0.25, 0.28, -0.32], [0.18, 0.56, 0.18], [0.38, 0.34, 0.30, 1]],
+      [[-0.25, 0.28, 0.32], [0.18, 0.56, 0.18], [0.38, 0.34, 0.30, 1]],
+      [[0.25, 0.28, 0.32], [0.18, 0.56, 0.18], [0.38, 0.34, 0.30, 1]],
+    ];
+    const pig = [
+      [[0, 0.72, 0], [0.72, 0.58, 1.0], [0.88, 0.48, 0.55, 1]],
+      [[0, 0.94, 0.53], [0.44, 0.42, 0.42], [0.90, 0.57, 0.62, 1]],
+      [[0, 0.88, 0.78], [0.24, 0.20, 0.12], [0.68, 0.30, 0.38, 1]],
+      [[-0.23, 0.25, -0.32], [0.18, 0.48, 0.18], [0.48, 0.32, 0.36, 1]],
+      [[0.23, 0.25, -0.32], [0.18, 0.48, 0.18], [0.48, 0.32, 0.36, 1]],
+      [[-0.23, 0.25, 0.32], [0.18, 0.48, 0.18], [0.48, 0.32, 0.36, 1]],
+      [[0.23, 0.25, 0.32], [0.18, 0.48, 0.18], [0.48, 0.32, 0.36, 1]],
+    ];
+    const draw = (x, y, z, yaw, parts) => {
       gl.uniform3f(uniforms.uPlayerPos, x, y, z);
-      gl.uniform1f(uniforms.uYaw, yaw * Math.PI / 180);
+      gl.uniform1f(uniforms.uYaw, yaw);
       for (const [offset, scale, color] of parts) {
         gl.uniform3f(uniforms.uPartOffset, offset[0], offset[1], offset[2]);
         gl.uniform3f(uniforms.uPartScale, scale[0], scale[1], scale[2]);
@@ -281,9 +301,13 @@ export const RendererMixin = {
     gl.useProgram(program);
     gl.uniformMatrix4fv(uniforms.uViewProjection, false, this.viewProjection);
     gl.bindVertexArray(this.avatarVao);
-    if (this.thirdPerson) draw(this.player.x, this.player.y, this.player.z, this.player.yaw);
+    if (this.thirdPerson) draw(this.player.x, this.player.y, this.player.z, this.player.yaw * Math.PI / 180, human);
     for (const remote of this.multiplayer?.remotePlayers?.values?.() ?? []) {
-      draw(remote.x, remote.y, remote.z, remote.yaw);
+      draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, human);
+    }
+    for (const mob of this.entities?.mobs ?? []) {
+      const parts = mob.type === 'zombie' ? zombie : mob.type === 'pig' ? pig : sheep;
+      draw(mob.x, mob.y, mob.z, mob.yaw, parts);
     }
     gl.bindVertexArray(null);
   },
