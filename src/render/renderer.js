@@ -75,7 +75,13 @@ function buildAvatarCube() {
     [[0,0,0],[1,0,0],[1,0,1],[0,0,1]],
   ];
   const out = [];
-  for (const [a,b,c,d] of faces) for (const v of [a,b,c,a,c,d]) out.push(...v);
+  const normals = [
+    [0,0,-1], [0,0,1], [-1,0,0], [1,0,0], [0,1,0], [0,-1,0],
+  ];
+  for (let f = 0; f < faces.length; f++) {
+    const [a,b,c,d] = faces[f];
+    for (const v of [a,b,c,a,c,d]) out.push(...v, ...normals[f]);
+  }
   return new Float32Array(out);
 }
 
@@ -86,7 +92,7 @@ export const RendererMixin = {
     this.skyProgram = createProgram(gl, SKY_VERTEX_SHADER, SKY_FRAGMENT_SHADER, 'sky');
     this.lineProgram = createProgram(gl, LINE_VERTEX_SHADER, LINE_FRAGMENT_SHADER, 'line');
     this.crackProgram = createProgram(gl, CRACK_VERTEX_SHADER, CRACK_FRAGMENT_SHADER, 'crack');
-    this.avatarProgram = createProgram(gl, `#version 300 es\nprecision highp float;\nlayout(location=0) in vec3 aPos;\nuniform mat4 uViewProjection; uniform vec3 uPlayerPos; uniform vec3 uPartOffset; uniform vec3 uPartScale; uniform float uYaw;\nvoid main(){ vec3 p=(aPos-0.5)*uPartScale+uPartOffset; float c=cos(uYaw), s=sin(uYaw); vec3 r=vec3(p.x*c-p.z*s,p.y,p.x*s+p.z*c); gl_Position=uViewProjection*vec4(uPlayerPos+r,1.0); }`, `#version 300 es\nprecision highp float;\nuniform vec4 uColor; out vec4 fragColor; void main(){fragColor=uColor;}`, 'player avatar');
+    this.avatarProgram = createProgram(gl, `#version 300 es\nprecision highp float;\nlayout(location=0) in vec3 aPos; layout(location=1) in vec3 aNormal;\nuniform mat4 uViewProjection; uniform vec3 uPlayerPos; uniform vec3 uPartOffset; uniform vec3 uPartScale; uniform float uYaw;\nout vec3 vLocalPos; out float vLight;\nvoid main(){ vec3 p=(aPos-0.5)*uPartScale+uPartOffset; float c=cos(uYaw), s=sin(uYaw); vec3 r=vec3(p.x*c-p.z*s,p.y,p.x*s+p.z*c); vec3 n=vec3(aNormal.x*c-aNormal.z*s,aNormal.y,aNormal.x*s+aNormal.z*c); vLocalPos=aPos; vLight=0.72+0.28*max(0.0,dot(normalize(n),normalize(vec3(-0.4,0.8,0.5)))); gl_Position=uViewProjection*vec4(uPlayerPos+r,1.0); }`, `#version 300 es\nprecision highp float;\nuniform vec4 uColor; in vec3 vLocalPos; in float vLight; out vec4 fragColor; void main(){ float grain=fract(sin(dot(floor(vLocalPos*16.0),vec3(12.9898,78.233,37.719)))*43758.5453); float pixel=0.96+grain*0.08; fragColor=vec4(uColor.rgb*vLight*pixel,uColor.a); }`, 'player avatar');
   },
 
   _setupBuffers() {
@@ -327,7 +333,9 @@ export const RendererMixin = {
     }
     for (const mob of this.entities?.mobs ?? []) {
       const parts = mob.type === 'zombie' ? zombie : mob.type === 'pig' ? pig : sheep;
-      draw(mob.x, mob.y, mob.z, mob.yaw, parts);
+      draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase,
+        mob.type === 'zombie' ? 4 : mob.type === 'pig' ? 3 : 2,
+        mob.type === 'zombie' ? 5 : mob.type === 'pig' ? 6 : 5);
     }
     gl.bindVertexArray(null);
   },
