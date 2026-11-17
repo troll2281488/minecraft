@@ -7129,7 +7129,9 @@ const WORLD_CONFIG: WorldConfig = {
     // 18. INITIALIZATION & MAIN LOOP
     // =========================================================================
     initTextures();
-    loadVanillaBlockTextures();
+    applyReferenceAtlas();
+    createIsometricBlockIcons();
+    // Do not load modern remote textures: maksik.txt is the single visual source of truth.
 
     GAME.world = new VoxelWorld(12345);
     for (let dx = -2; dx <= 2; dx++) {
