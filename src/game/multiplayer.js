@@ -28,7 +28,11 @@ export class Multiplayer {
     this.game = game;
     this.app = null;
     this.db = null;
-    this.uid = localStorage.getItem('mc_uid') || `p_${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}`;
+    const savedUid = localStorage.getItem('mc_uid');
+    // The supplied Firebase rules allow user IDs up to 32 characters.
+    this.uid = savedUid && savedUid.length <= 32
+      ? savedUid
+      : `u_${(globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)).replace(/[^a-z0-9]/gi, '').slice(0, 24)}`;
     this.nickname = safeName(localStorage.getItem('mc_nick') || `Игрок_${Math.floor(100 + Math.random() * 900)}`);
     this.roomId = null;
     this.remotePlayers = new Map();
@@ -52,7 +56,7 @@ export class Multiplayer {
       this.db = getDatabase(this.app);
       this.connected = true;
       localStorage.setItem('mc_uid', this.uid);
-      await set(ref(this.db, `minecraft_game/players/${this.uid}`), {
+      await set(ref(this.db, `minecraft_game/users/${this.uid}`), {
         name: this.nickname, online: true, room: '', ts: Date.now(),
       });
       onDisconnect(ref(this.db, `minecraft_game/players/${this.uid}`))
@@ -96,7 +100,7 @@ export class Multiplayer {
         rooms.append(row);
       }
     });
-    this._listen(onValue, ref(this.db, 'minecraft_game/players'), (snap) => {
+    this._listen(onValue, ref(this.db, 'minecraft_game/users'), (snap) => {
       people.replaceChildren();
       for (const [uid, p] of Object.entries(snap.val() || {})) {
         if (!p.online) continue;
@@ -229,7 +233,8 @@ export class Multiplayer {
       p.x += (p.targetX - p.x) * alpha;
       p.y += (p.targetY - p.y) * alpha;
       p.z += (p.targetZ - p.z) * alpha;
-      p.yaw += (p.targetYaw - p.yaw) * alpha;
+      const yawDelta = Math.atan2(Math.sin(p.targetYaw - p.yaw), Math.cos(p.targetYaw - p.yaw));
+      p.yaw += yawDelta * alpha;
     }
     if (!this.db || !this.roomId || !this.game.running || this.game.paused || !this.game.player) return;
     this.syncElapsed += dt;
