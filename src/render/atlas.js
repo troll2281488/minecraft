@@ -385,6 +385,15 @@ const TEXTURES = {
   white_wool:         () => grainy(hex(0xe8e5df), 0.08, 'white_wool', { clumps: 8, clumpColor: hex(0xd4d0c8) }),
   water:              () => waterTile('water'),
   torch:              () => torchTile('torch'),
+  farmland:           () => grainy(hex(0x765638), 0.12, 'farmland', { clumps: 18, clumpColor: hex(0x4d3828) }),
+  wheat_crop:         () => crossPlant('wheat_crop', (t, r) => {
+    grassBlades(t, r, hex(0x91a83a));
+    for (let y = 3; y < 15; y += 3) {
+      const x = 5 + ((y * 7) % 7);
+      setPx(t, x, y, 0xd6bd48, 0xc4a63a, 0x3b);
+      setPx(t, x + 1, y - 1, 0xe1cb61, 0xc8aa42, 0x3b);
+    }
+  }),
 
   coal_ore:           () => oreTile(STONE_GREY, hex(0x1b1b1b), 'coal_ore', 6),
   iron_ore:           () => oreTile(STONE_GREY, hex(0xd8a582), 'iron_ore', 5),
