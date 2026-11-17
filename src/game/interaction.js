@@ -334,6 +334,7 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
   const NO_DROP = new Set(['mc:short_grass', 'mc:fern', 'mc:dead_bush']);
   if (NO_DROP.has(block.id)) return [];
   if (block.id.endsWith('_leaves')) {
+    if (heldStack?.item?.tool === 'shears') return [{ id: block.id, count: 1 }];
     const sapling = block.id.replace('_leaves', '_sapling');
     return rng.nextDouble() < 0.05 && ITEMS.get(sapling) ? [{ id: sapling, count: 1 }] : [];
   }
