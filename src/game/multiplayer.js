@@ -56,6 +56,7 @@ export class Multiplayer {
       return true;
     } catch (error) {
       this.connected = false;
+      this.db = null;
       console.error('[multiplayer] Firebase initialization failed:', error);
       this.game.ui.toast(`Firebase недоступен: ${error.message}`, { error: true, duration: 9000 });
       return false;
@@ -63,7 +64,8 @@ export class Multiplayer {
   }
 
   async showLobby() {
-    const ok = this.db ? true : await this.init();
+    for (const unsubscribe of this.unsubscribers.splice(0)) unsubscribe();
+    const ok = this.connected && this.db ? true : await this.init();
     const rooms = document.getElementById('mp-rooms-list');
     const people = document.getElementById('mp-players-list');
     if (!ok) {
