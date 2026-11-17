@@ -258,7 +258,7 @@ export const RendererMixin = {
     gl.bufferSubData(gl.ARRAY_BUFFER, 0, vertices);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.drawArrays(gl.LINES, 0, edges.length);
+    gl.drawArrays(gl.LINES, 0, SELECTION_EDGES.length);
     gl.disable(gl.BLEND);
     gl.bindVertexArray(null);
 
