@@ -8,7 +8,7 @@ export const MOB_TYPES_112 = Object.freeze([
   'llama','magma_cube','mooshroom','mule','ocelot','parrot','pig','polar_bear',
   'rabbit','sheep','shulker','silverfish','skeleton','skeleton_horse','slime',
   'snow_golem','spider','squid','stray','vex','villager','vindicator','witch',
-  'wither','wither_skeleton','wolf','zombie','zombie_horse','zombie_villager','illusioner',
+  'wither','wither_skeleton','wolf','zombie','zombie_horse','zombie_villager',
 ]);
 
 export function shearSheep(mob, random = Math.random) {
