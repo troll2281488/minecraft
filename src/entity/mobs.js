@@ -2,12 +2,24 @@
  * Lightweight voxel creature simulation. Mobs use deterministic game ticks,
  * ground-following movement and simple species-specific behaviour.
  */
+export function rollMobDrops(type, random = Math.random) {
+  const amount = (min, max) => min + Math.floor(random() * (max - min + 1));
+  if (type === 'pig') return [{ id: 'mc:raw_porkchop', count: amount(1, 3) }];
+  if (type === 'sheep') return [{ id: 'mc:raw_mutton', count: amount(1, 2) }];
+  if (type === 'zombie') {
+    const count = amount(0, 2);
+    return count ? [{ id: 'mc:rotten_flesh', count }] : [];
+  }
+  return [];
+}
+
 export class MobSystem {
   constructor(game) {
     this.game = game;
     this.mobs = [];
     this.spawnTicks = 0;
     this.nextId = 1;
+    this.attackCooldown = 0;
   }
 
   reset() {
@@ -25,7 +37,56 @@ export class MobSystem {
       targetYaw: Math.random() * Math.PI * 2,
       speed: type === 'zombie' ? 0.035 : 0.018,
       thinkTicks: 0, attackTicks: 0, walkPhase: Math.random() * 6,
+      health: type === 'zombie' ? 20 : type === 'pig' ? 10 : 8,
     });
+  }
+
+
+  targetedMob(maxDistance = 4.5) {
+    const player = this.game.player;
+    if (!player) return null;
+    const yaw = player.yaw * Math.PI / 180;
+    const pitch = player.pitch * Math.PI / 180;
+    const look = [-Math.sin(yaw) * Math.cos(pitch), -Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)];
+    let best = null;
+    let bestDistance = maxDistance;
+    for (const mob of this.mobs) {
+      const dx = mob.x - player.x;
+      const dy = mob.y + 0.75 - player.eyeY;
+      const dz = mob.z - player.z;
+      const distance = Math.hypot(dx, dy, dz);
+      if (distance <= 0.001 || distance > bestDistance) continue;
+      const dot = (dx * look[0] + dy * look[1] + dz * look[2]) / distance;
+      if (dot < 0.82) continue;
+      best = mob;
+      bestDistance = distance;
+    }
+    return best;
+  }
+
+  attackFromPlayer() {
+    const mob = this.targetedMob();
+    if (!mob) return false;
+    if (this.attackCooldown > 0) return true;
+    const player = this.game.player;
+    const held = this.game.inventory?.held;
+    const damage = Math.max(1, held?.item?.attackDamage || 1);
+    mob.health = Math.max(0, mob.health - damage);
+    this.attackCooldown = 10;
+    const dx = mob.x - player.x;
+    const dz = mob.z - player.z;
+    const length = Math.max(0.01, Math.hypot(dx, dz));
+    mob.x += dx / length * 0.12;
+    mob.z += dz / length * 0.12;
+    if (mob.health <= 0) {
+      for (const drop of rollMobDrops(mob.type)) {
+        const leftover = this.game.inventory?.addItem(drop.id, drop.count) ?? drop.count;
+        if (leftover > 0) this.game.ui?.toast('Inventory full: ' + leftover + ' ' + drop.id.replace('mc:', '') + ' not collected', { error: true });
+      }
+      this.mobs.splice(this.mobs.indexOf(mob), 1);
+      this.game.ui?.toast(mob.type + ' defeated');
+    }
+    return true;
   }
 
   tick() {
@@ -33,6 +94,7 @@ export class MobSystem {
     const player = this.game.player;
     if (!world || !player) return;
     this.spawnTicks++;
+    if (this.attackCooldown > 0) this.attackCooldown--;
     if (this.spawnTicks >= 240 && this.mobs.length < 9) {
       this.spawnTicks = 0;
       const angle = Math.random() * Math.PI * 2;
