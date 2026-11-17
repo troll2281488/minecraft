@@ -93,7 +93,7 @@ export class ChunkRenderer {
         return { key, cx, cz, missing, visible, distanceSq: dx * dx + dz * dz };
       })
       // Fill holes in the current view first, then prepare nearby surroundings.
-      .sort((a, b) => b.missing - a.missing || b.visible - a.visible ||
+      .sort((a, b) => b.visible - a.visible || b.missing - a.missing ||
         a.distanceSq - b.distanceSq);
 
     for (const entry of queue) {
