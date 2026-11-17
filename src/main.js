@@ -142,13 +142,14 @@ class Game {
     this.world.requestAround(0, 0, 8, 12);
     this.titlePreviewAngle = 0;
     const fallback = document.getElementById('title-world-bg');
-    if (fallback) fallback.style.display = 'none';
     const orbit = () => {
       if (!this._titlePreviewActive || this.running || this.world !== this.titlePreviewWorld) return;
       this.titlePreviewAngle += 0.00042;
       const centerX = 0, centerZ = 0, radius = 17;
       const x = centerX + Math.cos(this.titlePreviewAngle) * radius;
       const z = centerZ + Math.sin(this.titlePreviewAngle) * radius;
+      this.world.requestAround(x, z, 8, 2);
+      if (this.world.chunkCount >= 4 && fallback) fallback.style.display = 'none';
       const ground = this.world.getHeight(Math.floor(x), Math.floor(z));
       const targetY = ground > -60 ? ground + 5.5 : 78;
       this.player.x = x;
