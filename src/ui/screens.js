@@ -22,6 +22,23 @@ export const ScreensMixin = {
     const byId = (id) => document.getElementById(id);
 
     byId('btn-singleplayer').onclick = () => this._showWorldList();
+    byId('btn-settings').onclick = () => this._openSettings();
+    byId('btn-settings-back').onclick = () => this.ui.showScreen('title');
+    this._loadSettings();
+    byId('setting-distance').oninput = (e) => {
+      this.renderDistance = Number(e.target.value);
+      byId('setting-distance-value').textContent = this.renderDistance + ' чанков';
+      this._saveSettings();
+    };
+    byId('setting-sensitivity').oninput = (e) => {
+      this.mouseSensitivity = Number(e.target.value);
+      this._saveSettings();
+    };
+    byId('setting-quality').onchange = (e) => {
+      this.graphicsQuality = e.target.value;
+      this._saveSettings();
+      this._resize();
+    };
 
     byId('btn-multiplayer').onclick = async () => {
       this.ui.showScreen('multiplayer');
@@ -80,6 +97,35 @@ export const ScreensMixin = {
       (result) => this._adoptImported(result),
       (err) => ui.toast(describeImportError(err), { error: true, duration: 8000 }),
     );
+  },
+
+
+  _loadSettings() {
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem('voxel-game-settings') || '{}'); } catch {}
+    this.renderDistance = Math.max(3, Math.min(16, Number(saved.renderDistance) || 8));
+    this.mouseSensitivity = Math.max(0.04, Math.min(0.5, Number(saved.mouseSensitivity) || 0.15));
+    this.graphicsQuality = ['performance','balanced','high'].includes(saved.graphicsQuality) ? saved.graphicsQuality : 'balanced';
+    document.getElementById('setting-distance').value = this.renderDistance;
+    document.getElementById('setting-distance-value').textContent = this.renderDistance + ' чанков';
+    document.getElementById('setting-sensitivity').value = this.mouseSensitivity;
+    document.getElementById('setting-quality').value = this.graphicsQuality;
+    this._saveSettings();
+  },
+
+  _saveSettings() {
+    try {
+      localStorage.setItem('voxel-game-settings', JSON.stringify({
+        renderDistance: this.renderDistance,
+        mouseSensitivity: this.mouseSensitivity,
+        graphicsQuality: this.graphicsQuality,
+      }));
+    } catch {}
+  },
+
+  _openSettings() {
+    this._loadSettings();
+    this.ui.showScreen('settings');
   },
 
   async _showWorldList() {
