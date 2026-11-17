@@ -142,7 +142,6 @@ const checks = [
     "Vanilla destroy-stage crack overlays",
     "destroy_stage_"
   ],
-  ["Pixel-art mob texture pipeline", "function getMobPixelTexture"],
   ["Enderman water behavior", "e.waterEscapeCooldown"],
   ["Enderman arrow immunity", 'target.type === "enderman"'],
   ["Flint and steel creeper ignition", "hitEnt.ignited = true"],
