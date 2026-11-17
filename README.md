@@ -15,7 +15,7 @@ evidence. See [`docs/SAVE_FORMAT.md`](docs/SAVE_FORMAT.md).
 **Playable; incremental development has resumed.** The `v0.1.0` foundation remains intact. New
 systems are being added in small, testable steps, with incomplete mechanics labelled honestly.
 
-Over 13,000 lines of JavaScript and 220 tests in a hand-written browser harness.
+Over 13,000 lines of JavaScript and 227 tests in a hand-written browser harness.
 
 **Working:**
 
@@ -46,7 +46,7 @@ it has been verified against a documented vanilla value - "the number is typed i
 
 ## Development approach
 
-The target is broad feature coverage up to Java Edition 1.12.2, not a claim of complete parity today.
+The long-term target is broad feature coverage through Java Edition 1.12.2, not a claim of complete parity today. The existing foundation contains some newer-version data; mechanics are being brought toward the requested 1.12.2 target incrementally.
 Work proceeds system by system: implement a real mechanic, add regression tests, then document
 what is working and what remains.
 
