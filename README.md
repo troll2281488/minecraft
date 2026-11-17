@@ -15,7 +15,7 @@ evidence. See [`docs/SAVE_FORMAT.md`](docs/SAVE_FORMAT.md).
 **Playable; incremental development has resumed.** The `v0.1.0` foundation remains intact. New
 systems are being added in small, testable steps, with incomplete mechanics labelled honestly.
 
-Over 13,000 lines of JavaScript and 231 tests in a hand-written browser harness.
+Over 13,000 lines of JavaScript and 238 tests in a hand-written browser harness.
 
 **Working:**
 
@@ -30,9 +30,9 @@ Over 13,000 lines of JavaScript and 231 tests in a hand-written browser harness.
 | **Menus** | Title screen, world create / load / delete / export, pause menu, F3 debug overlay. |
 | **Survival food** | Food level, saturation, exhaustion from sprinting and jumping, natural regeneration, normal-difficulty starvation, and right-click consumption of apples, bread, raw/cooked meat, carrots, and potatoes. |
 
-**Partial:** sheep, pigs and zombies wander; sheep and pigs flee; zombies pursue and attack. Players can melee-attack mobs, kill them, and collect raw porkchops, raw mutton or rotten flesh. Mob models are procedural low-poly shapes, not vanilla rigs.
+**Partial:** sheep, pigs and zombies wander; sheep and pigs flee; zombies pursue and attack. Players can melee-attack mobs, kill them, and collect raw porkchops, raw mutton or rotten flesh. Sheep can be sheared once with iron shears, which drop 1–3 white wool; shears have 238 durability. Mob models are procedural low-poly shapes, not vanilla rigs.
 
-**Not built:** golden-apple effects, food poisoning, cooked mob drops, shearing, loot tables and mob-specific animations, full survival damage and death flow, combat tools,
+**Not built:** golden-apple effects, food poisoning, cooked mob drops, coloured wool, loot tables and mob-specific animations, full survival damage and death flow, combat tools,
 fluid flow, weather, furnaces and chests, redstone, enchanting, dimensions, structures and audio.
 Water renders and blocks movement but does not flow.
 
@@ -56,7 +56,7 @@ what is working and what remains.
 | **Platform** | Browser, WebGL2, vanilla ES modules |
 | **Dependencies** | None. No npm, no bundler, no framework, no `package.json`. |
 | **Size** | Over 13,000 lines of JavaScript |
-| **Tests** | 231, in a hand-written browser harness (`tests.html`) |
+| **Tests** | 238, in a hand-written browser harness (`tests.html`) |
 | **Server** | `serve.py` - Python stdlib static server, only needed because ES modules require `http://` |
 | **Saves** | Versioned `.mcw` files + IndexedDB, with an ordered migration chain |
 | **Mode** | Singleplayer |
