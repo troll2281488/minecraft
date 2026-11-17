@@ -151,6 +151,14 @@ const checks = [
   ["Setblock command", 'case "setblock"'],
   ["Fill command", 'case "fill"'],
   ["Entity kill command", 'a1 === "@e"'],
+  ["Zombie daylight burning", "sunBurnCooldown"],
+  ["Wither skeleton damage over time", "witherCooldown"],
+  ["Blaze water weakness", "e.waterCooldown"],
+  ["Chicken egg laying", "eggTimer"],
+  ["Rabbit hopping", "hopVisual"],
+  ["Sheep grazing", "grazeCooldown"],
+  ["Villager panic behavior", "e.fleeing=true"],
+  ["Pig food luring", "e.luredByPlayer"],
 ];
 const missing = checks.filter(([, anchor]) => !source.includes(anchor)).map(([name]) => name);
 
