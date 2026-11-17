@@ -3025,7 +3025,7 @@ const WORLD_CONFIG: WorldConfig = {
           const bx = Math.floor(e.mesh.position.x), by = Math.floor(e.mesh.position.y + e.cfg.h + 0.2), bz = Math.floor(e.mesh.position.z);
           const exposedToSky = GAME.world.getBlock(bx, by, bz) === B.AIR;
           e.sunBurnCooldown = (e.sunBurnCooldown || 0) - dt;
-          if (exposedToSky && exposedToSky && e.sunBurnCooldown <= 0) {
+          if (exposedToSky && e.sunBurnCooldown <= 0) {
             damageEntity(e, 1);
             e.sunBurnCooldown = 1;
             spawnParticles(e.mesh.position.x,e.mesh.position.y+1.4,e.mesh.position.z,0xffa33a,2);
@@ -3063,7 +3063,7 @@ const WORLD_CONFIG: WorldConfig = {
         if (e.type === "rabbit") {
           e.hopCooldown = (e.hopCooldown || Math.random()*1.5) - dt;
           if (e.hopCooldown <= 0) {
-            e.mesh.position.y += 0.28;
+            e.hopVisual = 0.35;
             e.hopCooldown = 1.1 + Math.random()*0.8;
             e.wandAng = Math.atan2(e.mesh.position.x-PLAYER.pos.x,e.mesh.position.z-PLAYER.pos.z) + (Math.random()-0.5)*0.9;
           }
@@ -3092,6 +3092,7 @@ const WORLD_CONFIG: WorldConfig = {
             const flee=new THREE.Vector3(e.mesh.position.x-danger.mesh.position.x,0,e.mesh.position.z-danger.mesh.position.z).normalize();
             e.wandAng=Math.atan2(flee.z,flee.x);
             e.timer=0.3;
+            e.fleeing=true;
             moving=true;
             moveMobWithCollision(e,flee.x*2.8*dt,flee.z*2.8*dt);
           }
@@ -3099,7 +3100,8 @@ const WORLD_CONFIG: WorldConfig = {
 
         if (e.type === "pig") {
           const heldId=PLAYER.inv[PLAYER.hotbarIdx]?.id;
-          if(["carrot","potato","beetroot"].includes(heldId) && dist<9){
+          e.luredByPlayer=["carrot","potato","beetroot"].includes(heldId) && dist<9;
+          if(e.luredByPlayer){
             const lure=PLAYER.pos.clone().sub(e.mesh.position); lure.y=0;
             if(lure.lengthSq()>0.01){lure.normalize();moveMobWithCollision(e,lure.x*0.8*dt,lure.z*0.8*dt);e.mesh.rotation.y=Math.atan2(lure.x,lure.z);moving=true;}
           }
@@ -3149,16 +3151,23 @@ const WORLD_CONFIG: WorldConfig = {
             damagePlayer(Math.ceil(e.cfg.dmg * mult), `Убит мобом: ${e.cfg.name}`);
           }
         } else {
-          e.timer -= dt;
-          if (e.timer <= 0) {
-            e.timer = 2 + Math.random() * 3;
-            e.wandAng = Math.random() * Math.PI * 2;
+          if (e.cfg.passiveVillager && e.fleeing) {
+            e.fleeing = false;
+            moving = true;
+          } else if (e.type === "pig" && e.luredByPlayer) {
+            moving = true;
+          } else {
+            e.timer -= dt;
+            if (e.timer <= 0) {
+              e.timer = 2 + Math.random() * 3;
+              e.wandAng = Math.random() * Math.PI * 2;
+            }
+            const vx = Math.cos(e.wandAng || 0) * (e.cfg.passiveVillager ? 0.5 : 0.9);
+            const vz = Math.sin(e.wandAng || 0) * (e.cfg.passiveVillager ? 0.5 : 0.9);
+            moveMobWithCollision(e, vx * dt, vz * dt);
+            e.mesh.rotation.y = Math.atan2(vx, vz);
+            moving = true;
           }
-          const vx = Math.cos(e.wandAng || 0) * (e.cfg.passiveVillager ? 0.5 : 0.9);
-          const vz = Math.sin(e.wandAng || 0) * (e.cfg.passiveVillager ? 0.5 : 0.9);
-          moveMobWithCollision(e, vx * dt, vz * dt);
-          e.mesh.rotation.y = Math.atan2(vx, vz);
-          moving = true;
         }
 
         if (moving && e.parts.legs.length >= 2) {
@@ -3197,7 +3206,12 @@ const WORLD_CONFIG: WorldConfig = {
 
         if (GAME.world.dimension === "overworld") {
           const surfY = GAME.world.getSurfaceHeight(e.mesh.position.x, e.mesh.position.z);
-          if (surfY > 0) e.mesh.position.y = surfY + 1;
+          if (surfY > 0) {
+            if (e.type === "rabbit" && e.hopVisual > 0) {
+              e.hopVisual = Math.max(0,e.hopVisual-dt);
+              e.mesh.position.y = surfY + 1 + Math.sin((1-e.hopVisual/0.35)*Math.PI)*0.48;
+            } else e.mesh.position.y = surfY + 1;
+          }
         }
       }
     }
