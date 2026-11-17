@@ -106,15 +106,6 @@ export const InputMixin = {
       return;
     }
 
-    if (e.code === 'KeyT') {
-      e.preventDefault();
-      const chat = document.getElementById('chat-entry');
-      chat.classList.remove('hidden');
-      document.exitPointerLock?.();
-      chat.focus();
-      return;
-    }
-
     if (e.code === 'F3') {
       e.preventDefault();
       this.showDebug = !this.showDebug;
