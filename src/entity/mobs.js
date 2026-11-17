@@ -4,11 +4,11 @@
  */
 export const MOB_TYPES_112 = Object.freeze([
   'bat','blaze','cave_spider','chicken','cow','creeper','donkey','elder_guardian',
-  'ender_dragon','enderman','endermite','evoker','ghast','guardian','horse','husk',
+  'ender_dragon','enderman','endermite','evoker','ghast','guardian','horse','husk','illusioner',
   'llama','magma_cube','mooshroom','mule','ocelot','parrot','pig','polar_bear',
   'rabbit','sheep','shulker','silverfish','skeleton','skeleton_horse','slime',
   'snow_golem','spider','squid','stray','vex','villager','vindicator','witch',
-  'wither','wither_skeleton','wolf','zombie','zombie_horse','zombie_villager',
+  'wither','wither_skeleton','wolf','zombie','zombie_horse','zombie_villager','illusioner',
 ]);
 
 export function shearSheep(mob, random = Math.random) {
