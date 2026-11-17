@@ -41,7 +41,6 @@ export function createContext(canvas) {
     stencil: false,
     powerPreference: 'high-performance',
     preserveDrawingBuffer: false,
-    desynchronized: true,
   });
 
   if (!gl) {
