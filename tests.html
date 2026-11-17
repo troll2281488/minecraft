@@ -84,7 +84,7 @@
   // leaves the page reading "running…" forever, which is a worse outcome than
   // any failing test -- it looks like a hang rather than a bug, and it hides
   // which module actually broke.
-  const modules = ['rng', 'block', 'chunk', 'save', 'gameplay', 'camera', 'physics', 'crafting_table', 'shapes', 'golden', 'vitals'];
+  const modules = ['rng', 'block', 'chunk', 'save', 'gameplay', 'camera', 'physics', 'crafting_table', 'shapes', 'golden', 'vitals', 'food'];
   let importFailures = 0;
 
   for (const name of modules) {
