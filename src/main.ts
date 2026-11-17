@@ -364,9 +364,12 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       gold_hoe: { name: "Золотая мотыга", cat: "tools", stack: 1, tool: "hoe", tier: 1 },
       gold_sword: { name: "Золотой меч", cat: "tools", stack: 1, damage: 4 },
       trident: { name: "Трезубец", cat: "tools", stack: 1, damage: 9, trident: true }
+    };
+
     // Spawn eggs: each living mob implemented by spawnMob has its own survival item.
     const SPAWN_EGG_TYPES = ['villager_fletcher', 'villager_farmer', 'villager_blacksmith', 'villager_cleric', 'cow', 'pig', 'sheep', 'chicken', 'rabbit', 'zombie', 'skeleton', 'wither_skeleton', 'creeper', 'enderman', 'blaze', 'dragon'];
-    for (const [type, name] of [      ["villager_fletcher", "Лучник"],
+    for (const [type, name] of [
+      ["villager_fletcher", "Лучник"],
       ["villager_farmer", "Фермер"],
       ["villager_blacksmith", "Оружейник"],
       ["villager_cleric", "Священник"],
@@ -381,11 +384,10 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       ["creeper", "Крипер"],
       ["enderman", "Эндермен"],
       ["blaze", "Ифрит"],
-      ["dragon", "Дракон Края"]]) {
+      ["dragon", "Дракон Края"]
+    ]) {
       ITEMS["spawn_egg_" + type] = { name: "Яйцо призыва: " + name, cat: "misc", stack: 16, spawnMob: type };
     }
-
-    };
 
     const ATLAS = {
       textures: {},
