@@ -12,9 +12,8 @@ evidence. See [`docs/SAVE_FORMAT.md`](docs/SAVE_FORMAT.md).
 
 ## Status
 
-**Playable, and archived.** This repo is read-only: development stopped after `v0.1.0` with the
-world, rendering, movement, mining, inventory and save systems working. It is kept public
-because the parts that are built are complete and documented, not because more is coming.
+**Playable; incremental development has resumed.** The `v0.1.0` foundation remains intact. New
+systems are being added in small, testable steps, with incomplete mechanics labelled honestly.
 
 Over 13,000 lines of JavaScript and 220 tests in a hand-written browser harness.
 
@@ -28,11 +27,13 @@ Over 13,000 lines of JavaScript and 220 tests in a hand-written browser harness.
 | **Blocks and mining** | ~80 blocks carrying their real vanilla hardness, tool, and harvest-level values. The real `ceil(hardness x 1.5 / speed x 20)` mining formula, 10-stage crack overlay, tool durability consumed on break. Slabs and stairs render and collide from one shared box list. |
 | **Inventory and crafting** | Full inventory GUI with the vanilla slot layout and click rules. 2x2 personal grid, 3x3 crafting table, shaped / shapeless / tag (`#mc:planks`) recipe matching, tools and weapons across all six tiers, searchable creative block picker. |
 | **Saves** | Versioned `.mcw` files plus IndexedDB. Ordered migration chain, autosave every 30 s and on chunk unload, export and import including drag-and-drop. |
-| **Menus** | Title screen, world create / load / delete / export, pause menu, F3 debug overlay. |
+| **Menus** | Title screen, world create / load / delete / export, pause menu, F3 debug overlay. |\n| **Survival food (new)** | Food level, saturation, exhaustion from sprinting and jumping, natural regeneration, and normal-difficulty starvation. Food restoration items are not wired yet. |
 
-**Never built:** survival damage, hunger, mobs and AI, combat, fluid flow, weather, furnaces and
-chests, redstone, enchanting, dimensions, structures, audio. Water renders and blocks movement
-but does not flow.
+**Partial:** mob simulation currently includes simple sheep, pigs and zombies with basic wandering,
+fleeing and zombie pursuit/attacks; models are procedural low-poly shapes, not vanilla rigs.
+\n**Not built:** food restoration/consumption, full survival damage and death flow, combat tools,
+fluid flow, weather, furnaces and chests, redstone, enchanting, dimensions, structures and audio.
+Water renders and blocks movement but does not flow.
 
 [`docs/PARITY.md`](docs/PARITY.md) grades all of it system by system, including where it
 deliberately differs from vanilla. A row earns a check mark there only when a test covers it or
@@ -41,7 +42,7 @@ it has been verified against a documented vanilla value - "the number is typed i
 
 ---
 
-## What this is
+## Development approach\n\nThe target is broad feature coverage up to Java Edition 1.12.2, not a claim of complete parity today.\nWork proceeds system by system: implement a real mechanic, add regression tests, then document\nwhat is working and what remains.\n\n## What this is
 
 | | |
 |---|---|
