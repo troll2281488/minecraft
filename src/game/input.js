@@ -27,7 +27,7 @@ export const InputMixin = {
 
     document.addEventListener('mousemove', (e) => {
       if (document.pointerLockElement !== canvas || !this.player) return;
-      const sensitivity = 0.15;
+      const sensitivity = this.mouseSensitivity ?? 0.15;
       this.player.look(e.movementX * sensitivity, e.movementY * sensitivity);
     });
 
