@@ -142,7 +142,20 @@ export const RendererMixin = {
     const far = Math.max(64, this.renderDistance * 16 + 64);
 
     mat4.perspective(this.projection, fov, aspect, 0.05, far);
-    mat4.fromCamera(this.view, player.x, player.eyeY, player.z, player.yaw, player.pitch);
+    let cameraX = player.x;
+    let cameraY = player.eyeY;
+    let cameraZ = player.z;
+    let cameraYaw = player.yaw;
+    let cameraPitch = player.pitch;
+    if (this.thirdPerson) {
+      const yaw = player.yaw * Math.PI / 180;
+      const pitch = player.pitch * Math.PI / 180;
+      const distance = 4.2;
+      cameraX += Math.sin(yaw) * Math.cos(pitch) * distance;
+      cameraY += Math.sin(pitch) * distance + 0.8;
+      cameraZ -= Math.cos(yaw) * Math.cos(pitch) * distance;
+    }
+    mat4.fromCamera(this.view, cameraX, cameraY, cameraZ, cameraYaw, cameraPitch);
     mat4.multiply(this.viewProjection, this.projection, this.view);
     this.frustum.update(this.viewProjection);
 
