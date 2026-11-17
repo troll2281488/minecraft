@@ -20,6 +20,7 @@ export class UI {
 
     this.screens = {
       title: $('title-screen'),
+      settings: $('settings-screen'),
       multiplayer: $('mp-screen'),
       worlds: $('worlds-screen'),
       create: $('create-screen'),
