@@ -57,6 +57,7 @@ if (canvas) {
   }
   function draw(now) {
     requestAnimationFrame(draw);
+    if (canvas.style.display === 'none') return;
     const dt = last ? Math.min(.05,(now-last)/1000) : 0; last=now; time += dt;
     const d = Math.min(window.devicePixelRatio || 1, 2);
     if (canvas.width !== Math.max(1,Math.floor(canvas.clientWidth*d)) || canvas.height !== Math.max(1,Math.floor(canvas.clientHeight*d))) resize();
