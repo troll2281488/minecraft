@@ -148,7 +148,7 @@ class Game {
       const centerX = 0, centerZ = 0, radius = 17;
       const x = centerX + Math.cos(this.titlePreviewAngle) * radius;
       const z = centerZ + Math.sin(this.titlePreviewAngle) * radius;
-      if (this.world.chunkCount >= 4 && fallback) fallback.style.display = 'none';
+      if (this.chunkRenderer.meshes.size > 0 && fallback) fallback.style.display = 'none';
       const ground = this.world.getHeight(Math.floor(x), Math.floor(z));
       const targetY = ground > -60 ? ground + 5.5 : 78;
       this.player.x = x;
