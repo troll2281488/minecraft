@@ -45,6 +45,7 @@ import { RendererMixin, SELECTION_EDGES } from './render/renderer.js';
 import { SessionMixin } from './game/session.js';
 import { Multiplayer } from './game/multiplayer.js';
 import { MobSystem } from './entity/mobs.js';
+import { growNearbyWheat } from './game/farming.js';
 
 const AUTOSAVE_TICKS = SAVE.AUTOSAVE_INTERVAL_TICKS;
 const MAX_CATCHUP_TICKS = 10;
@@ -263,6 +264,9 @@ class Game {
 
     player.tick(world);
     this.entities?.tick();
+    for (const change of growNearbyWheat(world, player, this.tickCount)) {
+      this.multiplayer?.pushBlockChange(change.x, change.y, change.z, change.state);
+    }
     this.multiplayer?.tick(MS_PER_TICK / 1000);
 
     this.hit = raycast(
