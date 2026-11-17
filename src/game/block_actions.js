@@ -32,7 +32,7 @@ export const BlockActionsMixin = {
       if (this.inventory.held.item?.tool) this.inventory.damageHeld(1);
     }
 
-    this.world.setBlock(x, y, z, AIR.defaultState);
+    this.world.setBlock(x, y, z, AIR.defaultState);\n    this.multiplayer?.pushBlockChange(x, y, z, AIR.defaultState);
     this.mining.reset();
   },
 
@@ -59,7 +59,7 @@ export const BlockActionsMixin = {
     if (block.solid && wouldTrapPlayer(this.player, target.x, target.y, target.z)) return;
 
     const state = orientPlacement(block, this.player, this.hit);
-    if (!this.world.setBlock(target.x, target.y, target.z, state)) return;
+    if (!this.world.setBlock(target.x, target.y, target.z, state)) return;\n    this.multiplayer?.pushBlockChange(target.x, target.y, target.z, state);
 
     if (this.player.gamemode !== GAMEMODE.CREATIVE) this.inventory.consumeHeld(1);
   },
