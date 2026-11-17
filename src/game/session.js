@@ -25,6 +25,7 @@ export const SessionMixin = {
     this.chunkRenderer.dispose();
 
     this.world = new World({ seed: meta.seed, textureTable: this.textureTable });
+    this.entities?.reset();
     this.world.time = meta.time ?? 0;
 
     // Load any chunks already saved for this world before generating new ones,
@@ -107,6 +108,7 @@ export const SessionMixin = {
     this.ui.setHudVisible(false);
     this.world?.dispose();
     this.world = null;
+    this.entities?.reset();
     this.chunkRenderer.dispose();
     this.ui.showScreen('title');
   },
