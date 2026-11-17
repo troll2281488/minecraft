@@ -22,6 +22,36 @@ export const ScreensMixin = {
     const byId = (id) => document.getElementById(id);
 
     byId('btn-singleplayer').onclick = () => this._showWorldList();
+
+    byId('btn-multiplayer').onclick = async () => {
+      this.ui.showScreen('multiplayer');
+      byId('mp-nickname').value = this.multiplayer.nickname;
+      await this.multiplayer.showLobby();
+    };
+    byId('btn-mp-back').onclick = () => this.ui.showScreen('title');
+    byId('btn-mp-save-nick').onclick = () => {
+      const name = byId('mp-nickname').value.trim().slice(0, 20);
+      if (!name) return;
+      this.multiplayer.nickname = name;
+      localStorage.setItem('mc_nick', name);
+      this.ui.toast('Ник сохранён');
+    };
+    byId('btn-mp-create-room').onclick = () => this.multiplayer.createRoom().catch((e) => this.ui.toast(e.message, { error: true }));
+    byId('btn-mp-join-room').onclick = () => this.multiplayer.joinRoom(byId('mp-room-code').value).catch((e) => this.ui.toast(e.message, { error: true }));
+
+    const chat = byId('chat-entry');
+    chat.addEventListener('keydown', (event) => {
+      event.stopPropagation();
+      if (event.code === 'Enter') {
+        this.multiplayer.sendChat(chat.value);
+        chat.value = '';
+        chat.classList.add('hidden');
+        if (this.running && !this.paused) this._requestPointerLock();
+      } else if (event.code === 'Escape') {
+        chat.classList.add('hidden');
+        if (this.running && !this.paused) this._requestPointerLock();
+      }
+    });
     byId('btn-import').onclick = () => this._importFromPicker();
     byId('btn-worlds-back').onclick = () => ui.showScreen('title');
     byId('btn-new-world').onclick = () => {
