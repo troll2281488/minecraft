@@ -152,7 +152,7 @@ Reference target is **Minecraft: Java Edition 1.20.x**.
 Survival is partial: health and hunger are present, with food consumption and basic starvation/
 regeneration; mob spawning, wandering, simple fleeing/pursuit, melee combat, sheep shearing,
 fishing, apple drops from oak leaves, wheat seed drops from grass, rare zombie carrot/potato drops, and drops for pigs, sheep, cows, chickens and zombies are implemented in simplified
-form. Still missing are full vanilla mob AI, breeding, growth, chicken egg laying, equipment/
+form. Basic wheat farming is now playable: hoes till soil, seeds plant crops, seven growth stages advance near the player, and mature wheat yields wheat/seeds; bread is craftable. Crop growth is a fixed 600-tick interval within a 6-block player radius, without vanilla light, hydration or neighbour checks. Still missing are full vanilla mob AI, breeding, chicken egg laying, equipment/
 armour combat, and a complete death/respawn loop. Fluids and flow, redstone, enchanting and
 brewing, dimensions, structures, villagers and audio are not implemented. See
 [`../PLAN.md`](../PLAN.md) for the phase each belongs to.
