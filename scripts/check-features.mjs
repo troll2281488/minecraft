@@ -159,6 +159,16 @@ const checks = [
   ["Sheep grazing", "grazeCooldown"],
   ["Villager panic behavior", "e.fleeing=true"],
   ["Pig food luring", "e.luredByPlayer"],
+  ["Snowballs damage blazes", 'target.type === "blaze") { damageEntity(target, 3)'],
+  ["Creeper flashing fuse", "e.hissCooldown"],
+  ["Dropped item hover animation", "floatPhase"],
+  ["Eating hand animation", "eatPull"],
+  ["Mob-specific procedural voices", "mobVoice"],
+  ["Active status effect HUD", "active-effects-hud"],
+  ["Utility crafting recipes", 'id: "compass"'],
+  ["Snowball recipe", 'id: "snowball", count: 4'],
+  ["Leather armor recipes", 'id: "leather_chestplate"'],
+  ["Gold armor recipes", 'id: "gold_chestplate"'],
 ];
 const missing = checks.filter(([, anchor]) => !source.includes(anchor)).map(([name]) => name);
 
