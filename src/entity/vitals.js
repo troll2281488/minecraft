@@ -26,6 +26,18 @@ export class PlayerVitals {
     this.starveTicks = 0;
   }
 
+  /** Restore food and saturation using the vanilla item formula. */
+  eat(food) {
+    if (!food || !Number.isFinite(food.nutrition) || !Number.isFinite(food.saturation)) return false;
+    if (this.food >= FOOD.MAX && !food.canAlwaysEat) return false;
+    this.food = Math.min(FOOD.MAX, this.food + food.nutrition);
+    const restoredSaturation = food.nutrition * food.saturation * 2;
+    this.saturation = Math.min(this.food, FOOD.MAX_SATURATION, this.saturation + restoredSaturation);
+    this.regenTicks = 0;
+    this.starveTicks = 0;
+    return true;
+  }
+
   addExhaustion(amount) {
     if (!Number.isFinite(amount) || amount <= 0) return;
     this.exhaustion = Math.min(40, this.exhaustion + amount);
