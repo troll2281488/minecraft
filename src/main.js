@@ -148,7 +148,10 @@ class Game {
       const centerX = 0, centerZ = 0, radius = 17;
       const x = centerX + Math.cos(this.titlePreviewAngle) * radius;
       const z = centerZ + Math.sin(this.titlePreviewAngle) * radius;
-      if (this.chunkRenderer.meshes.size > 0 && fallback) fallback.style.display = 'none';
+      // Reveal the 3D panorama only after every preview chunk has a finished mesh.
+      // This prevents the old one-chunk-at-a-time flashing/pop-in on the title screen.
+      const expectedChunks = 49;
+      if (this.world.generatedCount >= expectedChunks && this.world.dirtyMeshes.size === 0 && this.chunkRenderer.meshes.size > 0 && fallback) fallback.style.display = 'none';
       const ground = this.world.getHeight(Math.floor(x), Math.floor(z));
       const targetY = ground > -60 ? ground + 5.5 : 78;
       this.player.x = x;
