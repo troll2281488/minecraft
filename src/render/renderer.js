@@ -143,7 +143,9 @@ export const RendererMixin = {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.avatarBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, buildAvatarCube(), gl.STATIC_DRAW);
     gl.enableVertexAttribArray(0);
-    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 24, 0);
+    gl.enableVertexAttribArray(1);
+    gl.vertexAttribPointer(1, 3, gl.FLOAT, false, 24, 12);
     gl.bindVertexArray(null);
 
     this.viewProjection = mat4.create();
@@ -313,11 +315,13 @@ export const RendererMixin = {
       [[-0.055, 0.89, 0.845], [0.035, 0.045, 0.018], [0.22, 0.08, 0.10, 1]],
       [[0.055, 0.89, 0.845], [0.035, 0.045, 0.018], [0.22, 0.08, 0.10, 1]],
     ];
-    const draw = (x, y, z, yaw, parts) => {
+    const draw = (x, y, z, yaw, parts, walkPhase = 0, legStart = -1, legEnd = -1) => {
       gl.uniform3f(uniforms.uPlayerPos, x, y, z);
       gl.uniform1f(uniforms.uYaw, yaw);
-      for (const [offset, scale, color] of parts) {
-        gl.uniform3f(uniforms.uPartOffset, offset[0], offset[1], offset[2]);
+      for (let partIndex = 0; partIndex < parts.length; partIndex++) {
+        const [offset, scale, color] = parts[partIndex];
+        const swing = partIndex >= legStart && partIndex <= legEnd ? Math.sin(walkPhase) * 0.07 : 0;
+        gl.uniform3f(uniforms.uPartOffset, offset[0], offset[1] + swing, offset[2]);
         gl.uniform3f(uniforms.uPartScale, scale[0], scale[1], scale[2]);
         gl.uniform4f(uniforms.uColor, color[0], color[1], color[2], color[3]);
         gl.drawArrays(gl.TRIANGLES, 0, 36);
