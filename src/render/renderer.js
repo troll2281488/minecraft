@@ -316,6 +316,24 @@ export const RendererMixin = {
       [[-0.055, 0.89, 0.845], [0.035, 0.045, 0.018], [0.22, 0.08, 0.10, 1]],
       [[0.055, 0.89, 0.845], [0.035, 0.045, 0.018], [0.22, 0.08, 0.10, 1]],
     ];
+    const cow = [
+      [[0, 0.78, 0], [0.86, 0.82, 1.12], [0.42, 0.28, 0.18, 1]],
+      [[0, 1.08, 0.62], [0.48, 0.48, 0.46], [0.48, 0.32, 0.22, 1]],
+      [[-0.26, 0.30, -0.34], [0.18, 0.58, 0.18], [0.30, 0.22, 0.14, 1]],
+      [[0.26, 0.30, -0.34], [0.18, 0.58, 0.18], [0.30, 0.22, 0.14, 1]],
+      [[-0.26, 0.30, 0.34], [0.18, 0.58, 0.18], [0.30, 0.22, 0.14, 1]],
+      [[0.26, 0.30, 0.34], [0.18, 0.58, 0.18], [0.30, 0.22, 0.14, 1]],
+      [[-0.29, 1.22, 0.57], [0.12, 0.12, 0.22], [0.82, 0.78, 0.68, 1]],
+      [[0.29, 1.22, 0.57], [0.12, 0.12, 0.22], [0.82, 0.78, 0.68, 1]],
+    ];
+    const chicken = [
+      [[0, 0.62, 0], [0.52, 0.62, 0.58], [0.91, 0.90, 0.82, 1]],
+      [[0, 1.00, 0.28], [0.34, 0.34, 0.34], [0.94, 0.92, 0.86, 1]],
+      [[0, 0.95, 0.49], [0.24, 0.12, 0.18], [0.88, 0.24, 0.12, 1]],
+      [[0, 0.77, 0.55], [0.12, 0.08, 0.12], [0.96, 0.65, 0.12, 1]],
+      [[-0.16, 0.20, -0.12], [0.10, 0.38, 0.10], [0.91, 0.72, 0.22, 1]],
+      [[0.16, 0.20, -0.12], [0.10, 0.38, 0.10], [0.91, 0.72, 0.22, 1]],
+    ];
     const draw = (x, y, z, yaw, parts, walkPhase = 0, legStart = -1, legEnd = -1) => {
       gl.uniform3f(uniforms.uPlayerPos, x, y, z);
       gl.uniform1f(uniforms.uYaw, yaw);
@@ -337,10 +355,10 @@ export const RendererMixin = {
       draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, human);
     }
     for (const mob of this.entities?.mobs ?? []) {
-      const parts = mob.type === 'zombie' ? zombie : mob.type === 'pig' ? pig : sheep;
+      const parts = mob.type === 'zombie' ? zombie : mob.type === 'pig' ? pig : mob.type === 'cow' ? cow : mob.type === 'chicken' ? chicken : sheep;
       draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase,
-        mob.type === 'zombie' ? 4 : mob.type === 'pig' ? 3 : 2,
-        mob.type === 'zombie' ? 5 : mob.type === 'pig' ? 6 : 5);
+        mob.type === 'zombie' ? 4 : mob.type === 'pig' ? 3 : mob.type === 'cow' ? 2 : mob.type === 'chicken' ? 4 : 2,
+        mob.type === 'zombie' ? 5 : mob.type === 'pig' ? 6 : mob.type === 'cow' ? 5 : mob.type === 'chicken' ? 5 : 5);
     }
     gl.bindVertexArray(null);
   },
