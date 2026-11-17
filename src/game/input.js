@@ -72,8 +72,8 @@ export const InputMixin = {
 
   _onKeyDown(e) {
     // Prevent browser shortcuts from interrupting active gameplay.
-    if (this.running && !this.paused && document.pointerLockElement === this.canvas &&
-        (e.ctrlKey || e.metaKey || e.code === 'F5' || e.code === 'F11')) e.preventDefault();
+    if (this.running && !this.chatOpen &&
+        (e.ctrlKey || e.metaKey || e.code === 'F3' || e.code === 'F5' || e.code === 'F11')) e.preventDefault();
     if (e.repeat) return;
     this.keys.add(e.code);
 
