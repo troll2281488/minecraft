@@ -1,0 +1,23 @@
+# This machine has core.autocrlf=true set system-wide. Without the rules below,
+# Git would apply line-ending translation to .mcw save files and silently corrupt
+# them — any 0x0A byte in packed block data or compressed payload could be rewritten
+# as 0x0D 0x0A on checkout. That would break the golden-save regression tests in a way
+# that looks like a loader bug rather than a Git configuration problem.
+#
+# Marking them binary disables both translation and diffing.
+*.mcw   binary
+*.bin   binary
+*.png   binary
+*.ogg   binary
+
+# Source and docs: normalize to LF in the repository, checked out natively.
+*.js     text eol=lf
+*.html   text eol=lf
+*.css    text eol=lf
+*.json   text eol=lf
+*.md     text eol=lf
+*.py     text eol=lf
+*.glsl   text eol=lf
+
+# Windows launcher must keep CRLF or cmd.exe can mis-parse it.
+*.bat    text eol=crlf

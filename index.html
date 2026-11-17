@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>minecraft-clone</title>
+<style>
+  :root {
+    --ui-bg: rgba(16, 16, 20, 0.94);
+    --slot: #8b8b8b;
+    --slot-dark: #373737;
+    --slot-light: #ffffff;
+    --text: #f0f0f0;
+    --shadow: #3f3f3f;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #000;
+    color: var(--text);
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  #canvas { display: block; width: 100%; height: 100%; cursor: default; }
+  #canvas.locked { cursor: none; }
+
+  .overlay {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0, 0, 0, 0.72);
+    z-index: 20;
+  }
+  .overlay.hidden, .hidden { display: none !important; }
+
+  .panel {
+    background: var(--ui-bg);
+    border: 2px solid #000;
+    box-shadow: inset 0 0 0 2px #565656, 0 8px 32px rgba(0,0,0,.6);
+    padding: 1.6rem 1.8rem;
+    min-width: 22rem;
+    max-width: 30rem;
+  }
+  .panel h1 { font-size: 1.5rem; margin-bottom: .3rem; letter-spacing: .04em; }
+  .panel h2 { font-size: 1rem; margin-bottom: 1rem; color: #9aa0aa; font-weight: 400; }
+  .panel .sub { color: #9aa0aa; font-size: .78rem; line-height: 1.5; margin-bottom: 1rem; }
+
+  button, .btn {
+    display: block; width: 100%;
+    padding: .6rem 1rem; margin-bottom: .55rem;
+    font: inherit; font-size: .9rem;
+    color: var(--text);
+    background: #6b6b6b;
+    border: 2px solid #000;
+    box-shadow: inset 2px 2px 0 #a0a0a0, inset -2px -2px 0 #3a3a3a;
+    cursor: pointer;
+    text-align: center;
+  }
+  button:hover:not(:disabled) { background: #7f8a9e; }
+  button:active:not(:disabled) { box-shadow: inset -2px -2px 0 #a0a0a0, inset 2px 2px 0 #3a3a3a; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.secondary { background: #4a4a4a; }
+
+  label { display: block; font-size: .78rem; color: #9aa0aa; margin: .7rem 0 .25rem; }
+  input[type=text] {
+    width: 100%; padding: .5rem .6rem;
+    font: inherit; font-size: .85rem;
+    color: var(--text); background: #000;
+    border: 2px solid #565656;
+  }
+  input[type=text]:focus { outline: none; border-color: #9aa0aa; }
+
+  /* ---- HUD ---- */
+  #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+
+  #crosshair {
+    position: absolute; left: 50%; top: 50%;
+    width: 20px; height: 20px; margin: -10px 0 0 -10px;
+    /* difference blending keeps the crosshair visible against any background */
+    mix-blend-mode: difference;
+  }
+  #crosshair::before, #crosshair::after {
+    content: ''; position: absolute; background: #fff;
+  }
+  #crosshair::before { left: 9px; top: 2px; width: 2px; height: 16px; }
+  #crosshair::after { top: 9px; left: 2px; height: 2px; width: 16px; }
+
+  #hotbar {
+    position: absolute; left: 50%; bottom: 12px;
+    transform: translateX(-50%);
+    display: flex; gap: 0;
+    border: 2px solid #000;
+    background: rgba(20,20,24,.75);
+  }
+  .slot {
+    position: relative;
+    width: 44px; height: 44px;
+    border: 2px solid transparent;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #hotbar .slot { border-color: #2a2a2a; }
+  #hotbar .slot.selected {
+    border-color: #fff;
+    box-shadow: 0 0 0 2px #000 inset;
+  }
+  .slot img { width: 32px; height: 32px; image-rendering: pixelated; pointer-events: none; }
+  .slot .count {
+    position: absolute; right: 2px; bottom: 0;
+    font-size: .72rem; font-weight: 700;
+    text-shadow: 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000;
+  }
+  .slot .durability {
+    position: absolute; left: 3px; right: 3px; bottom: 3px; height: 3px;
+    background: #000;
+  }
+  .slot .durability > span { display: block; height: 100%; }
+
+  #hotbar-label {
+    position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%);
+    font-size: .82rem; text-shadow: 1px 1px 0 #000;
+    opacity: 0; transition: opacity .35s;
+    white-space: nowrap;
+  }
+  #hotbar-label.show { opacity: 1; transition: none; }
+
+  #debug {
+    position: absolute; left: 6px; top: 6px;
+    font-size: .74rem; line-height: 1.45;
+    text-shadow: 1px 1px 0 #000;
+    white-space: pre;
+  }
+
+  #toast {
+    position: absolute; left: 50%; top: 14%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,.8);
+    border-left: 3px solid #6bbf59;
+    padding: .5rem .9rem;
+    font-size: .8rem; white-space: pre-line;
+    max-width: 34rem;
+    opacity: 0; transition: opacity .4s;
+  }
+  #toast.show { opacity: 1; }
+  #toast.error { border-left-color: #e05c5c; }
+
+  /* ---- Inventory ---- */
+  #inventory-screen { z-index: 30; }
+  .inv-grid { display: grid; grid-template-columns: repeat(9, 44px); gap: 2px; }
+  .inv-section { margin-bottom: .8rem; }
+  .inv-section h3 {
+    font-size: .72rem; font-weight: 400; color: #9aa0aa;
+    margin-bottom: .35rem; text-transform: uppercase; letter-spacing: .08em;
+  }
+  #inventory-screen .slot {
+    background: var(--slot-dark);
+    border: 2px solid #1d1d1d;
+    box-shadow: inset 1px 1px 0 #2a2a2a;
+    cursor: pointer;
+  }
+  #inventory-screen .slot:hover { background: #4d4d4d; }
+
+  .craft-row { display: flex; align-items: center; gap: 1rem; margin-bottom: .8rem; }
+  .craft-grid-2 { display: grid; grid-template-columns: repeat(2, 44px); gap: 2px; }
+  .craft-grid-3 { display: grid; grid-template-columns: repeat(3, 44px); gap: 2px; }
+  .craft-arrow { font-size: 1.4rem; color: #9aa0aa; }
+
+  #cursor-stack {
+    position: fixed; z-index: 40; pointer-events: none;
+    width: 32px; height: 32px;
+    transform: translate(-50%, -50%);
+  }
+  #cursor-stack img { width: 100%; height: 100%; image-rendering: pixelated; }
+  #cursor-stack .count {
+    position: absolute; right: -2px; bottom: -4px;
+    font-size: .72rem; font-weight: 700;
+    text-shadow: 1px 1px 0 #000, -1px 1px 0 #000, 1px -1px 0 #000, -1px -1px 0 #000;
+  }
+
+  .world-list { max-height: 15rem; overflow-y: auto; margin-bottom: 1rem; }
+  .world-entry {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: .55rem .7rem; margin-bottom: .3rem;
+    background: #3a3a3a; border: 2px solid #000; cursor: pointer;
+  }
+  .world-entry:hover { background: #4d5566; }
+  .world-entry.selected { background: #55627a; border-color: #fff; }
+  .world-entry .meta { font-size: .7rem; color: #9aa0aa; }
+
+  .row { display: flex; gap: .5rem; }
+  .row > button { margin-bottom: 0; }
+
+  #loading-bar {
+    width: 100%; height: 6px; background: #000; margin-top: .8rem;
+    border: 1px solid #565656;
+  }
+  #loading-bar > div { height: 100%; background: #6bbf59; width: 0%; transition: width .2s; }
+
+  kbd {
+    background: #2a2a2a; border: 1px solid #565656; border-radius: 2px;
+    padding: 0 .25rem; font-size: .72rem;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+
+<div id="hud" class="hidden">
+  <div id="crosshair"></div>
+  <div id="debug" class="hidden"></div>
+  <div id="hotbar-label"></div>
+  <div id="hotbar"></div>
+  <div id="toast"></div>
+</div>
+
+<!-- Title -->
+<div id="title-screen" class="overlay">
+  <div class="panel">
+    <h1>minecraft-clone</h1>
+    <h2>Phase 1 &mdash; v0.1.0</h2>
+    <p class="sub">
+      A from-scratch voxel game. Original textures and sounds; not affiliated with Mojang.
+    </p>
+    <button id="btn-singleplayer">Singleplayer</button>
+    <button id="btn-import" class="secondary">Import World (.mcw)</button>
+    <p class="sub" style="margin-top:1rem;margin-bottom:0">
+      You can also drag a <code>.mcw</code> file anywhere onto this window.
+    </p>
+  </div>
+</div>
+
+<!-- World list -->
+<div id="worlds-screen" class="overlay hidden">
+  <div class="panel">
+    <h1>Select World</h1>
+    <div class="world-list" id="world-list"></div>
+    <button id="btn-play">Play Selected World</button>
+    <button id="btn-new-world" class="secondary">Create New World</button>
+    <div class="row">
+      <button id="btn-export-world" class="secondary" disabled>Export</button>
+      <button id="btn-delete-world" class="secondary" disabled>Delete</button>
+    </div>
+    <button id="btn-worlds-back" class="secondary">Back</button>
+  </div>
+</div>
+
+<!-- Create world -->
+<div id="create-screen" class="overlay hidden">
+  <div class="panel">
+    <h1>Create New World</h1>
+    <label for="world-name">World Name</label>
+    <input type="text" id="world-name" value="New World" maxlength="48">
+    <label for="world-seed">Seed (blank for random)</label>
+    <input type="text" id="world-seed" placeholder="leave blank for random" maxlength="64">
+    <p class="sub" style="margin-top:.9rem">
+      Text seeds are hashed the same way Minecraft does, so a named seed gives
+      the same world it would there.
+    </p>
+    <button id="btn-create">Create World</button>
+    <button id="btn-create-back" class="secondary">Back</button>
+  </div>
+</div>
+
+<!-- Loading -->
+<div id="loading-screen" class="overlay hidden">
+  <div class="panel">
+    <h1>Building terrain</h1>
+    <h2 id="loading-detail">Generating chunks&hellip;</h2>
+    <div id="loading-bar"><div></div></div>
+  </div>
+</div>
+
+<!-- Pause -->
+<div id="pause-screen" class="overlay hidden">
+  <div class="panel">
+    <h1>Paused</h1>
+    <h2 id="pause-world-name"></h2>
+    <button id="btn-resume">Back to Game</button>
+    <button id="btn-save" class="secondary">Save Now</button>
+    <button id="btn-export" class="secondary">Export World (.mcw)</button>
+    <button id="btn-gamemode" class="secondary">Toggle Creative Mode</button>
+    <button id="btn-quit" class="secondary">Save and Quit to Title</button>
+    <p class="sub" style="margin-top:1rem;margin-bottom:0">
+      <kbd>WASD</kbd> move &nbsp; <kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> sneak<br>
+      <kbd>E</kbd> inventory &nbsp; <kbd>F3</kbd> debug &nbsp; <kbd>F</kbd> fly (creative)<br>
+      <kbd>1</kbd>&ndash;<kbd>9</kbd> hotbar &nbsp; <kbd>Q</kbd> drop &nbsp; mouse wheel to scroll
+    </p>
+  </div>
+</div>
+
+<!-- Inventory -->
+<div id="inventory-screen" class="overlay hidden">
+  <div class="panel" style="min-width:26rem">
+    <h1 id="inventory-title">Inventory</h1>
+    <div class="craft-row">
+      <div>
+        <h3 style="font-size:.72rem;color:#9aa0aa;margin-bottom:.35rem">Crafting</h3>
+        <div id="craft-grid" class="craft-grid-2"></div>
+      </div>
+      <div class="craft-arrow">&rarr;</div>
+      <div>
+        <h3 style="font-size:.72rem;color:#9aa0aa;margin-bottom:.35rem">Result</h3>
+        <div id="craft-result" class="inv-grid" style="grid-template-columns:44px"></div>
+      </div>
+    </div>
+    <div class="inv-section">
+      <h3>Inventory</h3>
+      <div id="inv-main" class="inv-grid"></div>
+    </div>
+    <div class="inv-section" style="margin-bottom:0">
+      <h3>Hotbar</h3>
+      <div id="inv-hotbar" class="inv-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Creative inventory -->
+<div id="creative-screen" class="overlay hidden">
+  <div class="panel" style="min-width:28rem;max-width:30rem">
+    <h1>Creative Inventory</h1>
+    <input type="text" id="creative-search" placeholder="Search items…" autocomplete="off"
+           style="margin:0 0 .7rem">
+    <div id="creative-grid" class="inv-grid"
+         style="max-height:15.5rem;overflow-y:auto;align-content:start;padding-right:.3rem"></div>
+    <div class="inv-section" style="margin:.9rem 0 0">
+      <h3>Hotbar</h3>
+      <div id="creative-hotbar" class="inv-grid"></div>
+    </div>
+    <p class="sub" style="margin:.7rem 0 0">
+      Click a block to pick it up, then click a hotbar slot to place it.
+      <kbd>E</kbd> or <kbd>Esc</kbd> to close.
+    </p>
+  </div>
+</div>
+
+<!-- Fatal error -->
+<div id="error-screen" class="overlay hidden">
+  <div class="panel" style="max-width:38rem">
+    <h1 style="color:#e05c5c">Something went wrong</h1>
+    <pre id="error-detail" style="white-space:pre-wrap;font-size:.78rem;line-height:1.5;color:#f0a0a0;margin:1rem 0"></pre>
+    <button id="btn-error-reload">Reload</button>
+  </div>
+</div>
+
+<div id="cursor-stack" class="hidden"></div>
+
+<script type="module">
+  import { boot } from './src/main.js';
+  boot().catch((err) => {
+    console.error(err);
+    document.getElementById('error-screen').classList.remove('hidden');
+    document.getElementById('error-detail').textContent =
+      `${err.name}: ${err.message}\n\n${(err.stack ?? '').split('\n').slice(0, 8).join('\n')}`;
+  });
+  document.getElementById('btn-error-reload').onclick = () => location.reload();
+</script>
+</body>
+</html>

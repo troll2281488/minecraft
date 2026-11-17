@@ -1,0 +1,24 @@
+{
+  "comment": "Golden saves, one per tagged version. The test suite loads every entry on every run. Add a line here when tagging a release; never edit or regenerate an existing file.",
+  "saves": [
+    {
+      "file": "v0.1.0.mcw",
+      "version": "v0.1.0",
+      "dataVersion": 1,
+      "bytes": 3371,
+      "seed": "accept1",
+      "expect": {
+        "worldName": "Golden v0.1.0",
+        "chunks": 1,
+        "comment": "Full blockstate strings, not bare ids -- birch_log carries axis=z specifically to prove property values survive the round trip, which a bare id comparison would not catch.",
+        "blocks": [
+          { "x": 0, "y": 76, "z": 2, "state": "mc:glass" },
+          { "x": 1, "y": 76, "z": 2, "state": "mc:torch" },
+          { "x": 2, "y": 76, "z": 2, "state": "mc:birch_log[axis=z]" },
+          { "x": 2, "y": 77, "z": 2, "state": "mc:diamond_block" }
+        ],
+        "playerHasDamagedTool": "mc:iron_pickaxe"
+      }
+    }
+  ]
+}

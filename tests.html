@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>minecraft-clone tests</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #16181d;
+    --panel: #1e2128;
+    --text: #d8dbe2;
+    --dim: #858b98;
+    --pass: #6bbf59;
+    --fail: #e05c5c;
+    --rule: #2c3038;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 2rem 1.5rem 4rem;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.55 ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  main { max-width: 60rem; margin: 0 auto; }
+  h1 { font-size: 1.15rem; margin: 0 0 .3rem; letter-spacing: .02em; }
+  .sub { color: var(--dim); margin: 0 0 1.75rem; font-size: .85rem; }
+  #summary {
+    position: sticky; top: 0; z-index: 2;
+    background: var(--panel);
+    border: 1px solid var(--rule); border-radius: 6px;
+    padding: .8rem 1rem; margin-bottom: 1.5rem;
+    display: flex; gap: 1.5rem; align-items: baseline; flex-wrap: wrap;
+  }
+  #summary .n { font-size: 1.5rem; font-weight: 600; }
+  .ok { color: var(--pass); }
+  .bad { color: var(--fail); }
+  .suite { margin-bottom: 1.5rem; }
+  .suite > h2 {
+    font-size: .9rem; margin: 0 0 .45rem; padding-bottom: .3rem;
+    border-bottom: 1px solid var(--rule); color: #aab0bd; font-weight: 600;
+  }
+  .test { display: flex; gap: .6rem; padding: .13rem 0; align-items: baseline; }
+  .test .mark { width: 1rem; flex: none; }
+  .test .ms { color: var(--dim); font-size: .78rem; margin-left: auto; flex: none; }
+  .err {
+    white-space: pre-wrap; color: #f0a0a0;
+    background: #241b1b; border-left: 2px solid var(--fail);
+    padding: .5rem .7rem; margin: .3rem 0 .5rem 1.6rem;
+    border-radius: 0 4px 4px 0; font-size: .82rem;
+  }
+  .note {
+    margin-top: 2.5rem; padding-top: 1rem; border-top: 1px solid var(--rule);
+    color: var(--dim); font-size: .82rem; max-width: 48rem;
+  }
+  a { color: #7aa7d8; }
+</style>
+</head>
+<body>
+<main>
+  <h1>minecraft-clone &mdash; test suite</h1>
+  <p class="sub">Phase 0: core, registries, chunk storage, save format.</p>
+
+  <div id="summary"><span class="n">running…</span></div>
+  <div id="results"></div>
+
+  <p class="note">
+    The golden-save regression tests will appear here once tagged versions exist to
+    produce them &mdash; see <code>tests/saves/README.md</code>. Those are the checks
+    that make the compatibility promise real: every world file written by every past
+    version, loaded on the current build, on every run.
+  </p>
+</main>
+
+<script type="module">
+  import { run, testCount, suiteCount } from './tests/framework.js';
+
+  const results = document.getElementById('results');
+  const summary = document.getElementById('summary');
+
+  // Importing a test module registers its suites as a side effect.
+  //
+  // Each import is caught individually and rendered. An uncaught failure here
+  // leaves the page reading "running…" forever, which is a worse outcome than
+  // any failing test -- it looks like a hang rather than a bug, and it hides
+  // which module actually broke.
+  const modules = ['rng', 'block', 'chunk', 'save', 'gameplay', 'camera', 'physics', 'crafting_table', 'shapes', 'golden'];
+  let importFailures = 0;
+
+  for (const name of modules) {
+    try {
+      await import(`./tests/${name}.test.js`);
+    } catch (err) {
+      importFailures++;
+      const box = document.createElement('section');
+      box.className = 'suite';
+      box.innerHTML = `<h2 class="bad">${name}.test.js failed to load</h2>`;
+      const detail = document.createElement('div');
+      detail.className = 'err';
+      detail.textContent = `${err.name}: ${err.message}` +
+        (err.stack ? `\n\n${err.stack.split('\n').slice(0, 6).join('\n')}` : '');
+      box.appendChild(detail);
+      results.appendChild(box);
+    }
+  }
+
+  if (importFailures > 0) {
+    summary.innerHTML =
+      `<span class="n bad">LOAD ERROR</span>` +
+      `<span>${importFailures} of ${modules.length} test modules could not be imported</span>`;
+    document.title = 'LOAD ERROR — minecraft-clone tests';
+  }
+  let suiteEl = null;
+
+  const started = performance.now();
+
+  await run((e) => {
+    if (e.type === 'suite') {
+      suiteEl = document.createElement('section');
+      suiteEl.className = 'suite';
+      const h = document.createElement('h2');
+      h.textContent = e.name;
+      suiteEl.appendChild(h);
+      results.appendChild(suiteEl);
+      return;
+    }
+
+    if (e.type === 'pass' || e.type === 'fail') {
+      const row = document.createElement('div');
+      row.className = 'test';
+      const ok = e.type === 'pass';
+      row.innerHTML =
+        `<span class="mark ${ok ? 'ok' : 'bad'}">${ok ? '✓' : '✗'}</span>` +
+        `<span>${escapeHtml(e.name)}</span>` +
+        `<span class="ms">${e.ms.toFixed(1)}ms</span>`;
+      suiteEl.appendChild(row);
+
+      if (!ok) {
+        const err = document.createElement('div');
+        err.className = 'err';
+        err.textContent = `${e.error.name}: ${e.error.message}` +
+          (e.error.stack ? `\n\n${trimStack(e.error.stack)}` : '');
+        suiteEl.appendChild(err);
+      }
+      return;
+    }
+
+    if (e.type === 'done') {
+      const ms = (performance.now() - started).toFixed(0);
+      // A module that failed to import counts as a failure. Reporting PASS
+      // because the tests that did load happened to pass would be actively
+      // misleading -- the ones that matter never ran.
+      const allPassed = e.failed === 0 && importFailures === 0;
+      summary.innerHTML =
+        `<span class="n ${allPassed ? 'ok' : 'bad'}">${allPassed ? 'PASS' : 'FAIL'}</span>` +
+        `<span><span class="ok">${e.passed}</span> passed</span>` +
+        `<span class="${e.failed ? 'bad' : ''}">${e.failed} failed</span>` +
+        (importFailures ? `<span class="bad">${importFailures} module(s) failed to load</span>` : '') +
+        `<span style="color:var(--dim)">${suiteCount()} suites, ${testCount()} tests, ${ms}ms</span>`;
+      document.title = `${allPassed ? 'PASS' : 'FAIL'} — minecraft-clone tests`;
+    }
+  });
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  }
+
+  // Frames pointing into the framework itself are noise; the useful frames are
+  // the ones in the test and the code under test.
+  function trimStack(stack) {
+    return stack.split('\n')
+      .filter((line) => !line.includes('/tests/framework.js'))
+      .slice(0, 6)
+      .join('\n');
+  }
+</script>
+</body>
+</html>
