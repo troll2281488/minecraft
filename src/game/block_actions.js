@@ -38,6 +38,7 @@ export const BlockActionsMixin = {
   },
 
   _useOrPlace() {
+    if (this.entities?.shearFromPlayer()) return;
     const sneaking = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
     if (this.hit && !sneaking) {
       const handler = USABLE_BLOCKS[this.hit.state.block.id];
