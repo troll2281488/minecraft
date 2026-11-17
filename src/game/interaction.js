@@ -329,6 +329,14 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
     'mc:clay': 'mc:clay_ball',
   };
 
+  if (block.id === 'mc:wheat') {
+    if (state.get('age') < 7) return [];
+    return [
+      { id: 'mc:wheat', count: 1 },
+      { id: 'mc:wheat_seeds', count: 1 + rng.nextInt(3) },
+    ];
+  }
+
   // Leaves and plants drop nothing without shears, matching vanilla closely
   // enough that a forest is not an infinite block source.
   if (block.id === 'mc:short_grass' || block.id === 'mc:fern') {
