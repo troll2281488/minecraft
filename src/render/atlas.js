@@ -382,6 +382,7 @@ const TEXTURES = {
   snow:               () => grainy(hex(0xf4f8f8), 0.07, 'snow'),
   ice:                () => grainy(hex(0x92b8f0), 0.12, 'ice'),
   glass:              () => glassTile('glass'),
+  white_wool:         () => grainy(hex(0xe8e5df), 0.08, 'white_wool', { clumps: 8, clumpColor: hex(0xd4d0c8) }),
   water:              () => waterTile('water'),
   torch:              () => torchTile('torch'),
 
