@@ -44,6 +44,7 @@ import { BlockActionsMixin } from './game/block_actions.js';
 import { RendererMixin, SELECTION_EDGES } from './render/renderer.js';
 import { SessionMixin } from './game/session.js';
 import { Multiplayer } from './game/multiplayer.js';
+import { MobSystem } from './entity/mobs.js';
 
 const AUTOSAVE_TICKS = SAVE.AUTOSAVE_INTERVAL_TICKS;
 const MAX_CATCHUP_TICKS = 10;
@@ -90,6 +91,7 @@ class Game {
 
     this.ui = new UI(icons);
     this.multiplayer = new Multiplayer(this);
+    this.entities = new MobSystem(this);
     this.frustum = new Frustum();
 
     this.world = null;
@@ -260,6 +262,7 @@ class Game {
     }
 
     player.tick(world);
+    this.entities?.tick();
     this.multiplayer?.tick(MS_PER_TICK / 1000);
 
     this.hit = raycast(
