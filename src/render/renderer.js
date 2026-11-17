@@ -18,6 +18,7 @@ import {
   CRACK_VERTEX_SHADER, CRACK_FRAGMENT_SHADER,
 } from './gl.js';
 import { ChunkRenderer } from './chunk_renderer.js';
+import { raycast } from '../game/interaction.js';
 
 /**
  * A unit cube as 36 vertices of (x, y, z, u, v), two triangles per face.
@@ -175,7 +176,14 @@ export const RendererMixin = {
     if (this.thirdPerson) {
       const yaw = player.yaw * Math.PI / 180;
       const pitch = player.pitch * Math.PI / 180;
-      const distance = 4.2;
+      let distance = 4.2;
+      const obstruction = raycast(this.world, player.x, player.eyeY + 0.8, player.z,
+        (player.yaw + 180) % 360, -player.pitch, distance);
+      if (obstruction) {
+        const hitDistance = Math.hypot(obstruction.x + 0.5 - player.x,
+          obstruction.y + 0.5 - (player.eyeY + 0.8), obstruction.z + 0.5 - player.z);
+        distance = Math.max(0.35, Math.min(distance, hitDistance - 0.8));
+      }
       cameraX += Math.sin(yaw) * Math.cos(pitch) * distance;
       cameraY += Math.sin(pitch) * distance + 0.8;
       cameraZ -= Math.cos(yaw) * Math.cos(pitch) * distance;
