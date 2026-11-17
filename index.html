@@ -27,10 +27,12 @@
   }
 
   #canvas { display: block; width: 100%; height: 100%; cursor: default; }
+  /* A visible menu must always receive pointer input, never the WebGL canvas. */
+  body.menu-active #canvas { pointer-events: none; }
   #canvas.locked { cursor: none; }
 
   /* Orbiting voxel panorama behind the title menu. */
-  #title-screen { z-index: 20; background: transparent; isolation: auto; }
+  #title-screen { z-index: 1000; background: transparent; isolation: isolate; pointer-events: auto; }
   #title-screen .panel { z-index: 21; }
   #title-screen button { z-index: 22; }
   #title-screen, #title-screen .panel, #title-screen button { pointer-events: auto; }
