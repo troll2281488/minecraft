@@ -142,6 +142,10 @@ const checks = [
     "Vanilla block texture loader",
     "function loadVanillaBlockTextures"
   ],
+  ["Stable pixel mipmaps", "THREE.NearestMipmapNearestFilter"],
+  ["Animal pixel coats", "function getAnimalPixelTexture"],
+  ["Cached chunk meshing", "const centerData=this.getChunk(cx,cz)"],
+  ["Default render distance", "renderDist: 6"],
   [
     "Vanilla destroy-stage crack overlays",
     "destroy_stage_"
