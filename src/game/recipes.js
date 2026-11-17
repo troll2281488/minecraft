@@ -74,6 +74,12 @@ for (const [prefix, material] of TOOL_MATERIALS) {
   }
 }
 
+recipes.push({
+  result: 'mc:shears', count: 1,
+  pattern: [' I', 'I '],
+  key: { I: 'mc:iron_ingot' },
+});
+
 // -- Mineral blocks --------------------------------------------------------
 
 /**
