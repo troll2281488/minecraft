@@ -172,7 +172,7 @@ export const RendererMixin = {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     const aspect = this.canvas.width / Math.max(1, this.canvas.height);
-    const fov = (RENDER.DEFAULT_FOV + (player.sprinting ? RENDER.SPRINT_FOV_BONUS : 0)) * Math.PI / 180;
+    const fov = ((this.fieldOfView ?? RENDER.DEFAULT_FOV) + (player.sprinting ? RENDER.SPRINT_FOV_BONUS : 0)) * Math.PI / 180;
     const far = Math.max(64, this.renderDistance * 16 + 64);
 
     mat4.perspective(this.projection, fov, aspect, 0.05, far);
