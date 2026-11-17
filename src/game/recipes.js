@@ -86,6 +86,12 @@ recipes.push({
 });
 
 recipes.push({
+  result: 'mc:bread', count: 1,
+  pattern: ['WWW'],
+  key: { W: 'mc:wheat' },
+});
+
+recipes.push({
   result: 'mc:shears', count: 1,
   pattern: [' I', 'I '],
   key: { I: 'mc:iron_ingot' },
