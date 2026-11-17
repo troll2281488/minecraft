@@ -399,6 +399,7 @@ const TOOL_TYPES = [
   ['pickaxe', 'PICKAXE', ATTACK_SPEED.PICKAXE],
   ['axe', 'AXE', null],       // axe speed varies by tier
   ['shovel', 'SHOVEL', ATTACK_SPEED.SHOVEL],
+  ['hoe', 'HOE', 1.0],
   ['sword', 'SWORD', ATTACK_SPEED.SWORD],
 ];
 
@@ -422,7 +423,7 @@ for (const [prefix, tierKey, damageKey] of TIER_KEYS) {
       tier: tierKey,
       toolSpeed: tier.speed,
       harvestLevel: tier.level,
-      attackDamage: WEAPON_DAMAGE[damageTable][damageKey],
+      attackDamage: WEAPON_DAMAGE[damageTable][damageKey] ?? 1,
       attackSpeed: fixedSpeed ?? axeSpeed,
       // Wooden tools burn. Golden ones do not, despite being equally flimsy.
       fuelTicks: prefix === 'wooden' ? 200 : 0,
