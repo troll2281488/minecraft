@@ -3,6 +3,7 @@ import '../src/world/blocks/index.js';
 import { BLOCKS } from '../src/world/block.js';
 import { growNearbyWheat, nextWheatAge } from '../src/game/farming.js';
 import { RECIPES } from '../src/game/recipes.js';
+import { blockDrops } from '../src/game/interaction.js';
 
 describe('wheat farming', () => {
   it('increments crop age up to seven', () => {
@@ -23,6 +24,14 @@ describe('wheat farming', () => {
     const changed = growNearbyWheat(world, { x: 0.5, y: 65, z: 0.5 }, 600);
     assertEqual(changed.length, 1);
     assertEqual(world.getBlock(0, 65, 0).get('age'), 1);
+  });
+
+  it('only mature wheat drops wheat and seeds when broken', () => {
+    const crop = BLOCKS.get('mc:wheat');
+    assertEqual(blockDrops(crop.defaultState, null, 1, 0, 0, 0).length, 0);
+    const drops = blockDrops(crop.defaultState.with('age', 7), null, 1, 0, 0, 0);
+    assertEqual(drops[0].id, 'mc:wheat');
+    assertEqual(drops[1].id, 'mc:wheat_seeds');
   });
 
   it('has a bread recipe and craftable wooden hoe', () => {
