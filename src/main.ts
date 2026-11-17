@@ -2591,6 +2591,7 @@ const WORLD_CONFIG: WorldConfig = {
       armor: { head: null, chest: null, legs: null, feet: null },
       effects: { speed: 0, jump: 0, strength: 0, night_vision: 0 },
       eatTimer: 0,
+      eatTimer: 0,
       bobTimer: 0,
       stepDist: 0,
       invulnTimer: 0,
@@ -2756,6 +2757,9 @@ const WORLD_CONFIG: WorldConfig = {
       ent.hp -= dmg;
       ent.hurtTimer = 0.25;
       ent.mesh.traverse(o => { if (o.isMesh && o.material?.emissive) o.material.emissive.setHex(0x661111); });
+      const mobVoice = { cow:95, pig:145, sheep:125, chicken:520, rabbit:390, zombie:82, skeleton:210, wither_skeleton:68, creeper:105, enderman:260, blaze:430, dragon:54, crystal:760 };
+      const voice = mobVoice[ent.type] || 180;
+      SFX.tone(voice, ent.type === "chicken" || ent.type === "blaze" ? "triangle" : "sawtooth", 0.14, 0.09, voice * 0.62);
       SFX.hurt();
 
       if (ent.type === "dragon") {
@@ -2984,6 +2988,7 @@ const WORLD_CONFIG: WorldConfig = {
           continue;
         }
 
+        if (e.attackSoundCooldown > 0) e.attackSoundCooldown = Math.max(0, e.attackSoundCooldown - dt);
         if (e.hurtTimer > 0) {
           e.hurtTimer -= dt;
           if (e.hurtTimer <= 0) {
@@ -3194,6 +3199,10 @@ const WORLD_CONFIG: WorldConfig = {
           if (dist < 1.45 && Math.random() < dt * 1.4) {
             const mult = GAME.difficulty === "hard" ? 1.5 : GAME.difficulty === "easy" ? 0.6 : 1;
             damagePlayer(Math.ceil(e.cfg.dmg * mult), `Убит мобом: ${e.cfg.name}`);
+            if ((e.attackSoundCooldown || 0) <= 0) {
+              const pitch = { zombie:90, skeleton:240, wither_skeleton:65, enderman:300, blaze:520, dragon:58, creeper:130 }[e.type] || 160;
+              SFX.tone(pitch, "sawtooth", 0.12, 0.07, pitch * 0.7); e.attackSoundCooldown = 0.85;
+            }
           }
         } else {
           if (e.cfg.passiveVillager && e.fleeing) {
@@ -4041,6 +4050,8 @@ const WORLD_CONFIG: WorldConfig = {
 
       // 4. Eating Food
       if (held && ITEMS[held.id]?.food && (PLAYER.hunger < 20 || held.id === "golden_apple")) {
+        PLAYER.eatTimer = 0.62;
+        GAME.swingTimer = 0.3;
         PLAYER.eatTimer = 0.62;
         GAME.swingTimer = 0.3;
         PLAYER.hunger = Math.min(20, PLAYER.hunger + ITEMS[held.id].food);
