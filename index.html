@@ -403,10 +403,7 @@
     document.getElementById('title-screen').classList.add('hidden');
     document.body.classList.add('menu-active');
     document.getElementById('error-screen').classList.remove('hidden');
-    document.getElementById('error-detail').textContent =
-      `${err.name}: ${err.message}
-
-${(err.stack ?? '').split('\n').slice(0, 8).join('\n')}`;
+    document.getElementById('error-detail').textContent = String(err?.name ?? 'Error') + ': ' + String(err?.message ?? err) + String.fromCharCode(10) + String(err?.stack ?? '').split(String.fromCharCode(10)).slice(0, 8).join(String.fromCharCode(10));
   });
   document.getElementById('btn-error-reload').onclick = () => location.reload();
 </script>
