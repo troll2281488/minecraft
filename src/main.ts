@@ -1055,6 +1055,15 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       { out: { id: "wood_axe", count: 1 }, req: { [B.OAK_PLANKS]: 3, stick: 2 } },
       { out: { id: "wood_sword", count: 1 }, req: { [B.OAK_PLANKS]: 2, stick: 1 } },
       { out: { id: "wood_hoe", count: 1 }, req: { [B.OAK_PLANKS]: 2, stick: 2 } },
+      { out: { id: "wood_shovel", count: 1 }, req: { [B.OAK_PLANKS]: 1, stick: 2 } },
+      { out: { id: "stone_shovel", count: 1 }, req: { [B.COBBLESTONE]: 1, stick: 2 } },
+      { out: { id: "iron_shovel", count: 1 }, req: { iron_ingot: 1, stick: 2 } },
+      { out: { id: "diamond_shovel", count: 1 }, req: { diamond: 1, stick: 2 } },
+      { out: { id: "stone_hoe", count: 1 }, req: { [B.COBBLESTONE]: 2, stick: 2 } },
+      { out: { id: "iron_hoe", count: 1 }, req: { iron_ingot: 2, stick: 2 } },
+      { out: { id: "diamond_hoe", count: 1 }, req: { diamond: 2, stick: 2 } },
+      { out: { id: "netherite_axe", count: 1 }, req: { diamond: 1, netherite_ingot: 1, stick: 2 } },
+      { out: { id: "netherite_hoe", count: 1 }, req: { diamond: 1, netherite_ingot: 1, stick: 2 } },
       { out: { id: "stone_pickaxe", count: 1 }, req: { [B.COBBLESTONE]: 3, stick: 2 } },
       { out: { id: "stone_axe", count: 1 }, req: { [B.COBBLESTONE]: 3, stick: 2 } },
       { out: { id: "stone_sword", count: 1 }, req: { [B.COBBLESTONE]: 2, stick: 1 } },
@@ -1097,7 +1106,14 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       { out: { id: "bow", count: 1 }, req: { stick: 3, string: 3 } },
       { out: { id: "arrow", count: 4 }, req: { stick: 1, [B.GRAVEL]: 1 } },
       { out: { id: "blaze_powder", count: 2 }, req: { blaze_rod: 1 } },
-      { out: { id: "ender_eye", count: 1 }, req: { ender_pearl: 1, blaze_powder: 1 } }
+      { out: { id: "ender_eye", count: 1 }, req: { ender_pearl: 1, blaze_powder: 1 } },
+      { out: { id: "paper", count: 3 }, req: { sugar_cane: 3 } },
+      { out: { id: "book", count: 1 }, req: { paper: 3, leather: 1 } },
+      { out: { id: "compass", count: 1 }, req: { iron_ingot: 4, redstone: 1 } },
+      { out: { id: "clock", count: 1 }, req: { gold_ingot: 4, redstone: 1 } },
+      { out: { id: "shears", count: 1 }, req: { iron_ingot: 2 } },
+      { out: { id: "snowball", count: 4 }, req: { snow_block: 1 } },
+      { out: { id: "lead", count: 2 }, req: { string: 4, slime_ball: 1 } }
     ];
 
     const VILLAGER_PROFESSIONS = {
@@ -2629,7 +2645,9 @@ const WORLD_CONFIG: WorldConfig = {
         fromNetwork,
         dim: GAME.world?.dimension || "overworld",
         vel: new THREE.Vector3((Math.random() - 0.5) * 2, 2.8, (Math.random() - 0.5) * 2),
-        age: 0
+        age: 0,
+        baseY: y,
+        floatPhase: Math.random() * Math.PI * 2
       });
     }
 
@@ -2835,7 +2853,9 @@ const WORLD_CONFIG: WorldConfig = {
         const e = entities[i];
         if (e.type === "drop") {
           e.age += dt;
+          e.floatPhase = (e.floatPhase || 0) + dt * 3.2;
           e.mesh.rotation.y += dt * 2.5;
+          e.mesh.position.y = (e.baseY ?? e.mesh.position.y) + Math.sin(e.floatPhase) * 0.08;
           const bBelow = GAME.world.getBlock(e.mesh.position.x, e.mesh.position.y - 0.2, e.mesh.position.z);
           if (!BLOCK_PROPS[bBelow]?.solid) {
             e.vel.y -= 16 * dt;
@@ -2907,6 +2927,22 @@ const WORLD_CONFIG: WorldConfig = {
           continue;
         }
 
+        if (e.type === "thrown_snowball") {
+          e.life -= dt; e.vel.y -= 8 * dt; e.mesh.position.addScaledVector(e.vel, dt);
+          const hitBlock = BLOCK_PROPS[GAME.world.getBlock(e.mesh.position.x,e.mesh.position.y,e.mesh.position.z)]?.solid;
+          let hitMob = false;
+          for (const target of entities) {
+            if (!target.cfg || target.type === "thrown_snowball") continue;
+            const center = target.mesh.position.clone().add(new THREE.Vector3(0,(target.cfg.h||1)*0.5,0));
+            if (center.distanceTo(e.mesh.position) < Math.max(0.65,(target.cfg.w||0.6)*0.75)) {
+              if (target.type === "blaze") { damageEntity(target, 3); spawnParticles(e.mesh.position.x,e.mesh.position.y,e.mesh.position.z,0xc9eaff,7); SFX.tone(320,"triangle",0.12,0.12,150); }
+              else spawnParticles(e.mesh.position.x,e.mesh.position.y,e.mesh.position.z,0xe8f5ff,3);
+              hitMob = true; break;
+            }
+          }
+          if (hitBlock || hitMob || e.life <= 0) { scene.remove(e.mesh); entities.splice(i,1); }
+          continue;
+        }
         if (e.type === "hostile_projectile") {
           e.life -= dt;
           e.mesh.position.addScaledVector(e.vel, dt);
@@ -3114,6 +3150,10 @@ const WORLD_CONFIG: WorldConfig = {
           e.fuse = (e.fuse || 0) + dt;
           const pulse = 1 + Math.sin(e.fuse * 24) * 0.07;
           e.mesh.scale.setScalar(pulse);
+          const flash = Math.sin(e.fuse * 38) > 0 ? 0xffffff : 0x8f8f8f;
+          e.mesh.traverse(o => { if (o.isMesh && o.material?.color) o.material.color.setHex(flash); });
+          e.hissCooldown = (e.hissCooldown || 0) - dt;
+          if (e.hissCooldown <= 0) { SFX.tone(125,"sawtooth",0.16,0.045,65); e.hissCooldown = 0.32; }
           if (e.fuse >= 1.45) {
             triggerExplosion(e.mesh.position.x, e.mesh.position.y, e.mesh.position.z, 4, "Взорвался крипер");
             scene.remove(e.mesh);
@@ -3123,6 +3163,7 @@ const WORLD_CONFIG: WorldConfig = {
         } else if (e.type === "creeper") {
           e.fuse = 0;
           e.mesh.scale.setScalar(1);
+          e.mesh.traverse(o => { if (o.isMesh && o.material?.color) o.material.color.setHex(0xffffff); });
         }
         // Endermen aggro when the player looks at their face, then teleport away.
         if (e.type === "enderman" && dist < 18 && GAME.gamemode !== "creative" && GAME.gamemode !== "spectator") {
@@ -3896,6 +3937,15 @@ const WORLD_CONFIG: WorldConfig = {
       // 1. Villager trading and milking cows.
       const hitEnt = findEntityUnderCrosshair(4.2);
       // Flint and steel can prime a creeper directly, just like lighting TNT.
+      if (held?.id === "snowball") {
+        const start = getEyePos().add(getLookDir().multiplyScalar(0.7));
+        const velocity = getLookDir().multiplyScalar(17); velocity.y += 1.2;
+        const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), new THREE.MeshBasicMaterial({ color: 0xf2fbff }));
+        mesh.position.copy(start); scene.add(mesh);
+        entities.push({ type: "thrown_snowball", mesh, vel: velocity, life: 2.2 });
+        if (GAME.gamemode !== "creative") consumeHeld(1);
+        SFX.tone(690, "sine", 0.06, 0.07, 430); return;
+      }
       if (hitEnt?.type === "creeper" && held?.id === "flint_and_steel") {
         hitEnt.ignited = true;
         hitEnt.fuse = Math.max(hitEnt.fuse || 0, 1.0);
