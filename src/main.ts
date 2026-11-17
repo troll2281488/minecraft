@@ -428,8 +428,8 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       const tex = new THREE.CanvasTexture(c);
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.magFilter = THREE.NearestFilter;
-      tex.minFilter = THREE.NearestFilter;
-      tex.generateMipmaps = false;
+      tex.minFilter = THREE.NearestMipmapNearestFilter;
+      tex.generateMipmaps = true;
       if (typeof renderer !== "undefined") tex.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
       return { tex, dataUrl: c.toDataURL() };
     }
@@ -998,8 +998,9 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       const configureTexture = texture => {
         texture.colorSpace = THREE.SRGBColorSpace;
         texture.magFilter = THREE.NearestFilter;
-        texture.minFilter = THREE.NearestFilter;
-        texture.generateMipmaps = false;
+        texture.minFilter = THREE.NearestMipmapNearestFilter;
+        texture.generateMipmaps = true;
+        texture.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
         texture.needsUpdate = true;
       };
       const loadTexture = (file, onLoad) => loader.load(base + file, texture => {
@@ -1007,61 +1008,8 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         onLoad(texture);
       }, undefined, () => console.warn("Vanilla texture unavailable:", file));
 
-      // Load real 16x16 Minecraft block textures into the existing materials.
-      // Face-specific blocks keep their top/side/bottom maps; simple blocks use
-      // the same vanilla tile on all six faces. Updating maps in place also
-      // updates already-created chunk meshes and first-person held blocks.
-      const blockTextureJobs = [];
-      for (const [id, files] of blockFaces) {
-        const faceFiles = Array.isArray(files) ? files : [files];
-        blockTextureJobs.push(Promise.all(faceFiles.map(file => new Promise(resolve => {
-          loadTexture(file, resolve);
-        }))).then(textures => {
-          const target = ATLAS.materials[id];
-          if (Array.isArray(target)) {
-            textures.forEach((texture, index) => {
-              if (target[index]) {
-                target[index].map = texture;
-                target[index].color.setHex(0xffffff);
-                target[index].needsUpdate = true;
-              }
-            });
-          } else if (target && textures[0]) {
-            target.map = textures[0];
-            target.color?.setHex(0xffffff);
-            target.needsUpdate = true;
-          }
-        }));
-      }
-      for (const [id, file] of blockFiles) {
-        if (blockFaces.has(id)) continue;
-        blockTextureJobs.push(new Promise(resolve => {
-          loadTexture(file, texture => {
-            const target = ATLAS.materials[id];
-            if (Array.isArray(target)) {
-              target.forEach(material => {
-                material.map = texture;
-                material.color.setHex(0xffffff);
-                material.needsUpdate = true;
-              });
-            } else if (target) {
-              target.map = texture;
-              target.color?.setHex(0xffffff);
-              target.needsUpdate = true;
-            }
-            resolve();
-          });
-        }));
-      }
-      // Rebuild the small inventory images only after the source textures are
-      // ready, so the world, hand, hotbar and creative slots share one source.
-      Promise.all(blockTextureJobs).then(() => {
-        createIsometricBlockIcons();
-        if (typeof updateHotbarUI === "function") updateHotbarUI();
-        if (typeof renderCreativeCatalog === "function") renderCreativeCatalog();
-      });
-
-      // Procedural textures remain the offline fallback if the asset host is unavailable.
+      // Keep the supplied classic muted 16px block atlas authoritative.
+      // A remote modern pack previously overwrote the intended palette.
       createIsometricBlockIcons();
 
       // Vanilla item sprites replace the hand-made icons when available; procedural art remains as fallback.
@@ -2130,33 +2078,31 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           }
         };
 
-        const isOpaque = (id) => id !== B.AIR && !BLOCK_PROPS[id]?.transparent && id !== B.BED_FOOT && id !== B.BED_HEAD;
-
-        for (let lx = 0; lx < CHUNK_SIZE; lx++) {
-          for (let lz = 0; lz < CHUNK_SIZE; lz++) {
-            const wx = cx * CHUNK_SIZE + lx;
-            const wz = cz * CHUNK_SIZE + lz;
-            for (let y = 0; y < WORLD_HEIGHT; y++) {
-              const id = this.getBlock(wx, y, wz);
-              if (id === B.AIR) continue;
-              const props = BLOCK_PROPS[id];
-              if (props?.cross || id === B.TORCH) {
-                pushCross(id, wx, y, wz);
-                continue;
-              }
-              const hTop = (id === B.BED_FOOT || id === B.BED_HEAD) ? 0.56 : 1.0;
-              const checkNeighbor = (nx, ny, nz) => {
-                const nb = this.getBlock(nx, ny, nz);
-                if (nb === id && id === B.WATER) return false;
-                return !isOpaque(nb);
-              };
-              if (checkNeighbor(wx + 1, y, wz)) pushFace(id, wx, y, wz, "px", hTop);
-              if (checkNeighbor(wx - 1, y, wz)) pushFace(id, wx, y, wz, "nx", hTop);
-              if (hTop < 1.0 || checkNeighbor(wx, y + 1, wz)) pushFace(id, wx, y, wz, "py", hTop);
-              if (checkNeighbor(wx, y - 1, wz)) pushFace(id, wx, y, wz, "ny", hTop);
-              if (checkNeighbor(wx, y, wz + 1)) pushFace(id, wx, y, wz, "pz", hTop);
-              if (checkNeighbor(wx, y, wz - 1)) pushFace(id, wx, y, wz, "nz", hTop);
-            }
+        const isOpaque=(id)=>id!==B.AIR&&!BLOCK_PROPS[id]?.transparent&&id!==B.BED_FOOT&&id!==B.BED_HEAD;
+        // Cache centre and four edge-neighbour arrays instead of repeated getBlock Map lookups.
+        const centerData=this.getChunk(cx,cz),westData=this.getChunk(cx-1,cz),eastData=this.getChunk(cx+1,cz);
+        const northData=this.getChunk(cx,cz-1),southData=this.getChunk(cx,cz+1),stride=CHUNK_SIZE*CHUNK_SIZE;
+        const readNeighbor=(lx,y,lz,dx,dy,dz)=>{
+          const ny=y+dy;if(ny<0||ny>=WORLD_HEIGHT)return B.AIR;const row=ny*stride;
+          if(dx===1)return(lx<CHUNK_SIZE-1?centerData:eastData)[row+(lx<CHUNK_SIZE-1?lx+1:0)+lz*CHUNK_SIZE];
+          if(dx===-1)return(lx>0?centerData:westData)[row+(lx>0?lx-1:CHUNK_SIZE-1)+lz*CHUNK_SIZE];
+          if(dz===1)return(lz<CHUNK_SIZE-1?centerData:southData)[row+lx+(lz<CHUNK_SIZE-1?lz+1:0)*CHUNK_SIZE];
+          if(dz===-1)return(lz>0?centerData:northData)[row+lx+(lz>0?lz-1:CHUNK_SIZE-1)*CHUNK_SIZE];
+          return centerData[row+lx+lz*CHUNK_SIZE];
+        };
+        const visibleNeighbor=(id,lx,y,lz,dx,dy,dz)=>{const nb=readNeighbor(lx,y,lz,dx,dy,dz);if(nb===id&&id===B.WATER)return false;return!isOpaque(nb);};
+        for(let lx=0;lx<CHUNK_SIZE;lx++)for(let lz=0;lz<CHUNK_SIZE;lz++){
+          const wx=cx*CHUNK_SIZE+lx,wz=cz*CHUNK_SIZE+lz,column=lx+lz*CHUNK_SIZE;
+          for(let y=0;y<WORLD_HEIGHT;y++){
+            const id=centerData[column+y*stride];if(id===B.AIR)continue;
+            const props=BLOCK_PROPS[id];if(props?.cross||id===B.TORCH){pushCross(id,wx,y,wz);continue;}
+            const hTop=(id===B.BED_FOOT||id===B.BED_HEAD)?0.56:1;
+            if(visibleNeighbor(id,lx,y,lz,1,0,0))pushFace(id,wx,y,wz,"px",hTop);
+            if(visibleNeighbor(id,lx,y,lz,-1,0,0))pushFace(id,wx,y,wz,"nx",hTop);
+            if(hTop<1||visibleNeighbor(id,lx,y,lz,0,1,0))pushFace(id,wx,y,wz,"py",hTop);
+            if(visibleNeighbor(id,lx,y,lz,0,-1,0))pushFace(id,wx,y,wz,"ny",hTop);
+            if(visibleNeighbor(id,lx,y,lz,0,0,1))pushFace(id,wx,y,wz,"pz",hTop);
+            if(visibleNeighbor(id,lx,y,lz,0,0,-1))pushFace(id,wx,y,wz,"nz",hTop);
           }
         }
 
@@ -2396,19 +2342,51 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       return tex;
     }
 
+    // Calm, vanilla-inspired species-specific pixel coats for passive animals.
+    const ANIMAL_PIXEL_TEXTURES=new Map();
+    function getAnimalPixelTexture(type){
+      if(ANIMAL_PIXEL_TEXTURES.has(type))return ANIMAL_PIXEL_TEXTURES.get(type);
+      const c=document.createElement("canvas");c.width=16;c.height=16;const ctx=c.getContext("2d");
+      const px=(x,y,color,w=1,h=1)=>{ctx.fillStyle=color;ctx.fillRect(x,y,w,h);};
+      if(type==="cow"){
+        ctx.fillStyle="#e8e1d0";ctx.fillRect(0,0,16,16);
+        px(1,1,"#5b3928",4,3);px(2,3,"#5b3928",3,2);px(10,2,"#4a3024",4,3);px(11,4,"#4a3024",3,2);
+        px(5,9,"#5b3928",4,3);px(4,11,"#5b3928",3,2);px(12,11,"#4a3024",3,3);px(0,14,"#c8bda8",3,2);
+      }else if(type==="pig"){
+        ctx.fillStyle="#e5a0a3";ctx.fillRect(0,0,16,16);
+        [[1,2],[5,1],[10,3],[13,1],[3,7],[8,6],[12,9],[1,12],[6,14],[14,14]].forEach(([x,y])=>px(x,y,"#efb7b4"));
+        [[4,4],[11,6],[2,10],[9,12],[14,4]].forEach(([x,y])=>px(x,y,"#ce858b"));
+      }else if(type==="sheep"){
+        ctx.fillStyle="#e9e6dc";ctx.fillRect(0,0,16,16);
+        for(let y=0;y<16;y+=4)for(let x=(y%8?2:0);x<16;x+=4){px(x,y,"#f5f2e9",2,2);px(x+2,y+2,"#d7d2c7");}
+      }else if(type==="chicken"){
+        ctx.fillStyle="#eee9dc";ctx.fillRect(0,0,16,16);
+        [[1,2],[5,1],[9,3],[13,1],[3,7],[8,6],[12,9],[2,12],[7,14],[14,13]].forEach(([x,y])=>px(x,y,"#d8d0bd"));
+        px(4,4,"#f8f5ec",3,2);px(10,11,"#f8f5ec",3,2);
+      }else{
+        ctx.fillStyle="#b69a78";ctx.fillRect(0,0,16,16);
+        [[1,1],[2,2],[7,1],[8,2],[12,1],[13,2],[3,7],[4,8],[9,6],[10,7],[13,11],[14,12]].forEach(([x,y])=>px(x,y,"#d3b995"));
+        [[5,4],[11,4],[1,12],[7,13],[12,14]].forEach(([x,y])=>px(x,y,"#8c7258"));
+      }
+      const tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;tex.magFilter=THREE.NearestFilter;
+      tex.minFilter=THREE.NearestMipmapNearestFilter;tex.generateMipmaps=true;tex.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());tex.needsUpdate=true;
+      ANIMAL_PIXEL_TEXTURES.set(type,tex);return tex;
+    }
+
     function buildDetailedMobModel(type) {
       const g = new THREE.Group();
       const parts = { legs: [], wings: [], rods: [], head: null, body: null };
 
       const makeQuadruped = (bodyCol, bodySize, headCol, headSize, legH, extraFn) => {
-        const body = new THREE.Mesh(new THREE.BoxGeometry(...bodySize), new THREE.MeshLambertMaterial({ color: bodyCol }));
+        const coat = ["cow","pig","sheep","chicken","rabbit"].includes(type) ? new THREE.MeshLambertMaterial({ map: getAnimalPixelTexture(type) }) : null;
+        const body = new THREE.Mesh(new THREE.BoxGeometry(...bodySize), coat || new THREE.MeshLambertMaterial({ color: bodyCol }));
         body.position.y = legH + bodySize[1] / 2;
         g.add(body);
         parts.body = body;
 
         const head = new THREE.Group();
         head.position.set(0, legH + bodySize[1] * 0.7, bodySize[2] / 2 + headSize[2] * 0.35);
-        const hMesh = new THREE.Mesh(new THREE.BoxGeometry(...headSize), new THREE.MeshLambertMaterial({ color: headCol }));
+        const hMesh = new THREE.Mesh(new THREE.BoxGeometry(...headSize), coat || new THREE.MeshLambertMaterial({ color: headCol }));
         head.add(hMesh);
         g.add(head);
         parts.head = head;
@@ -2417,13 +2395,21 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         for (const [sx, sz] of [[-lx, lz], [lx, lz], [-lx, -lz], [lx, -lz]]) {
           const legPivot = new THREE.Group();
           legPivot.position.set(sx, legH, sz);
-          const legM = new THREE.Mesh(new THREE.BoxGeometry(0.18, legH, 0.18), new THREE.MeshLambertMaterial({ color: headCol }));
+          const legM = new THREE.Mesh(new THREE.BoxGeometry(0.18, legH, 0.18), coat || new THREE.MeshLambertMaterial({ color: headCol }));
           legM.position.y = -legH / 2;
           legPivot.add(legM);
           g.add(legPivot);
           parts.legs.push(legPivot);
         }
         if (extraFn) extraFn(head, body);
+      };
+
+      const addAnimalEyes=(head,headSize,spacing=0.12)=>{
+        const eyeMat=new THREE.MeshBasicMaterial({color:0x241a16}),glintMat=new THREE.MeshBasicMaterial({color:0xf4eadb});
+        for(const side of [-1,1]){
+          const eye=new THREE.Mesh(new THREE.BoxGeometry(0.055,0.055,0.025),eyeMat);eye.position.set(side*spacing,0.055,headSize[2]/2+0.012);head.add(eye);
+          const glint=new THREE.Mesh(new THREE.BoxGeometry(0.018,0.018,0.012),glintMat);glint.position.set(side*spacing-0.008,0.068,headSize[2]/2+0.028);head.add(glint);
+        }
       };
 
       if (type.startsWith("villager_")) {
@@ -2451,19 +2437,19 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           const hornL = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.18, 0.07), new THREE.MeshLambertMaterial({ color: 0xd4d0c5 }));
           hornL.position.set(-0.24, 0.24, 0);
           const hornR = hornL.clone(); hornR.position.x = 0.24;
-          head.add(snout, hornL, hornR);
+          addAnimalEyes(head,[0.46,0.46,0.44],0.13);head.add(snout,hornL,hornR);
         });
       } else if (type === "pig") {
         makeQuadruped(0xd48a94, [0.68, 0.56, 1.0], 0xdb959f, [0.46, 0.44, 0.44], 0.42, (head) => {
           const snout = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.16, 0.12), new THREE.MeshLambertMaterial({ color: 0xc2727d }));
           snout.position.set(0, -0.06, 0.25);
-          head.add(snout);
+          addAnimalEyes(head,[0.46,0.44,0.44],0.13);head.add(snout);
         });
       } else if (type === "sheep") {
         makeQuadruped(0xd6d6d6, [0.78, 0.68, 1.1], 0xbfa38e, [0.42, 0.42, 0.44], 0.5, (head) => {
           const woolCap = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.16, 0.46), new THREE.MeshLambertMaterial({ color: 0xd6d6d6 }));
           woolCap.position.y = 0.2;
-          head.add(woolCap);
+          addAnimalEyes(head,[0.42,0.42,0.44],0.11);head.add(woolCap);
         });
       } else if (type === "chicken") {
         makeQuadruped(0xdedede, [0.42, 0.38, 0.52], 0xdedede, [0.26, 0.32, 0.26], 0.28, (head, body) => {
@@ -2474,9 +2460,15 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
           const wingL = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.24, 0.38), new THREE.MeshLambertMaterial({ color: 0xc7c7c7 }));
           wingL.position.set(-0.24, 0, 0);
           const wingR = wingL.clone(); wingR.position.x = 0.24;
-          head.add(beak, wattle);
+          addAnimalEyes(head,[0.26,0.32,0.26],0.075);head.add(beak,wattle);
           body.add(wingL, wingR);
           parts.wings.push(wingL, wingR);
+        });
+      } else if (type === "rabbit") {
+        makeQuadruped(0xb69a78,[0.38,0.36,0.48],0xb69a78,[0.28,0.3,0.3],0.22,(head)=>{
+          const earMat=new THREE.MeshLambertMaterial({color:0xb69a78});
+          for(const side of [-1,1]){const ear=new THREE.Mesh(new THREE.BoxGeometry(0.09,0.38,0.1),earMat);ear.position.set(side*0.09,0.28,0);head.add(ear);}
+          addAnimalEyes(head,[0.28,0.3,0.3],0.085);
         });
       } else if (type === "zombie" || type === "skeleton" || type === "wither_skeleton" || type === "enderman") {
         const isEnd = type === "enderman";
@@ -2628,7 +2620,7 @@ const WORLD_CONFIG: WorldConfig = {
       allowCheats: true,
       doDaylightCycle: true,
       weather: "clear",
-      renderDist: 12,
+      renderDist: 6,
       fov: 75,
       mouseSens: 1.0,
       graphicsQuality: "medium",
@@ -6261,7 +6253,7 @@ const WORLD_CONFIG: WorldConfig = {
     };
     document.getElementById("btn-set-render").onclick = (e) => {
       SFX.click();
-      GAME.renderDist = GAME.renderDist >= 32 ? 8 : Math.min(32, GAME.renderDist + 4);
+      GAME.renderDist = GAME.renderDist >= 12 ? 6 : GAME.renderDist + 2;
       e.target.textContent = `Дальность прорисовки: ${GAME.renderDist} чанков`;
       updateChunksAroundPlayer();
     };
@@ -6287,8 +6279,8 @@ const WORLD_CONFIG: WorldConfig = {
       GAME.graphicsQuality = levels[(levels.indexOf(GAME.graphicsQuality) + 1) % levels.length];
       const cfg = {
         low: { pixelRatio: 0.65, shadows: false, label: "Низкое" },
-        medium: { pixelRatio: 0.85, shadows: false, label: "Среднее" },
-        high: { pixelRatio: 1.0, shadows: true, label: "Высокое" }
+        medium: { pixelRatio: 0.9, shadows: false, label: "Среднее" },
+        high: { pixelRatio: 1.0, shadows: false, label: "Высокое" }
       }[GAME.graphicsQuality];
       adaptivePixelRatio = Math.min(window.devicePixelRatio || 1, cfg.pixelRatio);
       renderer.setPixelRatio(adaptivePixelRatio);
@@ -6542,11 +6534,11 @@ const WORLD_CONFIG: WorldConfig = {
       fpsTimer += dt;
       adaptiveSampleFrames++;
       adaptiveSampleTime += dt;
-      if (GAME.graphicsQuality === "medium" && adaptiveSampleTime >= 3) {
+      if (adaptiveSampleTime >= 2.5) {
         const measuredFps = adaptiveSampleFrames / adaptiveSampleTime;
         const previousRatio = adaptivePixelRatio;
-        if (measuredFps < 38) adaptivePixelRatio = Math.max(0.55, adaptivePixelRatio - 0.1);
-        else if (measuredFps > 56) adaptivePixelRatio = Math.min(Math.min(window.devicePixelRatio || 1, 0.9), adaptivePixelRatio + 0.05);
+        if (measuredFps < 45) adaptivePixelRatio = Math.max(0.5, adaptivePixelRatio - 0.08);
+        else if (measuredFps > 58) adaptivePixelRatio = Math.min(Math.min(window.devicePixelRatio || 1, GAME.graphicsQuality === "high" ? 1 : 0.9), adaptivePixelRatio + 0.04);
         if (Math.abs(previousRatio - adaptivePixelRatio) >= 0.04) {
           renderer.setPixelRatio(adaptivePixelRatio);
           renderer.setSize(window.innerWidth, window.innerHeight);
