@@ -220,6 +220,19 @@ define('mc:crafting_table', {
   textures: { top: 'crafting_table_top', bottom: 'oak_planks', side: 'crafting_table_side' },
 });
 
+define('mc:farmland', {
+  hardness: 0.6, resistance: 0.6, tool: 'shovel', soundGroup: 'grass',
+  texture: 'farmland',
+});
+
+define('mc:wheat', {
+  hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
+  replaceable: true, renderShape: 'cross', soundGroup: 'grass',
+  properties: { age: PROPS.age7 },
+  defaultValues: { age: 0 },
+  texture: 'wheat_crop',
+});
+
 define('mc:torch', {
   hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
   lightEmission: 14, renderShape: 'torch', soundGroup: 'wood', texture: 'torch',
@@ -344,6 +357,7 @@ const MATERIALS = [
   ['mc:leather', {}],
   ['mc:feather', {}],
   ['mc:wheat_seeds', {}],
+  ['mc:wheat', {}],
 ];
 for (const [id, opts] of MATERIALS) ITEMS.define(id, opts);
 
