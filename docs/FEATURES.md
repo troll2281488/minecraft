@@ -49,6 +49,9 @@ This checklist records the previously implemented game, not every vanilla Minecr
 - Muted 16x16 procedural pixel-art textures are authoritative for world blocks; remote high-brightness block assets do not overwrite them.
 - Grass, logs, crafting/furnace/chest/TNT/sandstone/hay/portal-frame blocks keep distinct top, side, and bottom face textures.
 - Inventory, hotbar, and creative-catalog block icons are rendered as shaded three-face isometric cubes, so visually similar materials remain distinguishable.
+- The muted classic 16px block atlas stays authoritative across world, hand and inventory; nearest-neighbour mipmaps stabilize distant pixel textures.
+- Passive animals use species-specific pixel coats and facial details instead of random noisy colour patches.
+- Chunk meshing caches voxel arrays to reduce repeated map lookups; default render distance is six chunks, adjustable from six to twelve.
 - Block mining uses the ten vanilla destroy-stage crack overlays in progression order.
 
 ## Regression rule
