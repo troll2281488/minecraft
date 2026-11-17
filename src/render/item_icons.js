@@ -114,6 +114,8 @@ const BLOB_SHAPES = {
 };
 
 const ITEM_ICON_SPEC = {
+  'mc:wheat':         { shape: 'chunk', colors: ['#d8bd50', '#a98b32'] },
+  'mc:wheat_seeds':   { shape: 'dust', colors: ['#c9b35b', '#8f7938'] },
   'mc:stick':        { shape: 'stick', colors: HANDLE },
   'mc:raw_cod':      { shape: 'chunk', colors: ['#b6c8d0', '#738e9b'] },
   'mc:raw_salmon':   { shape: 'chunk', colors: ['#ed9b78', '#bd6654'] },
