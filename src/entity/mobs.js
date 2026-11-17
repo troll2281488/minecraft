@@ -2,6 +2,15 @@
  * Lightweight voxel creature simulation. Mobs use deterministic game ticks,
  * ground-following movement and simple species-specific behaviour.
  */
+export const MOB_TYPES_112 = Object.freeze([
+  'bat','blaze','cave_spider','chicken','cow','creeper','donkey','elder_guardian',
+  'ender_dragon','enderman','endermite','evoker','ghast','guardian','horse','husk',
+  'llama','magma_cube','mooshroom','mule','ocelot','parrot','pig','polar_bear',
+  'rabbit','sheep','shulker','silverfish','skeleton','skeleton_horse','slime',
+  'snow_golem','spider','squid','stray','vex','villager','vindicator','witch',
+  'wither','wither_skeleton','wolf','zombie','zombie_horse','zombie_villager',
+]);
+
 export function shearSheep(mob, random = Math.random) {
   if (!mob || mob.type !== 'sheep' || mob.sheared) return [];
   mob.sheared = true;
@@ -31,6 +40,10 @@ export function rollMobDrops(type, random = Math.random) {
     { id: 'mc:feather', count: amount(0, 2) },
   ];
   if (type === 'sheep') return [{ id: 'mc:raw_mutton', count: amount(1, 2) }];
+  if (type === 'skeleton' || type === 'stray') return [{ id: 'mc:bone', count: amount(0, 2) }];
+  if (type === 'creeper') return [{ id: 'mc:gunpowder', count: amount(0, 2) }];
+  if (type === 'spider' || type === 'cave_spider') return [{ id: 'mc:string', count: amount(0, 2) }];
+  if (type === 'enderman') return [{ id: 'mc:ender_pearl', count: amount(0, 1) }];
   if (type === 'zombie') {
     const count = amount(0, 2);
     const drops = count ? [{ id: 'mc:rotten_flesh', count }] : [];
@@ -65,10 +78,11 @@ export class MobSystem {
       id: this.nextId++, type, x: x + 0.5, y, z: z + 0.5,
       yaw: Math.random() * Math.PI * 2,
       targetYaw: Math.random() * Math.PI * 2,
-      speed: type === 'zombie' ? 0.035 : 0.018,
+      speed: ['zombie','skeleton','stray','spider','creeper'].includes(type) ? 0.035 : type === 'enderman' ? 0.045 : 0.018,
       thinkTicks: 0, attackTicks: 0, walkPhase: Math.random() * 6,
-      health: type === 'zombie' ? 20 : type === 'cow' ? 10 : type === 'pig' ? 10 : type === 'chicken' ? 4 : 8,
-      sheared: false,
+      health: ({ zombie:20, skeleton:20, stray:20, creeper:20, enderman:40, spider:16, cow:10, pig:10, chicken:4, sheep:8 })[type] ?? 10,
+      sheared: false, hurtTicks: 0, fuseTicks: 0,
+      anim: { walk: 0, idle: Math.random() * Math.PI * 2, attack: 0, hurt: 0, fuse: 0 },
     });
   }
 
@@ -173,6 +187,7 @@ export class MobSystem {
     const held = this.game.inventory?.held;
     const damage = Math.max(1, held?.item?.attackDamage || 1);
     mob.health = Math.max(0, mob.health - damage);
+    mob.hurtTicks = 8;
     this.attackCooldown = 10;
     const dx = mob.x - player.x;
     const dz = mob.z - player.z;
@@ -205,7 +220,10 @@ export class MobSystem {
       const z = Math.floor(player.z + Math.sin(angle) * distance);
       if (world.hasChunk(Math.floor(x / 16), Math.floor(z / 16))) {
         const roll = Math.random();
-        const type = roll < 0.18 && this.game.daylight < 0.55 ? 'zombie' : roll < 0.40 ? 'sheep' : roll < 0.62 ? 'pig' : roll < 0.82 ? 'cow' : 'chicken';
+        const night = this.game.daylight < 0.55;
+        const type = night
+          ? (roll < 0.24 ? 'zombie' : roll < 0.39 ? 'skeleton' : roll < 0.52 ? 'creeper' : roll < 0.62 ? 'spider' : roll < 0.67 ? 'enderman' : roll < 0.79 ? 'sheep' : roll < 0.86 ? 'pig' : roll < 0.94 ? 'cow' : 'chicken')
+          : (roll < 0.28 ? 'sheep' : roll < 0.50 ? 'pig' : roll < 0.76 ? 'cow' : 'chicken');
         this._spawn(type, x, z);
       }
     }
@@ -216,41 +234,108 @@ export class MobSystem {
       const dx = player.x - mob.x;
       const dz = player.z - mob.z;
       const distance = Math.hypot(dx, dz);
-      if (mob.type === 'zombie' && distance < 12) {
+      mob.anim.idle += 0.045;
+      mob.anim.walk = mob.walkPhase;
+      if (mob.hurtTicks > 0) mob.hurtTicks--;
+      mob.anim.hurt = mob.hurtTicks > 0 ? mob.hurtTicks / 8 : 0;
+
+      const hostileType = ['zombie','skeleton','stray','creeper','spider','enderman'].includes(mob.type);
+      const targeted = this.targetedMob(32) === mob;
+      const endermanWater = mob.type === 'enderman' && (
+        world.getBlock(Math.floor(mob.x), Math.floor(mob.y), Math.floor(mob.z)).block.id === 'mc:water' ||
+        world.getBlock(Math.floor(mob.x), Math.floor(mob.y + 1), Math.floor(mob.z)).block.id === 'mc:water'
+      );
+
+      // Endermen instantly flee water by teleporting to a nearby dry landing spot.
+      if (endermanWater) {
+        for (let attempt = 0; attempt < 12; attempt++) {
+          const tx = Math.floor(mob.x + (Math.random() - 0.5) * 16);
+          const tz = Math.floor(mob.z + (Math.random() - 0.5) * 16);
+          const ty = world.getHeight(tx, tz) + 1;
+          if (ty > -60 && world.getBlock(tx, ty - 1, tz).block.solid &&
+              world.getBlock(tx, ty, tz).block.id !== 'mc:water') {
+            mob.x = tx + 0.5; mob.y = ty; mob.z = tz + 0.5;
+            mob.targetYaw = Math.atan2(mob.x - player.x, mob.z - player.z);
+            break;
+          }
+        }
+      }
+
+      const creeperNear = mob.type === 'creeper' && player.gamemode === 'survival' && distance < 3 && distance > 0.01;
+      if (creeperNear) {
+        mob.fuseTicks = Math.min(30, mob.fuseTicks + 1);
+        mob.anim.fuse = mob.fuseTicks / 30;
         mob.targetYaw = Math.atan2(dx, dz);
-      } else if (mob.thinkTicks <= 0) {
+        if (mob.fuseTicks >= 30) {
+          if (distance < 4) {
+            const damage = Math.max(0, Math.ceil((4 - distance) * 3));
+            player.health = Math.max(0, player.health - damage);
+            const knock = 0.35 / Math.max(distance, 0.2);
+            player.vx += dx * knock; player.vz += dz * knock;
+          }
+          mob.health = 0;
+        }
+      } else if (mob.type === 'creeper' && mob.fuseTicks > 0) {
+        mob.fuseTicks = Math.max(0, mob.fuseTicks - 2);
+        mob.anim.fuse = mob.fuseTicks / 30;
+      }
+
+      const endermanAngry = mob.type === 'enderman' && targeted && distance < 16;
+      const hostile = hostileType && player.gamemode === 'survival' &&
+        distance < ((mob.type === 'skeleton' || mob.type === 'stray') ? 16 : 12) &&
+        (mob.type !== 'enderman' || endermanAngry || distance < 2.5);
+      if (hostile && mob.type !== 'skeleton' && mob.type !== 'stray' && !creeperNear) {
+        mob.targetYaw = Math.atan2(dx, dz);
+      } else if (!hostile && mob.thinkTicks <= 0) {
         mob.targetYaw += (Math.random() - 0.5) * 2.2;
         mob.thinkTicks = 35 + Math.floor(Math.random() * 70);
       }
 
-      const hostile = mob.type === 'zombie' && player.gamemode === 'survival' && distance < 12;
-      const fleeing = mob.type !== 'zombie' && distance < 4;
+      const fleeing = !hostileType && distance < 4;
       if (fleeing) mob.targetYaw = Math.atan2(mob.x - player.x, mob.z - player.z);
-      const speed = hostile ? 0.035 : fleeing ? 0.045 : mob.speed;
+      const speed = hostile ? (mob.type === 'spider' ? 0.052 : mob.speed) : fleeing ? 0.045 : mob.speed;
       mob.yaw += Math.atan2(Math.sin(mob.targetYaw - mob.yaw), Math.cos(mob.targetYaw - mob.yaw)) * 0.12;
-      const nx = mob.x + Math.sin(mob.yaw) * speed;
-      const nz = mob.z + Math.cos(mob.yaw) * speed;
-      const ground = world.getHeight(Math.floor(nx), Math.floor(nz));
-      if (ground > -60 && world.getBlock(Math.floor(nx), ground, Math.floor(nz)).block.solid) {
-        mob.x = nx;
-        mob.z = nz;
-        mob.y += (ground + 1 - mob.y) * 0.35;
+      if (!creeperNear && !endermanWater) {
+        const nx = mob.x + Math.sin(mob.yaw) * speed;
+        const nz = mob.z + Math.cos(mob.yaw) * speed;
+        const ground = world.getHeight(Math.floor(nx), Math.floor(nz));
+        if (ground > -60 && world.getBlock(Math.floor(nx), ground, Math.floor(nz)).block.solid) {
+          mob.x = nx; mob.z = nz;
+          mob.y += (ground + 1 - mob.y) * 0.35;
+        }
       }
-      mob.walkPhase += speed * 8;
+      mob.walkPhase += speed * (hostile ? 12 : 8);
+      mob.anim.walk = mob.walkPhase;
 
-      if (hostile && distance < 1.25) {
+      // Skeletons and strays keep their distance and fire ranged attacks.
+      if ((mob.type === 'skeleton' || mob.type === 'stray') && hostile && distance < 14 && distance > 3) {
         mob.attackTicks++;
-        if (mob.attackTicks >= 40) {
-          mob.attackTicks = 0;
-          player.health = Math.max(0, player.health - 1);
+        mob.anim.attack = Math.min(1, mob.attackTicks / 18);
+        if (mob.attackTicks >= 55) {
+          mob.attackTicks = 0; mob.anim.attack = 0;
+          player.health = Math.max(0, player.health - 2);
+          this.game.ui?.toast(mob.type === 'stray' ? 'Странник попал в тебя!' : 'Скелет попал в тебя!', { error: true, duration: 1000 });
+        }
+        mob.targetYaw = Math.atan2(dx, dz);
+      } else if (hostile && distance < 1.35 && mob.type !== 'creeper') {
+        mob.attackTicks++;
+        mob.anim.attack = Math.min(1, mob.attackTicks / 10);
+        if (mob.attackTicks >= (mob.type === 'spider' ? 28 : 40)) {
+          mob.attackTicks = 0; mob.anim.attack = 0;
+          player.health = Math.max(0, player.health - (mob.type === 'enderman' ? 4 : 1));
           player.vx += (dx / Math.max(distance, 0.01)) * 0.12;
           player.vz += (dz / Math.max(distance, 0.01)) * 0.12;
-          this.game.ui.toast('Зомби атаковал тебя!', { error: true, duration: 1100 });
+          this.game.ui?.toast(mob.type + ' атаковал тебя!', { error: true, duration: 1100 });
         }
-      } else {
-        mob.attackTicks = 0;
+      } else if (!hostile) {
+        mob.attackTicks = 0; mob.anim.attack = 0;
       }
 
+      if (mob.health <= 0) {
+        for (const drop of rollMobDrops(mob.type)) this.game.inventory?.addItem(drop.id, drop.count);
+        this.mobs.splice(i, 1);
+        continue;
+      }
       if (distance > 42) this.mobs.splice(i, 1);
     }
   }
