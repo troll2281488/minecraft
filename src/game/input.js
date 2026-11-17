@@ -179,7 +179,8 @@ export const InputMixin = {
   },
 
   _resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const qualityScale = this.graphicsQuality === 'performance' ? 0.7 : this.graphicsQuality === 'high' ? 1 : 0.85;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2) * qualityScale;
     this.canvas.width = Math.floor(window.innerWidth * dpr);
     this.canvas.height = Math.floor(window.innerHeight * dpr);
     this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
