@@ -1636,7 +1636,20 @@ function makeReferenceItemCanvas(type, c1, c2, c3) {
         return 'gem';
       };
       for (const id of Object.keys(ITEMS)) {
-        const t=itemType(id), tierKey=Object.keys(tier).find(k=>id.includes(k))||'iron', colors=tier[tierKey];
+        const t=itemType(id), tierKey=Object.keys(tier).find(k=>id.includes(k))||'iron';
+        const foodColors = {
+          apple:['#b5291f','#6e140e','#e3594f'],golden_apple:['#e3c22b','#9c7c14','#fff28c'],
+          bread:['#b5762d','#693f16','#d49546'],raw_beef:['#a83232','#631717','#d97373'],cooked_beef:['#733c26','#421f12','#b88c72'],
+          raw_porkchop:['#cf6f6f','#8c3f3f','#f0a8a8'],cooked_porkchop:['#a66b3c','#663c1c','#d49e6e'],
+          raw_chicken:['#cf8a82','#8c524b','#f0bdb6'],cooked_chicken:['#9e5c2b','#5e3313','#cc8852'],
+          raw_mutton:['#9e3434','#5e1919','#cf6b6b'],cooked_mutton:['#753f29','#422012','#ab6e52'],
+          raw_rabbit:['#c97973','#85443f','#eba6a0'],cooked_rabbit:['#99592e','#593014','#c78354'],
+          raw_fish:['#6b8c99','#3e5761','#9ec2cf'],cooked_fish:['#8c6e46','#523e24','#ba9b70'],
+          carrot:['#d46b1c','#8c410b','#f09348'],golden_carrot:['#e3c22b','#9c7c14','#fff28c'],
+          potato:['#ba954e','#785c29','#dec07c'],baked_potato:['#9e7334','#5e4017','#cc9f58'],
+          poisonous_potato:['#7d8c3a','#4a541d','#a8b85c'],beetroot:['#8c2432','#4f0e17','#b84857']
+        };
+        const colors=foodColors[id]||tier[tierKey];
         const canvas = t==='spawn_egg' ? referenceCanvas16(ctx=>{ctx.fillStyle='#e5dfc7';ctx.fillRect(4,2,8,12);ctx.fillStyle='#6b9b4a';ctx.fillRect(5,4,6,5);ctx.fillStyle='#3d6634';ctx.fillRect(6,5,3,2);}) : makeReferenceItemCanvas(t,...colors);
         const tex = new THREE.CanvasTexture(canvas); tex.colorSpace=THREE.SRGBColorSpace; tex.magFilter=THREE.NearestFilter; tex.minFilter=THREE.NearestMipmapNearestFilter; tex.generateMipmaps=true;
         ATLAS.icons[id]=canvas.toDataURL('image/png'); ATLAS.itemTextures[id]=tex;
@@ -1658,7 +1671,7 @@ function makeReferenceItemCanvas(type, c1, c2, c3) {
         wither_skeleton:['#262626','#4b4b4b'],spider:['#362e2b','#b81d1d'],enderman:['#161616','#cc49f5'],ghast:['#d9d9d9','#999999'],
         blaze:['#d9a11e','#7a2b0a'],slime:['#4fa13b','#316923'],shulker:['#825882','#d6cc96'],iron_golem:['#bfb4a8','#45732f'],
         dragon:['#1a181c','#b53dd6'],wither:['#242424','#5c7c9c'],
-        villager_fletcher:['#75604a','#8a6a45'],villager_farmer:['#6b7c3b','#b59a52'],villager_blacksmith:['#55585a','#777777'],villager_cleric:['#8d4e8b','#b58ab2']
+        villager_fletcher:['#75604a','#8a6a45'],villager_farmer:['#6b7c3b','#b59a52'],villager_blacksmith:['#55585a','#777777'],villager_cleric:['#8d4e8b','#b58ab2'],villager_skin:['#b98662','#e0b28c']
       };
       const [base,accent]=palettes[type]||['#806b54','#493c32'];
       const canvas=referenceCanvas16(ctx=>{
@@ -3028,9 +3041,9 @@ function makeReferenceItemCanvas(type, c1, c2, c3) {
       if (type.startsWith("villager_")) {
         const profKey = type.replace("villager_", "");
         const prof = VILLAGER_PROFESSIONS[profKey] || VILLAGER_PROFESSIONS.fletcher;
-        const robe = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.15, 0.32), new THREE.MeshLambertMaterial({ color: 0x593d28 }));
+        const robe = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.15, 0.32), referenceMaterial(referenceCanvas16(ctx => { ctx.fillStyle = prof.hatColor ? "#" + prof.hatColor.toString(16).padStart(6,"0") : "#75604a"; ctx.fillRect(0,0,16,16); for(let y=2;y<16;y+=4){ctx.fillStyle="rgba(0,0,0,0.18)";ctx.fillRect(0,y,16,1);} })));
         robe.position.y = 0.72;
-        const head = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.56, 0.46), new THREE.MeshLambertMaterial({ color: 0xb58665 }));
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.56, 0.46), referenceMaterial(getReferenceMobTexture("villager_skin")));
         head.position.y = 1.56;
         const nose = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.22, 0.14), new THREE.MeshLambertMaterial({ color: 0x9c6e4e }));
         nose.position.set(0, -0.08, 0.27);
@@ -3196,7 +3209,7 @@ function makeReferenceItemCanvas(type, c1, c2, c3) {
       // Apply the reference 16x16 species skin to every substantial body mesh.
       // Tiny facial details (eyes, nose, beak) keep their own vanilla colours.
       const mobSkin = getReferenceMobTexture(type);
-      g.traverse(o => {
+      if (!type.startsWith("villager_")) g.traverse(o => {
         if (!o.isMesh || !o.material || !o.material.isMeshLambertMaterial) return;
         const box = new THREE.Box3().setFromObject(o);
         const size = new THREE.Vector3(); box.getSize(size);
@@ -7128,7 +7141,6 @@ const WORLD_CONFIG: WorldConfig = {
     // =========================================================================
     // 18. INITIALIZATION & MAIN LOOP
     // =========================================================================
-    initTextures();
     applyReferenceAtlas();
     createIsometricBlockIcons();
     // Do not load modern remote textures: maksik.txt is the single visual source of truth.
