@@ -907,6 +907,52 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       }
     }
 
+    // Build the inventory/hotbar block icons as tiny three-face cubes, matching
+    // the classic creative inventory reference instead of reusing one flat tile.
+    function createIsometricBlockIcons() {
+      const seen = new Set();
+      const drawFace = (ctx, image, points, shade = 0) => {
+        if (!image) return;
+        ctx.save();
+        ctx.beginPath();
+        points.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+        ctx.closePath();
+        ctx.clip();
+        const [p0, p1, , p3] = points;
+        const a = (p1[0] - p0[0]) / 32, b = (p1[1] - p0[1]) / 32;
+        const c = (p3[0] - p0[0]) / 32, d = (p3[1] - p0[1]) / 32;
+        ctx.setTransform(a, b, c, d, p0[0], p0[1]);
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(image, 0, 0, 32, 32);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        if (shade) {
+          ctx.fillStyle = `rgba(0,0,0,${shade})`;
+          ctx.fill();
+        }
+        ctx.restore();
+      };
+
+      for (const rawId of Object.keys(BLOCK_PROPS)) {
+        const id = Number(rawId);
+        if (seen.has(id) || !BLOCK_PROPS[id]?.solid) continue;
+        seen.add(id);
+        const source = ATLAS.materials[id];
+        if (!source) continue;
+        const faces = Array.isArray(source) ? source : [source, source, source, source, source, source];
+        const imageAt = index => faces[index]?.map?.image || null;
+        const canvas = document.createElement("canvas");
+        canvas.width = 64; canvas.height = 64;
+        const ctx = canvas.getContext("2d");
+        ctx.imageSmoothingEnabled = false;
+        // Back/right face, left face, then top face: same layout as the supplied
+        // inventory screenshot, with subtle directional shading.
+        drawFace(ctx, imageAt(0), [[32, 33], [57, 19], [57, 46], [32, 60]], 0.18);
+        drawFace(ctx, imageAt(4), [[7, 19], [32, 33], [32, 60], [7, 46]], 0.10);
+        drawFace(ctx, imageAt(2), [[32, 5], [57, 19], [32, 33], [7, 19]], 0);
+        ATLAS.icons[id] = canvas.toDataURL("image/png");
+      }
+    }
+
     // Load the unmodified vanilla block atlas textures from the public Minecraft asset mirror.
     // Procedural textures remain as an offline fallback if the asset host is unavailable.
     function loadVanillaBlockTextures() {
@@ -961,27 +1007,11 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         onLoad(texture);
       }, undefined, () => console.warn("Vanilla texture unavailable:", file));
 
-      for (const [id, files] of blockFaces) {
-        const materials = ATLAS.materials[id];
-        if (!Array.isArray(materials)) continue;
-        files.forEach((file, face) => loadTexture(file, texture => {
-          materials[face].map = texture;
-          materials[face].needsUpdate = true;
-        }));
-        ATLAS.icons[id] = base + files[2];
-      }
-      for (const [id, file] of blockFiles) {
-        const material = ATLAS.materials[id];
-        if (!material) continue;
-        loadTexture(file, texture => {
-          const targets = Array.isArray(material) ? material : [material];
-          targets.forEach(faceMaterial => {
-            faceMaterial.map = texture;
-            faceMaterial.needsUpdate = true;
-          });
-        });
-        ATLAS.icons[id] = base + file;
-      }
+      // Keep the muted, face-specific procedural pixel art as the authoritative
+      // world texture set. Remote 1.21 assets were much brighter and also
+      // replaced the distinct fallback inventory icons with flat single faces.
+      // Item sprites below may still load independently.
+      createIsometricBlockIcons();
 
       // Vanilla item sprites replace the hand-made icons when available; procedural art remains as fallback.
       const vanillaItemFiles = {
