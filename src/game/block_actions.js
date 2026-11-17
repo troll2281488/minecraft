@@ -38,6 +38,7 @@ export const BlockActionsMixin = {
   },
 
   _useOrPlace() {
+    if (this.entities?.useFishingRod()) return;
     if (this.entities?.shearFromPlayer()) return;
     const sneaking = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
     if (this.hit && !sneaking) {
