@@ -43,7 +43,22 @@ export const BlockActionsMixin = {
       const handler = USABLE_BLOCKS[this.hit.state.block.id];
       if (handler) { handler(this); return; }
     }
+
+    // Eating takes priority over block placement, as using a food item does in
+    // survival. A full food bar prevents ordinary food from being consumed.
+    if (!sneaking && this._eatHeldFood()) return;
     this._placeBlock();
+  },
+
+  _eatHeldFood() {
+    const player = this.player;
+    const stack = this.inventory.held;
+    const food = stack.item?.food;
+    if (!player || player.gamemode !== GAMEMODE.SURVIVAL || stack.isEmpty || !food) return false;
+    if (!player.vitals.eat(food)) return false;
+    this.inventory.consumeHeld(1);
+    this.ui.toast('Eating');
+    return true;
   },
 
   _placeBlock() {
