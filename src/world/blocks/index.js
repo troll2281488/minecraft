@@ -423,7 +423,7 @@ for (const [prefix, tierKey, damageKey] of TIER_KEYS) {
       tier: tierKey,
       toolSpeed: tier.speed,
       harvestLevel: tier.level,
-      attackDamage: WEAPON_DAMAGE[damageTable][damageKey] ?? 1,
+      attackDamage: WEAPON_DAMAGE[damageTable]?.[damageKey] ?? 1,
       attackSpeed: fixedSpeed ?? axeSpeed,
       // Wooden tools burn. Golden ones do not, despite being equally flimsy.
       fuelTicks: prefix === 'wooden' ? 200 : 0,
