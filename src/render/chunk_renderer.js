@@ -68,7 +68,7 @@ export class ChunkRenderer {
    * Mesh dirty chunks until the time budget runs out.
    * @returns {number} how many chunks were meshed
    */
-  update(world, cameraX, cameraZ, budgetMs = 6) {
+  update(world, cameraX, cameraZ, budgetMs = 6, frustum = null) {
     this.frame++;
     this.stats.meshedThisFrame = 0;
     this.stats.meshTimeMs = 0;
@@ -86,9 +86,15 @@ export class ChunkRenderer {
         // A generated chunk without a GPU mesh is a visible hole in terrain.
         // Build missing meshes before refreshing already-visible stale meshes.
         const missing = this.meshes.has(key) ? 0 : 1;
-        return { key, cx, cz, missing, distanceSq: dx * dx + dz * dz };
+        const visible = frustum && frustum.containsBox(
+          cx * CHUNK_SIZE, MIN_Y, cz * CHUNK_SIZE,
+          (cx + 1) * CHUNK_SIZE, WORLD_TOP, (cz + 1) * CHUNK_SIZE,
+        ) ? 1 : 0;
+        return { key, cx, cz, missing, visible, distanceSq: dx * dx + dz * dz };
       })
-      .sort((a, b) => b.missing - a.missing || a.distanceSq - b.distanceSq);
+      // Fill holes in the current view first, then prepare nearby surroundings.
+      .sort((a, b) => b.missing - a.missing || b.visible - a.visible ||
+        a.distanceSq - b.distanceSq);
 
     for (const entry of queue) {
       if (performance.now() - started > budgetMs) break;
