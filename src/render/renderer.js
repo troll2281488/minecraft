@@ -212,7 +212,13 @@ export const RendererMixin = {
       const hp = Math.max(0, Math.min(20, this.player.health));
       health.textContent = Array.from({ length: 10 }, (_, i) => hp >= i * 2 + 2 ? '♥' : hp > i * 2 ? '♡' : '·').join('');
     }
-    const food = document.getElementById('food');\n    if (food) {\n      const points = Math.max(0, Math.min(20, this.player.vitals.food));\n      food.textContent = Array.from({ length: 10 }, (_, i) => points >= i * 2 + 2 ? '●' : points > i * 2 ? '◐' : '·').join('');\n      food.title = `Food ${points}/20 · saturation ${this.player.vitals.saturation.toFixed(1)}`;\n    }\n    this.ui.updateHotbar(this.inventory);
+    const food = document.getElementById('food');
+    if (food) {
+      const points = Math.max(0, Math.min(20, this.player.vitals.food));
+      food.textContent = Array.from({ length: 10 }, (_, i) => points >= i * 2 + 2 ? '●' : points > i * 2 ? '◐' : '·').join('');
+      food.title = `Food ${points}/20 · saturation ${this.player.vitals.saturation.toFixed(1)}`;
+    }
+    this.ui.updateHotbar(this.inventory);
     if (this.creativeOpen) this.ui.updateCreativeInventory(this.inventory);
     else if (this.inventoryOpen) this.ui.updateInventory(this.inventory, this.craftingGrid);
     if (this.showDebug) this._updateDebug();
