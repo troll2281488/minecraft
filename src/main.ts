@@ -2590,6 +2590,7 @@ const WORLD_CONFIG: WorldConfig = {
       offhand: null,
       armor: { head: null, chest: null, legs: null, feet: null },
       effects: { speed: 0, jump: 0, strength: 0, night_vision: 0 },
+      eatTimer: 0,
       bobTimer: 0,
       stepDist: 0,
       invulnTimer: 0,
@@ -4040,6 +4041,8 @@ const WORLD_CONFIG: WorldConfig = {
 
       // 4. Eating Food
       if (held && ITEMS[held.id]?.food && (PLAYER.hunger < 20 || held.id === "golden_apple")) {
+        PLAYER.eatTimer = 0.62;
+        GAME.swingTimer = 0.3;
         PLAYER.hunger = Math.min(20, PLAYER.hunger + ITEMS[held.id].food);
         if (held.id === "golden_apple") PLAYER.health = Math.min(20, PLAYER.health + 8);
         consumeHeld(1);
@@ -4638,9 +4641,11 @@ const WORLD_CONFIG: WorldConfig = {
         const held = PLAYER.inv[PLAYER.hotbarIdx];
         fpArm.visible = true;
         fpHand.visible = true;
-        fpArm.position.set(0.50 + bobX, -0.49 + bobY - equipDrop, -0.64);
-        fpArm.rotation.set(0.12 + swingCycle * 0.28, -0.22, -0.12 - swingCycle * 0.18);
-        fpHand.position.set(0.49 + bobX, -0.77 + bobY - equipDrop, -0.72);
+        if (PLAYER.eatTimer > 0) PLAYER.eatTimer = Math.max(0, PLAYER.eatTimer - dt);
+        const eatPull = PLAYER.eatTimer > 0 ? Math.sin((0.62 - PLAYER.eatTimer) * 18) * 0.18 : 0;
+        fpArm.position.set(0.50 + bobX, -0.49 + bobY - equipDrop + eatPull, -0.64 + Math.max(0,eatPull) * 0.8);
+        fpArm.rotation.set(0.12 + swingCycle * 0.28 - eatPull * 2.2, -0.22, -0.12 - swingCycle * 0.18);
+        fpHand.position.set(0.49 + bobX, -0.77 + bobY - equipDrop + eatPull, -0.72 + Math.max(0,eatPull) * 0.8);
         fpHand.rotation.copy(fpArm.rotation);
         fpBlock.visible = false;
         fpItemSprite.visible = false;
@@ -5616,10 +5621,23 @@ const WORLD_CONFIG: WorldConfig = {
       if (PLAYER.air < 300) {
         const bubs = Math.ceil(PLAYER.air / 30);
         for (let i = 0; i < bubs; i++) {
-          const s = document.createElement("span");
-          s.textContent = "🫧";
-          aBox.appendChild(s);
+          const s = document.createElement("span"); s.textContent = "🫧"; aBox.appendChild(s);
         }
+      }
+      let effectsBox = document.getElementById("active-effects-hud");
+      if (!effectsBox) {
+        effectsBox = document.createElement("div"); effectsBox.id = "active-effects-hud";
+        effectsBox.style.cssText = "position:fixed;right:14px;top:14px;z-index:30;display:flex;flex-direction:column;gap:6px;pointer-events:auto;font:14px monospace";
+        document.body.appendChild(effectsBox);
+      }
+      const effectMeta = { speed:["🏃","Скорость"], jump:["🦘","Прыгучесть"], strength:["⚔️","Сила"], night_vision:["🌙","Ночное зрение"] };
+      effectsBox.innerHTML = "";
+      for (const [key,value] of Object.entries(PLAYER.effects || {})) {
+        if (!(value > 0) || !effectMeta[key]) continue;
+        const chip = document.createElement("div"); chip.textContent = effectMeta[key][0] + " " + effectMeta[key][1];
+        chip.title = effectMeta[key][1] + ": эффект активен";
+        chip.style.cssText = "padding:5px 8px;background:#202020dd;border:1px solid #777;border-radius:4px;color:#fff;text-shadow:1px 1px #000;cursor:help";
+        effectsBox.appendChild(chip);
       }
     }
 
