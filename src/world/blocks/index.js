@@ -339,6 +339,9 @@ const MATERIALS = [
   ['mc:redstone', {}],
   ['mc:flint', {}],
   ['mc:clay_ball', {}],
+  ['mc:string', {}],
+  ['mc:bone', {}],
+  ['mc:leather', {}],
 ];
 for (const [id, opts] of MATERIALS) ITEMS.define(id, opts);
 
@@ -358,6 +361,10 @@ const FOODS = [
   ['mc:raw_mutton', 2, 0.3],
   ['mc:rotten_flesh', 4, 0.1],
   ['mc:cooked_mutton', 6, 0.8],
+  ['mc:raw_cod', 2, 0.2],
+  ['mc:raw_salmon', 2, 0.2],
+  ['mc:pufferfish', 1, 0.1],
+  ['mc:tropical_fish', 1, 0.1],
 ];
 for (const [id, nutrition, saturation] of FOODS) {
   ITEMS.define(id, { food: { nutrition, saturation } });
@@ -371,6 +378,7 @@ for (const [id, nutrition, saturation] of FOODS) {
  * come from the vanilla tables in the same file.
  */
 ITEMS.define('mc:shears', { stackSize: 1, maxDamage: 238, tool: 'shears', attackDamage: 1 });
+ITEMS.define('mc:fishing_rod', { stackSize: 1, maxDamage: 64, tool: 'fishing_rod' });
 
 const TOOL_TYPES = [
   ['pickaxe', 'PICKAXE', ATTACK_SPEED.PICKAXE],
