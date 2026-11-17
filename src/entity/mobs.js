@@ -9,6 +9,16 @@ export function shearSheep(mob, random = Math.random) {
   return [{ id: 'mc:white_wool', count }];
 }
 
+export function rollFishingCatch(random = Math.random) {
+  const roll = random();
+  if (roll < 0.60) return { id: 'mc:raw_cod', count: 1 };
+  if (roll < 0.85) return { id: 'mc:raw_salmon', count: 1 };
+  if (roll < 0.90) return { id: 'mc:pufferfish', count: 1 };
+  if (roll < 0.95) return { id: 'mc:tropical_fish', count: 1 };
+  if (roll < 0.98) return { id: 'mc:bone', count: 1 };
+  return { id: 'mc:leather', count: 1 };
+}
+
 export function rollMobDrops(type, random = Math.random) {
   const amount = (min, max) => min + Math.floor(random() * (max - min + 1));
   if (type === 'pig') return [{ id: 'mc:raw_porkchop', count: amount(1, 3) }];
@@ -27,11 +37,13 @@ export class MobSystem {
     this.spawnTicks = 0;
     this.nextId = 1;
     this.attackCooldown = 0;
+    this.fishing = null;
   }
 
   reset() {
     this.mobs.length = 0;
     this.spawnTicks = 0;
+    this.fishing = null;
   }
 
   _spawn(type, x, z) {
@@ -70,6 +82,51 @@ export class MobSystem {
       bestDistance = distance;
     }
     return best;
+  }
+
+  _waterInSight(maxDistance = 6) {
+    const player = this.game.player;
+    if (!player || !this.game.world) return false;
+    const yaw = player.yaw * Math.PI / 180;
+    const pitch = player.pitch * Math.PI / 180;
+    const dx = -Math.sin(yaw) * Math.cos(pitch);
+    const dy = -Math.sin(pitch);
+    const dz = Math.cos(yaw) * Math.cos(pitch);
+    for (let distance = 0.2; distance <= maxDistance; distance += 0.15) {
+      const x = Math.floor(player.x + dx * distance);
+      const y = Math.floor(player.eyeY + dy * distance);
+      const z = Math.floor(player.z + dz * distance);
+      const block = this.game.world.getBlock(x, y, z).block;
+      if (block.id === 'mc:water') return true;
+      if (block.solid) return false;
+    }
+    return false;
+  }
+
+  useFishingRod() {
+    const stack = this.game.inventory?.held;
+    if (stack?.item?.id !== 'mc:fishing_rod' || this.game.player?.gamemode !== 'survival') return false;
+    if (!this.fishing) {
+      if (!this._waterInSight()) {
+        this.game.ui?.toast('Aim at water to cast the fishing line');
+        return true;
+      }
+      this.fishing = { ticks: 80 + Math.floor(Math.random() * 121) };
+      this.game.ui?.toast('Fishing line cast');
+      return true;
+    }
+    if (this.fishing.ticks > 0) {
+      this.fishing = null;
+      this.game.ui?.toast('Fishing line reeled in too early');
+      return true;
+    }
+    const caught = rollFishingCatch();
+    const leftover = this.game.inventory.addItem(caught.id, caught.count);
+    if (leftover > 0) this.game.ui?.toast('Inventory full: catch not collected', { error: true });
+    this.game.inventory.damageHeld(1);
+    this.fishing = null;
+    this.game.ui?.toast('Caught ' + caught.id.replace('mc:', ''));
+    return true;
   }
 
   shearFromPlayer() {
@@ -116,6 +173,7 @@ export class MobSystem {
     const player = this.game.player;
     if (!world || !player) return;
     this.spawnTicks++;
+    if (this.fishing && this.fishing.ticks > 0) this.fishing.ticks--;
     if (this.attackCooldown > 0) this.attackCooldown--;
     if (this.spawnTicks >= 240 && this.mobs.length < 9) {
       this.spawnTicks = 0;
