@@ -15,13 +15,13 @@ evidence. See [`docs/SAVE_FORMAT.md`](docs/SAVE_FORMAT.md).
 **Playable; incremental development has resumed.** The `v0.1.0` foundation remains intact. New
 systems are being added in small, testable steps, with incomplete mechanics labelled honestly.
 
-Over 13,000 lines of JavaScript and 247 tests in a hand-written browser harness.
+Over 13,000 lines of JavaScript and 250 tests in a hand-written browser harness.
 
 **Working:**
 
 | System | What runs |
 |---|---|
-| **World generation** | Seeded and reproducible from the seed alone. xoroshiro128++ matching 1.18+, verified against BigInt. 8 biomes over a temperature/humidity map, caves, ore veins using the real 1.18 triangular distributions, deepslate ore variants, oak/birch/spruce trees. Terrain generates on a Web Worker pool. |
+| **World generation** | Seeded and reproducible from the seed alone. xoroshiro128++ matching 1.18+, verified against BigInt. 8 biomes over a temperature/humidity map, caves, ore veins using the real 1.18 triangular distributions, deepslate ore variants, oak/birch/spruce trees. Oak leaves can rarely drop apples; grass can drop wheat seeds. Terrain generates on a Web Worker pool. |
 | **Rendering** | WebGL2. Procedurally generated texture atlas, per-face culling, per-vertex ambient occlusion, smooth lighting, back-to-front translucent pass, frustum culling, packed 8-byte vertex format, hard mesh-memory budget with farthest-first eviction. |
 | **Player** | Real vanilla constants on a fixed 20 TPS tick: gravity 0.08/tick, drag 0.98, jump 0.42, walk 4.317 m/s, sprint 5.612 m/s. AABB collision, sneak, sprint, 0.6 step height, ice slipperiness. Survival and creative modes; creative flight. |
 | **Blocks and mining** | ~80 blocks carrying their real vanilla hardness, tool, and harvest-level values. The real `ceil(hardness x 1.5 / speed x 20)` mining formula, 10-stage crack overlay, tool durability consumed on break. Slabs and stairs render and collide from one shared box list. |
@@ -30,9 +30,9 @@ Over 13,000 lines of JavaScript and 247 tests in a hand-written browser harness.
 | **Menus** | Title screen, world create / load / delete / export, pause menu, F3 debug overlay. |
 | **Survival food** | Food level, saturation, exhaustion from sprinting and jumping, natural regeneration, normal-difficulty starvation, and right-click consumption of apples, bread, raw/cooked meat, carrots, and potatoes. |
 
-**Partial:** sheep, pigs and zombies wander; sheep, pigs, cows and chickens flee; zombies pursue and attack. Players can melee-attack mobs, kill them, and collect raw porkchops, raw mutton, raw beef, raw chicken, leather, feathers or rotten flesh. Sheep can be sheared once with iron shears, which drop 1–3 white wool; shears have 238 durability. Fishing rods can be crafted and used on visible water to catch cod, salmon, pufferfish or tropical fish; wool can be converted to string as a temporary substitute until spiders and cobwebs exist. Mob models are procedural low-poly shapes, not vanilla rigs.
+**Partial:** sheep, pigs and zombies wander; sheep, pigs, cows and chickens flee; zombies pursue and attack. Players can melee-attack mobs, kill them, and collect raw porkchops, raw mutton, raw beef, raw chicken, leather, feathers, rotten flesh and rare carrots or potatoes. Sheep can be sheared once with iron shears, which drop 1–3 white wool; shears have 238 durability. Fishing rods can be crafted and used on visible water to catch cod, salmon, pufferfish or tropical fish; wool can be converted to string as a temporary substitute until spiders and cobwebs exist. Mob models are procedural low-poly shapes, not vanilla rigs.
 
-**Not built:** golden-apple effects, food poisoning, cooked mob drops, chicken egg laying, coloured wool, spider/cobweb string drops, loot tables and mob-specific animations, full survival damage and death flow, combat tools,
+**Not built:** golden-apple effects, food poisoning, cooked mob drops, wheat crop growth and harvesting, chicken egg laying, coloured wool, spider/cobweb string drops, loot tables and mob-specific animations, full survival damage and death flow, combat tools,
 fluid flow, weather, furnaces and chests, redstone, enchanting, dimensions, structures and audio.
 Water renders and blocks movement but does not flow.
 
@@ -56,7 +56,7 @@ what is working and what remains.
 | **Platform** | Browser, WebGL2, vanilla ES modules |
 | **Dependencies** | None. No npm, no bundler, no framework, no `package.json`. |
 | **Size** | Over 13,000 lines of JavaScript |
-| **Tests** | 243, in a hand-written browser harness (`tests.html`) |
+| **Tests** | 250, in a hand-written browser harness (`tests.html`) |
 | **Server** | `serve.py` - Python stdlib static server, only needed because ES modules require `http://` |
 | **Saves** | Versioned `.mcw` files + IndexedDB, with an ordered migration chain |
 | **Mode** | Singleplayer |
