@@ -22,6 +22,14 @@ export function rollFishingCatch(random = Math.random) {
 export function rollMobDrops(type, random = Math.random) {
   const amount = (min, max) => min + Math.floor(random() * (max - min + 1));
   if (type === 'pig') return [{ id: 'mc:raw_porkchop', count: amount(1, 3) }];
+  if (type === 'cow') return [
+    { id: 'mc:raw_beef', count: amount(1, 3) },
+    ...(random() < 0.5 ? [{ id: 'mc:leather', count: amount(1, 2) }] : []),
+  ];
+  if (type === 'chicken') return [
+    { id: 'mc:raw_chicken', count: amount(1, 3) },
+    { id: 'mc:feather', count: amount(0, 2) },
+  ];
   if (type === 'sheep') return [{ id: 'mc:raw_mutton', count: amount(1, 2) }];
   if (type === 'zombie') {
     const count = amount(0, 2);
@@ -56,7 +64,7 @@ export class MobSystem {
       targetYaw: Math.random() * Math.PI * 2,
       speed: type === 'zombie' ? 0.035 : 0.018,
       thinkTicks: 0, attackTicks: 0, walkPhase: Math.random() * 6,
-      health: type === 'zombie' ? 20 : type === 'pig' ? 10 : 8,
+      health: type === 'zombie' ? 20 : type === 'cow' ? 10 : type === 'pig' ? 10 : type === 'chicken' ? 4 : 8,
       sheared: false,
     });
   }
@@ -193,7 +201,8 @@ export class MobSystem {
       const x = Math.floor(player.x + Math.cos(angle) * distance);
       const z = Math.floor(player.z + Math.sin(angle) * distance);
       if (world.hasChunk(Math.floor(x / 16), Math.floor(z / 16))) {
-        const type = Math.random() < 0.38 && this.game.daylight < 0.55 ? 'zombie' : (Math.random() < 0.5 ? 'sheep' : 'pig');
+        const roll = Math.random();
+        const type = roll < 0.18 && this.game.daylight < 0.55 ? 'zombie' : roll < 0.40 ? 'sheep' : roll < 0.62 ? 'pig' : roll < 0.82 ? 'cow' : 'chicken';
         this._spawn(type, x, z);
       }
     }
