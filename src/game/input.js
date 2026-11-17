@@ -166,9 +166,10 @@ export const InputMixin = {
   },
 
   _toggleGamemode() {
-    const creative = this.player.gamemode === GAMEMODE.CREATIVE;
-    this.player.gamemode = creative ? GAMEMODE.SURVIVAL : GAMEMODE.CREATIVE;
-    if (creative) this.player.flying = false;
+    const modes = [GAMEMODE.SURVIVAL, GAMEMODE.CREATIVE, GAMEMODE.SPECTATOR];
+    const index = modes.indexOf(this.player.gamemode);
+    this.player.gamemode = modes[(index + 1) % modes.length];
+    this.player.flying = this.player.gamemode === GAMEMODE.SPECTATOR;
     this.ui.toast(`Game mode: ${this.player.gamemode}`);
   },
 
