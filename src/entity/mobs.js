@@ -33,7 +33,10 @@ export function rollMobDrops(type, random = Math.random) {
   if (type === 'sheep') return [{ id: 'mc:raw_mutton', count: amount(1, 2) }];
   if (type === 'zombie') {
     const count = amount(0, 2);
-    return count ? [{ id: 'mc:rotten_flesh', count }] : [];
+    const drops = count ? [{ id: 'mc:rotten_flesh', count }] : [];
+    // Rare carrot/potato drops make both crops obtainable before farming exists.
+    if (random() < 0.025) drops.push({ id: random() < 0.5 ? 'mc:carrot' : 'mc:potato', count: 1 });
+    return drops;
   }
   return [];
 }
