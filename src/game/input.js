@@ -44,11 +44,19 @@ export const InputMixin = {
     document.addEventListener('contextmenu', (e) => e.preventDefault());
 
     document.addEventListener('wheel', (e) => {
+      // Ctrl+wheel and Cmd+wheel are browser zoom gestures. While the game is
+      // active, consume them instead of letting the page resize the game UI.
+      if (this.running && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        return;
+      }
       if (!this.running || this.paused || this.inventoryOpen) return;
       const direction = Math.sign(e.deltaY);
+      if (direction === 0) return;
       this.inventory.selectedSlot = (this.inventory.selectedSlot + direction + 9) % 9;
       this.ui.flashItemName(this.inventory.held);
-    }, { passive: true });
+      e.preventDefault();
+    }, { passive: false, capture: true });
 
     document.addEventListener('keydown', (e) => this._onKeyDown(e));
     document.addEventListener('keyup', (e) => this.keys.delete(e.code));
@@ -71,9 +79,14 @@ export const InputMixin = {
   },
 
   _onKeyDown(e) {
-    // Prevent browser shortcuts from interrupting active gameplay.
+    // Keep browser-level shortcuts and zoom gestures from hijacking gameplay.
+    // Do this before the repeat guard so holding Ctrl cannot re-enable defaults.
     if (this.running && !this.chatOpen &&
-        (e.ctrlKey || e.metaKey || e.code === 'F3' || e.code === 'F5' || e.code === 'F11')) e.preventDefault();
+        (e.ctrlKey || e.metaKey || e.code === 'F3' || e.code === 'F5' ||
+         e.code === 'F11' || e.code === 'F12')) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (e.repeat) return;
     this.keys.add(e.code);
 
