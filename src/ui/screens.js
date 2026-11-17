@@ -24,6 +24,10 @@ export const ScreensMixin = {
     byId('btn-singleplayer').onclick = () => this._showWorldList();
     byId('btn-settings').onclick = () => this._openSettings();
     byId('btn-settings-back').onclick = () => this.ui.showScreen('title');
+    byId('btn-fullscreen').onclick = async () => { try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen(); else await document.exitFullscreen(); } catch { this.ui.toast('Полноэкранный режим недоступен', { error: true }); } };
+    byId('setting-fov').oninput = (e) => { this.fieldOfView = Number(e.target.value); byId('setting-fov-value').textContent = this.fieldOfView + '°'; this._saveSettings(); };
+    byId('btn-rename-world').onclick = () => this._renameSelectedWorld();
+    byId('btn-duplicate-world').onclick = () => this._duplicateSelectedWorld();
     this._loadSettings();
     byId('setting-distance').oninput = (e) => {
       this.renderDistance = Number(e.target.value);
@@ -106,10 +110,13 @@ export const ScreensMixin = {
     this.renderDistance = Math.max(3, Math.min(16, Number(saved.renderDistance) || 8));
     this.mouseSensitivity = Math.max(0.04, Math.min(0.5, Number(saved.mouseSensitivity) || 0.15));
     this.graphicsQuality = ['performance','balanced','high'].includes(saved.graphicsQuality) ? saved.graphicsQuality : 'balanced';
+    this.fieldOfView = Math.max(50, Math.min(110, Number(saved.fieldOfView) || 70));
     document.getElementById('setting-distance').value = this.renderDistance;
     document.getElementById('setting-distance-value').textContent = this.renderDistance + ' чанков';
     document.getElementById('setting-sensitivity').value = this.mouseSensitivity;
     document.getElementById('setting-quality').value = this.graphicsQuality;
+    document.getElementById('setting-fov').value = this.fieldOfView;
+    document.getElementById('setting-fov-value').textContent = this.fieldOfView + '°';
     this._saveSettings();
     this._resize?.();
   },
@@ -120,6 +127,7 @@ export const ScreensMixin = {
         renderDistance: this.renderDistance,
         mouseSensitivity: this.mouseSensitivity,
         graphicsQuality: this.graphicsQuality,
+        fieldOfView: this.fieldOfView,
       }));
     } catch {}
   },
@@ -146,6 +154,8 @@ export const ScreensMixin = {
     document.getElementById('btn-play').disabled = !hasSelection;
     document.getElementById('btn-delete-world').disabled = !hasSelection;
     document.getElementById('btn-export-world').disabled = !hasSelection;
+    document.getElementById('btn-rename-world').disabled = !hasSelection;
+    document.getElementById('btn-duplicate-world').disabled = !hasSelection;
   },
 
   async _createWorld() {
@@ -172,10 +182,36 @@ export const ScreensMixin = {
     await this._enterWorld(meta, player);
   },
 
+  async _renameSelectedWorld() {
+    const world = this.worlds.find((w) => w.id === this.selectedWorldId);
+    if (!world) return;
+    const name = prompt('Новое название мира:', world.name);
+    if (name === null) return;
+    const trimmed = name.trim().slice(0, 48);
+    if (!trimmed) { this.ui.toast('Название не может быть пустым', { error: true }); return; }
+    await storage.putWorld({ ...world, name: trimmed });
+    await this._showWorldList();
+  },
+
+  async _duplicateSelectedWorld() {
+    const world = this.worlds.find((w) => w.id === this.selectedWorldId);
+    if (!world) return;
+    const id = 'world-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
+    const copy = await storage.putWorld({ ...world, id, name: world.name + ' (копия)', time: world.time ?? 0, createdWith: DATA_VERSION });
+    const chunks = await storage.getAllChunks(world.id, 'mc:overworld');
+    if (chunks.length) await storage.putChunks(id, 'mc:overworld', chunks.map((chunk) => { const parts = chunk.key.split(',').map(Number); return { cx: parts[0], cz: parts[1], bytes: chunk.bytes }; }));
+    const player = await storage.getPlayer(world.id, 'local');
+    if (player) await storage.putPlayer(id, 'local', player);
+    this.ui.toast('Создана копия «' + copy.name + '»');
+    await this._showWorldList();
+    this.selectedWorldId = id;
+    this._refreshWorldList();
+  },
+
   async _deleteSelectedWorld() {
     const world = this.worlds.find((w) => w.id === this.selectedWorldId);
     if (!world) return;
-    if (!confirm(`Delete "${world.name}" permanently? This cannot be undone.`)) return;
+    if (!confirm(`Удалить мир «${world.name}» навсегда? Это действие нельзя отменить.`)) return;
     await storage.deleteWorld(world.id);
     await this._showWorldList();
   },
