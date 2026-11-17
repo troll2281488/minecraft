@@ -1007,10 +1007,61 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         onLoad(texture);
       }, undefined, () => console.warn("Vanilla texture unavailable:", file));
 
-      // Keep the muted, face-specific procedural pixel art as the authoritative
-      // world texture set. Remote 1.21 assets were much brighter and also
-      // replaced the distinct fallback inventory icons with flat single faces.
-      // Item sprites below may still load independently.
+      // Load real 16x16 Minecraft block textures into the existing materials.
+      // Face-specific blocks keep their top/side/bottom maps; simple blocks use
+      // the same vanilla tile on all six faces. Updating maps in place also
+      // updates already-created chunk meshes and first-person held blocks.
+      const blockTextureJobs = [];
+      for (const [id, files] of blockFaces) {
+        const faceFiles = Array.isArray(files) ? files : [files];
+        blockTextureJobs.push(Promise.all(faceFiles.map(file => new Promise(resolve => {
+          loadTexture(file, resolve);
+        }))).then(textures => {
+          const target = ATLAS.materials[id];
+          if (Array.isArray(target)) {
+            textures.forEach((texture, index) => {
+              if (target[index]) {
+                target[index].map = texture;
+                target[index].color.setHex(0xffffff);
+                target[index].needsUpdate = true;
+              }
+            });
+          } else if (target && textures[0]) {
+            target.map = textures[0];
+            target.color?.setHex(0xffffff);
+            target.needsUpdate = true;
+          }
+        }));
+      }
+      for (const [id, file] of blockFiles) {
+        if (blockFaces.has(id)) continue;
+        blockTextureJobs.push(new Promise(resolve => {
+          loadTexture(file, texture => {
+            const target = ATLAS.materials[id];
+            if (Array.isArray(target)) {
+              target.forEach(material => {
+                material.map = texture;
+                material.color.setHex(0xffffff);
+                material.needsUpdate = true;
+              });
+            } else if (target) {
+              target.map = texture;
+              target.color?.setHex(0xffffff);
+              target.needsUpdate = true;
+            }
+            resolve();
+          });
+        }));
+      }
+      // Rebuild the small inventory images only after the source textures are
+      // ready, so the world, hand, hotbar and creative slots share one source.
+      Promise.all(blockTextureJobs).then(() => {
+        createIsometricBlockIcons();
+        if (typeof updateHotbarUI === "function") updateHotbarUI();
+        if (typeof renderCreativeCatalog === "function") renderCreativeCatalog();
+      });
+
+      // Procedural textures remain the offline fallback if the asset host is unavailable.
       createIsometricBlockIcons();
 
       // Vanilla item sprites replace the hand-made icons when available; procedural art remains as fallback.
