@@ -331,12 +331,20 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
 
   // Leaves and plants drop nothing without shears, matching vanilla closely
   // enough that a forest is not an infinite block source.
-  const NO_DROP = new Set(['mc:short_grass', 'mc:fern', 'mc:dead_bush']);
-  if (NO_DROP.has(block.id)) return [];
+  if (block.id === 'mc:short_grass' || block.id === 'mc:fern') {
+    const seeds = rng.nextDouble() < 0.12 ? 1 + rng.nextInt(2) : 0;
+    return seeds ? [{ id: 'mc:wheat_seeds', count: seeds }] : [];
+  }
+  if (block.id === 'mc:dead_bush') return [];
   if (block.id.endsWith('_leaves')) {
     if (heldStack?.item?.tool === 'shears') return [{ id: block.id, count: 1 }];
     const sapling = block.id.replace('_leaves', '_sapling');
-    return rng.nextDouble() < 0.05 && ITEMS.get(sapling) ? [{ id: sapling, count: 1 }] : [];
+    const drops = [];
+    if (rng.nextDouble() < 0.05 && ITEMS.get(sapling)) drops.push({ id: sapling, count: 1 });
+    // Oak leaves can rarely yield apples, making this food obtainable without
+    // inventing a tree-growth system. Other leaf species never drop apples.
+    if (block.id === 'mc:oak_leaves' && rng.nextDouble() < 0.005) drops.push({ id: 'mc:apple', count: 1 });
+    return drops;
   }
 
   const dropId = SPECIAL[block.id] ?? block.id;
