@@ -53,6 +53,13 @@ export const InputMixin = {
     document.addEventListener('keydown', (e) => this._onKeyDown(e));
     document.addEventListener('keyup', (e) => this.keys.delete(e.code));
 
+    // Clear held inputs when the tab loses focus; otherwise keys can stick.
+    window.addEventListener('blur', () => {
+      this.keys.clear();
+      this.mouseButtons.clear();
+      this.mining.reset();
+    });
+
     window.addEventListener('resize', () => this._resize());
     window.addEventListener('beforeunload', () => {
       // Best-effort: async work cannot be awaited here, but the synchronous
@@ -64,6 +71,9 @@ export const InputMixin = {
   },
 
   _onKeyDown(e) {
+    // Prevent browser shortcuts from interrupting active gameplay.
+    if (this.running && !this.paused && document.pointerLockElement === this.canvas &&
+        (e.ctrlKey || e.metaKey || e.code === 'F5' || e.code === 'F11')) e.preventDefault();
     if (e.repeat) return;
     this.keys.add(e.code);
 
@@ -90,6 +100,13 @@ export const InputMixin = {
       e.preventDefault();
       this.showDebug = !this.showDebug;
       this.ui.setDebugVisible(this.showDebug);
+      return;
+    }
+
+    if (e.code === 'F5') {
+      e.preventDefault();
+      this.thirdPerson = !this.thirdPerson;
+      this.ui.toast(this.thirdPerson ? 'Third-person camera mode selected' : 'First-person camera mode selected', { duration: 1200 });
       return;
     }
 
