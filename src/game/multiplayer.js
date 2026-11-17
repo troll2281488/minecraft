@@ -71,6 +71,18 @@ export class Multiplayer {
     }
   }
 
+  async setNickname(value) {
+    this.nickname = safeName(value);
+    localStorage.setItem('mc_nick', this.nickname);
+    if (this.db) {
+      await update(ref(this.db, `minecraft_game/users/${this.uid}`), { name: this.nickname });
+      if (this.roomId) {
+        await update(ref(this.db, `minecraft_game/rooms/${this.roomId}/players/${this.uid}`), { name: this.nickname });
+      }
+    }
+    return this.nickname;
+  }
+
   async showLobby() {
     for (const unsubscribe of this.unsubscribers.splice(0)) unsubscribe();
     const ok = this.connected && this.db ? true : await this.init();
@@ -261,7 +273,7 @@ export class Multiplayer {
       return;
     }
     push(ref(this.db, `minecraft_game/rooms/${this.roomId}/chat`), {
-      sender: this.nickname, text: value, ts: Date.now(),
+      sender: this.nickname, text: value, timestamp: Date.now(),
     }).catch((error) => this.game.ui.toast(`Чат недоступен: ${error.message}`, { error: true }));
   }
 
