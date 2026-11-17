@@ -96,6 +96,15 @@ export const InputMixin = {
 
     if (this.inventoryOpen) return;
 
+    if (e.code === 'KeyT' && !this.inventoryOpen) {
+      e.preventDefault();
+      const chat = document.getElementById('chat-entry');
+      chat.classList.remove('hidden');
+      document.exitPointerLock?.();
+      chat.focus();
+      return;
+    }
+
     if (e.code === 'F3') {
       e.preventDefault();
       this.showDebug = !this.showDebug;
