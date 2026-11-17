@@ -199,6 +199,13 @@
   }
   #loading-bar > div { height: 100%; background: #6bbf59; width: 0%; transition: width .2s; }
 
+  .mp-row { display:flex; justify-content:space-between; align-items:center; gap:.6rem; padding:.45rem .55rem; margin:.3rem 0; background:#303030; border:1px solid #555; font-size:.75rem; }
+  .mp-row button { width:auto; margin:0; padding:.35rem .65rem; font-size:.75rem; }
+  .mp-list { max-height:10rem; overflow:auto; margin:.4rem 0 .8rem; }
+  #hud-room { position:absolute; right:12px; top:12px; padding:.35rem .6rem; background:rgba(0,0,0,.6); font-size:.75rem; }
+  #chat-messages { position:absolute; left:12px; bottom:72px; width:min(420px,70vw); font-size:.78rem; text-shadow:1px 1px #000; pointer-events:none; }
+  #chat-messages div { margin:.15rem 0; }
+  #chat-entry { position:absolute; left:12px; bottom:42px; width:min(420px,70vw); padding:.45rem; background:#171717; color:white; border:1px solid #777; pointer-events:auto; }
   kbd {
     background: #2a2a2a; border: 1px solid #565656; border-radius: 2px;
     padding: 0 .25rem; font-size: .72rem;
@@ -211,6 +218,9 @@
 
 <div id="hud" class="hidden">
   <div id="crosshair"></div>
+  <div id="hud-room" class="hidden"></div>
+  <div id="chat-messages"></div>
+  <input id="chat-entry" class="hidden" type="text" maxlength="240" placeholder="Enter — отправить, Esc — закрыть">
   <div id="debug" class="hidden"></div>
   <div id="hotbar-label"></div>
   <div id="hotbar"></div>
@@ -226,10 +236,26 @@
       A from-scratch voxel game. Original textures and sounds; not affiliated with Mojang.
     </p>
     <button id="btn-singleplayer">Singleplayer</button>
+    <button id="btn-multiplayer" class="secondary">Сетевая игра</button>
     <button id="btn-import" class="secondary">Import World (.mcw)</button>
     <p class="sub" style="margin-top:1rem;margin-bottom:0">
       You can also drag a <code>.mcw</code> file anywhere onto this window.
     </p>
+  </div>
+</div>
+
+<!-- Multiplayer lobby -->
+<div id="mp-screen" class="overlay hidden">
+  <div class="panel">
+    <h1>Сетевая игра</h1><h2>Firebase · комнаты и друзья</h2>
+    <label for="mp-nickname">Никнейм</label><input type="text" id="mp-nickname" maxlength="20" value="Игрок">
+    <button id="btn-mp-save-nick" class="secondary">Сохранить ник</button>
+    <button id="btn-mp-create-room">Создать комнату</button>
+    <label for="mp-room-code">Код комнаты</label><input type="text" id="mp-room-code" maxlength="8" placeholder="Например, A1B2C">
+    <button id="btn-mp-join-room" class="secondary">Войти по коду</button>
+    <label>Активные комнаты</label><div id="mp-rooms-list" class="mp-list">Подключение…</div>
+    <label>Игроки онлайн</label><div id="mp-players-list" class="mp-list"></div>
+    <button id="btn-mp-back" class="secondary">Назад</button>
   </div>
 </div>
 
