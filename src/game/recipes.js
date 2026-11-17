@@ -75,6 +75,17 @@ for (const [prefix, material] of TOOL_MATERIALS) {
 }
 
 recipes.push({
+  result: 'mc:string', count: 4,
+  ingredients: ['mc:white_wool'],
+});
+
+recipes.push({
+  result: 'mc:fishing_rod', count: 1,
+  pattern: ['  S', ' ST', 'S T'],
+  key: { S: 'mc:stick', T: 'mc:string' },
+});
+
+recipes.push({
   result: 'mc:shears', count: 1,
   pattern: [' I', 'I '],
   key: { I: 'mc:iron_ingot' },
