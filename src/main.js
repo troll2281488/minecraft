@@ -160,7 +160,7 @@ class Game {
       requestAnimationFrame(orbit);
     };
     requestAnimationFrame(orbit);
-  },
+  }
 
   _stopTitlePreview() {
     this._titlePreviewActive = false;
@@ -172,7 +172,7 @@ class Game {
     this.titlePreviewWorld = null;
     const fallback = document.getElementById('title-world-bg');
     if (fallback) fallback.style.display = '';
-  },
+  }
 
   /** Show the title screen and ask the browser not to evict saved worlds. */
   async start() {
