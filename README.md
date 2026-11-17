@@ -15,7 +15,7 @@ evidence. See [`docs/SAVE_FORMAT.md`](docs/SAVE_FORMAT.md).
 **Playable; incremental development has resumed.** The `v0.1.0` foundation remains intact. New
 systems are being added in small, testable steps, with incomplete mechanics labelled honestly.
 
-Over 13,000 lines of JavaScript and 231 tests in a hand-written browser harness.
+Over 13,000 lines of JavaScript and 235 tests in a hand-written browser harness.
 
 **Working:**
 
@@ -33,7 +33,7 @@ Over 13,000 lines of JavaScript and 231 tests in a hand-written browser harness.
 **Partial:** mob simulation currently includes simple sheep, pigs and zombies with basic wandering,
 fleeing and zombie pursuit/attacks; models are procedural low-poly shapes, not vanilla rigs.
 
-**Not built:** golden-apple effects, food poisoning, full survival damage and death flow, combat tools,
+**Not built:** golden-apple effects, food poisoning, cooked mob drops, shearing, loot tables and mob-specific animations, full survival damage and death flow, combat tools,
 fluid flow, weather, furnaces and chests, redstone, enchanting, dimensions, structures and audio.
 Water renders and blocks movement but does not flow.
 
@@ -57,7 +57,7 @@ what is working and what remains.
 | **Platform** | Browser, WebGL2, vanilla ES modules |
 | **Dependencies** | None. No npm, no bundler, no framework, no `package.json`. |
 | **Size** | Over 13,000 lines of JavaScript |
-| **Tests** | 220, in a hand-written browser harness (`tests.html`) |
+| **Tests** | 235, in a hand-written browser harness (`tests.html`) |
 | **Server** | `serve.py` - Python stdlib static server, only needed because ES modules require `http://` |
 | **Saves** | Versioned `.mcw` files + IndexedDB, with an ordered migration chain |
 | **Mode** | Singleplayer |
