@@ -11,7 +11,7 @@ describe('additional survival food sources', () => {
   });
   it('zombies can rarely drop potatoes', () => {
     let calls = 0;
-    const drops = rollMobDrops('zombie', () => { calls++; return calls === 1 ? 0 : 0.9; });
+    const drops = rollMobDrops('zombie', () => { calls++; return calls === 3 ? 0.9 : 0; });
     assertEqual(drops[1].id, 'mc:potato');
   });
   it('wheat seeds are registered as an obtainable item', () => {
