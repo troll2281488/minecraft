@@ -3021,7 +3021,7 @@ const WORLD_CONFIG: WorldConfig = {
         let moving = false;
 
         // Individual vanilla-inspired traits for every mob currently implemented.
-        if (e.type === "zombie" && GAME.world.dimension === "overworld" && GAME.timeOfDay < 12000) {
+        if (e.type === "zombie" && GAME.world.dimension === "overworld" && GAME.timeOfDay < 12000 && GAME.weather !== "rain") {
           const bx = Math.floor(e.mesh.position.x), by = Math.floor(e.mesh.position.y + e.cfg.h + 0.2), bz = Math.floor(e.mesh.position.z);
           const exposedToSky = GAME.world.getBlock(bx, by, bz) === B.AIR;
           e.sunBurnCooldown = (e.sunBurnCooldown || 0) - dt;
@@ -3029,6 +3029,7 @@ const WORLD_CONFIG: WorldConfig = {
             damageEntity(e, 1);
             e.sunBurnCooldown = 1;
             spawnParticles(e.mesh.position.x,e.mesh.position.y+1.4,e.mesh.position.z,0xffa33a,2);
+            if (e.hp <= 0) continue;
           }
         }
 
