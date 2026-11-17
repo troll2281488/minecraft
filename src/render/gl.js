@@ -363,19 +363,31 @@ out vec4 fragColor;
 // The crack pattern is generated here rather than as a texture: it is a handful
 // of lines, and generating it in the shader keeps ten more textures out of the
 // array for something that is drawn a few hundred pixels at a time.
+float segmentDistance(vec2 p, vec2 a, vec2 b) {
+  vec2 ab = b - a;
+  float h = clamp(dot(p - a, ab) / max(dot(ab, ab), 0.001), 0.0, 1.0);
+  return length(p - (a + ab * h));
+}
 float crackMask(vec2 uv, float stage) {
   vec2 p = uv * 16.0;
-  float density = (stage + 1.0) / 10.0;
+  vec2 center = vec2(8.0);
   float m = 0.0;
-  for (int i = 0; i < 6; i++) {
+  // Every fracture starts near the centre and branches outward as mining advances.
+  for (int i = 0; i < 8; i++) {
     float fi = float(i);
-    if (fi / 6.0 > density) break;
-    vec2 a = vec2(sin(fi * 12.9898) * 8.0 + 8.0, cos(fi * 78.233) * 8.0 + 8.0);
-    vec2 b = a + vec2(sin(fi * 3.7) * 7.0, cos(fi * 5.1) * 7.0);
-    vec2 pa = p - a, ba = b - a;
-    float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
-    float d = length(pa - ba * h);
-    m = max(m, 1.0 - smoothstep(0.0, 0.9, d));
+    if (fi > floor((stage + 1.0) * 0.8)) break;
+    float angle = fi * 0.785398 + 0.13 * sin(fi * 4.7);
+    vec2 dir = vec2(cos(angle), sin(angle));
+    float reach = 2.0 + stage * 1.35;
+    vec2 a = center + dir * 0.45;
+    vec2 b = center + dir * reach;
+    m = max(m, 1.0 - smoothstep(0.12, 0.62, segmentDistance(p, a, b)));
+    if (stage > 2.0) {
+      vec2 branch = b - dir * (1.0 + mod(fi, 2.0));
+      float side = mod(fi, 2.0) < 1.0 ? 1.0 : -1.0;
+      vec2 branchEnd = branch + vec2(-dir.y, dir.x) * side * (1.0 + stage * 0.22);
+      m = max(m, 1.0 - smoothstep(0.12, 0.58, segmentDistance(p, branch, branchEnd)));
+    }
   }
   return m;
 }
