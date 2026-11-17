@@ -3020,7 +3020,7 @@ const WORLD_CONFIG: WorldConfig = {
         const dist = toPlayer.length();
         let moving = false;
 
-        if (e.type === "creeper" && dist < 3.2 && GAME.gamemode !== "creative" && GAME.gamemode !== "spectator") {
+        if (e.type === "creeper" && (dist < 3.2 || e.ignited) && GAME.gamemode !== "creative" && GAME.gamemode !== "spectator") {
           e.fuse = (e.fuse || 0) + dt;
           const pulse = 1 + Math.sin(e.fuse * 24) * 0.07;
           e.mesh.scale.setScalar(pulse);
@@ -3793,6 +3793,14 @@ const WORLD_CONFIG: WorldConfig = {
 
       // 1. Villager trading and milking cows.
       const hitEnt = findEntityUnderCrosshair(4.2);
+      // Flint and steel can prime a creeper directly, just like lighting TNT.
+      if (hitEnt?.type === "creeper" && held?.id === "flint_and_steel") {
+        hitEnt.ignited = true;
+        hitEnt.fuse = Math.max(hitEnt.fuse || 0, 1.0);
+        showBanner("Крипер подожжён! Беги!");
+        SFX.tone(520, "square", 0.12, 0.18, 180);
+        return;
+      }
       // Spawn eggs place the matching mob on the targeted surface.
       if (held && ITEMS[held.id] && ITEMS[held.id].spawnMob) {
         const mobType = ITEMS[held.id].spawnMob;
