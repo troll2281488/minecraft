@@ -2,6 +2,13 @@
  * Lightweight voxel creature simulation. Mobs use deterministic game ticks,
  * ground-following movement and simple species-specific behaviour.
  */
+export function shearSheep(mob, random = Math.random) {
+  if (!mob || mob.type !== 'sheep' || mob.sheared) return [];
+  mob.sheared = true;
+  const count = 1 + Math.floor(random() * 3);
+  return [{ id: 'mc:white_wool', count }];
+}
+
 export function rollMobDrops(type, random = Math.random) {
   const amount = (min, max) => min + Math.floor(random() * (max - min + 1));
   if (type === 'pig') return [{ id: 'mc:raw_porkchop', count: amount(1, 3) }];
@@ -38,6 +45,7 @@ export class MobSystem {
       speed: type === 'zombie' ? 0.035 : 0.018,
       thinkTicks: 0, attackTicks: 0, walkPhase: Math.random() * 6,
       health: type === 'zombie' ? 20 : type === 'pig' ? 10 : 8,
+      sheared: false,
     });
   }
 
@@ -62,6 +70,20 @@ export class MobSystem {
       bestDistance = distance;
     }
     return best;
+  }
+
+  shearFromPlayer() {
+    const mob = this.targetedMob();
+    const held = this.game.inventory?.held;
+    if (!mob || mob.type !== 'sheep' || mob.sheared || held?.item?.tool !== 'shears') return false;
+    const drops = shearSheep(mob);
+    for (const drop of drops) {
+      const leftover = this.game.inventory.addItem(drop.id, drop.count);
+      if (leftover > 0) this.game.ui?.toast('Inventory full: ' + leftover + ' wool not collected', { error: true });
+    }
+    if (this.game.player?.gamemode !== 'creative') this.game.inventory.damageHeld(1);
+    this.game.ui?.toast('Sheep sheared');
+    return true;
   }
 
   attackFromPlayer() {
