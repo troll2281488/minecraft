@@ -40,6 +40,7 @@ export const BlockActionsMixin = {
   _useOrPlace() {
     if (this.entities?.useFishingRod()) return;
     if (this.entities?.shearFromPlayer()) return;
+    if (this._farmInteraction()) return;
     const sneaking = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
     if (this.hit && !sneaking) {
       const handler = USABLE_BLOCKS[this.hit.state.block.id];
@@ -50,6 +51,59 @@ export const BlockActionsMixin = {
     // survival. A full food bar prevents ordinary food from being consumed.
     if (!sneaking && this._eatHeldFood()) return;
     this._placeBlock();
+  },
+
+  _farmInteraction() {
+    if (!this.hit || !this.player) return false;
+    const { x, y, z, state } = this.hit;
+    const held = this.inventory.held;
+    const id = state.block.id;
+    const survival = this.player.gamemode === GAMEMODE.SURVIVAL;
+
+    // Hoe grass/dirt from the top face to prepare a planting bed.
+    if (survival && held.item?.tool === 'hoe' && this.hit.face?.dy === 1 &&
+        ['mc:grass_block', 'mc:dirt', 'mc:coarse_dirt'].includes(id)) {
+      const farmland = BLOCKS.get('mc:farmland').defaultState;
+      if (this.world.setBlock(x, y, z, farmland)) {
+        this.multiplayer?.pushBlockChange(x, y, z, farmland);
+        this.inventory.damageHeld(1);
+        this.ui.toast('Farmland');
+      }
+      return true;
+    }
+
+    // Seeds are planted on farmland, occupying the air block directly above it.
+    if (held.item?.id === 'mc:wheat_seeds' && id === 'mc:farmland') {
+      const cropPos = { x, y: y + 1, z };
+      const above = this.world.getBlock(cropPos.x, cropPos.y, cropPos.z);
+      if (above.block.id === 'mc:air' || above.block.replaceable) {
+        const crop = BLOCKS.get('mc:wheat').defaultState;
+        if (this.world.setBlock(cropPos.x, cropPos.y, cropPos.z, crop)) {
+          this.multiplayer?.pushBlockChange(cropPos.x, cropPos.y, cropPos.z, crop);
+          if (survival) this.inventory.consumeHeld(1);
+          this.ui.toast('Wheat planted');
+        }
+      }
+      return true;
+    }
+
+    // Mature wheat gives wheat plus a small seed return; immature crops cannot
+    // be harvested early for a guaranteed drop.
+    if (id === 'mc:wheat') {
+      if (state.get('age') < 7) {
+        this.ui.toast('Wheat is not ripe');
+        return true;
+      }
+      this.world.setBlock(x, y, z, AIR.defaultState);
+      this.multiplayer?.pushBlockChange(x, y, z, AIR.defaultState);
+      if (survival) {
+        this.inventory.addItem('mc:wheat', 1);
+        this.inventory.addItem('mc:wheat_seeds', 1 + Math.floor(Math.random() * 3));
+      }
+      this.ui.toast('Wheat harvested');
+      return true;
+    }
+    return false;
   },
 
   _eatHeldFood() {
