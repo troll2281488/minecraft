@@ -406,9 +406,7 @@
     document.getElementById('error-detail').textContent =
       `${err.name}: ${err.message}
 
-${(err.stack ?? '').split('
-').slice(0, 8).join('
-')}`;
+${(err.stack ?? '').split('\n').slice(0, 8).join('\n')}`;
   });
   document.getElementById('btn-error-reload').onclick = () => location.reload();
 </script>
