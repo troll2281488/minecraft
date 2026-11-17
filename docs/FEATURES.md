@@ -23,6 +23,7 @@ This is the compatibility checklist for the game that already exists. Future wor
 - Passive/hostile mobs, villagers, drops, melee/ranged combat, bows, hostile projectiles.
 - Individual 16x16 pixel-art mob skins matching the block texture style.
 - Creeper proximity fuse and flint-and-steel ignition; Enderman gaze-triggered teleport, water damage/escape, and arrow immunity.
+- Existing mob roster now has distinct vanilla-inspired traits: zombies burn in daylight (but not rain); skeletons keep ranged bow attacks; wither skeletons inflict periodic wither damage; blazes hover, shoot fireballs, and are hurt by water; pigs follow carrots/potatoes/beetroots; sheep graze grass into dirt; chickens lay eggs; rabbits hop; villagers flee nearby hostile mobs; cows remain milkable; creepers ignite/explode; Endermen react to gaze, teleport, avoid arrows and flee water; Ender Crystals heal the Dragon; the Dragon circles, breathes at the player, and is healed by crystals.
 - Ender Dragon, End crystals, boss UI, particles, procedural sound effects.
 
 ## Commands and interface
