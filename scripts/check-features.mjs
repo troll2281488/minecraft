@@ -148,6 +148,9 @@ const checks = [
   ["Flint and steel creeper ignition", "hitEnt.ignited = true"],
   ["XP command", 'case "xp"'],
   ["Time add command", 'if (a1 === "add")'],
+  ["Setblock command", 'case "setblock"'],
+  ["Fill command", 'case "fill"'],
+  ["Entity kill command", 'a1 === "@e"'],
 ];
 const missing = checks.filter(([, anchor]) => !source.includes(anchor)).map(([name]) => name);
 
