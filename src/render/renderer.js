@@ -204,6 +204,7 @@ export const RendererMixin = {
 
     this.chunkRenderer.update(this.world, player.x, player.z, 6);
     this._drawTerrain(daylight, fogColor, far);
+    this._drawPlayers();
     this._drawSelection();
 
     const health = document.getElementById('health');
