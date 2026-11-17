@@ -364,9 +364,12 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       gold_hoe: { name: "Золотая мотыга", cat: "tools", stack: 1, tool: "hoe", tier: 1 },
       gold_sword: { name: "Золотой меч", cat: "tools", stack: 1, damage: 4 },
       trident: { name: "Трезубец", cat: "tools", stack: 1, damage: 9, trident: true }
+    };
+
     // Spawn eggs: each living mob implemented by spawnMob has its own survival item.
     const SPAWN_EGG_TYPES = ['villager_fletcher', 'villager_farmer', 'villager_blacksmith', 'villager_cleric', 'cow', 'pig', 'sheep', 'chicken', 'rabbit', 'zombie', 'skeleton', 'wither_skeleton', 'creeper', 'enderman', 'blaze', 'dragon'];
-    for (const [type, name] of [      ["villager_fletcher", "Лучник"],
+    for (const [type, name] of [
+      ["villager_fletcher", "Лучник"],
       ["villager_farmer", "Фермер"],
       ["villager_blacksmith", "Оружейник"],
       ["villager_cleric", "Священник"],
@@ -381,11 +384,10 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       ["creeper", "Крипер"],
       ["enderman", "Эндермен"],
       ["blaze", "Ифрит"],
-      ["dragon", "Дракон Края"]]) {
+      ["dragon", "Дракон Края"]
+    ]) {
       ITEMS["spawn_egg_" + type] = { name: "Яйцо призыва: " + name, cat: "misc", stack: 16, spawnMob: type };
     }
-
-    };
 
     const ATLAS = {
       textures: {},
@@ -1053,6 +1055,15 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       { out: { id: "wood_axe", count: 1 }, req: { [B.OAK_PLANKS]: 3, stick: 2 } },
       { out: { id: "wood_sword", count: 1 }, req: { [B.OAK_PLANKS]: 2, stick: 1 } },
       { out: { id: "wood_hoe", count: 1 }, req: { [B.OAK_PLANKS]: 2, stick: 2 } },
+      { out: { id: "wood_shovel", count: 1 }, req: { [B.OAK_PLANKS]: 1, stick: 2 } },
+      { out: { id: "stone_shovel", count: 1 }, req: { [B.COBBLESTONE]: 1, stick: 2 } },
+      { out: { id: "iron_shovel", count: 1 }, req: { iron_ingot: 1, stick: 2 } },
+      { out: { id: "diamond_shovel", count: 1 }, req: { diamond: 1, stick: 2 } },
+      { out: { id: "stone_hoe", count: 1 }, req: { [B.COBBLESTONE]: 2, stick: 2 } },
+      { out: { id: "iron_hoe", count: 1 }, req: { iron_ingot: 2, stick: 2 } },
+      { out: { id: "diamond_hoe", count: 1 }, req: { diamond: 2, stick: 2 } },
+      { out: { id: "netherite_axe", count: 1 }, req: { diamond: 1, netherite_ingot: 1, stick: 2 } },
+      { out: { id: "netherite_hoe", count: 1 }, req: { diamond: 1, netherite_ingot: 1, stick: 2 } },
       { out: { id: "stone_pickaxe", count: 1 }, req: { [B.COBBLESTONE]: 3, stick: 2 } },
       { out: { id: "stone_axe", count: 1 }, req: { [B.COBBLESTONE]: 3, stick: 2 } },
       { out: { id: "stone_sword", count: 1 }, req: { [B.COBBLESTONE]: 2, stick: 1 } },
@@ -1061,6 +1072,14 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       { out: { id: "iron_sword", count: 1 }, req: { iron_ingot: 2, stick: 1 } },
       { out: { id: "iron_helmet", count: 1 }, req: { iron_ingot: 5 } },
       { out: { id: "iron_chestplate", count: 1 }, req: { iron_ingot: 8 } },
+      { out: { id: "leather_helmet", count: 1 }, req: { leather: 5 } },
+      { out: { id: "leather_chestplate", count: 1 }, req: { leather: 8 } },
+      { out: { id: "leather_leggings", count: 1 }, req: { leather: 7 } },
+      { out: { id: "leather_boots", count: 1 }, req: { leather: 4 } },
+      { out: { id: "gold_helmet", count: 1 }, req: { gold_ingot: 5 } },
+      { out: { id: "gold_chestplate", count: 1 }, req: { gold_ingot: 8 } },
+      { out: { id: "gold_leggings", count: 1 }, req: { gold_ingot: 7 } },
+      { out: { id: "gold_boots", count: 1 }, req: { gold_ingot: 4 } },
       { out: { id: "diamond_pickaxe", count: 1 }, req: { diamond: 3, stick: 2 } },
       { out: { id: "diamond_axe", count: 1 }, req: { diamond: 3, stick: 2 } },
       { out: { id: "diamond_sword", count: 1 }, req: { diamond: 2, stick: 1 } },
@@ -1095,7 +1114,14 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       { out: { id: "bow", count: 1 }, req: { stick: 3, string: 3 } },
       { out: { id: "arrow", count: 4 }, req: { stick: 1, [B.GRAVEL]: 1 } },
       { out: { id: "blaze_powder", count: 2 }, req: { blaze_rod: 1 } },
-      { out: { id: "ender_eye", count: 1 }, req: { ender_pearl: 1, blaze_powder: 1 } }
+      { out: { id: "ender_eye", count: 1 }, req: { ender_pearl: 1, blaze_powder: 1 } },
+      { out: { id: "paper", count: 3 }, req: { sugar_cane: 3 } },
+      { out: { id: "book", count: 1 }, req: { paper: 3, leather: 1 } },
+      { out: { id: "compass", count: 1 }, req: { iron_ingot: 4, redstone: 1 } },
+      { out: { id: "clock", count: 1 }, req: { gold_ingot: 4, redstone: 1 } },
+      { out: { id: "shears", count: 1 }, req: { iron_ingot: 2 } },
+      { out: { id: "snowball", count: 4 }, req: { snow_block: 1 } },
+      { out: { id: "lead", count: 2 }, req: { string: 4, slime_ball: 1 } }
     ];
 
     const VILLAGER_PROFESSIONS = {
@@ -2257,6 +2283,38 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
       rig.headPivot.rotation.x = -(state.pitch || 0);
     }
 
+    // Small 16x16 pixel-art skins: each mob gets its own palette and blocky noise pattern.
+    const MOB_PIXEL_TEXTURES = new Map();
+    function getMobPixelTexture(type) {
+      if (MOB_PIXEL_TEXTURES.has(type)) return MOB_PIXEL_TEXTURES.get(type);
+      const palettes = {
+        zombie:["#397878","#4b783c","#263f42"], skeleton:["#c7c7c7","#eeeeea","#777b80"],
+        wither_skeleton:["#262626","#454545","#111111"], enderman:["#181818","#34233f","#b852d9"],
+        creeper:["#488c38","#70ad4d","#285c2b"], cow:["#543924","#cfcfcf","#3a2418"],
+        pig:["#d48a94","#f0b0b7","#a95f6b"], sheep:["#d6d6d6","#f4f0e8","#bfa38e"],
+        chicken:["#dedede","#d49b28","#b52b2b"], rabbit:["#b69a7b","#e2d0b7","#80644d"],
+        blaze:["#d99b26","#f6d34c","#a94c1c"], dragon:["#1b1724","#3a294c","#c952c9"],
+        villager_fletcher:["#593d28","#b58665","#87613e"], villager_farmer:["#72502e","#b58665","#4f7133"],
+        villager_blacksmith:["#454545","#b58665","#777777"], villager_cleric:["#6d3e82","#b58665","#d6c4e3"]
+      };
+      const p = palettes[type] || ["#777777","#aaaaaa","#444444"];
+      const canvas = document.createElement("canvas"); canvas.width = 16; canvas.height = 16;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = p[0]; ctx.fillRect(0,0,16,16);
+      let seed = [...type].reduce((n,c)=>((n*31+c.charCodeAt(0))>>>0),17);
+      for (let y=0;y<16;y++) for (let x=0;x<16;x++) {
+        seed = (seed * 1664525 + 1013904223) >>> 0;
+        const v = seed / 4294967296;
+        if (v > 0.62) { ctx.fillStyle = v > 0.91 ? p[2] : p[1]; ctx.fillRect(x,y,1,1); }
+      }
+      ctx.fillStyle = p[2]; for(let y=0;y<16;y+=4) ctx.fillRect(0,y,16,1);
+      const tex = new THREE.CanvasTexture(canvas);
+      tex.colorSpace = THREE.SRGBColorSpace; tex.magFilter = THREE.NearestFilter;
+      tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false; tex.needsUpdate = true;
+      MOB_PIXEL_TEXTURES.set(type,tex);
+      return tex;
+    }
+
     function buildDetailedMobModel(type) {
       const g = new THREE.Group();
       const parts = { legs: [], wings: [], rods: [], head: null, body: null };
@@ -2437,6 +2495,17 @@ import { getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded
         parts.wings.push(wingL, wingR);
       }
 
+      // Restore the mob skins only; world and block lighting remain unchanged.
+      if (type !== "crystal") {
+        const skin = getMobPixelTexture(type);
+        g.traverse(o => {
+          if (!o.isMesh || !o.material || !o.material.isMeshLambertMaterial) return;
+          o.material = o.material.clone();
+          o.material.map = skin;
+          o.material.color.setHex(0xffffff);
+          o.material.needsUpdate = true;
+        });
+      }
       return { group: g, parts };
     }
 
@@ -2528,6 +2597,8 @@ const WORLD_CONFIG: WorldConfig = {
       offhand: null,
       armor: { head: null, chest: null, legs: null, feet: null },
       effects: { speed: 0, jump: 0, strength: 0, night_vision: 0 },
+      eatTimer: 0,
+      eatTimer: 0,
       bobTimer: 0,
       stepDist: 0,
       invulnTimer: 0,
@@ -2583,7 +2654,9 @@ const WORLD_CONFIG: WorldConfig = {
         fromNetwork,
         dim: GAME.world?.dimension || "overworld",
         vel: new THREE.Vector3((Math.random() - 0.5) * 2, 2.8, (Math.random() - 0.5) * 2),
-        age: 0
+        age: 0,
+        baseY: y,
+        floatPhase: Math.random() * Math.PI * 2
       });
     }
 
@@ -2691,6 +2764,9 @@ const WORLD_CONFIG: WorldConfig = {
       ent.hp -= dmg;
       ent.hurtTimer = 0.25;
       ent.mesh.traverse(o => { if (o.isMesh && o.material?.emissive) o.material.emissive.setHex(0x661111); });
+      const mobVoice = { cow:95, pig:145, sheep:125, chicken:520, rabbit:390, zombie:82, skeleton:210, wither_skeleton:68, creeper:105, enderman:260, blaze:430, dragon:54, crystal:760 };
+      const voice = mobVoice[ent.type] || 180;
+      SFX.tone(voice, ent.type === "chicken" || ent.type === "blaze" ? "triangle" : "sawtooth", 0.14, 0.09, voice * 0.62);
       SFX.hurt();
 
       if (ent.type === "dragon") {
@@ -2789,7 +2865,9 @@ const WORLD_CONFIG: WorldConfig = {
         const e = entities[i];
         if (e.type === "drop") {
           e.age += dt;
+          e.floatPhase = (e.floatPhase || 0) + dt * 3.2;
           e.mesh.rotation.y += dt * 2.5;
+          e.mesh.position.y = (e.baseY ?? e.mesh.position.y) + Math.sin(e.floatPhase) * 0.08;
           const bBelow = GAME.world.getBlock(e.mesh.position.x, e.mesh.position.y - 0.2, e.mesh.position.z);
           if (!BLOCK_PROPS[bBelow]?.solid) {
             e.vel.y -= 16 * dt;
@@ -2861,6 +2939,22 @@ const WORLD_CONFIG: WorldConfig = {
           continue;
         }
 
+        if (e.type === "thrown_snowball") {
+          e.life -= dt; e.vel.y -= 8 * dt; e.mesh.position.addScaledVector(e.vel, dt);
+          const hitBlock = BLOCK_PROPS[GAME.world.getBlock(e.mesh.position.x,e.mesh.position.y,e.mesh.position.z)]?.solid;
+          let hitMob = false;
+          for (const target of entities) {
+            if (!target.cfg || target.type === "thrown_snowball") continue;
+            const center = target.mesh.position.clone().add(new THREE.Vector3(0,(target.cfg.h||1)*0.5,0));
+            if (center.distanceTo(e.mesh.position) < Math.max(0.65,(target.cfg.w||0.6)*0.75)) {
+              if (target.type === "blaze") { damageEntity(target, 3); spawnParticles(e.mesh.position.x,e.mesh.position.y,e.mesh.position.z,0xc9eaff,7); SFX.tone(320,"triangle",0.12,0.12,150); }
+              else spawnParticles(e.mesh.position.x,e.mesh.position.y,e.mesh.position.z,0xe8f5ff,3);
+              hitMob = true; break;
+            }
+          }
+          if (hitBlock || hitMob || e.life <= 0) { scene.remove(e.mesh); entities.splice(i,1); }
+          continue;
+        }
         if (e.type === "hostile_projectile") {
           e.life -= dt;
           e.mesh.position.addScaledVector(e.vel, dt);
@@ -2885,6 +2979,8 @@ const WORLD_CONFIG: WorldConfig = {
           let hitMob = false;
           for (const target of entities) {
             if (target === e || target.type === "drop" || target.type === "arrow" || target.type === "thrown_eye") continue;
+            // Endermen dodge ordinary arrows: the projectile passes straight through.
+            if (target.type === "enderman") continue;
             const c = target.mesh.position.clone().add(new THREE.Vector3(0, target.cfg.h * 0.5, 0));
             if (c.distanceTo(e.mesh.position) < Math.max(0.8, target.cfg.w * 0.7)) {
               damageEntity(target, e.dmg);
@@ -2899,6 +2995,7 @@ const WORLD_CONFIG: WorldConfig = {
           continue;
         }
 
+        if (e.attackSoundCooldown > 0) e.attackSoundCooldown = Math.max(0, e.attackSoundCooldown - dt);
         if (e.hurtTimer > 0) {
           e.hurtTimer -= dt;
           if (e.hurtTimer <= 0) {
@@ -2974,10 +3071,102 @@ const WORLD_CONFIG: WorldConfig = {
         const dist = toPlayer.length();
         let moving = false;
 
-        if (e.type === "creeper" && dist < 3.2 && GAME.gamemode !== "creative" && GAME.gamemode !== "spectator") {
+        // Individual vanilla-inspired traits for every mob currently implemented.
+        if (e.type === "zombie" && GAME.world.dimension === "overworld" && GAME.timeOfDay < 12000 && GAME.weather !== "rain") {
+          const bx = Math.floor(e.mesh.position.x), by = Math.floor(e.mesh.position.y + e.cfg.h + 0.2), bz = Math.floor(e.mesh.position.z);
+          const exposedToSky = GAME.world.getBlock(bx, by, bz) === B.AIR;
+          e.sunBurnCooldown = (e.sunBurnCooldown || 0) - dt;
+          if (exposedToSky && e.sunBurnCooldown <= 0) {
+            damageEntity(e, 1);
+            e.sunBurnCooldown = 1;
+            spawnParticles(e.mesh.position.x,e.mesh.position.y+1.4,e.mesh.position.z,0xffa33a,2);
+            if (e.hp <= 0) continue;
+          }
+        }
+
+        if (e.type === "wither_skeleton" && dist < 1.8 && GAME.gamemode === "survival") {
+          e.witherCooldown = (e.witherCooldown || 0) - dt;
+          if (e.witherCooldown <= 0) {
+            damagePlayer(2, "Иссушение от визер-скелета");
+            e.witherCooldown = 1.25;
+            spawnParticles(PLAYER.pos.x,PLAYER.pos.y+1,PLAYER.pos.z,0x292329,5);
+          }
+        }
+
+        if (e.type === "blaze") {
+          const bx=Math.floor(e.mesh.position.x), by=Math.floor(e.mesh.position.y), bz=Math.floor(e.mesh.position.z);
+          const inWater=[GAME.world.getBlock(bx,by,bz),GAME.world.getBlock(bx,by+1,bz)].includes(B.WATER);
+          if (inWater) {
+            e.waterCooldown=(e.waterCooldown||0)-dt;
+            if(e.waterCooldown<=0){damageEntity(e,2);e.waterCooldown=1;}
+          }
+          e.mesh.position.y += Math.sin((e.walkPhase||0)*0.4)*dt*0.35;
+        }
+
+        if (e.type === "chicken") {
+          e.eggTimer = (e.eggTimer ?? (18 + Math.random()*12)) - dt;
+          if (e.eggTimer <= 0) {
+            spawnDrop(e.mesh.position.x,e.mesh.position.y+0.25,e.mesh.position.z,"egg",1);
+            e.eggTimer = 24 + Math.random()*12;
+            SFX.tone(760,"sine",0.08,0.035,680);
+          }
+        }
+
+        if (e.type === "rabbit") {
+          e.hopCooldown = (e.hopCooldown || Math.random()*1.5) - dt;
+          if (e.hopCooldown <= 0) {
+            e.hopVisual = 0.35;
+            e.hopCooldown = 1.1 + Math.random()*0.8;
+            e.wandAng = Math.atan2(e.mesh.position.x-PLAYER.pos.x,e.mesh.position.z-PLAYER.pos.z) + (Math.random()-0.5)*0.9;
+          }
+        }
+
+        if (e.type === "sheep") {
+          e.grazeCooldown = (e.grazeCooldown || 0) - dt;
+          if (e.grazeCooldown <= 0) {
+            const gx=Math.floor(e.mesh.position.x), gy=Math.floor(e.mesh.position.y-0.15), gz=Math.floor(e.mesh.position.z);
+            if (GAME.world.getBlock(gx,gy,gz) === B.GRASS) {
+              GAME.world.setBlock(gx,gy,gz,B.DIRT,true);
+              spawnParticles(gx+0.5,gy+0.8,gz+0.5,0x6b9c42,4);
+              e.grazeCooldown=18;
+            } else e.grazeCooldown=4;
+          }
+        }
+
+        if (e.cfg.passiveVillager) {
+          let danger = null, dangerDist = 7;
+          for (const other of entities) {
+            if (!other.cfg?.hostile) continue;
+            const d=other.mesh.position.distanceTo(e.mesh.position);
+            if(d<dangerDist){danger=other;dangerDist=d;}
+          }
+          if(danger){
+            const flee=new THREE.Vector3(e.mesh.position.x-danger.mesh.position.x,0,e.mesh.position.z-danger.mesh.position.z).normalize();
+            e.wandAng=Math.atan2(flee.z,flee.x);
+            e.timer=0.3;
+            e.fleeing=true;
+            moving=true;
+            moveMobWithCollision(e,flee.x*2.8*dt,flee.z*2.8*dt);
+          }
+        }
+
+        if (e.type === "pig") {
+          const heldId=PLAYER.inv[PLAYER.hotbarIdx]?.id;
+          e.luredByPlayer=["carrot","potato","beetroot"].includes(heldId) && dist<9;
+          if(e.luredByPlayer){
+            const lure=PLAYER.pos.clone().sub(e.mesh.position); lure.y=0;
+            if(lure.lengthSq()>0.01){lure.normalize();moveMobWithCollision(e,lure.x*0.8*dt,lure.z*0.8*dt);e.mesh.rotation.y=Math.atan2(lure.x,lure.z);moving=true;}
+          }
+        }
+
+        if (e.type === "creeper" && (dist < 3.2 || e.ignited) && GAME.gamemode !== "creative" && GAME.gamemode !== "spectator") {
           e.fuse = (e.fuse || 0) + dt;
           const pulse = 1 + Math.sin(e.fuse * 24) * 0.07;
           e.mesh.scale.setScalar(pulse);
+          const flash = Math.sin(e.fuse * 38) > 0 ? 0xffffff : 0x8f8f8f;
+          e.mesh.traverse(o => { if (o.isMesh && o.material?.color) o.material.color.setHex(flash); });
+          e.hissCooldown = (e.hissCooldown || 0) - dt;
+          if (e.hissCooldown <= 0) { SFX.tone(125,"sawtooth",0.16,0.045,65); e.hissCooldown = 0.32; }
           if (e.fuse >= 1.45) {
             triggerExplosion(e.mesh.position.x, e.mesh.position.y, e.mesh.position.z, 4, "Взорвался крипер");
             scene.remove(e.mesh);
@@ -2987,6 +3176,7 @@ const WORLD_CONFIG: WorldConfig = {
         } else if (e.type === "creeper") {
           e.fuse = 0;
           e.mesh.scale.setScalar(1);
+          e.mesh.traverse(o => { if (o.isMesh && o.material?.color) o.material.color.setHex(0xffffff); });
         }
         // Endermen aggro when the player looks at their face, then teleport away.
         if (e.type === "enderman" && dist < 18 && GAME.gamemode !== "creative" && GAME.gamemode !== "spectator") {
@@ -3016,18 +3206,29 @@ const WORLD_CONFIG: WorldConfig = {
           if (dist < 1.45 && Math.random() < dt * 1.4) {
             const mult = GAME.difficulty === "hard" ? 1.5 : GAME.difficulty === "easy" ? 0.6 : 1;
             damagePlayer(Math.ceil(e.cfg.dmg * mult), `Убит мобом: ${e.cfg.name}`);
+            if ((e.attackSoundCooldown || 0) <= 0) {
+              const pitch = { zombie:90, skeleton:240, wither_skeleton:65, enderman:300, blaze:520, dragon:58, creeper:130 }[e.type] || 160;
+              SFX.tone(pitch, "sawtooth", 0.12, 0.07, pitch * 0.7); e.attackSoundCooldown = 0.85;
+            }
           }
         } else {
-          e.timer -= dt;
-          if (e.timer <= 0) {
-            e.timer = 2 + Math.random() * 3;
-            e.wandAng = Math.random() * Math.PI * 2;
+          if (e.cfg.passiveVillager && e.fleeing) {
+            e.fleeing = false;
+            moving = true;
+          } else if (e.type === "pig" && e.luredByPlayer) {
+            moving = true;
+          } else {
+            e.timer -= dt;
+            if (e.timer <= 0) {
+              e.timer = 2 + Math.random() * 3;
+              e.wandAng = Math.random() * Math.PI * 2;
+            }
+            const vx = Math.cos(e.wandAng || 0) * (e.cfg.passiveVillager ? 0.5 : 0.9);
+            const vz = Math.sin(e.wandAng || 0) * (e.cfg.passiveVillager ? 0.5 : 0.9);
+            moveMobWithCollision(e, vx * dt, vz * dt);
+            e.mesh.rotation.y = Math.atan2(vx, vz);
+            moving = true;
           }
-          const vx = Math.cos(e.wandAng || 0) * (e.cfg.passiveVillager ? 0.5 : 0.9);
-          const vz = Math.sin(e.wandAng || 0) * (e.cfg.passiveVillager ? 0.5 : 0.9);
-          moveMobWithCollision(e, vx * dt, vz * dt);
-          e.mesh.rotation.y = Math.atan2(vx, vz);
-          moving = true;
         }
 
         if (moving && e.parts.legs.length >= 2) {
@@ -3039,9 +3240,39 @@ const WORLD_CONFIG: WorldConfig = {
           if (e.parts.legs[3]) e.parts.legs[3].rotation.x = s;
         }
 
+        // Endermen take damage from water and repeatedly blink toward nearby dry ground.
+        if (e.type === "enderman") {
+          const mx = Math.floor(e.mesh.position.x), my = Math.floor(e.mesh.position.y + 0.5), mz = Math.floor(e.mesh.position.z);
+          const wet = [GAME.world.getBlock(mx,my,mz), GAME.world.getBlock(mx,my+1,mz)].includes(B.WATER);
+          if (wet) {
+            e.waterDamageCooldown = (e.waterDamageCooldown || 0) - dt;
+            e.waterEscapeCooldown = (e.waterEscapeCooldown || 0) - dt;
+            if (e.waterDamageCooldown <= 0) { damageEntity(e, 1); e.waterDamageCooldown = 1; }
+            if (e.waterEscapeCooldown <= 0) {
+              for (let attempt=0; attempt<8; attempt++) {
+                const tx = e.mesh.position.x + (Math.random()-0.5)*12;
+                const tz = e.mesh.position.z + (Math.random()-0.5)*12;
+                const ty = GAME.world.dimension === "overworld" ? GAME.world.getSurfaceHeight(tx,tz)+1 : e.mesh.position.y;
+                if (GAME.world.getBlock(Math.floor(tx),Math.floor(ty),Math.floor(tz)) !== B.WATER) {
+                  spawnParticles(e.mesh.position.x,e.mesh.position.y+1,e.mesh.position.z,0x9b4fd4,8);
+                  e.mesh.position.set(tx,ty,tz);
+                  spawnParticles(tx,ty+1,tz,0x9b4fd4,8);
+                  break;
+                }
+              }
+              e.waterEscapeCooldown = 1.2;
+            }
+          } else { e.waterDamageCooldown = 0; }
+        }
+
         if (GAME.world.dimension === "overworld") {
           const surfY = GAME.world.getSurfaceHeight(e.mesh.position.x, e.mesh.position.z);
-          if (surfY > 0) e.mesh.position.y = surfY + 1;
+          if (surfY > 0) {
+            if (e.type === "rabbit" && e.hopVisual > 0) {
+              e.hopVisual = Math.max(0,e.hopVisual-dt);
+              e.mesh.position.y = surfY + 1 + Math.sin((1-e.hopVisual/0.35)*Math.PI)*0.48;
+            } else e.mesh.position.y = surfY + 1;
+          }
         }
       }
     }
@@ -3722,6 +3953,23 @@ const WORLD_CONFIG: WorldConfig = {
 
       // 1. Villager trading and milking cows.
       const hitEnt = findEntityUnderCrosshair(4.2);
+      // Flint and steel can prime a creeper directly, just like lighting TNT.
+      if (held?.id === "snowball") {
+        const start = getEyePos().add(getLookDir().multiplyScalar(0.7));
+        const velocity = getLookDir().multiplyScalar(17); velocity.y += 1.2;
+        const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), new THREE.MeshBasicMaterial({ color: 0xf2fbff }));
+        mesh.position.copy(start); scene.add(mesh);
+        entities.push({ type: "thrown_snowball", mesh, vel: velocity, life: 2.2 });
+        if (GAME.gamemode !== "creative") consumeHeld(1);
+        SFX.tone(690, "sine", 0.06, 0.07, 430); return;
+      }
+      if (hitEnt?.type === "creeper" && held?.id === "flint_and_steel") {
+        hitEnt.ignited = true;
+        hitEnt.fuse = Math.max(hitEnt.fuse || 0, 1.0);
+        showBanner("Крипер подожжён! Беги!");
+        SFX.tone(520, "square", 0.12, 0.18, 180);
+        return;
+      }
       // Spawn eggs place the matching mob on the targeted surface.
       if (held && ITEMS[held.id] && ITEMS[held.id].spawnMob) {
         const mobType = ITEMS[held.id].spawnMob;
@@ -3809,6 +4057,10 @@ const WORLD_CONFIG: WorldConfig = {
 
       // 4. Eating Food
       if (held && ITEMS[held.id]?.food && (PLAYER.hunger < 20 || held.id === "golden_apple")) {
+        PLAYER.eatTimer = 0.62;
+        GAME.swingTimer = 0.3;
+        PLAYER.eatTimer = 0.62;
+        GAME.swingTimer = 0.3;
         PLAYER.hunger = Math.min(20, PLAYER.hunger + ITEMS[held.id].food);
         if (held.id === "golden_apple") PLAYER.health = Math.min(20, PLAYER.health + 8);
         consumeHeld(1);
@@ -4407,9 +4659,11 @@ const WORLD_CONFIG: WorldConfig = {
         const held = PLAYER.inv[PLAYER.hotbarIdx];
         fpArm.visible = true;
         fpHand.visible = true;
-        fpArm.position.set(0.50 + bobX, -0.49 + bobY - equipDrop, -0.64);
-        fpArm.rotation.set(0.12 + swingCycle * 0.28, -0.22, -0.12 - swingCycle * 0.18);
-        fpHand.position.set(0.49 + bobX, -0.77 + bobY - equipDrop, -0.72);
+        if (PLAYER.eatTimer > 0) PLAYER.eatTimer = Math.max(0, PLAYER.eatTimer - dt);
+        const eatPull = PLAYER.eatTimer > 0 ? Math.sin((0.62 - PLAYER.eatTimer) * 18) * 0.18 : 0;
+        fpArm.position.set(0.50 + bobX, -0.49 + bobY - equipDrop + eatPull, -0.64 + Math.max(0,eatPull) * 0.8);
+        fpArm.rotation.set(0.12 + swingCycle * 0.28 - eatPull * 2.2, -0.22, -0.12 - swingCycle * 0.18);
+        fpHand.position.set(0.49 + bobX, -0.77 + bobY - equipDrop + eatPull, -0.72 + Math.max(0,eatPull) * 0.8);
         fpHand.rotation.copy(fpArm.rotation);
         fpBlock.visible = false;
         fpItemSprite.visible = false;
@@ -4950,7 +5204,24 @@ const WORLD_CONFIG: WorldConfig = {
       "/spawnpoint",
       "/setworldspawn",
       "/summon zombie",
+      "/summon skeleton",
+      "/summon creeper",
+      "/summon enderman",
+      "/summon wither_skeleton",
+      "/summon blaze",
+      "/summon dragon",
+      "/summon pig",
+      "/summon sheep",
+      "/summon chicken",
+      "/summon rabbit",
       "/summon cow",
+      "/time add 1000",
+      "/time query",
+      "/xp add 100",
+      "/setblock ~ ~-1 ~ stone",
+      "/fill ~-2 ~-1 ~-2 ~2 ~-1 ~2 stone",
+      "/say Привет!",
+      "/kill @e",
       "/heal",
       "/feed",
       "/clear",
@@ -5022,6 +5293,9 @@ const WORLD_CONFIG: WorldConfig = {
           addChatLine("/difficulty <peaceful|easy|normal|hard|0|1|2|3>");
           addChatLine("/give <предмет> [кол-во] • /tp <x> <y> <z> | spawn • /spawnpoint");
           addChatLine("/heal • /feed • /clear • /kill • /effect <speed|jump|strength|clear>");
+          addChatLine("/time add|query • /xp add <число> • /summon <тип моба>");
+          addChatLine("/setblock <x> <y> <z> <блок> • /fill <x1> <y1> <z1> <x2> <y2> <z2> <блок> • /say <текст>");
+          addChatLine("/kill @e — удалить мобов");
           addChatLine("/locate <village|pyramid|stronghold> • /seed");
           break;
 
@@ -5039,7 +5313,15 @@ const WORLD_CONFIG: WorldConfig = {
           break;
 
         case "time":
-          if (a1 === "set") {
+          if (a1 === "query") {
+            addChatLine(`Время мира: ${Math.floor(GAME.timeOfDay)} тиков; день ${GAME.dayCount}`, "#a8c993");
+          } else if (a1 === "add") {
+            const amount = Number(a2);
+            if (!Number.isFinite(amount)) { addChatLine("Использование: /time add <число>", "#c98b8b"); break; }
+            GAME.timeOfDay = ((GAME.timeOfDay + amount) % 24000 + 24000) % 24000;
+            updateEnvironment(0);
+            logAndBroadcastCommand(`К игровому времени добавлено ${amount}`);
+          } else if (a1 === "set") {
             const presets = { day: 1000, noon: 6000, night: 13500, midnight: 18000 };
             if (presets[a2] !== undefined) GAME.timeOfDay = presets[a2];
             else if (!isNaN(Number(a2))) GAME.timeOfDay = Math.max(0, Number(a2)) % 24000;
@@ -5121,6 +5403,69 @@ const WORLD_CONFIG: WorldConfig = {
           break;
         }
 
+        case "xp": {
+          if (a1 !== "add" || !Number.isFinite(Number(a2))) { addChatLine("Использование: /xp add <количество>", "#c98b8b"); break; }
+          const amount = Math.max(0, Math.min(100000, Math.floor(Number(a2))));
+          PLAYER.xp += amount;
+          while (PLAYER.xp >= (PLAYER.level + 1) * 100) { PLAYER.xp -= (PLAYER.level + 1) * 100; PLAYER.level++; }
+          updateXP();
+          logAndBroadcastCommand(`Добавлено опыта: ${amount}`);
+          break;
+        }
+
+        case "setblock": {
+          const base = [PLAYER.pos.x, PLAYER.pos.y, PLAYER.pos.z];
+          const coords = parts.slice(1,4).map((v,i) => v?.startsWith("~") ? base[i] + (v.length > 1 ? Number(v.slice(1)) || 0 : 0) : Number(v));
+          const token = parts[4] || "";
+          const blockId = B[token.toUpperCase()] !== undefined ? B[token.toUpperCase()] : Number(token);
+          if (coords.length !== 3 || coords.some(v => !Number.isFinite(v)) || !Number.isInteger(blockId) || !BLOCK_PROPS[blockId]) {
+            addChatLine("Использование: /setblock <x> <y> <z> <block>", "#c98b8b"); break;
+          }
+          GAME.world.setBlock(Math.floor(coords[0]),Math.floor(coords[1]),Math.floor(coords[2]),blockId,true);
+          logAndBroadcastCommand(`Блок ${token} установлен в ${coords.map(Math.floor).join(" ")}`);
+          break;
+        }
+
+        case "fill": {
+          const base = [PLAYER.pos.x, PLAYER.pos.y, PLAYER.pos.z];
+          const coords = parts.slice(1,7).map((v,i) => v?.startsWith("~") ? base[i%3] + (v.length > 1 ? Number(v.slice(1)) || 0 : 0) : Number(v));
+          const token = parts[7] || "";
+          const blockId = B[token.toUpperCase()] !== undefined ? B[token.toUpperCase()] : Number(token);
+          if (coords.length !== 6 || coords.some(v => !Number.isFinite(v)) || !Number.isInteger(blockId) || !BLOCK_PROPS[blockId]) {
+            addChatLine("Использование: /fill <x1> <y1> <z1> <x2> <y2> <z2> <block>", "#c98b8b"); break;
+          }
+          const lo = [0,1,2].map(i => Math.floor(Math.min(coords[i],coords[i+3])));
+          const hi = [0,1,2].map(i => Math.floor(Math.max(coords[i],coords[i+3])));
+          const volume = (hi[0]-lo[0]+1)*(hi[1]-lo[1]+1)*(hi[2]-lo[2]+1);
+          if (volume > 32768) { addChatLine("Слишком большая область: максимум 32768 блоков", "#c98b8b"); break; }
+          for(let x=lo[0];x<=hi[0];x++) for(let y=lo[1];y<=hi[1];y++) for(let z=lo[2];z<=hi[2];z++) GAME.world.setBlock(x,y,z,blockId,true);
+          logAndBroadcastCommand(`Заполнено блоками ${token}: ${volume}`);
+          break;
+        }
+
+        case "say": {
+          const message = parts.slice(1).join(" ");
+          if (message) logAndBroadcastCommand(`[Объявление] ${message}`);
+          else addChatLine("Использование: /say <сообщение>", "#c98b8b");
+          break;
+        }
+
+        case "kill": {
+          if (a1 === "@e" || a1 === "@e[type=mobs]") {
+            let count = 0;
+            for (let i=entities.length-1;i>=0;i--) {
+              const ent = entities[i];
+              if (!ent.cfg) continue;
+              scene.remove(ent.mesh); entities.splice(i,1); count++;
+            }
+            logAndBroadcastCommand(`Уничтожено существ: ${count}`);
+          } else {
+            logAndBroadcastCommand("Использована команда /kill");
+            damagePlayer(999, "Убит командой /kill", true);
+          }
+          break;
+        }
+
         case "heal":
           PLAYER.health = 20;
           PLAYER.fireTicks = 0;
@@ -5139,11 +5484,6 @@ const WORLD_CONFIG: WorldConfig = {
           PLAYER.offhand = null;
           updateHotbarUI();
           logAndBroadcastCommand(`Инвентарь очищен`);
-          break;
-
-        case "kill":
-          logAndBroadcastCommand(`Использована команда /kill`);
-          damagePlayer(999, "Убит командой /kill", true);
           break;
 
         case "effect":
@@ -5299,10 +5639,23 @@ const WORLD_CONFIG: WorldConfig = {
       if (PLAYER.air < 300) {
         const bubs = Math.ceil(PLAYER.air / 30);
         for (let i = 0; i < bubs; i++) {
-          const s = document.createElement("span");
-          s.textContent = "🫧";
-          aBox.appendChild(s);
+          const s = document.createElement("span"); s.textContent = "🫧"; aBox.appendChild(s);
         }
+      }
+      let effectsBox = document.getElementById("active-effects-hud");
+      if (!effectsBox) {
+        effectsBox = document.createElement("div"); effectsBox.id = "active-effects-hud";
+        effectsBox.style.cssText = "position:fixed;right:14px;top:14px;z-index:30;display:flex;flex-direction:column;gap:6px;pointer-events:auto;font:14px monospace";
+        document.body.appendChild(effectsBox);
+      }
+      const effectMeta = { speed:["🏃","Скорость"], jump:["🦘","Прыгучесть"], strength:["⚔️","Сила"], night_vision:["🌙","Ночное зрение"] };
+      effectsBox.innerHTML = "";
+      for (const [key,value] of Object.entries(PLAYER.effects || {})) {
+        if (!(value > 0) || !effectMeta[key]) continue;
+        const chip = document.createElement("div"); chip.textContent = effectMeta[key][0] + " " + effectMeta[key][1];
+        chip.title = effectMeta[key][1] + ": эффект активен";
+        chip.style.cssText = "padding:5px 8px;background:#202020dd;border:1px solid #777;border-radius:4px;color:#fff;text-shadow:1px 1px #000;cursor:help";
+        effectsBox.appendChild(chip);
       }
     }
 

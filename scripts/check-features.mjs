@@ -63,6 +63,10 @@ const checks = [
     "function spawnMob"
   ],
   [
+    "Mob-specific pixel texture pipeline",
+    "function getMobPixelTexture"
+  ],
+  [
     "Bosses and hostile projectiles",
     "hostile_projectile"
   ],
@@ -142,6 +146,32 @@ const checks = [
     "Vanilla destroy-stage crack overlays",
     "destroy_stage_"
   ],
+  ["Enderman water behavior", "e.waterEscapeCooldown"],
+  ["Enderman arrow immunity", 'target.type === "enderman"'],
+  ["Flint and steel creeper ignition", "hitEnt.ignited = true"],
+  ["XP command", 'case "xp"'],
+  ["Time add command", 'if (a1 === "add")'],
+  ["Setblock command", 'case "setblock"'],
+  ["Fill command", 'case "fill"'],
+  ["Entity kill command", 'a1 === "@e"'],
+  ["Zombie daylight burning", "sunBurnCooldown"],
+  ["Wither skeleton damage over time", "witherCooldown"],
+  ["Blaze water weakness", "e.waterCooldown"],
+  ["Chicken egg laying", "eggTimer"],
+  ["Rabbit hopping", "hopVisual"],
+  ["Sheep grazing", "grazeCooldown"],
+  ["Villager panic behavior", "e.fleeing=true"],
+  ["Pig food luring", "e.luredByPlayer"],
+  ["Snowballs damage blazes", 'target.type === "blaze") { damageEntity(target, 3)'],
+  ["Creeper flashing fuse", "e.hissCooldown"],
+  ["Dropped item hover animation", "floatPhase"],
+  ["Eating hand animation", "eatPull"],
+  ["Mob-specific procedural voices", "mobVoice"],
+  ["Active status effect HUD", "active-effects-hud"],
+  ["Utility crafting recipes", 'id: "compass"'],
+  ["Snowball recipe", 'id: "snowball", count: 4'],
+  ["Leather armor recipes", 'id: "leather_chestplate"'],
+  ["Gold armor recipes", 'id: "gold_chestplate"'],
 ];
 const missing = checks.filter(([, anchor]) => !source.includes(anchor)).map(([name]) => name);
 
