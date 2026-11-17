@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
@@ -227,6 +227,29 @@
     background: #2a2a2a; border: 1px solid #565656; border-radius: 2px;
     padding: 0 .25rem; font-size: .72rem;
   }
+ 
+  /* Main menu: cinematic, restrained Minecraft-inspired glass-and-stone UI. */
+  #title-screen { align-items:stretch; justify-content:flex-start; background:linear-gradient(90deg,rgba(5,12,10,.76),rgba(5,12,10,.30) 52%,rgba(5,12,10,.05)); }
+  #title-screen::after { content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(0deg,rgba(0,0,0,.48),transparent 34%,rgba(0,0,0,.10)); z-index:1; }
+  #title-world-bg { filter:saturate(1.12) contrast(1.04); }
+  #title-screen .panel { align-self:center; margin-left:clamp(24px,8vw,150px); width:min(440px,calc(100vw - 40px)); min-width:0; max-width:440px; padding:30px; border:1px solid rgba(230,235,215,.28); border-radius:4px; background:linear-gradient(145deg,rgba(13,22,19,.88),rgba(12,17,18,.78)); box-shadow:0 24px 80px rgba(0,0,0,.42),inset 0 1px rgba(255,255,255,.08); backdrop-filter:blur(12px); }
+  #title-screen .brand { font-family:Georgia,serif; font-size:clamp(2.5rem,6vw,4.3rem); line-height:1; letter-spacing:-.06em; color:#f3f1dc; text-shadow:0 4px 0 #45563b,0 8px 24px #000; margin-bottom:8px; }
+  #title-screen .tagline { color:#c4d2b5; font-size:.82rem; letter-spacing:.14em; text-transform:uppercase; margin-bottom:26px; }
+  #title-screen button { border:1px solid rgba(235,238,216,.25); border-radius:3px; padding:.88rem 1rem; text-align:left; background:linear-gradient(180deg,rgba(106,133,83,.94),rgba(56,82,49,.96)); box-shadow:inset 0 1px rgba(255,255,255,.18),0 4px 12px rgba(0,0,0,.18); transition:transform .16s,filter .16s,background .16s; font-size:.88rem; }
+  #title-screen button:hover:not(:disabled) { background:linear-gradient(180deg,#91ad6b,#5d804c); transform:translateX(4px); filter:brightness(1.08); }
+  #title-screen button.secondary { background:rgba(28,39,34,.84); }
+  #title-screen button.secondary:hover:not(:disabled) { background:rgba(67,91,69,.96); }
+  #title-screen .sub { color:#bdc8b9; }
+  #title-screen .version { position:absolute; right:22px; bottom:18px; z-index:3; color:rgba(255,255,255,.76); font-size:.68rem; text-shadow:0 2px 4px #000; }
+  #settings-screen { z-index:1050; background:rgba(5,9,8,.72); backdrop-filter:blur(10px); }
+  #settings-screen .panel { width:min(560px,calc(100vw - 28px)); max-width:560px; min-width:0; border-radius:5px; background:rgba(20,28,25,.97); }
+  .settings-row { display:grid; grid-template-columns:1fr minmax(150px,1.1fr); gap:18px; align-items:center; padding:13px 0; border-bottom:1px solid rgba(255,255,255,.09); }
+  .settings-row label { margin:0; color:#e1e8dc; font-size:.82rem; }
+  .settings-row input[type=range] { width:100%; accent-color:#9fbd76; }
+  .settings-row select { width:100%; padding:9px; background:#101714; color:#eef2e8; border:1px solid #667365; font:inherit; }
+  #settings-screen .sub { margin-top:14px; }
+  @media(max-width:640px) { #title-screen .panel { margin:0 auto; align-self:center; padding:22px; } #title-screen .version { right:10px; bottom:8px; } }
+
 </style>
 </head>
 <body>
@@ -250,17 +273,28 @@
 <div id="title-screen" class="overlay">
   <canvas id="title-world-bg" aria-hidden="true"></canvas>
   <div class="panel">
-    <h1>minecraft-clone</h1>
-    <h2>Phase 1 &mdash; v0.1.0</h2>
-    <p class="sub">
-      A from-scratch voxel game. Original textures and sounds; not affiliated with Mojang.
-    </p>
-    <button id="btn-singleplayer">Singleplayer</button>
+    <div class="brand">MINECRAFT</div>
+    <div class="tagline">Исследуй. Строй. Выживай.</div>
+    <button id="btn-singleplayer">Одиночная игра</button>
     <button id="btn-multiplayer" class="secondary">Сетевая игра</button>
-    <button id="btn-import" class="secondary">Import World (.mcw)</button>
-    <p class="sub" style="margin-top:1rem;margin-bottom:0">
-      You can also drag a <code>.mcw</code> file anywhere onto this window.
-    </p>
+    <button id="btn-settings" class="secondary">Настройки</button>
+    <button id="btn-import" class="secondary">Импорт мира (.mcw)</button>
+    <p class="sub" style="margin-top:18px;margin-bottom:0">Собственный воксельный мир · Сохранения хранятся на этом устройстве</p>
+  </div>
+  <div class="version">Java-inspired · Prototype build</div>
+</div>
+
+
+<!-- Settings -->
+<div id="settings-screen" class="overlay hidden">
+  <div class="panel">
+    <h1>Настройки</h1>
+    <h2>Графика и управление</h2>
+    <div class="settings-row"><label for="setting-distance">Дальность прорисовки <strong id="setting-distance-value">8 чанков</strong></label><input id="setting-distance" type="range" min="3" max="16" step="1" value="8"></div>
+    <div class="settings-row"><label for="setting-sensitivity">Чувствительность мыши</label><input id="setting-sensitivity" type="range" min="0.04" max="0.5" step="0.01" value="0.15"></div>
+    <div class="settings-row"><label for="setting-quality">Качество графики</label><select id="setting-quality"><option value="performance">Производительность</option><option value="balanced" selected>Сбалансированное</option><option value="high">Высокое</option></select></div>
+    <p class="sub">Параметры применяются сразу и сохраняются в этом браузере. Качество графики управляет масштабом рендеринга; дальность прорисовки влияет на загрузку чанков.</p>
+    <button id="btn-settings-back" class="secondary">Готово</button>
   </div>
 </div>
 
