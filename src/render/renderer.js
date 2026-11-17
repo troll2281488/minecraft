@@ -175,7 +175,9 @@ export const RendererMixin = {
     const fov = ((this.fieldOfView ?? RENDER.DEFAULT_FOV) + (player.sprinting ? RENDER.SPRINT_FOV_BONUS : 0)) * Math.PI / 180;
     const far = Math.max(64, this.renderDistance * 16 + 64);
 
-    mat4.perspective(this.projection, fov, aspect, 0.05, far);
+    // Keep the near plane away from the camera to preserve depth-buffer precision.
+    // A 0.05 plane wastes precision at normal block distances and can amplify z-fighting.
+    mat4.perspective(this.projection, fov, aspect, 0.2, far);
     let cameraX = player.x;
     let cameraY = player.eyeY;
     let cameraZ = player.z;
