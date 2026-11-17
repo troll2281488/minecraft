@@ -202,7 +202,8 @@
   .mp-row { display:flex; justify-content:space-between; align-items:center; gap:.6rem; padding:.45rem .55rem; margin:.3rem 0; background:#303030; border:1px solid #555; font-size:.75rem; }
   .mp-row button { width:auto; margin:0; padding:.35rem .65rem; font-size:.75rem; }
   .mp-list { max-height:10rem; overflow:auto; margin:.4rem 0 .8rem; }
-  #health { position:absolute; left:12px; bottom:14px; color:#ff6565; font-size:1.25rem; letter-spacing:2px; text-shadow:2px 2px #000; }\n  #hud-room { position:absolute; right:12px; top:12px; padding:.35rem .6rem; background:rgba(0,0,0,.6); font-size:.75rem; }
+  #health { position:absolute; left:12px; bottom:14px; color:#ff6565; font-size:1.25rem; letter-spacing:2px; text-shadow:2px 2px #000; }
+  #hud-room { position:absolute; right:12px; top:12px; padding:.35rem .6rem; background:rgba(0,0,0,.6); font-size:.75rem; }
   #chat-messages { position:absolute; left:12px; bottom:72px; width:min(420px,70vw); font-size:.78rem; text-shadow:1px 1px #000; pointer-events:none; }
   #chat-messages div { margin:.15rem 0; }
   #chat-entry { position:absolute; left:12px; bottom:42px; width:min(420px,70vw); padding:.45rem; background:#171717; color:white; border:1px solid #777; pointer-events:auto; }
@@ -218,7 +219,8 @@
 
 <div id="hud" class="hidden">
   <div id="crosshair"></div>
-  <div id="hud-room" class="hidden"></div>\n  <div id="health" aria-label="Health"></div>
+  <div id="hud-room" class="hidden"></div>
+  <div id="health" aria-label="Health"></div>
   <div id="chat-messages"></div>
   <input id="chat-entry" class="hidden" type="text" maxlength="240" placeholder="Enter — отправить, Esc — закрыть">
   <div id="debug" class="hidden"></div>
@@ -380,7 +382,11 @@
     console.error(err);
     document.getElementById('error-screen').classList.remove('hidden');
     document.getElementById('error-detail').textContent =
-      `${err.name}: ${err.message}\n\n${(err.stack ?? '').split('\n').slice(0, 8).join('\n')}`;
+      `${err.name}: ${err.message}
+
+${(err.stack ?? '').split('
+').slice(0, 8).join('
+')}`;
   });
   document.getElementById('btn-error-reload').onclick = () => location.reload();
 </script>
