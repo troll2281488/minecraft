@@ -351,6 +351,9 @@ const FOODS = [
   ['mc:carrot', 3, 0.6],
   ['mc:potato', 1, 0.3],
   ['mc:baked_potato', 5, 0.6],
+  ['mc:raw_mutton', 2, 0.3],
+  ['mc:rotten_flesh', 4, 0.1],
+  ['mc:cooked_mutton', 6, 0.8],
 ];
 for (const [id, nutrition, saturation] of FOODS) {
   ITEMS.define(id, { food: { nutrition, saturation } });
