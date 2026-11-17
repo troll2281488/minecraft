@@ -261,6 +261,10 @@
   .world-entry { background:#26372e; border:1px solid #52634e; border-radius:3px; }
   .world-entry.selected { background:#405a3e; border-color:#dce8c8; }
   .world-entry .meta { color:#bdcbb7; }
+  #worlds-screen .panel { max-height:min(88vh,760px); overflow:auto; }
+  #world-list { max-height:min(42vh,360px); }
+  #worlds-screen .row { margin-top:.5rem; }
+  @media(max-width:520px) { .settings-row { grid-template-columns:1fr; gap:7px; } }
 
 </style>
 </head>
@@ -304,8 +308,10 @@
     <h2>Графика и управление</h2>
     <div class="settings-row"><label for="setting-distance">Дальность прорисовки <strong id="setting-distance-value">8 чанков</strong></label><input id="setting-distance" type="range" min="3" max="16" step="1" value="8"></div>
     <div class="settings-row"><label for="setting-sensitivity">Чувствительность мыши</label><input id="setting-sensitivity" type="range" min="0.04" max="0.5" step="0.01" value="0.15"></div>
+    <div class="settings-row"><label for="setting-fov">Поле зрения <strong id="setting-fov-value">70°</strong></label><input id="setting-fov" type="range" min="50" max="110" step="1" value="70"></div>
     <div class="settings-row"><label for="setting-quality">Качество графики</label><select id="setting-quality"><option value="performance">Производительность</option><option value="balanced" selected>Сбалансированное</option><option value="high">Высокое</option></select></div>
     <p class="sub">Параметры применяются сразу и сохраняются в этом браузере. Качество графики управляет масштабом рендеринга; дальность прорисовки влияет на загрузку чанков.</p>
+    <button id="btn-fullscreen" class="secondary">Полный экран</button>
     <button id="btn-settings-back" class="secondary">Готово</button>
   </div>
 </div>
@@ -332,6 +338,10 @@
     <div class="world-list" id="world-list"></div>
     <button id="btn-play">Играть в выбранном мире</button>
     <button id="btn-new-world" class="secondary">Создать новый мир</button>
+    <div class="row">
+      <button id="btn-rename-world" class="secondary" disabled>Переименовать</button>
+      <button id="btn-duplicate-world" class="secondary" disabled>Копировать</button>
+    </div>
     <div class="row">
       <button id="btn-export-world" class="secondary" disabled>Экспорт</button>
       <button id="btn-delete-world" class="secondary" disabled>Удалить</button>
