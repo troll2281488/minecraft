@@ -190,6 +190,11 @@ export const RendererMixin = {
     this._drawTerrain(daylight, fogColor, far);
     this._drawSelection();
 
+    const health = document.getElementById('health');
+    if (health) {
+      const hp = Math.max(0, Math.min(20, this.player.health));
+      health.textContent = Array.from({ length: 10 }, (_, i) => hp >= i * 2 + 2 ? '♥' : hp > i * 2 ? '♡' : '·').join('');
+    }
     this.ui.updateHotbar(this.inventory);
     if (this.creativeOpen) this.ui.updateCreativeInventory(this.inventory);
     else if (this.inventoryOpen) this.ui.updateInventory(this.inventory, this.craftingGrid);
