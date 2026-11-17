@@ -269,15 +269,21 @@ class Game {
       world, player.x, player.eyeY, player.z, player.yaw, player.pitch, player.reach,
     );
 
-    if (this.mouseButtons.has(0) && !this.inventoryOpen && this.hit) {
-      const conditions = {
-        underwater: player.inWater,
-        airborne: !player.onGround,
-      };
-      if (this.player.gamemode === GAMEMODE.CREATIVE) {
-        this._breakBlock();
-      } else if (this.mining.tick(world, this.hit, this.inventory.held, conditions)) {
-        this._breakBlock();
+    if (this.mouseButtons.has(0) && !this.inventoryOpen) {
+      // Entity hits take priority over mining blocks behind the creature.
+      const hitMob = this.entities?.attackFromPlayer();
+      if (!hitMob && this.hit) {
+        const conditions = {
+          underwater: player.inWater,
+          airborne: !player.onGround,
+        };
+        if (this.player.gamemode === GAMEMODE.CREATIVE) {
+          this._breakBlock();
+        } else if (this.mining.tick(world, this.hit, this.inventory.held, conditions)) {
+          this._breakBlock();
+        }
+      } else {
+        this.mining.reset();
       }
     } else if (!this.mouseButtons.has(0)) {
       this.mining.reset();
