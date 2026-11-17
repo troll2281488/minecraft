@@ -15,7 +15,7 @@ evidence. See [`docs/SAVE_FORMAT.md`](docs/SAVE_FORMAT.md).
 **Playable; incremental development has resumed.** The `v0.1.0` foundation remains intact. New
 systems are being added in small, testable steps, with incomplete mechanics labelled honestly.
 
-Over 13,000 lines of JavaScript and 227 tests in a hand-written browser harness.
+Over 13,000 lines of JavaScript and 231 tests in a hand-written browser harness.
 
 **Working:**
 
@@ -28,12 +28,12 @@ Over 13,000 lines of JavaScript and 227 tests in a hand-written browser harness.
 | **Inventory and crafting** | Full inventory GUI with the vanilla slot layout and click rules. 2x2 personal grid, 3x3 crafting table, shaped / shapeless / tag (`#mc:planks`) recipe matching, tools and weapons across all six tiers, searchable creative block picker. |
 | **Saves** | Versioned `.mcw` files plus IndexedDB. Ordered migration chain, autosave every 30 s and on chunk unload, export and import including drag-and-drop. |
 | **Menus** | Title screen, world create / load / delete / export, pause menu, F3 debug overlay. |
-| **Survival food (new)** | Food level, saturation, exhaustion from sprinting and jumping, natural regeneration, and normal-difficulty starvation. Food restoration items are not wired yet. |
+| **Survival food** | Food level, saturation, exhaustion from sprinting and jumping, natural regeneration, normal-difficulty starvation, and right-click consumption of apples, bread, raw/cooked meat, carrots, and potatoes. |
 
 **Partial:** mob simulation currently includes simple sheep, pigs and zombies with basic wandering,
 fleeing and zombie pursuit/attacks; models are procedural low-poly shapes, not vanilla rigs.
 
-**Not built:** food restoration/consumption, full survival damage and death flow, combat tools,
+**Not built:** golden-apple effects, food poisoning, full survival damage and death flow, combat tools,
 fluid flow, weather, furnaces and chests, redstone, enchanting, dimensions, structures and audio.
 Water renders and blocks movement but does not flow.
 
