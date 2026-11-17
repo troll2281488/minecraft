@@ -31,6 +31,10 @@
 
   /* Orbiting voxel panorama behind the title menu. */
   #title-screen { z-index: 20; background: transparent; isolation: auto; }
+  #title-screen .panel { z-index: 21; }
+  #title-screen button { z-index: 22; }
+  #title-screen, #title-screen .panel, #title-screen button { pointer-events: auto; }
+  #title-world-bg { pointer-events: none !important; }
   #title-world-bg { position:absolute; inset:0; width:100%; height:100%; display:block; z-index:0; pointer-events:none; }
   #title-screen .panel { position:relative; z-index:2; pointer-events:auto; }
   #title-screen button { position:relative; z-index:3; pointer-events:auto; touch-action:manipulation; }
@@ -386,6 +390,7 @@
 <div id="cursor-stack" class="hidden"></div>
 
 <script type="module">
+  import './src/ui/title_background.js';
   import { boot } from './src/main.js';
   boot().catch((err) => {
     console.error(err);
