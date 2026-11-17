@@ -390,8 +390,8 @@ const TEXTURES = {
     grassBlades(t, r, hex(0x91a83a));
     for (let y = 3; y < 15; y += 3) {
       const x = 5 + ((y * 7) % 7);
-      setPx(t, x, y, 0xd6bd48, 0xc4a63a, 0x3b);
-      setPx(t, x + 1, y - 1, 0xe1cb61, 0xc8aa42, 0x3b);
+      setPx(t, x, y, 214, 189, 72);
+      setPx(t, x + 1, y - 1, 225, 203, 97);
     }
   }),
 
