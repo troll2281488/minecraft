@@ -43,6 +43,7 @@ import { InventoryControllerMixin } from './game/inventory_controller.js';
 import { BlockActionsMixin } from './game/block_actions.js';
 import { RendererMixin, SELECTION_EDGES } from './render/renderer.js';
 import { SessionMixin } from './game/session.js';
+import { Multiplayer } from './game/multiplayer.js';
 
 const AUTOSAVE_TICKS = SAVE.AUTOSAVE_INTERVAL_TICKS;
 const MAX_CATCHUP_TICKS = 10;
@@ -88,6 +89,7 @@ class Game {
     this.textures = textures;
 
     this.ui = new UI(icons);
+    this.multiplayer = new Multiplayer(this);
     this.frustum = new Frustum();
 
     this.world = null;
@@ -258,6 +260,7 @@ class Game {
     }
 
     player.tick(world);
+    this.multiplayer?.tick(MS_PER_TICK / 1000);
 
     this.hit = raycast(
       world, player.x, player.eyeY, player.z, player.yaw, player.pitch, player.reach,
