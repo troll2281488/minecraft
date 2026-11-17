@@ -167,6 +167,10 @@ define('mc:glass', {
   opaqueCube: false, opacity: 0, renderShape: 'cutout', texture: 'glass',
 });
 
+define('mc:white_wool', {
+  hardness: 0.8, resistance: 0.8, soundGroup: 'cloth', texture: 'white_wool',
+});
+
 // ---------------------------------------------------------------------------
 // Ores and mineral blocks
 // ---------------------------------------------------------------------------
@@ -366,6 +370,8 @@ for (const [id, nutrition, saturation] of FOODS) {
  * exactly one place those numbers live. Attack damage and speed per tool type
  * come from the vanilla tables in the same file.
  */
+ITEMS.define('mc:shears', { stackSize: 1, maxDamage: 238, tool: 'shears', attackDamage: 1 });
+
 const TOOL_TYPES = [
   ['pickaxe', 'PICKAXE', ATTACK_SPEED.PICKAXE],
   ['axe', 'AXE', null],       // axe speed varies by tier
