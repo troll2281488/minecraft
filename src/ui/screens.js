@@ -111,6 +111,7 @@ export const ScreensMixin = {
     document.getElementById('setting-sensitivity').value = this.mouseSensitivity;
     document.getElementById('setting-quality').value = this.graphicsQuality;
     this._saveSettings();
+    this._resize?.();
   },
 
   _saveSettings() {
