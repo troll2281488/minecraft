@@ -140,7 +140,9 @@ export function createTextureArray(gl, { data, layers }, tileSize) {
 
   gl.generateMipmap(gl.TEXTURE_2D_ARRAY);
   gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-  gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR);
+  // Pick one mip level instead of blending adjacent levels: linear mip
+  // blending softens the deliberately hard-edged 16x16 pixel art.
+  gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_NEAREST);
   gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D_ARRAY, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
@@ -148,7 +150,8 @@ export function createTextureArray(gl, { data, layers }, tileSize) {
   // textures viewed at a shallow angle -- which is most of the ground.
   const ext = gl.getExtension('EXT_texture_filter_anisotropic');
   if (ext) {
-    const max = Math.min(4, gl.getParameter(ext.MAX_TEXTURE_MAX_ANISOTROPY_EXT));
+    // Keep the texture's pixel grid crisp at grazing angles.
+    const max = 1;
     gl.texParameterf(gl.TEXTURE_2D_ARRAY, ext.TEXTURE_MAX_ANISOTROPY_EXT, max);
   }
 
