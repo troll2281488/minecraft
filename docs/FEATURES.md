@@ -27,6 +27,7 @@ This is the compatibility checklist for the game that already exists. Future wor
 
 ## Commands and interface
 - Chat and command suggestions; teleport, summon, time, weather, gamerules, give, heal/feed, inventory utilities.
+- Additional `/time add`, `/time query`, `/xp add`, `/setblock`, `/fill`, `/say`, and `/kill @e` commands with suggestions.
 - Pause/death/victory screens, HUD, armor/hunger/health indicators, player skins, TAB player/ping list.
 
 ## Online multiplayer already present
