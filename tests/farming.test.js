@@ -2,6 +2,7 @@ import { describe, it, assertEqual } from './framework.js';
 import '../src/world/blocks/index.js';
 import { BLOCKS } from '../src/world/block.js';
 import { growNearbyWheat, nextWheatAge } from '../src/game/farming.js';
+import { RECIPES } from '../src/game/recipes.js';
 
 describe('wheat farming', () => {
   it('increments crop age up to seven', () => {
@@ -22,6 +23,11 @@ describe('wheat farming', () => {
     const changed = growNearbyWheat(world, { x: 0.5, y: 65, z: 0.5 }, 600);
     assertEqual(changed.length, 1);
     assertEqual(world.getBlock(0, 65, 0).get('age'), 1);
+  });
+
+  it('has a bread recipe and craftable wooden hoe', () => {
+    assertEqual(RECIPES.producing('mc:bread').length, 1);
+    assertEqual(RECIPES.producing('mc:wooden_hoe').length, 1);
   });
 
   it('does not grow without farmland or between growth intervals', () => {
