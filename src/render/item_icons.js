@@ -118,6 +118,7 @@ const ITEM_ICON_SPEC = {
   'mc:string':       { shape: 'stick', colors: ['#eee6d2', '#b9ad95'] },
   'mc:bone':         { shape: 'stick', colors: ['#eee8d8', '#bdb5a2'] },
   'mc:leather':      { shape: 'chunk', colors: ['#9b633b', '#633b27'] },
+  'mc:feather':      { shape: 'stick', colors: ['#eee9df', '#bdb6aa'] },
   'mc:coal':         { shape: 'chunk', colors: ['#2c2c2c', '#141414'] },
   'mc:charcoal':     { shape: 'chunk', colors: ['#3a332c', '#1e1a16'] },
   'mc:raw_iron':     { shape: 'chunk', colors: ['#d8a582', '#a97e5f'] },
