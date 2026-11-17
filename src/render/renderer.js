@@ -63,6 +63,21 @@ export const SELECTION_EDGES = [
 ];
 const SELECTION_CORNERS = Array.from({ length: 8 }, () => [0, 0, 0]);
 
+/** Unit cube triangles used by the low-poly player rig. */
+function buildAvatarCube() {
+  const faces = [
+    [[0,0,0],[0,1,0],[1,1,0],[1,0,0]],
+    [[0,0,1],[1,0,1],[1,1,1],[0,1,1]],
+    [[0,0,0],[0,0,1],[0,1,1],[0,1,0]],
+    [[1,0,0],[1,1,0],[1,1,1],[1,0,1]],
+    [[0,1,0],[0,1,1],[1,1,1],[1,1,0]],
+    [[0,0,0],[1,0,0],[1,0,1],[0,0,1]],
+  ];
+  const out = [];
+  for (const [a,b,c,d] of faces) for (const v of [a,b,c,a,c,d]) out.push(...v);
+  return new Float32Array(out);
+}
+
 export const RendererMixin = {
   _setupPrograms() {
     const gl = this.gl;
@@ -70,6 +85,7 @@ export const RendererMixin = {
     this.skyProgram = createProgram(gl, SKY_VERTEX_SHADER, SKY_FRAGMENT_SHADER, 'sky');
     this.lineProgram = createProgram(gl, LINE_VERTEX_SHADER, LINE_FRAGMENT_SHADER, 'line');
     this.crackProgram = createProgram(gl, CRACK_VERTEX_SHADER, CRACK_FRAGMENT_SHADER, 'crack');
+    this.avatarProgram = createProgram(gl, `#version 300 es\nprecision highp float;\nlayout(location=0) in vec3 aPos;\nuniform mat4 uViewProjection; uniform vec3 uPlayerPos; uniform vec3 uPartOffset; uniform vec3 uPartScale; uniform float uYaw;\nvoid main(){ vec3 p=(aPos-0.5)*uPartScale+uPartOffset; float c=cos(uYaw), s=sin(uYaw); vec3 r=vec3(p.x*c-p.z*s,p.y,p.x*s+p.z*c); gl_Position=uViewProjection*vec4(uPlayerPos+r,1.0); }`, `#version 300 es\nprecision highp float;\nuniform vec4 uColor; out vec4 fragColor; void main(){fragColor=uColor;}`, 'player avatar');
   },
 
   _setupBuffers() {
@@ -112,6 +128,15 @@ export const RendererMixin = {
     gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 20, 0);
     gl.enableVertexAttribArray(1);
     gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 20, 12);
+    gl.bindVertexArray(null);
+
+    this.avatarVao = gl.createVertexArray();
+    gl.bindVertexArray(this.avatarVao);
+    this.avatarBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.avatarBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, buildAvatarCube(), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(0);
+    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
     gl.bindVertexArray(null);
 
     this.viewProjection = mat4.create();
@@ -228,6 +253,39 @@ export const RendererMixin = {
       { cameraX: player.x, cameraZ: player.z }, setOrigin);
     gl.depthMask(true);
     gl.disable(gl.BLEND);
+  },
+
+  _drawPlayers() {
+    const gl = this.gl;
+    const { program, uniforms } = this.avatarProgram;
+    const parts = [
+      // center offset, scale, colour
+      [[0, 1.68, 0], [0.28, 0.32, 0.28], [0.78, 0.62, 0.46, 1]], // head
+      [[0, 1.05, 0], [0.48, 0.78, 0.26], [0.16, 0.42, 0.78, 1]], // torso
+      [[-0.34, 1.08, 0], [0.20, 0.72, 0.22], [0.78, 0.62, 0.46, 1]], // left arm
+      [[0.34, 1.08, 0], [0.20, 0.72, 0.22], [0.78, 0.62, 0.46, 1]], // right arm
+      [[-0.13, 0.36, 0], [0.24, 0.72, 0.25], [0.20, 0.24, 0.55, 1]], // left leg
+      [[0.13, 0.36, 0], [0.24, 0.72, 0.25], [0.20, 0.24, 0.55, 1]], // right leg
+    ];
+    const draw = (x, y, z, yaw) => {
+      gl.uniform3f(uniforms.uPlayerPos, x, y, z);
+      gl.uniform1f(uniforms.uYaw, yaw * Math.PI / 180);
+      for (const [offset, scale, color] of parts) {
+        gl.uniform3f(uniforms.uPartOffset, offset[0], offset[1], offset[2]);
+        gl.uniform3f(uniforms.uPartScale, scale[0], scale[1], scale[2]);
+        gl.uniform4f(uniforms.uColor, color[0], color[1], color[2], color[3]);
+        gl.drawArrays(gl.TRIANGLES, 0, 36);
+      }
+    };
+
+    gl.useProgram(program);
+    gl.uniformMatrix4fv(uniforms.uViewProjection, false, this.viewProjection);
+    gl.bindVertexArray(this.avatarVao);
+    if (this.thirdPerson) draw(this.player.x, this.player.y, this.player.z, this.player.yaw);
+    for (const remote of this.multiplayer?.remotePlayers?.values?.() ?? []) {
+      draw(remote.x, remote.y, remote.z, remote.yaw);
+    }
+    gl.bindVertexArray(null);
   },
 
   _drawSelection() {
