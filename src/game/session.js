@@ -100,6 +100,7 @@ export const SessionMixin = {
 
   async _quitToTitle() {
     await this._save(false);
+    await this.multiplayer?.leaveRoom();
     this.running = false;
     this.paused = true;
     document.exitPointerLock?.();
