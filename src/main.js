@@ -144,7 +144,7 @@ class Game {
     const fallback = document.getElementById('title-world-bg');
     const orbit = () => {
       if (!this._titlePreviewActive || this.running || this.world !== this.titlePreviewWorld) return;
-      this.titlePreviewAngle += 0.00042;
+      this.titlePreviewAngle += 0.0012;
       const centerX = 0, centerZ = 0, radius = 17;
       const x = centerX + Math.cos(this.titlePreviewAngle) * radius;
       const z = centerZ + Math.sin(this.titlePreviewAngle) * radius;
