@@ -149,9 +149,13 @@ Reference target is **Minecraft: Java Edition 1.20.x**.
 
 ## Not yet started
 
-Survival (health, hunger, damage), mobs and AI, combat and armour, fluids and flow, redstone,
-enchanting and brewing, dimensions, structures, villagers, audio. See [`../PLAN.md`](../PLAN.md)
-for the phase each belongs to.
+Survival is partial: health and hunger are present, with food consumption and basic starvation/
+regeneration; mob spawning, wandering, simple fleeing/pursuit, melee combat, sheep shearing,
+fishing, and drops for pigs, sheep, cows, chickens and zombies are implemented in simplified
+form. Still missing are full vanilla mob AI, breeding, growth, chicken egg laying, equipment/
+armour combat, and a complete death/respawn loop. Fluids and flow, redstone, enchanting and
+brewing, dimensions, structures, villagers and audio are not implemented. See
+[`../PLAN.md`](../PLAN.md) for the phase each belongs to.
 
 ---
 
