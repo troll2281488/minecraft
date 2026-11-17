@@ -29,6 +29,12 @@ import { materializeChunk } from '../save/format.js';
 // Build ceiling comes from constants.js (MAX_Y). It used to be re-derived here,
 // and in five other places, from MIN_Y + SECTION_COUNT * SECTION_HEIGHT.
 
+// Only the mesher reads the block's opaqueCube flag for a neighbour sample.
+const MISSING_CHUNK_STATE = Object.freeze({
+  runtimeId: 0,
+  block: Object.freeze({ opaqueCube: true }),
+});
+
 export class World {
   /**
    * @param {object} options
@@ -298,7 +304,18 @@ export class World {
           if (ly < MIN_Y || ly >= MAX_Y) return AIR.defaultState;
           return chunk.getBlock(lx, ly, lz);
         }
-        return world.getBlock(baseX + lx, ly, baseZ + lz);
+        const wx = baseX + lx;
+        const wz = baseZ + lz;
+        const neighborCx = blockToChunk(wx);
+        const neighborCz = blockToChunk(wz);
+        // An unloaded neighbour is a temporary solid boundary, not air.
+        // Treating it as air emits a face on BOTH sides when the adjacent
+        // chunk arrives. Those coplanar faces z-fight and look like rapid
+        // white flashes until both chunks happen to be remeshed. The opaque
+        // sentinel suppresses that temporary seam; arrival of the neighbour
+        // dirties both chunks and replaces the boundary with real geometry.
+        if (!world.hasChunk(neighborCx, neighborCz)) return MISSING_CHUNK_STATE;
+        return world.getBlock(wx, ly, wz);
       },
 
       /**
