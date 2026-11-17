@@ -332,6 +332,40 @@ export const RendererMixin = {
       [[-0.29, 1.22, 0.57], [0.12, 0.12, 0.22], [0.82, 0.78, 0.68, 1]],
       [[0.29, 1.22, 0.57], [0.12, 0.12, 0.22], [0.82, 0.78, 0.68, 1]],
     ];
+    const creeper = [
+      [[0, 0.82, 0], [0.58, 1.02, 0.58], [0.20, 0.62, 0.18, 1]],
+      [[0, 1.55, 0.02], [0.62, 0.62, 0.62], [0.22, 0.66, 0.20, 1]],
+      [[-0.19, 0.24, -0.18], [0.22, 0.48, 0.22], [0.16, 0.52, 0.15, 1]],
+      [[0.19, 0.24, -0.18], [0.22, 0.48, 0.22], [0.16, 0.52, 0.15, 1]],
+      [[-0.19, 0.24, 0.18], [0.22, 0.48, 0.22], [0.16, 0.52, 0.15, 1]],
+      [[0.19, 0.24, 0.18], [0.22, 0.48, 0.22], [0.16, 0.52, 0.15, 1]],
+      [[-0.15, 1.65, 0.34], [0.12, 0.12, 0.035], [0.04, 0.08, 0.04, 1]],
+      [[0.15, 1.65, 0.34], [0.12, 0.12, 0.035], [0.04, 0.08, 0.04, 1]],
+      [[0, 1.42, 0.35], [0.12, 0.22, 0.035], [0.04, 0.08, 0.04, 1]],
+    ];
+    const skeleton = human.map(([o, size], i) => [
+      o, size, i === 0 ? [0.82, 0.82, 0.76, 1] : i === 1 ? [0.78, 0.78, 0.72, 1] : [0.88, 0.87, 0.80, 1],
+    ]);
+    const enderman = [
+      [[0, 2.42, 0], [0.30, 0.48, 0.30], [0.08, 0.07, 0.12, 1]],
+      [[0, 1.52, 0], [0.38, 1.30, 0.25], [0.09, 0.08, 0.13, 1]],
+      [[-0.30, 1.55, 0], [0.14, 1.28, 0.14], [0.08, 0.07, 0.12, 1]],
+      [[0.30, 1.55, 0], [0.14, 1.28, 0.14], [0.08, 0.07, 0.12, 1]],
+      [[-0.11, 0.38, 0], [0.15, 0.76, 0.16], [0.07, 0.06, 0.11, 1]],
+      [[0.11, 0.38, 0], [0.15, 0.76, 0.16], [0.07, 0.06, 0.11, 1]],
+      [[-0.105, 2.44, 0.16], [0.08, 0.045, 0.035], [0.92, 0.12, 0.30, 1]],
+      [[0.105, 2.44, 0.16], [0.08, 0.045, 0.035], [0.92, 0.12, 0.30, 1]],
+    ];
+    const spider = [
+      [[0, 0.52, 0], [0.72, 0.42, 0.82], [0.12, 0.10, 0.09, 1]],
+      [[0, 0.68, 0.48], [0.48, 0.40, 0.48], [0.16, 0.12, 0.10, 1]],
+      [[-0.13, 0.76, 0.73], [0.07, 0.07, 0.035], [0.88, 0.12, 0.08, 1]],
+      [[0.13, 0.76, 0.73], [0.07, 0.07, 0.035], [0.88, 0.12, 0.08, 1]],
+      ...[-1, 1].flatMap(side => [-1, 1, 2, 3].map((n) => [
+        [side * (0.32 + (n % 2) * 0.08), 0.43, (n - 1.5) * 0.23],
+        [0.52, 0.09, 0.09], [0.10, 0.08, 0.07, 1],
+      ])),
+    ];
     const chicken = [
       [[0, 0.62, 0], [0.52, 0.62, 0.58], [0.91, 0.90, 0.82, 1]],
       [[0, 1.00, 0.28], [0.34, 0.34, 0.34], [0.94, 0.92, 0.86, 1]],
@@ -340,14 +374,14 @@ export const RendererMixin = {
       [[-0.16, 0.20, -0.12], [0.10, 0.38, 0.10], [0.91, 0.72, 0.22, 1]],
       [[0.16, 0.20, -0.12], [0.10, 0.38, 0.10], [0.91, 0.72, 0.22, 1]],
     ];
-    const draw = (x, y, z, yaw, parts, walkPhase = 0, legStart = -1, legEnd = -1) => {
+    const draw = (x, y, z, yaw, parts, walkPhase = 0, legStart = -1, legEnd = -1, pulse = 1) => {
       gl.uniform3f(uniforms.uPlayerPos, x, y, z);
       gl.uniform1f(uniforms.uYaw, yaw);
       for (let partIndex = 0; partIndex < parts.length; partIndex++) {
         const [offset, scale, color] = parts[partIndex];
         const swing = partIndex >= legStart && partIndex <= legEnd ? Math.sin(walkPhase) * 0.07 : 0;
         gl.uniform3f(uniforms.uPartOffset, offset[0], offset[1] + swing, offset[2]);
-        gl.uniform3f(uniforms.uPartScale, scale[0], scale[1], scale[2]);
+        gl.uniform3f(uniforms.uPartScale, scale[0] * pulse, scale[1] * pulse, scale[2] * pulse);
         gl.uniform4f(uniforms.uColor, color[0], color[1], color[2], color[3]);
         gl.drawArrays(gl.TRIANGLES, 0, 36);
       }
@@ -361,10 +395,19 @@ export const RendererMixin = {
       draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, human);
     }
     for (const mob of this.entities?.mobs ?? []) {
-      const parts = mob.type === 'zombie' ? zombie : mob.type === 'pig' ? pig : mob.type === 'cow' ? cow : mob.type === 'chicken' ? chicken : sheep;
-      draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase,
-        mob.type === 'zombie' ? 4 : mob.type === 'pig' ? 3 : mob.type === 'cow' ? 2 : mob.type === 'chicken' ? 4 : 2,
-        mob.type === 'zombie' ? 5 : mob.type === 'pig' ? 6 : mob.type === 'cow' ? 5 : mob.type === 'chicken' ? 5 : 5);
+      const parts = mob.type === 'zombie' ? zombie
+        : mob.type === 'skeleton' || mob.type === 'stray' ? skeleton
+        : mob.type === 'creeper' ? creeper
+        : mob.type === 'enderman' ? enderman
+        : mob.type === 'spider' || mob.type === 'cave_spider' ? spider
+        : mob.type === 'pig' ? pig : mob.type === 'cow' ? cow
+        : mob.type === 'chicken' ? chicken : sheep;
+      const pulse = mob.type === 'creeper' && mob.anim?.fuse > 0
+        ? 1 + Math.sin(mob.anim.fuse * Math.PI * 12) * 0.10 * mob.anim.fuse : 1;
+      const legs = mob.type === 'creeper' ? [2, 5] : mob.type === 'zombie' || mob.type === 'skeleton' || mob.type === 'stray' ? [4, 5]
+        : mob.type === 'pig' ? [3, 6] : mob.type === 'cow' ? [2, 5]
+        : mob.type === 'chicken' ? [4, 5] : mob.type === 'enderman' ? [4, 5] : [2, 9];
+      draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse);
     }
     gl.bindVertexArray(null);
   },
