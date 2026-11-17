@@ -162,6 +162,8 @@
 
   /* ---- Inventory ---- */
   #inventory-screen { z-index: 30; }
+  /* Startup failures must appear above the title menu, which has its own stacking context. */
+  #error-screen { z-index: 1100; }
   .inv-grid { display: grid; grid-template-columns: repeat(9, 44px); gap: 2px; }
   .inv-section { margin-bottom: .8rem; }
   .inv-section h3 {
@@ -396,6 +398,9 @@
   import { boot } from './src/main.js';
   boot().catch((err) => {
     console.error(err);
+    // Do not leave an apparently clickable title screen on top of a failed boot.
+    document.getElementById('title-screen').classList.add('hidden');
+    document.body.classList.add('menu-active');
     document.getElementById('error-screen').classList.remove('hidden');
     document.getElementById('error-detail').textContent =
       `${err.name}: ${err.message}
