@@ -1,5 +1,5 @@
 import { describe, it, assertEqual } from './framework.js';
-import { rollMobDrops } from '../src/entity/mobs.js';
+import { rollMobDrops, MOB_TYPES_112 } from '../src/entity/mobs.js';
 
 describe('mob drops', () => {
   it('pigs drop one to three raw porkchops', () => {
@@ -21,5 +21,23 @@ describe('mob drops', () => {
 
   it('unknown mob types have no drops', () => {
     assertEqual(rollMobDrops('unknown').length, 0);
+  });
+});
+
+describe('Minecraft Java 1.12.2 mob catalogue', () => {
+  it('includes classic hostile mobs and bosses', () => {
+    for (const type of ['creeper', 'enderman', 'skeleton', 'spider', 'wither', 'ender_dragon']) {
+      assertEqual(MOB_TYPES_112.includes(type), true);
+    }
+  });
+  it('excludes mobs introduced after 1.12.2', () => {
+    assertEqual(MOB_TYPES_112.includes('drowned'), false);
+    assertEqual(MOB_TYPES_112.includes('pillager'), false);
+  });
+  it('has species-specific drops for the new hostile mobs', () => {
+    assertEqual(rollMobDrops('creeper', () => 0.999)[0].id, 'mc:gunpowder');
+    assertEqual(rollMobDrops('skeleton', () => 0.999)[0].id, 'mc:bone');
+    assertEqual(rollMobDrops('spider', () => 0.999)[0].id, 'mc:string');
+    assertEqual(rollMobDrops('enderman', () => 0.999)[0].id, 'mc:ender_pearl');
   });
 });
