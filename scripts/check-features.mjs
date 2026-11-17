@@ -63,6 +63,10 @@ const checks = [
     "function spawnMob"
   ],
   [
+    "Mob-specific pixel texture pipeline",
+    "function getMobPixelTexture"
+  ],
+  [
     "Bosses and hostile projectiles",
     "hostile_projectile"
   ],
