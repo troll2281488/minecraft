@@ -202,7 +202,7 @@ export const RendererMixin = {
 
     this._drawSky(daylight);
 
-    this.chunkRenderer.update(this.world, player.x, player.z, 6);
+    this.chunkRenderer.update(this.world, player.x, player.z, 6, this.frustum);
     this._drawTerrain(daylight, fogColor, far);
     this._drawPlayers();
     this._drawSelection();
