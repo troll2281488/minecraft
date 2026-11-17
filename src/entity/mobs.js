@@ -58,8 +58,10 @@ export class MobSystem {
         mob.thinkTicks = 35 + Math.floor(Math.random() * 70);
       }
 
-      const hostile = mob.type === 'zombie' && distance < 12;
-      const speed = hostile ? 0.035 : mob.speed;
+      const hostile = mob.type === 'zombie' && player.gamemode === 'survival' && distance < 12;
+      const fleeing = mob.type !== 'zombie' && distance < 4;
+      if (fleeing) mob.targetYaw = Math.atan2(mob.x - player.x, mob.z - player.z);
+      const speed = hostile ? 0.035 : fleeing ? 0.045 : mob.speed;
       mob.yaw += Math.atan2(Math.sin(mob.targetYaw - mob.yaw), Math.cos(mob.targetYaw - mob.yaw)) * 0.12;
       const nx = mob.x + Math.sin(mob.yaw) * speed;
       const nz = mob.z + Math.cos(mob.yaw) * speed;
