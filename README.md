@@ -15,7 +15,7 @@ evidence. See [`docs/SAVE_FORMAT.md`](docs/SAVE_FORMAT.md).
 **Playable; incremental development has resumed.** The `v0.1.0` foundation remains intact. New
 systems are being added in small, testable steps, with incomplete mechanics labelled honestly.
 
-Over 13,000 lines of JavaScript and 254 tests in a hand-written browser harness.
+Over 13,000 lines of JavaScript and 255 tests in a hand-written browser harness.
 
 **Working:**
 
@@ -57,7 +57,7 @@ what is working and what remains.
 | **Platform** | Browser, WebGL2, vanilla ES modules |
 | **Dependencies** | None. No npm, no bundler, no framework, no `package.json`. |
 | **Size** | Over 13,000 lines of JavaScript |
-| **Tests** | 254, in a hand-written browser harness (`tests.html`) |
+| **Tests** | 255, in a hand-written browser harness (`tests.html`) |
 | **Server** | `serve.py` - Python stdlib static server, only needed because ES modules require `http://` |
 | **Saves** | Versioned `.mcw` files + IndexedDB, with an ordered migration chain |
 | **Mode** | Singleplayer |
