@@ -338,6 +338,24 @@ const MATERIALS = [
 ];
 for (const [id, opts] of MATERIALS) ITEMS.define(id, opts);
 
+// Food: nutrition restores food points; saturation is nutrition * modifier * 2.
+const FOODS = [
+  ['mc:apple', 4, 0.3],
+  ['mc:bread', 5, 0.6],
+  ['mc:raw_beef', 3, 0.3],
+  ['mc:cooked_beef', 8, 0.8],
+  ['mc:raw_porkchop', 3, 0.3],
+  ['mc:cooked_porkchop', 8, 0.8],
+  ['mc:raw_chicken', 2, 0.3],
+  ['mc:cooked_chicken', 6, 0.6],
+  ['mc:carrot', 3, 0.6],
+  ['mc:potato', 1, 0.3],
+  ['mc:baked_potato', 5, 0.6],
+];
+for (const [id, nutrition, saturation] of FOODS) {
+  ITEMS.define(id, { food: { nutrition, saturation } });
+}
+
 /**
  * Tools.
  *
