@@ -54,6 +54,7 @@ const TOOL_PATTERNS = {
   axe:     { pattern: ['MM', 'MS', ' S'] },
   shovel:  { pattern: ['M', 'S', 'S'] },
   sword:   { pattern: ['M', 'M', 'S'] },
+  hoe:     { pattern: ['MM', ' S', ' S'] },
 };
 
 const TOOL_MATERIALS = [
