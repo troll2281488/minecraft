@@ -7,7 +7,7 @@ import { initializeApp, getApps } from 'https://www.gstatic.com/firebasejs/10.12
 import {
   getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded, onChildChanged, onDisconnect,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
-import { BLOCKS } from '../world/block.js';
+import { BLOCKS, parseStateString } from '../world/block.js';
 import * as storage from '../save/storage.js';
 import { GENERATOR_VERSION } from '../world/gen/terrain.js';
 import { DATA_VERSION } from '../save/migrate.js';
@@ -188,9 +188,20 @@ export class Multiplayer {
     this.applyingRemoteBlock = true;
     try {
       for (const [key, block] of this.pendingBlocks) {
-        const definition = BLOCKS.get(block.id);
-        if (!definition) { this.pendingBlocks.delete(key); continue; }
-        if (this.game.world.setBlock(block.x, block.y, block.z, definition.defaultState, { relight: false })) this.pendingBlocks.delete(key);
+        let state;
+        try {
+          const parsed = parseStateString(block.state || block.id);
+          const definition = BLOCKS.get(parsed.blockId);
+          if (!definition) { this.pendingBlocks.delete(key); continue; }
+          state = definition.defaultState;
+          for (const [name, value] of Object.entries(parsed.values)) {
+            const property = definition.properties[name];
+            if (!property) continue;
+            const typed = property.parse(value);
+            if (typed !== undefined) state = state.with(name, typed);
+          }
+        } catch { this.pendingBlocks.delete(key); continue; }
+        if (this.game.world.setBlock(block.x, block.y, block.z, state, { relight: false })) this.pendingBlocks.delete(key);
       }
     } finally { this.applyingRemoteBlock = false; }
   }
@@ -224,10 +235,10 @@ export class Multiplayer {
 
   pushBlockChange(x, y, z, state) {
     if (!this.db || !this.roomId || this.applyingRemoteBlock) return;
-    const id = state?.block?.id;
-    if (!id) return;
+    const stateString = state?.toString?.();
+    if (!stateString) return;
     set(ref(this.db, `minecraft_game/rooms/${this.roomId}/blocks/overworld_${x}_${y}_${z}`), {
-      x, y, z, id, ts: Date.now(),
+      x, y, z, state: stateString, ts: Date.now(),
     }).catch((error) => this.game.ui.toast(`Не удалось синхронизировать блок: ${error.message}`, { error: true }));
   }
 
