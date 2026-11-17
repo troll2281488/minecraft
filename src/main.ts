@@ -5041,7 +5041,12 @@ const WORLD_CONFIG: WorldConfig = {
       "/summon rabbit",
       "/summon cow",
       "/time add 1000",
+      "/time query",
       "/xp add 100",
+      "/setblock ~ ~-1 ~ stone",
+      "/fill ~-2 ~-1 ~-2 ~2 ~-1 ~2 stone",
+      "/say Привет!",
+      "/kill @e",
       "/heal",
       "/feed",
       "/clear",
@@ -5113,7 +5118,9 @@ const WORLD_CONFIG: WorldConfig = {
           addChatLine("/difficulty <peaceful|easy|normal|hard|0|1|2|3>");
           addChatLine("/give <предмет> [кол-во] • /tp <x> <y> <z> | spawn • /spawnpoint");
           addChatLine("/heal • /feed • /clear • /kill • /effect <speed|jump|strength|clear>");
-          addChatLine("/time add <число> • /xp add <число> • /summon <тип моба>");
+          addChatLine("/time add|query • /xp add <число> • /summon <тип моба>");
+          addChatLine("/setblock <x> <y> <z> <блок> • /fill <x1> <y1> <z1> <x2> <y2> <z2> <блок> • /say <текст>");
+          addChatLine("/kill @e — удалить мобов");
           addChatLine("/locate <village|pyramid|stronghold> • /seed");
           break;
 
@@ -5131,7 +5138,9 @@ const WORLD_CONFIG: WorldConfig = {
           break;
 
         case "time":
-          if (a1 === "add") {
+          if (a1 === "query") {
+            addChatLine(`Время мира: ${Math.floor(GAME.timeOfDay)} тиков; день ${GAME.dayCount}`, "#a8c993");
+          } else if (a1 === "add") {
             const amount = Number(a2);
             if (!Number.isFinite(amount)) { addChatLine("Использование: /time add <число>", "#c98b8b"); break; }
             GAME.timeOfDay = ((GAME.timeOfDay + amount) % 24000 + 24000) % 24000;
@@ -5229,6 +5238,59 @@ const WORLD_CONFIG: WorldConfig = {
           break;
         }
 
+        case "setblock": {
+          const base = [PLAYER.pos.x, PLAYER.pos.y, PLAYER.pos.z];
+          const coords = parts.slice(1,4).map((v,i) => v?.startsWith("~") ? base[i] + (v.length > 1 ? Number(v.slice(1)) || 0 : 0) : Number(v));
+          const token = parts[4] || "";
+          const blockId = B[token.toUpperCase()] !== undefined ? B[token.toUpperCase()] : Number(token);
+          if (coords.length !== 3 || coords.some(v => !Number.isFinite(v)) || !Number.isInteger(blockId) || !BLOCK_PROPS[blockId]) {
+            addChatLine("Использование: /setblock <x> <y> <z> <block>", "#c98b8b"); break;
+          }
+          GAME.world.setBlock(Math.floor(coords[0]),Math.floor(coords[1]),Math.floor(coords[2]),blockId,true);
+          logAndBroadcastCommand(`Блок ${token} установлен в ${coords.map(Math.floor).join(" ")}`);
+          break;
+        }
+
+        case "fill": {
+          const base = [PLAYER.pos.x, PLAYER.pos.y, PLAYER.pos.z];
+          const coords = parts.slice(1,7).map((v,i) => v?.startsWith("~") ? base[i%3] + (v.length > 1 ? Number(v.slice(1)) || 0 : 0) : Number(v));
+          const token = parts[7] || "";
+          const blockId = B[token.toUpperCase()] !== undefined ? B[token.toUpperCase()] : Number(token);
+          if (coords.length !== 6 || coords.some(v => !Number.isFinite(v)) || !Number.isInteger(blockId) || !BLOCK_PROPS[blockId]) {
+            addChatLine("Использование: /fill <x1> <y1> <z1> <x2> <y2> <z2> <block>", "#c98b8b"); break;
+          }
+          const lo = [0,1,2].map(i => Math.floor(Math.min(coords[i],coords[i+3])));
+          const hi = [0,1,2].map(i => Math.floor(Math.max(coords[i],coords[i+3])));
+          const volume = (hi[0]-lo[0]+1)*(hi[1]-lo[1]+1)*(hi[2]-lo[2]+1);
+          if (volume > 32768) { addChatLine("Слишком большая область: максимум 32768 блоков", "#c98b8b"); break; }
+          for(let x=lo[0];x<=hi[0];x++) for(let y=lo[1];y<=hi[1];y++) for(let z=lo[2];z<=hi[2];z++) GAME.world.setBlock(x,y,z,blockId,true);
+          logAndBroadcastCommand(`Заполнено блоками ${token}: ${volume}`);
+          break;
+        }
+
+        case "say": {
+          const message = parts.slice(1).join(" ");
+          if (message) logAndBroadcastCommand(`[Объявление] ${message}`);
+          else addChatLine("Использование: /say <сообщение>", "#c98b8b");
+          break;
+        }
+
+        case "kill": {
+          if (a1 === "@e" || a1 === "@e[type=mobs]") {
+            let count = 0;
+            for (let i=entities.length-1;i>=0;i--) {
+              const ent = entities[i];
+              if (!ent.cfg) continue;
+              scene.remove(ent.mesh); entities.splice(i,1); count++;
+            }
+            logAndBroadcastCommand(`Уничтожено существ: ${count}`);
+          } else {
+            logAndBroadcastCommand("Использована команда /kill");
+            damagePlayer(999, "Убит командой /kill", true);
+          }
+          break;
+        }
+
         case "heal":
           PLAYER.health = 20;
           PLAYER.fireTicks = 0;
@@ -5247,11 +5309,6 @@ const WORLD_CONFIG: WorldConfig = {
           PLAYER.offhand = null;
           updateHotbarUI();
           logAndBroadcastCommand(`Инвентарь очищен`);
-          break;
-
-        case "kill":
-          logAndBroadcastCommand(`Использована команда /kill`);
-          damagePlayer(999, "Убит командой /kill", true);
           break;
 
         case "effect":
