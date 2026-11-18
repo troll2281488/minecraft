@@ -462,6 +462,30 @@
 
 <div id="cursor-stack" class="hidden"></div>
 
+<script>
+  // Report module-load failures too: a failed static import prevents the game
+  // bootstrap module from running, which otherwise leaves a dead-looking menu.
+  (() => {
+    let reported = false;
+    const showFatal = (message) => {
+      if (reported) return;
+      reported = true;
+      const title = document.getElementById('title-screen');
+      const screen = document.getElementById('error-screen');
+      const detail = document.getElementById('error-detail');
+      if (title) title.classList.add('hidden');
+      if (screen) screen.classList.remove('hidden');
+      if (detail) detail.textContent = String(message);
+      document.body.classList.add('menu-active');
+    };
+    window.addEventListener('error', (event) => {
+      if (event.message || event.error) showFatal(event.error?.stack || event.message || 'Не удалось загрузить игровой модуль.');
+    });
+    window.addEventListener('unhandledrejection', (event) => {
+      showFatal(event.reason?.stack || event.reason?.message || event.reason || 'Ошибка запуска игры.');
+    });
+  })();
+</script>
 <script type="module">
   import './src/ui/title_background.js';
   import { boot } from './src/main.js';
