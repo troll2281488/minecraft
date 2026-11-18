@@ -302,11 +302,44 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
   if (!canHarvest(block, heldStack)) return [];
 
   const rng = positionalRandom(worldSeed, x, y, z, 0x10ad);
+  const id = block.id;
 
-  // Phase 1 loot: blocks drop themselves, with the handful of vanilla
-  // exceptions that matter for early progression. Real loot tables with
-  // fortune, silk touch, and per-block variance arrive in Phase 4.
-  const SPECIAL = {
+  // Blocks that do not drop themselves in vanilla without Silk Touch.
+  // Silk Touch is not implemented yet, so these correctly yield nothing.
+  if (id === 'mc:glass' || id === 'mc:ice') return [];
+
+  if (id === 'mc:wheat') {
+    if (state.get('age') < 7) return [];
+    return [
+      { id: 'mc:wheat', count: 1 },
+      { id: 'mc:wheat_seeds', count: 1 + rng.nextInt(3) },
+    ];
+  }
+
+  if (id === 'mc:gravel') {
+    return rng.nextDouble() < 0.10
+      ? [{ id: 'mc:flint', count: 1 }]
+      : [{ id: 'mc:gravel', count: 1 }];
+  }
+
+  if (id === 'mc:short_grass' || id === 'mc:fern') {
+    const seeds = rng.nextDouble() < 0.12 ? 1 + rng.nextInt(2) : 0;
+    return seeds ? [{ id: 'mc:wheat_seeds', count: seeds }] : [];
+  }
+  if (id === 'mc:dead_bush') return [];
+
+  if (id.endsWith('_leaves')) {
+    if (heldStack?.item?.tool === 'shears') return [{ id, count: 1 }];
+    const sapling = id.replace('_leaves', '_sapling');
+    const drops = [];
+    if (rng.nextDouble() < 0.05 && ITEMS.get(sapling)) drops.push({ id: sapling, count: 1 });
+    if (id === 'mc:oak_leaves' && rng.nextDouble() < 0.005) {
+      drops.push({ id: 'mc:apple', count: 1 });
+    }
+    return drops;
+  }
+
+  const special = {
     'mc:stone': 'mc:cobblestone',
     'mc:grass_block': 'mc:dirt',
     'mc:coal_ore': 'mc:coal',
@@ -316,34 +349,7 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
     'mc:lapis_ore': 'mc:lapis_lazuli',
     'mc:clay': 'mc:clay_ball',
   };
-
-  if (block.id === 'mc:wheat') {
-    if (state.get('age') < 7) return [];
-    return [
-      { id: 'mc:wheat', count: 1 },
-      { id: 'mc:wheat_seeds', count: 1 + rng.nextInt(3) },
-    ];
-  }
-
-  // Leaves and plants drop nothing without shears, matching vanilla closely
-  // enough that a forest is not an infinite block source.
-  if (block.id === 'mc:short_grass' || block.id === 'mc:fern') {
-    const seeds = rng.nextDouble() < 0.12 ? 1 + rng.nextInt(2) : 0;
-    return seeds ? [{ id: 'mc:wheat_seeds', count: seeds }] : [];
-  }
-  if (block.id === 'mc:dead_bush') return [];
-  if (block.id.endsWith('_leaves')) {
-    if (heldStack?.item?.tool === 'shears') return [{ id: block.id, count: 1 }];
-    const sapling = block.id.replace('_leaves', '_sapling');
-    const drops = [];
-    if (rng.nextDouble() < 0.05 && ITEMS.get(sapling)) drops.push({ id: sapling, count: 1 });
-    // Oak leaves can rarely yield apples, making this food obtainable without
-    // inventing a tree-growth system. Other leaf species never drop apples.
-    if (block.id === 'mc:oak_leaves' && rng.nextDouble() < 0.005) drops.push({ id: 'mc:apple', count: 1 });
-    return drops;
-  }
-
-  const dropId = SPECIAL[block.id] ?? block.id;
+  const dropId = special[id] ?? id;
   if (!ITEMS.get(dropId)) return [];
 
   let count = 1;
