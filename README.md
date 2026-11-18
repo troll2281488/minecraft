@@ -149,4 +149,12 @@ The current compatibility pass targets the classic Java 1.12.2 world height (Y=0
 
 ## Texture attribution
 
-Matching block textures are loaded at startup from [ItsBrian/minecraft-textures](https://github.com/ItsBrian/minecraft-textures), with built-in procedural textures used as fallbacks when a matching image is unavailable. The repository author, ItsBrian, stated in the project's GitHub Issues that the textures are original works created by him and granted permission to redistribute them as part of this game or another project. The game currently loads the files that match its registered block texture names; it does not automatically use every image in the source repository.
+Matching textures are loaded at startup from [ItsBrian/minecraft-textures](https://github.com/ItsBrian/minecraft-textures). The repository author, ItsBrian, stated in the project's GitHub Issues that the textures are original works created by him and granted permission to redistribute them as part of this game or another project.
+
+The game requests matching assets for the content it actually renders:
+- registered block-face textures from `block/`;
+- registered item icons from `item/`;
+- HUD heart, hunger and air sprites from `gui/icons.png`;
+- hotbar and selected-slot artwork from `gui/widgets.png`.
+
+Assets that do not match a registered block or item, or UI elements the game does not implement, are not loaded. Built-in procedural art remains as a fallback when a matching remote image is unavailable.
