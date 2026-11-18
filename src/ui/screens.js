@@ -90,6 +90,7 @@ export const ScreensMixin = {
 
     byId('btn-resume').onclick = () => this._resume();
     byId('btn-respawn').onclick = () => this._respawnAfterDeath();
+    byId('btn-death-save').onclick = () => this._save(true);
     byId('btn-save').onclick = () => this._save(true);
     byId('btn-export').onclick = () => this._exportCurrent();
     byId('btn-gamemode').onclick = () => this._toggleGamemode();
