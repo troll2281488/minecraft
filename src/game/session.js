@@ -93,8 +93,8 @@ export const SessionMixin = {
     if (!stone || !this.world.hasChunk(0, 0)) {
       throw new Error('Не удалось подготовить безопасную точку появления: центральный чанк не загружен.');
     }
-    for (let z = -2; z <= 2; z++) {
-      for (let x = -2; x <= 2; x++) this.world.setBlock(x, 79, z, stone);
+    for (let z = -6; z <= 6; z++) {
+      for (let x = -6; x <= 6; x++) this.world.setBlock(x, 79, z, stone);
     }
     this.ui.toast('Рядом не нашлось суши — создана временная платформа для безопасного появления.', { duration: 6000 });
     return { x: 0.5, y: 80, z: 0.5 };
