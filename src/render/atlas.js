@@ -430,6 +430,22 @@ for (const [species, c] of Object.entries(WOOD)) {
     crossPlant(`${species}_sapling`, (t, r) => grassBlades(t, r, c.sapling));
 }
 
+/** Visible checkerboard fallback for a missing texture key. */
+function missingTexture() {
+  const out = new Uint8Array(TILE_SIZE * TILE_SIZE * 4);
+  for (let y = 0; y < TILE_SIZE; y++) {
+    for (let x = 0; x < TILE_SIZE; x++) {
+      const i = (y * TILE_SIZE + x) * 4;
+      const bright = ((x >> 2) + (y >> 2)) % 2 === 0;
+      out[i] = bright ? 255 : 32;
+      out[i + 1] = 0;
+      out[i + 2] = bright ? 255 : 32;
+      out[i + 3] = 255;
+    }
+  }
+  return out;
+}
+
 /**
  * Generate every texture and pack them into one Uint8Array laid out as
  * consecutive layers, ready for texImage3D.
