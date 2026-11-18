@@ -580,15 +580,15 @@ export const RendererMixin = {
   },
 
   _drawBreakingOverlay(x, y, z) {
-    const stage = this.mining.stage;
-    if (stage < 0) return;
+    const progress = this.mining.progress;
+    if (!this.mining.target || progress <= 0) return;
 
     const gl = this.gl;
     const { program, uniforms } = this.crackProgram;
     gl.useProgram(program);
     gl.uniformMatrix4fv(uniforms.uViewProjection, false, this.viewProjection);
     gl.uniform3f(uniforms.uBlockOrigin, x, y, z);
-    gl.uniform1f(uniforms.uStage, stage);
+    gl.uniform1f(uniforms.uProgress, progress);
 
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
