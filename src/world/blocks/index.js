@@ -212,6 +212,32 @@ for (const [id, hardness, resistance, tool, texture, soundGroup] of [
   });
 }
 
+// The full 16-colour families available in 1.12.2. The creative inventory
+// receives block items automatically from the registry below.
+const DYE_COLORS = [
+  'white', 'orange', 'magenta', 'light_blue', 'yellow', 'lime', 'pink', 'gray',
+  'light_gray', 'cyan', 'purple', 'blue', 'brown', 'green', 'red', 'black',
+];
+for (const color of DYE_COLORS) {
+  if (color !== 'white') define(`mc:${color}_wool`, {
+    hardness: 0.8, resistance: 0.8, soundGroup: 'cloth', texture: `${color}_wool`,
+  });
+  define(`mc:${color}_stained_glass`, {
+    hardness: 0.3, resistance: 0.3, soundGroup: 'glass',
+    opaqueCube: false, opacity: 0, renderShape: 'cutout', texture: `${color}_stained_glass`,
+  });
+  define(`mc:${color}_terracotta`, {
+    hardness: 1.25, resistance: 4.2, tool: 'pickaxe', soundGroup: 'stone', texture: `${color}_terracotta`,
+  });
+  define(`mc:${color}_concrete`, {
+    hardness: 1.8, resistance: 1.8, tool: 'pickaxe', soundGroup: 'stone', texture: `${color}_concrete`,
+  });
+  define(`mc:${color}_concrete_powder`, {
+    hardness: 0.5, resistance: 0.5, tool: 'shovel', soundGroup: 'sand', gravity: true,
+    texture: `${color}_concrete_powder`,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Wood
 // ---------------------------------------------------------------------------
