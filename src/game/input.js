@@ -10,7 +10,7 @@
 import { GAMEMODE } from '../entity/player.js';
 import { ITEMS } from '../world/item.js';
 import { BLOCKS, parseStateString } from '../world/block.js';
-import { isAction } from './keybinds.js';
+import { isAction, bindKey } from './keybinds.js';
 
 export const InputMixin = {
   _setupInput() {
@@ -86,6 +86,22 @@ export const InputMixin = {
   },
 
   _onKeyDown(e) {
+    if (this._rebindingAction) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.code === 'Escape') {
+        this._rebindingAction = null;
+        this._buildKeybindSettings();
+        return;
+      }
+      if (e.code.startsWith('Mouse')) return;
+      const action = this._rebindingAction;
+      this._rebindingAction = null;
+      bindKey(action, e.code);
+      this._buildKeybindSettings();
+      this.ui.toast('Клавиша управления изменена');
+      return;
+    }
     // Keep browser-level shortcuts and zoom gestures from hijacking gameplay.
     // Do this before the repeat guard so holding Ctrl cannot re-enable defaults.
     if (this.running && !this.chatOpen &&
