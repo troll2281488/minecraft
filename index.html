@@ -217,6 +217,8 @@
   .mp-row { display:flex; justify-content:space-between; align-items:center; gap:.6rem; padding:.45rem .55rem; margin:.3rem 0; background:#303030; border:1px solid #555; font-size:.75rem; }
   .mp-row button { width:auto; margin:0; padding:.35rem .65rem; font-size:.75rem; }
   .mp-list { max-height:10rem; overflow:auto; margin:.4rem 0 .8rem; }
+  #death-screen { z-index: 1050; background: rgba(0,0,0,.82); }
+  #death-screen .panel { text-align:center; }
   #health { position:absolute; left:12px; bottom:34px; color:#ff6565; font-size:1.25rem; letter-spacing:2px; text-shadow:2px 2px #000; }
   #food { position:absolute; left:12px; bottom:12px; color:#e7a34a; font-size:1.15rem; letter-spacing:2px; text-shadow:2px 2px #000; }
   #hud-room { position:absolute; right:12px; top:12px; padding:.35rem .6rem; background:rgba(0,0,0,.6); font-size:.75rem; }
@@ -436,6 +438,16 @@
       Click a block to pick it up, then click a hotbar slot to place it.
       <kbd>E</kbd> or <kbd>Esc</kbd> to close.
     </p>
+  </div>
+</div>
+
+<!-- Survival death and respawn -->
+<div id="death-screen" class="overlay hidden">
+  <div class="panel" style="max-width:28rem">
+    <h1 style="color:#e05c5c">Ты погиб</h1>
+    <p class="sub">Мир сохранён. Можно возродиться на точке появления; инвентарь в этой версии не теряется.</p>
+    <button id="btn-respawn">Возродиться</button>
+    <button class="secondary" id="btn-death-save">Сохранить мир</button>
   </div>
 </div>
 
