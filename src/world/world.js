@@ -285,7 +285,10 @@ export class World {
           if (!this.hasChunk(cx, cz)) continue;
 
           let y = this.getHeight(x, z);
-          // Heightmaps include water. Walk down to the first solid, dry floor.
+          // Ocean columns have water at the heightmap top; skip them quickly
+          // rather than scanning the entire water column on every spawn retry.
+          if (this.getBlock(x, y, z).block.id === 'mc:water') continue;
+          // Heightmaps can include plants or other non-solid surface blocks.
           while (y >= MIN_Y) {
             const ground = this.getBlock(x, y, z).block;
             if (ground.solid && ground.id !== 'mc:water') {
