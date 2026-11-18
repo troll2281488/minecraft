@@ -390,8 +390,8 @@ export const RendererMixin = {
       gl.uniform1f(uniforms.uYaw, yaw);
       for (let partIndex = 0; partIndex < parts.length; partIndex++) {
         const [offset, scale, color] = parts[partIndex];
-        const isArm = partIndex === 2 || partIndex === 3;
-        const isLeg = partIndex === 4 || partIndex === 5;
+        const isArm = skin && (partIndex === 2 || partIndex === 3);
+        const isLeg = skin && (partIndex === 4 || partIndex === 5);
         const phase = partIndex === 2 || partIndex === 4 ? 0 : Math.PI;
         let swing = 0;
         let pivotY = offset[1];
@@ -399,8 +399,11 @@ export const RendererMixin = {
           pivotY = isArm ? 1.30 : 0.70;
           if (pose.swimming) swing = isArm ? Math.sin(walkPhase * 1.7 + phase) * 0.72 : Math.sin(walkPhase * 1.7 + phase) * 0.42;
           else if (pose.airborne) swing = isArm ? -0.22 : 0.25;
-          else if (isArm || isLeg) swing = Math.sin(walkPhase + phase) * 0.58;
+          else swing = Math.sin(walkPhase + phase) * 0.58;
           if (isArm && pose.attack && partIndex === 3) swing -= 1.15;
+        } else if (!skin && partIndex >= legStart && partIndex <= legEnd) {
+          // Keep mob rigs' own leg ranges; do not animate arbitrary body parts.
+          swing = Math.sin(walkPhase) * 0.16;
         }
         gl.uniform3f(uniforms.uPartOffset, offset[0], offset[1], offset[2]);
         gl.uniform3f(uniforms.uPartScale, scale[0] * pulse, scale[1] * pulse, scale[2] * pulse);
