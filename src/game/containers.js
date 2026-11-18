@@ -119,6 +119,32 @@ export function deserializeContainer(record) {
   return null;
 }
 
+/**
+ * Remove all stored items when a container block is broken. The returned stacks
+ * are independent copies; the block entity is emptied so stale contents cannot
+ * reappear if another container is placed at the same coordinates.
+ */
+export function drainContainer(type, data) {
+  if (type === 'chest' && data instanceof Chest) {
+    const drops = data.slots.filter((stack) => !stack.isEmpty).map((stack) => stack.clone());
+    data.slots = Array.from({ length: CHEST_SLOTS }, () => ItemStack.EMPTY.clone());
+    return drops;
+  }
+  if (type === 'furnace' && data instanceof Furnace) {
+    const drops = [data.input, data.fuel, data.output]
+      .filter((stack) => !stack.isEmpty)
+      .map((stack) => stack.clone());
+    data.input = ItemStack.EMPTY.clone();
+    data.fuel = ItemStack.EMPTY.clone();
+    data.output = ItemStack.EMPTY.clone();
+    data.burnLeft = 0;
+    data.burnTotal = 0;
+    data.cookProgress = 0;
+    return drops;
+  }
+  return [];
+}
+
 export class Furnace {
   constructor() {
     this.input = ItemStack.EMPTY.clone();
