@@ -8,7 +8,7 @@
  * Clicks: left click takes, swaps or merges with the cursor; right click takes half or
  * puts down one; shift-click moves a stack between the player's inventory and the container.
  */
-import { Chest, Furnace, SMELTING, SMELT_TICKS } from './containers.js';
+import { Chest, Furnace, SMELTING, SMELT_TICKS, serializeContainer, deserializeContainer } from './containers.js';
 import { ItemStack } from '../world/item.js';
 
 const OVERLAY_ID = 'container-overlay';
@@ -46,6 +46,26 @@ function label(stack) {
 }
 
 export const ContainerScreensMixin = {
+  /** Export all placed chest/furnace inventories as save-file block entities. */
+  _serializeContainers() {
+    const records = [];
+    for (const [key, entry] of this._containers ?? []) {
+      const state = serializeContainer(entry.type, entry.data);
+      if (state) records.push({ key, ...state });
+    }
+    return records;
+  },
+
+  /** Restore block-entity state after the player's save has been loaded. */
+  _restoreContainers(records) {
+    this._containers = new Map();
+    if (!Array.isArray(records)) return;
+    for (const record of records) {
+      if (typeof record?.key !== 'string' || !/^-?\\d+,-?\\d+,-?\\d+$/.test(record.key)) continue;
+      const restored = deserializeContainer(record);
+      if (restored) this._containers.set(record.key, restored);
+    }
+  },
   _containerKey(x, y, z) { return `${x},${y},${z}`; },
 
   /** Chest contents, created on first open. */
