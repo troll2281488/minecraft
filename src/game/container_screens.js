@@ -8,7 +8,7 @@
  * Clicks: left click takes, swaps or merges with the cursor; right click takes half or
  * puts down one; shift-click moves a stack between the player's inventory and the container.
  */
-import { Chest, Furnace, SMELT_TICKS } from './containers.js';
+import { Chest, Furnace, SMELTING, SMELT_TICKS } from './containers.js';
 import { ItemStack } from '../world/item.js';
 
 const OVERLAY_ID = 'container-overlay';
@@ -179,7 +179,25 @@ export const ContainerScreensMixin = {
     const target = this._containerSlot(spec, kind, index);
     if (!target) return;
     const { get, set } = target;
-    this._swapWithCursor(get(), set, button);
+    const cursor = inv.cursor;
+    if (target.outputOnly) {
+      const output = get();
+      if (!output.isEmpty && cursor.isEmpty) {
+        const amount = button === 2 ? Math.ceil(output.count / 2) : output.count;
+        inv.cursor = output.split(amount);
+        set(output.count > 0 ? output : ItemStack.EMPTY.clone());
+      } else if (!output.isEmpty && !cursor.isEmpty && cursor.canStackWith(output)) {
+        const wanted = button === 2 ? 1 : output.count;
+        const moved = Math.min(wanted, cursor.maxStackSize - cursor.count);
+        cursor.count += moved;
+        output.count -= moved;
+        set(output.count > 0 ? output : ItemStack.EMPTY.clone());
+      }
+    } else if (!cursor.isEmpty && target.accepts && !target.accepts(cursor.item)) {
+      return;
+    } else {
+      this._swapWithCursor(get(), set, button);
+    }
     inv.version++;
     this._renderContainer();
   },
@@ -189,8 +207,14 @@ export const ContainerScreensMixin = {
       return { get: () => spec.slots[index], set: (v) => { spec.slots[index] = v; } };
     }
     const f = spec.furnace;
-    if (kind === 'furnace-in') return { get: () => f.input, set: (v) => { f.input = v; } };
-    if (kind === 'furnace-fuel') return { get: () => f.fuel, set: (v) => { f.fuel = v; } };
+    if (kind === 'furnace-in') return {
+      get: () => f.input, set: (v) => { f.input = v; },
+      accepts: (item) => SMELTING.has(item.id),
+    };
+    if (kind === 'furnace-fuel') return {
+      get: () => f.fuel, set: (v) => { f.fuel = v; },
+      accepts: (item) => item.fuelTicks > 0,
+    };
     if (kind === 'furnace-out') {
       // Output only ever gives items to the cursor; it never accepts them.
       return {
