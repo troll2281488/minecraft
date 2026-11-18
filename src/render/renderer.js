@@ -422,7 +422,15 @@ export const RendererMixin = {
         gl.uniform1f(uniforms.uPartSwing, swing);
         gl.uniform1f(uniforms.uPartPivotY, pivotY);
         gl.uniform1f(uniforms.uSkinPart, skin ? partIndex : -1);
-        gl.uniform4f(uniforms.uColor, color[0], color[1], color[2], color[3]);
+        if (pose.hurt) {
+          const flash = 0.42;
+          gl.uniform4f(uniforms.uColor,
+            color[0] + (1 - color[0]) * flash,
+            color[1] * (1 - flash * 0.45),
+            color[2] * (1 - flash * 0.45), color[3]);
+        } else {
+          gl.uniform4f(uniforms.uColor, color[0], color[1], color[2], color[3]);
+        }
         gl.drawArrays(gl.TRIANGLES, 0, 36);
       }
     };
@@ -447,7 +455,7 @@ export const RendererMixin = {
       const legs = mob.type === 'creeper' ? [2, 5] : mob.type === 'zombie' || mob.type === 'skeleton' || mob.type === 'stray' ? [4, 5]
         : mob.type === 'pig' ? [3, 6] : mob.type === 'cow' ? [2, 5]
         : mob.type === 'chicken' ? [4, 5] : mob.type === 'enderman' ? [4, 5] : [2, 9];
-      draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse);
+      draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse, { hurt: (mob.hurtTicks || 0) > 0 });
     }
     if (!this.thirdPerson) {
       // First-person right arm and held item, positioned relative to the
