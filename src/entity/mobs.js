@@ -206,7 +206,7 @@ export class MobSystem {
       armorPoints += stack.item.armorPoints || 0;
       toughness += stack.item.armorToughness || 0;
       worn = true;
-      if (stack.item.isDamageable && stack.applyDamage(1)) {
+      if (stack.item.isDamageable && stack.applyDamage(Math.max(1, Math.ceil(amount)))) {
         inventory.slots[36 + i] = ItemStack.EMPTY.clone();
       }
     }
