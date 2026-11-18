@@ -122,7 +122,8 @@ export class Player {
     this._applyInput(slipperiness);
     this._move(world);
     const moved = Math.hypot(this.x - oldX, this.z - oldZ);
-    if (moved > 0.001) this.walkPhase += Math.min(0.9, moved * 9);
+    if (this.inWater) this.walkPhase += 0.12;
+    else if (moved > 0.001) this.walkPhase += Math.min(0.9, moved * 9);
     if (this.attackTime > 0) this.attackTime--;
     this._applyGravityAndFriction(slipperiness);
     this.vitals.tick(this, Math.hypot(this.x - oldX, this.z - oldZ), this.sprinting, jumped);
