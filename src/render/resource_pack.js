@@ -14,6 +14,34 @@ import { TILE_SIZE, TEXTURES } from './atlas.js';
 
 const STORAGE_KEY = 'mc-resource-pack';
 
+
+const ITSBRIAN_RAW = 'https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/block/';
+
+/** Load matching original block textures from ItsBrian's Java texture repository. */
+export async function loadItsBrianTextures() {
+  const names = Object.keys(TEXTURES);
+  const entries = await Promise.all(names.map(async (name) => {
+    try {
+      const response = await fetch(ITSBRIAN_RAW + encodeURIComponent(name) + '.png');
+      if (!response.ok) return null;
+      const bitmap = await createImageBitmap(await response.blob());
+      const canvas = document.createElement('canvas');
+      canvas.width = TILE_SIZE;
+      canvas.height = TILE_SIZE;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(bitmap, 0, 0, TILE_SIZE, TILE_SIZE);
+      bitmap.close();
+      return [name, new Uint8Array(ctx.getImageData(0, 0, TILE_SIZE, TILE_SIZE).data)];
+    } catch {
+      return null;
+    }
+  }));
+  const overrides = new Map(entries.filter(Boolean));
+  console.info('[textures] Loaded ' + overrides.size + ' ItsBrian block textures.');
+  return overrides;
+}
+
 export function loadPackRecord() {
   try {
     const rec = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
