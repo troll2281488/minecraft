@@ -162,6 +162,17 @@ export const RendererMixin = {
       return;
     }
 
+    // Interpolate the camera between fixed 20 TPS physics states. Without
+    // this, a 60/120 Hz display still shows only 20 distinct movement steps.
+    const alpha = Math.max(0, Math.min(1, this.accumulator / MS_PER_TICK));
+    const px = Number.isFinite(player.prevX) ? player.prevX : player.x;
+    const py = Number.isFinite(player.prevY) ? player.prevY : player.y;
+    const pz = Number.isFinite(player.prevZ) ? player.prevZ : player.z;
+    this.renderPosition ||= { x: player.x, y: player.y, z: player.z };
+    this.renderPosition.x = px + (player.x - px) * alpha;
+    this.renderPosition.y = py + (player.y - py) * alpha;
+    this.renderPosition.z = pz + (player.z - pz) * alpha;
+
     const daylight = this.daylight;
     const fogColor = this._fogColor;   // reused; was a fresh array every frame
     fogColor[0] = 0.55 * daylight + 0.03;
@@ -178,20 +189,20 @@ export const RendererMixin = {
     // Keep the near plane away from the camera to preserve depth-buffer precision.
     // A 0.05 plane wastes precision at normal block distances and can amplify z-fighting.
     mat4.perspective(this.projection, fov, aspect, 0.2, far);
-    let cameraX = player.x;
-    let cameraY = player.eyeY;
-    let cameraZ = player.z;
+    let cameraX = this.renderPosition.x;
+    let cameraY = this.renderPosition.y + player.eyeHeight;
+    let cameraZ = this.renderPosition.z;
     let cameraYaw = player.yaw;
     let cameraPitch = player.pitch;
     if (this.thirdPerson) {
       const yaw = player.yaw * Math.PI / 180;
       const pitch = player.pitch * Math.PI / 180;
       let distance = 4.2;
-      const obstruction = raycast(this.world, player.x, player.eyeY + 0.8, player.z,
+      const obstruction = raycast(this.world, this.renderPosition.x, this.renderPosition.y + player.eyeHeight + 0.8, this.renderPosition.z,
         (player.yaw + 180) % 360, -player.pitch, distance);
       if (obstruction) {
-        const hitDistance = Math.hypot(obstruction.x + 0.5 - player.x,
-          obstruction.y + 0.5 - (player.eyeY + 0.8), obstruction.z + 0.5 - player.z);
+        const hitDistance = Math.hypot(obstruction.x + 0.5 - this.renderPosition.x,
+          obstruction.y + 0.5 - (this.renderPosition.y + player.eyeHeight + 0.8), obstruction.z + 0.5 - this.renderPosition.z);
         distance = Math.max(0.35, Math.min(distance, hitDistance - 0.8));
       }
       cameraX += Math.sin(yaw) * Math.cos(pitch) * distance;
@@ -204,7 +215,7 @@ export const RendererMixin = {
 
     this._drawSky(daylight);
 
-    this.chunkRenderer.update(this.world, player.x, player.z, 6, this.frustum);
+    this.chunkRenderer.update(this.world, this.renderPosition.x, this.renderPosition.z, 6, this.frustum);
     this._drawTerrain(daylight, fogColor, far);
     this._drawPlayers();
     this._updateRemotePlayerTags();
@@ -261,7 +272,7 @@ export const RendererMixin = {
     gl.uniform1i(uniforms.uTexture, 0);
 
     gl.uniformMatrix4fv(uniforms.uViewProjection, false, this.viewProjection);
-    gl.uniform3f(uniforms.uCameraPos, player.x, player.eyeY, player.z);
+    gl.uniform3f(uniforms.uCameraPos, this.renderPosition.x, this.renderPosition.y + player.eyeHeight, this.renderPosition.z);
     gl.uniform1f(uniforms.uDaylight, daylight);
     gl.uniform3f(uniforms.uFogColor, fogColor[0], fogColor[1], fogColor[2]);
     gl.uniform1f(uniforms.uFogStart, far * 0.55);
@@ -269,8 +280,8 @@ export const RendererMixin = {
 
     // Biome tint colours. Per-biome blending arrives in Phase 2; these are the
     // plains values, which is what most of a Phase 1 world is.
-    gl.uniform3f(uniforms.uGrassColor, 0.57, 0.74, 0.35);
-    gl.uniform3f(uniforms.uFoliageColor, 0.48, 0.71, 0.30);
+    gl.uniform3f(uniforms.uGrassColor, 0.39, 0.55, 0.24);
+    gl.uniform3f(uniforms.uFoliageColor, 0.43, 0.62, 0.28);
     gl.uniform3f(uniforms.uWaterColor, 0.25, 0.46, 0.9);
 
     const setOrigin = (x, y, z) => gl.uniform3f(uniforms.uChunkOrigin, x, y, z);
@@ -280,7 +291,7 @@ export const RendererMixin = {
     gl.uniform1f(uniforms.uAlphaCutoff, 0.5);
     gl.disable(gl.BLEND);
     this.chunkRenderer.draw('opaque', this.frustum,
-      { cameraX: player.x, cameraZ: player.z }, setOrigin);
+      { cameraX: this.renderPosition.x, cameraZ: this.renderPosition.z }, setOrigin);
 
     // Translucent geometry blends and must not write depth, or nearer water
     // would hide the water behind it.
