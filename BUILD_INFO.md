@@ -17,8 +17,9 @@ No npm install or build step is required. A modern browser with WebGL2 and Pytho
 - Six wood families: oak, spruce, birch, jungle, acacia and dark oak.
 - Additional 1.12.2-era blocks including red sandstone, prismarine, sea lantern, end stone, purpur, slime, magma, bone, packed ice, sponge, hay bale, and all 16-color wool/stained-glass/terracotta/concrete families.
 - WebGL2 voxel rendering, chunk generation, player movement/collision, creative/survival modes, mining, placing, inventory, crafting, tools, armour, food, farming, partial mobs, fishing, containers and local saves.
+- Survival damage from hostile mobs and falls, a death screen, and a respawn flow that preserves the player's inventory.
 
-Some added blocks use placeholder textures and do not yet implement their unique vanilla behavior. Biomes, structures, Nether/End, redstone, flowing fluids, brewing, enchanting, and many mobs/mechanics remain incomplete.
+This build is a playable survival sandbox, but it is not yet possible to complete the vanilla 1.12.2 progression or defeat the Ender Dragon. Some added blocks use placeholder textures and do not yet implement their unique vanilla behavior. Biomes, structures, Nether/End, redstone, flowing fluids, brewing, enchanting, and many mobs/mechanics remain incomplete.
 
 ## Verification
 
