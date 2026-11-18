@@ -1,7 +1,7 @@
 import '../src/world/blocks/index.js';
 import { describe, it, assert, assertEqual } from './framework.js';
 import { ItemStack } from '../src/world/item.js';
-import { Chest, Furnace, SMELT_TICKS, CHEST_SLOTS, serializeContainer, deserializeContainer } from '../src/game/containers.js';
+import { Chest, Furnace, SMELT_TICKS, CHEST_SLOTS, serializeContainer, deserializeContainer, drainContainer } from '../src/game/containers.js';
 import { RECIPES } from '../src/game/recipes.js';
 
 /**
@@ -54,6 +54,42 @@ describe('Java 1.12.2 furnace fuel values', () => {
     assertEqual(ITEMS.get('mc:crafting_table')?.fuelTicks, 300);
     assertEqual(ITEMS.get('mc:coal_block')?.fuelTicks, 16000);
     assertEqual(ITEMS.get('mc:golden_pickaxe')?.fuelTicks, 0);
+  });
+});
+
+describe('Breaking containers', () => {
+  it('returns every chest stack and clears all 27 slots', () => {
+    const chest = new Chest();
+    chest.slots[0] = ItemStack.of('mc:diamond', 4);
+    chest.slots[1] = ItemStack.of('mc:iron_pickaxe', 1, 23, { enchantments: { efficiency: 2 } });
+    const drops = drainContainer('chest', chest);
+    assertEqual(drops.length, 2);
+    assertEqual(drops[0].count, 4);
+    assertEqual(drops[1].damage, 23);
+    assertEqual(drops[1].data.enchantments.efficiency, 2);
+    assert(chest.slots.every((slot) => slot.isEmpty), 'chest contents were not cleared');
+  });
+
+  it('returns furnace input, remaining fuel and output, then resets its timers', () => {
+    const furnace = new Furnace();
+    furnace.input = ItemStack.of('mc:iron_ore', 2);
+    furnace.fuel = ItemStack.of('mc:coal', 3);
+    furnace.output = ItemStack.of('mc:iron_ingot', 1);
+    furnace.burnLeft = 400;
+    furnace.burnTotal = 1600;
+    furnace.cookProgress = 80;
+    const drops = drainContainer('furnace', furnace);
+    assertEqual(drops.length, 3);
+    assertEqual(drops[0].count, 2);
+    assertEqual(drops[1].count, 3);
+    assertEqual(drops[2].item.id, 'mc:iron_ingot');
+    assert(furnace.input.isEmpty && furnace.fuel.isEmpty && furnace.output.isEmpty);
+    assertEqual(furnace.burnLeft, 0);
+    assertEqual(furnace.cookProgress, 0);
+  });
+
+  it('ignores unknown container types', () => {
+    assertEqual(drainContainer('unknown', {} ).length, 0);
   });
 });
 
