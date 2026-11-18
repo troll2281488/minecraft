@@ -92,7 +92,7 @@ export const RendererMixin = {
     this.skyProgram = createProgram(gl, SKY_VERTEX_SHADER, SKY_FRAGMENT_SHADER, 'sky');
     this.lineProgram = createProgram(gl, LINE_VERTEX_SHADER, LINE_FRAGMENT_SHADER, 'line');
     this.crackProgram = createProgram(gl, CRACK_VERTEX_SHADER, CRACK_FRAGMENT_SHADER, 'crack');
-    this.avatarProgram = createProgram(gl, `#version 300 es\nprecision highp float;\nlayout(location=0) in vec3 aPos; layout(location=1) in vec3 aNormal;\nuniform mat4 uViewProjection; uniform vec3 uPlayerPos; uniform vec3 uPartOffset; uniform vec3 uPartScale; uniform float uYaw;\nout vec3 vLocalPos; out float vLight;\nvoid main(){ vec3 p=(aPos-0.5)*uPartScale+uPartOffset; float c=cos(uYaw), s=sin(uYaw); vec3 r=vec3(p.x*c-p.z*s,p.y,p.x*s+p.z*c); vec3 n=vec3(aNormal.x*c-aNormal.z*s,aNormal.y,aNormal.x*s+aNormal.z*c); vLocalPos=aPos; vLight=0.72+0.28*max(0.0,dot(normalize(n),normalize(vec3(-0.4,0.8,0.5)))); gl_Position=uViewProjection*vec4(uPlayerPos+r,1.0); }`, `#version 300 es\nprecision highp float;\nuniform vec4 uColor; in vec3 vLocalPos; in float vLight; out vec4 fragColor; void main(){ float grain=fract(sin(dot(floor(vLocalPos*16.0),vec3(12.9898,78.233,37.719)))*43758.5453); float pixel=0.96+grain*0.08; fragColor=vec4(uColor.rgb*vLight*pixel,uColor.a); }`, 'player avatar');
+    this.avatarProgram = createProgram(gl, `#version 300 es\nprecision highp float;\nlayout(location=0) in vec3 aPos; layout(location=1) in vec3 aNormal;\nuniform mat4 uViewProjection; uniform vec3 uPlayerPos; uniform vec3 uPartOffset; uniform vec3 uPartScale; uniform float uYaw; uniform float uPartSwing; uniform float uPartPivotY; uniform float uSkinPart;\nout vec3 vLocalPos; out vec3 vNormal; out float vLight;\nvoid main(){ vec3 p=(aPos-0.5)*uPartScale; p.y+=uPartOffset.y-uPartPivotY; float ca=cos(uPartSwing),sa=sin(uPartSwing); p=vec3(p.x,p.y*ca-p.z*sa,p.y*sa+p.z*ca); p.y-=uPartOffset.y-uPartPivotY; p+=uPartOffset; float c=cos(uYaw), s=sin(uYaw); vec3 r=vec3(p.x*c-p.z*s,p.y,p.x*s+p.z*c); vec3 n=vec3(aNormal.x*c-aNormal.z*s,aNormal.y,aNormal.x*s+aNormal.z*c); vLocalPos=aPos; vNormal=n; vLight=0.72+0.28*max(0.0,dot(normalize(n),normalize(vec3(-0.4,0.8,0.5)))); gl_Position=uViewProjection*vec4(uPlayerPos+r,1.0); }`, `#version 300 es\nprecision highp float;\nuniform vec4 uColor; uniform float uSkinPart; in vec3 vLocalPos; in vec3 vNormal; in float vLight; out vec4 fragColor; void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0); if(uSkinPart>=0.0){ if(uSkinPart==0.0){ color=vec3(0.72,0.48,0.32); bool hair=(vNormal.y>0.5)||(abs(vNormal.x)>0.5&&vLocalPos.y>0.70)||(vNormal.z< -0.5&&vLocalPos.y>0.55); if(hair) color=vec3(0.24,0.14,0.08); if(vNormal.z>0.5&&vLocalPos.y>0.28&&vLocalPos.y<0.58&&(cell.x==2.0||cell.x==5.0)&&cell.y>=2.0&&cell.y<=3.0) color=vec3(0.20,0.43,0.78); if(vNormal.z>0.5&&cell.y==1.0&&cell.x>=3.0&&cell.x<=4.0) color=vec3(0.38,0.18,0.13); } else if(uSkinPart==1.0){ color=vec3(0.12,0.48,0.72); if(mod(cell.x+cell.y,5.0)==0.0) color*=0.88; } else if(uSkinPart==2.0||uSkinPart==3.0){ color=vLocalPos.y<0.22?vec3(0.72,0.48,0.32):vec3(0.12,0.48,0.72); if(mod(cell.y,4.0)==0.0&&vLocalPos.y>=0.22) color*=0.9; } else { color=vec3(0.16,0.24,0.48); if(vLocalPos.y<0.16) color=vec3(0.24,0.16,0.10); if(mod(cell.x+cell.y,6.0)==0.0) color*=0.9; } } float pixel=0.97+mod(cell.x+cell.y+cell.z,2.0)*0.035; fragColor=vec4(color*vLight*pixel,uColor.a); }`, 'player avatar');
   },
 
   _setupBuffers() {
@@ -298,12 +298,12 @@ export const RendererMixin = {
     const gl = this.gl;
     const { program, uniforms } = this.avatarProgram;
     const human = [
-      [[0, 1.68, 0], [0.28, 0.32, 0.28], [0.78, 0.62, 0.46, 1]],
-      [[0, 1.05, 0], [0.48, 0.78, 0.26], [0.16, 0.42, 0.78, 1]],
-      [[-0.34, 1.08, 0], [0.20, 0.72, 0.22], [0.78, 0.62, 0.46, 1]],
-      [[0.34, 1.08, 0], [0.20, 0.72, 0.22], [0.78, 0.62, 0.46, 1]],
-      [[-0.13, 0.36, 0], [0.24, 0.72, 0.25], [0.20, 0.24, 0.55, 1]],
-      [[0.13, 0.36, 0], [0.24, 0.72, 0.25], [0.20, 0.24, 0.55, 1]],
+      [[0, 1.62, 0], [0.38, 0.38, 0.38], [0.72, 0.48, 0.32, 1]],
+      [[0, 1.00, 0], [0.50, 0.65, 0.25], [0.12, 0.48, 0.72, 1]],
+      [[-0.37, 1.00, 0], [0.24, 0.65, 0.25], [0.12, 0.48, 0.72, 1]],
+      [[0.37, 1.00, 0], [0.24, 0.65, 0.25], [0.12, 0.48, 0.72, 1]],
+      [[-0.13, 0.35, 0], [0.25, 0.70, 0.25], [0.16, 0.24, 0.48, 1]],
+      [[0.13, 0.35, 0], [0.25, 0.70, 0.25], [0.16, 0.24, 0.48, 1]],
     ];
     const zombie = human.map(([o, size, color], i) => [
       o, size, i === 0 || i === 2 || i === 3 ? [0.28, 0.62, 0.25, 1] :
@@ -385,14 +385,28 @@ export const RendererMixin = {
       [[-0.16, 0.20, -0.12], [0.10, 0.38, 0.10], [0.91, 0.72, 0.22, 1]],
       [[0.16, 0.20, -0.12], [0.10, 0.38, 0.10], [0.91, 0.72, 0.22, 1]],
     ];
-    const draw = (x, y, z, yaw, parts, walkPhase = 0, legStart = -1, legEnd = -1, pulse = 1) => {
+    const draw = (x, y, z, yaw, parts, walkPhase = 0, legStart = -1, legEnd = -1, pulse = 1, pose = {}, skin = false) => {
       gl.uniform3f(uniforms.uPlayerPos, x, y, z);
       gl.uniform1f(uniforms.uYaw, yaw);
       for (let partIndex = 0; partIndex < parts.length; partIndex++) {
         const [offset, scale, color] = parts[partIndex];
-        const swing = partIndex >= legStart && partIndex <= legEnd ? Math.sin(walkPhase) * 0.07 : 0;
-        gl.uniform3f(uniforms.uPartOffset, offset[0], offset[1] + swing, offset[2]);
+        const isArm = partIndex === 2 || partIndex === 3;
+        const isLeg = partIndex === 4 || partIndex === 5;
+        const phase = partIndex === 2 || partIndex === 4 ? 0 : Math.PI;
+        let swing = 0;
+        let pivotY = offset[1];
+        if (isArm || isLeg) {
+          pivotY = isArm ? 1.30 : 0.70;
+          if (pose.swimming) swing = isArm ? Math.sin(walkPhase * 1.7 + phase) * 0.72 : Math.sin(walkPhase * 1.7 + phase) * 0.42;
+          else if (pose.airborne) swing = isArm ? -0.22 : 0.25;
+          else if (isArm || isLeg) swing = Math.sin(walkPhase + phase) * 0.58;
+          if (isArm && pose.attack && partIndex === 3) swing -= 1.15;
+        }
+        gl.uniform3f(uniforms.uPartOffset, offset[0], offset[1], offset[2]);
         gl.uniform3f(uniforms.uPartScale, scale[0] * pulse, scale[1] * pulse, scale[2] * pulse);
+        gl.uniform1f(uniforms.uPartSwing, swing);
+        gl.uniform1f(uniforms.uPartPivotY, pivotY);
+        gl.uniform1f(uniforms.uSkinPart, skin ? partIndex : -1);
         gl.uniform4f(uniforms.uColor, color[0], color[1], color[2], color[3]);
         gl.drawArrays(gl.TRIANGLES, 0, 36);
       }
@@ -401,9 +415,9 @@ export const RendererMixin = {
     gl.useProgram(program);
     gl.uniformMatrix4fv(uniforms.uViewProjection, false, this.viewProjection);
     gl.bindVertexArray(this.avatarVao);
-    if (this.thirdPerson) draw(this.player.x, this.player.y, this.player.z, this.player.yaw * Math.PI / 180, human);
+    if (this.thirdPerson) draw(this.player.x, this.player.y, this.player.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, attack: this.player.attackTime > 0 }, true);
     for (const remote of this.multiplayer?.remotePlayers?.values?.() ?? []) {
-      draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, human);
+      draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, human, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne }, true);
     }
     for (const mob of this.entities?.mobs ?? []) {
       const parts = mob.type === 'zombie' ? zombie
