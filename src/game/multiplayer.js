@@ -167,7 +167,18 @@ export class Multiplayer {
   }
 
   async createRoom() {
-    if (!this.db && !(await this.init())) return;
+    try {
+      return await this._createRoom();
+    } catch (error) {
+      this.firebaseError = error?.message || 'Не удалось создать комнату';
+      console.error('[multiplayer] create room failed:', error);
+      this.game.ui.toast(`Не удалось создать комнату: ${this.firebaseError}`, { error: true, duration: 10000 });
+      return false;
+    }
+  }
+
+  async _createRoom() {
+    if (!this.db && !(await this.init())) return false;
     const code = roomCode();
     const seed = String(Math.floor(Math.random() * 2147483647));
     await set(ref(this.db, `minecraft_game/rooms/${code}`), {
@@ -177,7 +188,18 @@ export class Multiplayer {
   }
 
   async joinRoom(rawCode) {
-    if (!this.db && !(await this.init())) return;
+    try {
+      return await this._joinRoom(rawCode);
+    } catch (error) {
+      this.firebaseError = error?.message || 'Не удалось войти в комнату';
+      console.error('[multiplayer] join room failed:', error);
+      this.game.ui.toast(`Не удалось войти в комнату: ${this.firebaseError}`, { error: true, duration: 10000 });
+      return false;
+    }
+  }
+
+  async _joinRoom(rawCode) {
+    if (!this.db && !(await this.init())) return false;
     const code = String(rawCode || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
     if (!code) {
       this.game.ui.toast('Введи код комнаты', { error: true });
@@ -195,6 +217,8 @@ export class Multiplayer {
 
     await this.leaveRoom(false);
     this.roomId = code;
+    this.spawnSeparationChecked = false;
+    this.firebaseError = '';
     this.isHost = room.hostUid === this.uid;
     const worldId = `online-${code}-${this.uid}`;
     const savedPlayer = await storage.getPlayer(worldId, 'local');
@@ -300,6 +324,7 @@ export class Multiplayer {
     document.getElementById('hud-room').classList.remove('hidden');
     document.getElementById('mp-screen').classList.add('hidden');
     this.game.ui.toast(`Подключено к комнате ${code}`);
+    return true;
   }
 
   _separateSpawn(players) {
