@@ -1,4 +1,8 @@
-import { Player, GAMEMODE } from '../src/entity/player.js';
+import '../src/world/blocks/index.js';
+import { describe, it, assert, assertEqual } from './framework.js';
+import { BLOCKS } from '../src/world/block.js';
+import { AABB } from '../src/core/math.js';
+import { forwardVector } from '../src/core/mat4.js';
 
 describe('survival fall damage', () => {
   it('takes no fall damage at or below three blocks', () => {
@@ -26,13 +30,6 @@ describe('survival fall damage', () => {
     assertEqual(player.health, 20);
   });
 });
-
-import '../src/world/blocks/index.js';
-import { describe, it, assert, assertEqual } from './framework.js';
-import { Player, GAMEMODE } from '../src/entity/player.js';
-import { BLOCKS } from '../src/world/block.js';
-import { AABB } from '../src/core/math.js';
-import { forwardVector } from '../src/core/mat4.js';
 
 /**
  * Player physics regression tests.
