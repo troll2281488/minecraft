@@ -2,7 +2,7 @@ import { describe, it, assert, assertEqual } from './framework.js';
 import '../src/world/blocks/index.js';
 import { BLOCKS } from '../src/world/block.js';
 import { ITEMS } from '../src/world/item.js';
-import { MIN_Y, MAX_Y, WORLD_HEIGHT, TOOL_TIER, HARVEST_LEVEL } from '../src/core/constants.js';
+import { MIN_Y, MAX_Y, WORLD_HEIGHT, TOOL_TIER, HARVEST_LEVEL, HOSTILE_SPAWN_MAX_LIGHT } from '../src/core/constants.js';
 import { buildTextures } from '../src/render/atlas.js';
 import { TerrainGenerator, generateChunk } from '../src/world/gen/terrain.js';
 
@@ -11,6 +11,7 @@ describe('Minecraft Java Edition 1.12.2 compatibility guardrails', () => {
     assertEqual(MIN_Y, 0);
     assertEqual(MAX_Y, 256);
     assertEqual(WORLD_HEIGHT, 256);
+    assertEqual(HOSTILE_SPAWN_MAX_LIGHT, 7);
   });
 
   it('does not register post-1.12 block families removed in this pass', () => {
