@@ -10,6 +10,7 @@
 import { GAMEMODE } from '../entity/player.js';
 import { ITEMS } from '../world/item.js';
 import { BLOCKS, parseStateString } from '../world/block.js';
+import { isAction } from './keybinds.js';
 
 export const InputMixin = {
   _setupInput() {
@@ -106,7 +107,7 @@ export const InputMixin = {
 
     if (!this.running || this.paused) return;
 
-    if (e.code === 'Space') {
+    if (isAction(e.code, 'jump')) {
       e.preventDefault();
       if (this.player?.gamemode === GAMEMODE.CREATIVE) {
         const now = performance.now();
@@ -120,7 +121,7 @@ export const InputMixin = {
       }
     }
 
-    if (e.code === 'KeyE') {
+    if (isAction(e.code, 'inventory')) {
       e.preventDefault();
       if (this.inventoryOpen) this._closeInventory();
       else if (this.player.gamemode === GAMEMODE.CREATIVE) this._openCreativeInventory();
@@ -130,7 +131,7 @@ export const InputMixin = {
 
     if (this.inventoryOpen) return;
 
-    if (e.code === 'KeyT' && !this.inventoryOpen) {
+    if (isAction(e.code, 'chat') && !this.inventoryOpen) {
       e.preventDefault();
       const chat = document.getElementById('chat-entry');
       this.chatOpen = true;
@@ -154,13 +155,13 @@ export const InputMixin = {
       return;
     }
 
-    if (e.code === 'KeyF' && this.player.gamemode === GAMEMODE.CREATIVE) {
+    if (isAction(e.code, 'fly') && this.player.gamemode === GAMEMODE.CREATIVE) {
       this.player.flying = !this.player.flying;
       this.ui.toast(this.player.flying ? 'Flying enabled' : 'Flying disabled', { duration: 1500 });
       return;
     }
 
-    if (e.code === 'KeyQ') {
+    if (isAction(e.code, 'drop')) {
       this.inventory.consumeHeld(1);
       return;
     }
