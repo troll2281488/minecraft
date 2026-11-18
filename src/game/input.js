@@ -97,7 +97,8 @@ export const InputMixin = {
     this.keys.add(e.code);
 
     if (e.code === 'Escape') {
-      if (this.inventoryOpen) this._closeInventory();
+      if (this._activeContainer) this._closeContainer();
+      else if (this.inventoryOpen) this._closeInventory();
       else if (this.running && !this.paused) this._pause();
       else if (this.running && this.paused) this._resume();
       return;
