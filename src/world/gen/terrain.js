@@ -3,9 +3,7 @@
  *
  * A deliberately simplified ancestor of what Phase 2 will replace it with. This
  * uses a 2D heightmap with a 3D density field carved through it, which produces
- * good-looking hills, cliffs, and caves. The full 1.18-style multi-noise biome
- * system -- continentalness, erosion, peaks-and-valleys as independent
- * parameters -- lands in Phase 2.
+ * good-looking hills, cliffs, and caves. The full 1.12.2 biome placement and structure generation are still pending.
  *
  * WHY THAT ORDER IS SAFE
  *
