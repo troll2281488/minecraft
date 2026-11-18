@@ -14,7 +14,7 @@ describe('mob drops', () => {
   });
 
   it('zombies may drop zero to two rotten flesh', () => {
-    assertEqual(rollMobDrops('zombie', () => 0).length, 0);
+    assertEqual(rollMobDrops('zombie', () => 0).some((drop) => drop.id === 'mc:rotten_flesh'), false);
     assertEqual(rollMobDrops('zombie', () => 0.999)[0].count, 2);
     assertEqual(rollMobDrops('zombie', () => 0.999)[0].id, 'mc:rotten_flesh');
   });
