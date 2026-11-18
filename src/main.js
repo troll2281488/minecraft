@@ -310,6 +310,11 @@ class Game {
       player.input.jump = false;
     }
 
+    // Preserve the previous simulation position so rendering can interpolate
+    // between 20 TPS physics steps instead of visibly snapping at 20 Hz.
+    player.prevX = player.x;
+    player.prevY = player.y;
+    player.prevZ = player.z;
     player.tick(world);
     this.entities?.tick();
     if (player.health <= 0 && !this.deathScreenOpen) {
