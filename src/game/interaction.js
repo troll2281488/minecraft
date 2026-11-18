@@ -312,7 +312,7 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
     if (state.get('age') < 7) return [];
     return [
       { id: 'mc:wheat', count: 1 },
-      { id: 'mc:wheat_seeds', count: 1 + rng.nextInt(3) },
+      { id: 'mc:wheat_seeds', count: rng.nextInt(4) },
     ];
   }
 
