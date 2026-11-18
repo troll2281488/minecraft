@@ -312,14 +312,16 @@ export class Multiplayer {
       }
       this._updateRoomHud();
     });
-    const applyBlockSnapshot = (snap) => {
-      const block = snap.val();
-      if (!block || !Number.isInteger(block.x) || !Number.isInteger(block.y) || !Number.isInteger(block.z)) return;
-      this.pendingBlocks.set(`${block.x},${block.y},${block.z}`, block);
+    // One room-level value listener gives a joining client the complete edit
+    // snapshot and keeps it current when any participant changes a block.
+    this._listen(onValue, ref(this.db, `minecraft_game/rooms/${code}/blocks`), (snap) => {
+      const blocks = snap.val() || {};
+      for (const block of Object.values(blocks)) {
+        if (!block || !Number.isInteger(block.x) || !Number.isInteger(block.y) || !Number.isInteger(block.z)) continue;
+        this.pendingBlocks.set(`${block.x},${block.y},${block.z}`, block);
+      }
       this._applyPendingBlocks();
-    };
-    this._listen(onChildAdded, ref(this.db, `minecraft_game/rooms/${code}/blocks`), applyBlockSnapshot);
-    this._listen(onChildChanged, ref(this.db, `minecraft_game/rooms/${code}/blocks`), applyBlockSnapshot);
+    });
     this._listen(onChildAdded, ref(this.db, `minecraft_game/rooms/${code}/chat`), (snap) => {
       const msg = snap.val();
       if (msg?.text) this.addChat(`<${safeName(msg.sender)}> ${String(msg.text).slice(0, 240)}`);
@@ -385,7 +387,11 @@ export class Multiplayer {
             if (typed !== undefined) state = state.with(name, typed);
           }
         } catch { this.pendingBlocks.delete(key); continue; }
-        if (this.game.world.setBlock(block.x, block.y, block.z, state, { relight: false })) this.pendingBlocks.delete(key);
+        const current = this.game.world.getBlock(block.x, block.y, block.z);
+        if (current?.toString?.() === state.toString() ||
+            this.game.world.setBlock(block.x, block.y, block.z, state, { relight: false })) {
+          this.pendingBlocks.delete(key);
+        }
       }
     } finally { this.applyingRemoteBlock = false; }
   }
