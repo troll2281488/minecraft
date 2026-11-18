@@ -15,6 +15,7 @@ import {
 } from '../save/io.js';
 import { encodeChunk } from '../save/format.js';
 import { DATA_VERSION } from '../save/migrate.js';
+import { actionRows, bindKey, resetKeys, keyLabel } from '../game/keybinds.js';
 
 export const ScreensMixin = {
   _setupScreens() {
@@ -29,6 +30,7 @@ export const ScreensMixin = {
     byId('btn-rename-world').onclick = () => this._renameSelectedWorld();
     byId('btn-duplicate-world').onclick = () => this._duplicateSelectedWorld();
     this._loadSettings();
+    this._buildKeybindSettings();
     byId('setting-distance').oninput = (e) => {
       this.renderDistance = Number(e.target.value);
       byId('setting-distance-value').textContent = this.renderDistance + ' чанков';
@@ -168,6 +170,43 @@ export const ScreensMixin = {
     this._resize?.();
   },
 
+  _buildKeybindSettings() {
+    const panel = document.querySelector('#settings-screen .panel');
+    if (!panel) return;
+    let section = document.getElementById('keybind-settings');
+    if (!section) {
+      section = document.createElement('section');
+      section.id = 'keybind-settings';
+      section.innerHTML = '<h2>Управление</h2><div class="keybind-list"></div><button id="btn-reset-keybinds" class="secondary" type="button">Сбросить клавиши</button><p class="sub">Нажми на клавишу действия, затем нажми новую клавишу. Esc отменяет переназначение.</p>';
+      const back = document.getElementById('btn-settings-back');
+      panel.insertBefore(section, back);
+      section.querySelector('#btn-reset-keybinds').addEventListener('click', () => {
+        resetKeys();
+        this._buildKeybindSettings();
+        this.ui.toast('Управление сброшено');
+      });
+    }
+    const list = section.querySelector('.keybind-list');
+    list.replaceChildren();
+    for (const row of actionRows()) {
+      const line = document.createElement('div');
+      line.className = 'settings-row keybind-row';
+      const label = document.createElement('span');
+      label.textContent = row.label;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'secondary keybind-button';
+      button.textContent = this._rebindingAction === row.action ? 'Нажми клавишу…' : keyLabel(row.code);
+      button.setAttribute('aria-label', 'Назначить клавишу: ' + row.label);
+      button.addEventListener('click', () => {
+        this._rebindingAction = row.action;
+        this._buildKeybindSettings();
+      });
+      line.append(label, button);
+      list.append(line);
+    }
+  },
+
   _saveSettings() {
     try {
       localStorage.setItem('voxel-game-settings', JSON.stringify({
@@ -181,6 +220,7 @@ export const ScreensMixin = {
 
   _openSettings() {
     this._loadSettings();
+    this._buildKeybindSettings();
     this.ui.showScreen('settings');
   },
 
