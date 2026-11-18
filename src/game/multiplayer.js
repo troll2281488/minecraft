@@ -324,7 +324,7 @@ export class Multiplayer {
       this.game.ui.toast('Игроки появились рядом — позиция автоматически разведена.', { duration: 3500 });
       return;
     }
-  },
+  }
 
   _updateRoomHud() {
     const hud = document.getElementById('hud-room');
