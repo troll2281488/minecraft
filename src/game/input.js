@@ -8,6 +8,7 @@
  */
 
 import { GAMEMODE } from '../entity/player.js';
+import { ITEMS } from '../world/item.js';
 
 export const InputMixin = {
   _setupInput() {
@@ -149,6 +150,75 @@ export const InputMixin = {
       this.inventory.selectedSlot = Number(digit[1]) - 1;
       this.ui.flashItemName(this.inventory.held);
     }
+  },
+
+
+
+  _runCommand(raw) {
+    const args = String(raw || '').trim().replace(/^\\//, '').split(/\\s+/);
+    const command = (args.shift() || '').toLowerCase();
+    const reply = (message, error = false) => {
+      this.multiplayer?.addChat(`[Команда] ${message}`);
+      if (error) this.ui.toast(message, { error: true });
+      else this.ui.toast(message, { duration: 2500 });
+    };
+    if (!command) return;
+    if (command === 'help' || command === '?') {
+      reply('/gamemode creative|survival · /give <item> [кол-во] · /tp <x> <y> <z> · /time day|night · /heal · /fly');
+      return;
+    }
+    if (command === 'gamemode' || command === 'gm') {
+      const mode = (args[0] || '').toLowerCase();
+      const modes = { c: GAMEMODE.CREATIVE, creative: GAMEMODE.CREATIVE, s: GAMEMODE.SURVIVAL, survival: GAMEMODE.SURVIVAL, spectator: GAMEMODE.SPECTATOR, sp: GAMEMODE.SPECTATOR };
+      if (!modes[mode]) { reply('Использование: /gamemode creative|survival|spectator', true); return; }
+      this.player.gamemode = modes[mode];
+      this.player.flying = this.player.gamemode === GAMEMODE.SPECTATOR;
+      reply(`Режим игры: ${this.player.gamemode}`);
+      return;
+    }
+    if (this.player.gamemode !== GAMEMODE.CREATIVE) {
+      reply('Команды тестирования доступны в творческом режиме. Введи /gamemode creative.', true);
+      return;
+    }
+    if (command === 'give' || command === 'i') {
+      const rawId = (args[0] || '').toLowerCase();
+      const id = rawId.includes(':') ? rawId : `mc:${rawId}`;
+      const count = Math.max(1, Math.min(64, Number.parseInt(args[1] || '1', 10) || 1));
+      if (!ITEMS.get(id)) { reply(`Неизвестный предмет: ${id}`, true); return; }
+      const leftover = this.inventory.addItem(id, count);
+      reply(`Выдано ${count - leftover}/${count}: ${id}${leftover ? ` (не поместилось: ${leftover})` : ''}`);
+      return;
+    }
+    if (command === 'tp' || command === 'teleport') {
+      const coords = args.slice(0, 3).map(Number);
+      if (coords.length !== 3 || !coords.every(Number.isFinite) || Math.abs(coords[0]) > 30000000 || Math.abs(coords[2]) > 30000000 || coords[1] < -64 || coords[1] > 320) {
+        reply('Использование: /tp <x> <y> <z>', true); return;
+      }
+      this.player.teleport(coords[0] + 0.5, coords[1], coords[2] + 0.5);
+      this.world.requestAround(this.player.x, this.player.z, this.renderDistance, 12);
+      reply(`Телепорт: ${coords.join(' ')}`);
+      return;
+    }
+    if (command === 'time') {
+      const when = (args[0] || '').toLowerCase();
+      if (when !== 'day' && when !== 'night') { reply('Использование: /time day|night', true); return; }
+      this.world.time = when === 'day' ? 1000 : 13000;
+      reply(when === 'day' ? 'Установлено утро' : 'Установлена ночь');
+      return;
+    }
+    if (command === 'heal') {
+      this.player.health = 20;
+      this.player.vitals.food = 20;
+      this.player.vitals.saturation = 5;
+      reply('Здоровье и голод восстановлены');
+      return;
+    }
+    if (command === 'fly') {
+      this.player.flying = !this.player.flying;
+      reply(this.player.flying ? 'Полёт включён' : 'Полёт выключен');
+      return;
+    }
+    reply(`Неизвестная команда: /${command}. Введи /help.`, true);
   },
 
   _requestPointerLock() {
