@@ -155,7 +155,8 @@ export const InputMixin = {
 
 
   _runCommand(raw) {
-    const args = String(raw || '').trim().replace(/^\\//, '').split(/\\s+/);
+    const cleaned = String(raw || '').trim();
+    const args = (cleaned.startsWith('/') ? cleaned.slice(1) : cleaned).split(' ').filter(Boolean);
     const command = (args.shift() || '').toLowerCase();
     const reply = (message, error = false) => {
       this.multiplayer?.addChat(`[Команда] ${message}`);
