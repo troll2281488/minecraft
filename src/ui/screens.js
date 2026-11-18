@@ -61,6 +61,44 @@ export const ScreensMixin = {
     byId('btn-mp-join-room').onclick = () => this.multiplayer.joinRoom(byId('mp-room-code').value).catch((e) => this.ui.toast(e.message, { error: true }));
 
     const chat = byId('chat-entry');
+    const suggestions = byId('command-suggestions');
+    const commandHints = [
+      ['/help', 'список команд'],
+      ['/gamemode creative', 'творческий режим'],
+      ['/gamemode survival', 'выживание'],
+      ['/gamemode spectator', 'наблюдатель'],
+      ['/give diamond 64', 'выдать предмет'],
+      ['/tp 0 80 0', 'телепорт по координатам'],
+      ['/setblock 0 80 0 stone', 'поставить блок (creative)'],
+      ['/time set day', 'день'],
+      ['/time set night', 'ночь'],
+      ['/time add 1000', 'прибавить время'],
+      ['/heal', 'здоровье, еда и воздух'],
+      ['/fly', 'полёт (creative)'],
+      ['/spawn', 'вернуться на безопасный спавн'],
+      ['/save', 'сохранить мир'],
+      ['/seed', 'показать seed'],
+      ['/whereami', 'показать координаты'],
+    ];
+    chat.addEventListener('input', () => {
+      const value = chat.value.trim().toLowerCase();
+      if (!value.startsWith('/')) { suggestions.classList.add('hidden'); suggestions.replaceChildren(); return; }
+      const matches = commandHints.filter(([command]) => command.startsWith(value) || value === '/');
+      suggestions.replaceChildren();
+      for (const [command, description] of matches.slice(0, 8)) {
+        const option = document.createElement('div');
+        option.textContent = `${command}  —  ${description}`;
+        option.addEventListener('pointerdown', (event) => {
+          event.preventDefault();
+          chat.value = command;
+          chat.focus();
+          chat.setSelectionRange(chat.value.length, chat.value.length);
+          chat.dispatchEvent(new Event('input'));
+        });
+        suggestions.append(option);
+      }
+      suggestions.classList.toggle('hidden', matches.length === 0);
+    });
     chat.addEventListener('keydown', (event) => {
       event.stopPropagation();
       if (event.code === 'Enter') {
@@ -68,12 +106,15 @@ export const ScreensMixin = {
         if (message.startsWith('/')) this._runCommand(message);
         else this.multiplayer.sendChat(message);
         chat.value = '';
+        suggestions.classList.add('hidden');
+        suggestions.replaceChildren();
         this.chatOpen = false;
         chat.classList.add('hidden');
         if (this.running && !this.paused) this._requestPointerLock();
       } else if (event.code === 'Escape') {
         this.chatOpen = false;
         chat.classList.add('hidden');
+        suggestions.classList.add('hidden');
         if (this.running && !this.paused) this._requestPointerLock();
       }
     });
