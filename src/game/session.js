@@ -33,13 +33,18 @@ export const SessionMixin = {
     // Load any chunks already saved for this world before generating new ones,
     // so returning to a world shows what the player built rather than fresh
     // terrain generated over the top of it.
-    const saved = await storage.getAllChunks(meta.id, 'mc:overworld');
-    for (const record of saved) {
-      const chunk = materializeChunk(
-        ...record.key.split(',').map(Number),
-        decodeChunkBinary(record.bytes),
-      );
-      this.world.adoptChunk(chunk);
+    // Online rooms are generated from the room seed and their block edits live
+    // in Firebase. Loading this browser's private cached chunks here would make
+    // every participant see a different terrain snapshot.
+    if (!this.multiplayer?.roomId) {
+      const saved = await storage.getAllChunks(meta.id, 'mc:overworld');
+      for (const record of saved) {
+        const chunk = materializeChunk(
+          ...record.key.split(',').map(Number),
+          decodeChunkBinary(record.bytes),
+        );
+        this.world.adoptChunk(chunk);
+      }
     }
 
     this.player = new Player().loadFrom(playerJson);
