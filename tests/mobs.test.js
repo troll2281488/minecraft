@@ -121,6 +121,53 @@ describe('animal breeding', () => {
     assertEqual(inventory.removed, 2);
   });
 
+
+  it('feeds baby animals to speed up growth', () => {
+    const inventory = {
+      held: { item: { id: 'mc:wheat' } }, removed: 0,
+      remove(id, count) { this.removed += count; return count; },
+    };
+    const game = {
+      inventory, player: { gamemode: 'survival' },
+      ui: { toast() {} },
+    };
+    const system = new MobSystem(game);
+    const baby = { type: 'cow', ageTicks: -10000, breedCooldown: 0, loveTicks: 0 };
+    system.targetedMob = () => baby;
+    assertEqual(system.feedAnimalFromPlayer(), true);
+    assertEqual(baby.ageTicks, -9000);
+    assertEqual(inventory.removed, 1);
+  });
+
+  it('allows creative players to breed without consuming food', () => {
+    const inventory = {
+      held: { item: { id: 'mc:wheat' } }, removed: 0,
+      remove(id, count) { this.removed += count; return count; },
+    };
+    const game = {
+      inventory, player: { gamemode: 'creative' },
+      world: {
+        getHeight: () => 64,
+        getBlock: () => ({ block: { solid: true } }),
+      },
+      ui: { toast() {} },
+    };
+    const system = new MobSystem(game);
+    const cow = (x) => ({
+      type: 'cow', x, y: 65, z: 0, yaw: 0, speed: 0.018,
+      health: 10, ageTicks: 0, loveTicks: 0, breedCooldown: 0,
+    });
+    const first = cow(0);
+    const second = cow(2);
+    system.mobs.push(first, second);
+    system.targetedMob = () => first;
+    system.feedAnimalFromPlayer();
+    system.targetedMob = () => second;
+    system.feedAnimalFromPlayer();
+    assertEqual(system.mobs.length, 3);
+    assertEqual(inventory.removed, 0);
+  });
+
   it('persists baby age and breeding timers', () => {
     const system = new MobSystem({});
     system.loadFrom([{
