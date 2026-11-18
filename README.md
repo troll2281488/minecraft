@@ -146,3 +146,7 @@ quads cannot carry differing per-vertex ambient occlusion and light values.
 ## 1.12.2 compatibility work
 
 The current compatibility pass targets the classic Java 1.12.2 world height (Y=0..255), removes registered deepslate/copper/netherite content, removes post-1.12 waterlogging states from stairs/slabs, restores classic ore height bands, adds jungle/acacia/dark-oak wood families, and adds additional 1.12.2 blocks including the 16-color wool, stained glass, terracotta and concrete families. This remains an actively incomplete voxel sandbox, not a complete Minecraft implementation; see [the compatibility audit](docs/VERSION_1_12_2_AUDIT.md) for what is and is not implemented.
+
+## Texture attribution
+
+Matching block textures are loaded at startup from [ItsBrian/minecraft-textures](https://github.com/ItsBrian/minecraft-textures), with built-in procedural textures used as fallbacks when a matching image is unavailable. The repository author, ItsBrian, stated in the project's GitHub Issues that the textures are original works created by him and granted permission to redistribute them as part of this game or another project. The game currently loads the files that match its registered block texture names; it does not automatically use every image in the source repository.
