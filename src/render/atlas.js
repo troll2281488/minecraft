@@ -282,10 +282,10 @@ function grassSide(dirtBase, grassBase, seed) {
 }
 
 /** Mostly transparent with a visible border, as glass reads in game. */
-function glassTile(seed) {
+function glassTile(seed, tint = hex(0xd8f0f4)) {
   const rng = new Random(seed);
   const tile = newTile();
-  const frame = hex(0xd8f0f4);
+  const frame = tint;
   for (let i = 0; i < TILE_SIZE; i++) {
     setPx(tile, i, 0, frame[0], frame[1], frame[2], 210);
     setPx(tile, i, TILE_SIZE - 1, frame[0], frame[1], frame[2], 210);
@@ -419,6 +419,23 @@ const TEXTURES = {
   dandelion:          () => crossPlant('dandelion', (t, r) => flower(t, r, hex(0x4f8f38), hex(0xf5d63a), hex(0xfff2a0))),
   poppy:              () => crossPlant('poppy', (t, r) => flower(t, r, hex(0x4f8f38), hex(0xd93b30), hex(0x2a2a2a))),
 };
+
+// The 1.12.2 dye palette is shared by wool, stained glass, terracotta and
+// concrete. These procedural tiles keep every registered color visible.
+const DYE_PALETTE = {
+  white: 0xe8e5df, orange: 0xd97827, magenta: 0xb34bb7, light_blue: 0x6699d8,
+  yellow: 0xe5c83b, lime: 0x7fbd32, pink: 0xd77eaa, gray: 0x474f52,
+  light_gray: 0x9a9a91, cyan: 0x2e8b86, purple: 0x7d3fb2, blue: 0x3546a5,
+  brown: 0x68452b, green: 0x536b2f, red: 0x9f302b, black: 0x242424,
+};
+for (const [color, rgb] of Object.entries(DYE_PALETTE)) {
+  const tint = hex(rgb);
+  if (color !== 'white') TEXTURES[`${color}_wool`] = () => grainy(tint, 0.08, `${color}_wool`);
+  TEXTURES[`${color}_terracotta`] = () => grainy(tint, 0.05, `${color}_terracotta`);
+  TEXTURES[`${color}_concrete`] = () => grainy(tint, 0.015, `${color}_concrete`);
+  TEXTURES[`${color}_concrete_powder`] = () => grainy(tint, 0.09, `${color}_concrete_powder`);
+  TEXTURES[`${color}_stained_glass`] = () => glassTile(`${color}_stained_glass`, tint);
+}
 
 // Wood species expand into their four textures each.
 for (const [species, c] of Object.entries(WOOD)) {
