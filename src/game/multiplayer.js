@@ -278,6 +278,10 @@ export class Multiplayer {
         current.targetX = p.x; current.targetY = p.y; current.targetZ = p.z; current.targetYaw = p.yaw || 0;
         this.remotePlayers.set(uid, current);
       }
+      if (!this.spawnSeparationChecked && this.remotePlayers.size > 0) {
+        this.spawnSeparationChecked = true;
+        this._separateSpawn(players);
+      }
       this._updateRoomHud();
     });
     const applyBlockSnapshot = (snap) => {
@@ -297,6 +301,30 @@ export class Multiplayer {
     document.getElementById('mp-screen').classList.add('hidden');
     this.game.ui.toast(`Подключено к комнате ${code}`);
   }
+
+  _separateSpawn(players) {
+    const local = this.game.player;
+    if (!local || !this.game.world) return;
+    const others = Object.entries(players || {}).filter(([uid, p]) =>
+      uid !== this.uid && Number.isFinite(p.x) && Number.isFinite(p.z));
+    if (!others.some(([, p]) => Math.hypot(p.x - local.x, p.z - local.z) < 1.5)) return;
+
+    let hash = 2166136261;
+    for (const char of this.uid) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619) >>> 0;
+    for (let attempt = 0; attempt < 16; attempt++) {
+      const angle = ((hash + attempt * 5) % 16) * (Math.PI / 8);
+      const radius = 3 + (attempt % 5);
+      const x = Math.floor(local.x + Math.cos(angle) * radius);
+      const z = Math.floor(local.z + Math.sin(angle) * radius);
+      const spawn = this.game.world.findSpawn(x, z, 5);
+      if (!spawn) continue;
+      const occupied = others.some(([, p]) => Math.hypot(p.x - spawn.x, p.z - spawn.z) < 1.5);
+      if (occupied) continue;
+      local.teleport(spawn.x, spawn.y, spawn.z);
+      this.game.ui.toast('Игроки появились рядом — позиция автоматически разведена.', { duration: 3500 });
+      return;
+    }
+  },
 
   _updateRoomHud() {
     const hud = document.getElementById('hud-room');
