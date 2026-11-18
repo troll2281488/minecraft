@@ -438,7 +438,10 @@ export const RendererMixin = {
     gl.useProgram(program);
     gl.uniformMatrix4fv(uniforms.uViewProjection, false, this.viewProjection);
     gl.bindVertexArray(this.avatarVao);
-    if (this.thirdPerson) draw(this.player.x, this.player.y, this.player.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, attack: this.player.attackTime > 0 }, true);
+    if (this.thirdPerson) {
+      document.getElementById('held-item-view')?.classList.add('hidden');
+      draw(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, attack: this.player.attackTime > 0 }, true);
+    }
     for (const remote of this.multiplayer?.remotePlayers?.values?.() ?? []) {
       draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, human, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne }, true);
     }
