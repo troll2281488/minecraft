@@ -204,6 +204,20 @@ export class Multiplayer {
     });
     await this.game._enterWorld(meta, savedPlayer);
 
+    // New clients must not all appear at the exact same coordinates. That made
+    // remote avatars overlap the local camera and look like they were missing.
+    if (!savedPlayer) {
+      let hash = 2166136261;
+      for (const char of this.uid) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619) >>> 0;
+      const angle = (hash % 8) * (Math.PI / 4);
+      const radius = 2.5 + ((hash >>> 3) % 3);
+      const base = this.game.player;
+      const desiredX = Math.floor(base.x + Math.cos(angle) * radius);
+      const desiredZ = Math.floor(base.z + Math.sin(angle) * radius);
+      const offsetSpawn = this.game.world.findSpawn(desiredX, desiredZ, 7);
+      if (offsetSpawn) base.teleport(offsetSpawn.x, offsetSpawn.y, offsetSpawn.z);
+    }
+
     const playerRef = ref(this.db, `minecraft_game/rooms/${code}/players/${this.uid}`);
     await set(playerRef, this._playerPayload());
     onDisconnect(playerRef).remove().catch(() => {});
