@@ -1,7 +1,8 @@
 import { describe, it, assert, assertEqual } from './framework.js';
 import '../src/world/blocks/index.js';
 import { BLOCKS } from '../src/world/block.js';
-import { ITEMS } from '../src/world/item.js';
+import { ITEMS, ItemStack } from '../src/world/item.js';
+import { blockDrops } from '../src/game/interaction.js';
 import { MIN_Y, MAX_Y, WORLD_HEIGHT, TOOL_TIER, HARVEST_LEVEL, HOSTILE_SPAWN_MAX_LIGHT } from '../src/core/constants.js';
 import { buildTextures } from '../src/render/atlas.js';
 import { TerrainGenerator, generateChunk } from '../src/world/gen/terrain.js';
@@ -70,5 +71,40 @@ describe('Minecraft Java Edition 1.12.2 compatibility guardrails', () => {
     for (const height of chunk.heightmap) {
       assert(height >= 0 && height < 256, `height ${height} outside classic build range`);
     }
+  });
+});
+
+
+describe('Vanilla block loot regression', () => {
+  it('drops gravel or flint using deterministic position-based randomness', () => {
+    const gravel = BLOCKS.get('mc:gravel').defaultState;
+    let flintSeed = null;
+    let gravelSeed = null;
+    for (let seed = 0; seed < 200 && (flintSeed === null || gravelSeed === null); seed++) {
+      const drop = blockDrops(gravel, ItemStack.EMPTY, seed, 3, 64, -7)[0];
+      if (drop?.id === 'mc:flint') flintSeed = seed;
+      if (drop?.id === 'mc:gravel') gravelSeed = seed;
+    }
+    assert(flintSeed !== null, 'expected at least one flint result');
+    assert(gravelSeed !== null, 'expected at least one gravel result');
+    assertEqual(
+      blockDrops(gravel, ItemStack.EMPTY, flintSeed, 3, 64, -7)[0].id,
+      'mc:flint',
+    );
+  });
+
+  it('does not drop glass or ice without Silk Touch', () => {
+    for (const id of ['mc:glass', 'mc:ice']) {
+      const state = BLOCKS.get(id).defaultState;
+      assertEqual(blockDrops(state, ItemStack.EMPTY, 1, 0, 64, 0).length, 0, id);
+    }
+  });
+
+  it('only drops wheat from mature crops', () => {
+    const wheat = BLOCKS.get('mc:wheat').defaultState;
+    assertEqual(blockDrops(wheat.with('age', 6), ItemStack.EMPTY, 1, 0, 64, 0).length, 0);
+    const drops = blockDrops(wheat.with('age', 7), ItemStack.EMPTY, 1, 0, 64, 0);
+    assertEqual(drops[0].id, 'mc:wheat');
+    assertEqual(drops[1].id, 'mc:wheat_seeds');
   });
 });
