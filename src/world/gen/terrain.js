@@ -30,9 +30,6 @@ import { clamp } from '../../core/math.js';
 /** Bumped whenever generation output changes. Stored per world. */
 export const GENERATOR_VERSION = 1;
 
-/** Y below which stone becomes deepslate, with a ragged blend above it. */
-const DEEPSLATE_TOP = 0;
-const DEEPSLATE_BLEND = 8;
 
 // ---------------------------------------------------------------------------
 // Biomes
@@ -66,27 +63,25 @@ const BIOME_SURFACE = {
 // ---------------------------------------------------------------------------
 // Ore distribution
 //
-// Vanilla 1.18 uses triangular distributions peaked at a target depth rather
-// than uniform bands -- which is why diamonds get dramatically more common as
-// you approach y = -59 instead of being flat below 16.
+// Minecraft 1.12.2 uses bounded ore distributions in classic 0..127 terrain.
+// Most ores are uniform within their height range; lapis is triangular.
 // ---------------------------------------------------------------------------
 
 const ORES = [
-  { block: 'mc:coal_ore',    veins: 20, size: 12, minY: 0,   maxY: 192, peak: 96,  triangular: true },
-  { block: 'mc:iron_ore',    veins: 10, size: 8,  minY: -24, maxY: 56,  peak: 16,  triangular: true },
-  { block: 'mc:copper_ore',  veins: 8,  size: 10, minY: -16, maxY: 112, peak: 48,  triangular: true },
-  { block: 'mc:gold_ore',    veins: 3,  size: 6,  minY: -64, maxY: 32,  peak: -16, triangular: true },
-  { block: 'mc:redstone_ore',veins: 6,  size: 7,  minY: -64, maxY: 15,  peak: -32, triangular: false },
-  { block: 'mc:lapis_ore',   veins: 2,  size: 6,  minY: -64, maxY: 64,  peak: 0,   triangular: true },
-  { block: 'mc:diamond_ore', veins: 2,  size: 5,  minY: -64, maxY: 16,  peak: -59, triangular: true },
+  { block: 'mc:coal_ore',     veins: 20, size: 17, minY: 0, maxY: 127 },
+  { block: 'mc:iron_ore',     veins: 20, size: 9,  minY: 0, maxY: 63 },
+  { block: 'mc:gold_ore',     veins: 2,  size: 9,  minY: 0, maxY: 31 },
+  { block: 'mc:redstone_ore', veins: 8,  size: 8,  minY: 0, maxY: 15 },
+  { block: 'mc:lapis_ore',    veins: 1,  size: 7,  minY: 0, maxY: 31, peak: 16, triangular: true },
+  { block: 'mc:diamond_ore',  veins: 1,  size: 8,  minY: 0, maxY: 15 },
 ];
 
 const DIRT_PATCHES = [
   { block: 'mc:dirt',    veins: 8, size: 22, minY: 0, maxY: 160 },
-  { block: 'mc:gravel',  veins: 6, size: 20, minY: -32, maxY: 160 },
-  { block: 'mc:granite', veins: 4, size: 24, minY: -48, maxY: 80 },
-  { block: 'mc:diorite', veins: 4, size: 24, minY: -48, maxY: 80 },
-  { block: 'mc:andesite',veins: 4, size: 24, minY: -48, maxY: 80 },
+  { block: 'mc:gravel',  veins: 6, size: 20, minY: 0, maxY: 127 },
+  { block: 'mc:granite', veins: 4, size: 24, minY: 0, maxY: 80 },
+  { block: 'mc:diorite', veins: 4, size: 24, minY: 0, maxY: 80 },
+  { block: 'mc:andesite',veins: 4, size: 24, minY: 0, maxY: 80 },
 ];
 
 // ---------------------------------------------------------------------------
@@ -247,13 +242,9 @@ export class TerrainGenerator {
     return chunk;
   }
 
-  /** Stone or deepslate, with a ragged transition rather than a flat line. */
+  /** The 1.12.2 Overworld has stone throughout its underground layers. */
   stoneFor(wx, wy, wz) {
-    if (wy > DEEPSLATE_TOP) return this.states.stone;
-    if (wy < DEEPSLATE_TOP - DEEPSLATE_BLEND) return this.states.deepslate;
-    const r = positionalRandom(this.seed, wx, wy, wz, 11);
-    const t = (DEEPSLATE_TOP - wy) / DEEPSLATE_BLEND;
-    return r.nextDouble() < t ? this.states.deepslate : this.states.stone;
+    return this.states.stone;
   }
 
   placePatches(chunk, baseX, baseZ) {
@@ -264,7 +255,7 @@ export class TerrainGenerator {
 
   placeOres(chunk, baseX, baseZ) {
     for (const ore of ORES) {
-      this.scatterVeins(chunk, baseX, baseZ, ore, 53, true);
+      this.scatterVeins(chunk, baseX, baseZ, ore, 53, false);
     }
   }
 
@@ -291,9 +282,6 @@ export class TerrainGenerator {
           const existing = chunk.getBlock(x, y, z);
           if (STONE_REPLACEABLE.has(existing.block.id)) {
             let target = spec.block;
-            if (deepslateVariants && existing.block.id === 'mc:deepslate') {
-              target = spec.block.replace('mc:', 'mc:deepslate_');
-            }
             const state = S.byId[target];
             if (state) chunk.setBlock(x, y, z, state);
           }
@@ -458,7 +446,7 @@ function triangularY(rng, minY, maxY, peak) {
 
 /** Blocks a vein or surface rule may overwrite. Never air, water, or wood. */
 const STONE_REPLACEABLE = new Set([
-  'mc:stone', 'mc:deepslate', 'mc:granite', 'mc:diorite', 'mc:andesite',
+  'mc:stone', 'mc:granite', 'mc:diorite', 'mc:andesite',
   'mc:dirt', 'mc:grass_block', 'mc:sand', 'mc:gravel', 'mc:coarse_dirt',
   'mc:snow_block', 'mc:podzol',
 ]);
@@ -471,7 +459,6 @@ function resolveStates() {
     byId,
     air: byId['mc:air'],
     stone: byId['mc:stone'],
-    deepslate: byId['mc:deepslate'],
     bedrock: byId['mc:bedrock'],
     water: byId['mc:water'],
   };
