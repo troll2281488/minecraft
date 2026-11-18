@@ -56,6 +56,8 @@ export const SessionMixin = {
 
     const isNew = !playerJson;
     await this._waitForSpawnChunks(isNew);
+    // Mobs are world state, not player state; restore them only for local worlds.
+    this.entities?.loadFrom?.(this.multiplayer?.roomId ? [] : playerJson?.mobs);
 
     if (isNew) {
       const spawn = await this._findSafeSpawn();
@@ -207,6 +209,8 @@ export const SessionMixin = {
       selectedSlot: this.inventory.selectedSlot,
       // Chest contents and furnace timers survive reloads and world exports.
       containers: this.multiplayer?.roomId ? [] : this._serializeContainers?.() ?? [],
+      // Preserve nearby creatures, including health and sheep shearing, in local saves.
+      mobs: this.multiplayer?.roomId ? [] : this.entities?.toJSON?.() ?? [],
     });
     await storage.putWorld({ ...this.worldMeta, time: this.world.time });
 
