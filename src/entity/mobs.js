@@ -1,3 +1,5 @@
+import { ItemStack } from '../world/item.js';
+
 /**
  * Lightweight voxel creature simulation. Mobs use deterministic game ticks,
  * ground-following movement and simple species-specific behaviour.
