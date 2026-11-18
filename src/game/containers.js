@@ -1,0 +1,132 @@
+/**
+ * Chest and furnace logic (Java 1.12.2).
+ *
+ * Pure game state with no DOM or GL dependency, so it is testable under node
+ * and reusable from any UI. The furnace numbers come from the 1.12.2 reference:
+ * one smelt takes 200 ticks (10 s), and each fuel item gives its fuelTicks worth
+ * of burning. When the furnace cannot smelt, progress falls back instead of
+ * snapping to zero, as vanilla does.
+ */
+
+import { ItemStack } from '../world/item.js';
+
+export const CHEST_SLOTS = 27;
+export const SMELT_TICKS = 200;
+/** Progress lost per tick while the furnace is not smelting (vanilla behaviour). */
+const COOL_PER_TICK = 2;
+
+/** Smelting table: input item id -> { result, count }. From the 1.12.2 smelting list. */
+export const SMELTING = new Map([
+  ['mc:iron_ore',     { result: 'mc:iron_ingot', count: 1 }],
+  ['mc:gold_ore',     { result: 'mc:gold_ingot', count: 1 }],
+  ['mc:sand',         { result: 'mc:glass', count: 1 }],
+  ['mc:cobblestone',  { result: 'mc:stone', count: 1 }],
+  ['mc:raw_beef',     { result: 'mc:cooked_beef', count: 1 }],
+  ['mc:raw_porkchop', { result: 'mc:cooked_porkchop', count: 1 }],
+  ['mc:raw_chicken',  { result: 'mc:cooked_chicken', count: 1 }],
+  ['mc:raw_mutton',   { result: 'mc:cooked_mutton', count: 1 }],
+  ['mc:potato',       { result: 'mc:baked_potato', count: 1 }],
+  ['mc:raw_cod',      { result: 'mc:cooked_cod', count: 1 }],
+  ['mc:raw_salmon',   { result: 'mc:cooked_salmon', count: 1 }],
+  ['mc:raw_rabbit',   { result: 'mc:cooked_rabbit', count: 1 }],
+]);
+
+/** Remove one item from a stack, returning the stack or the empty stack. */
+function takeOne(stack) {
+  stack.count -= 1;
+  return stack.count > 0 ? stack : ItemStack.EMPTY.clone();
+}
+
+export class Chest {
+  constructor() {
+    this.slots = Array.from({ length: CHEST_SLOTS }, () => ItemStack.EMPTY.clone());
+  }
+
+  /**
+   * Insert a stack, filling matching partial stacks first, then empty slots.
+   * Returns the leftover count that did not fit (0 when everything was stored).
+   */
+  insert(stack) {
+    let remaining = stack.count;
+    for (const slot of this.slots) {
+      if (remaining <= 0) break;
+      if (!slot.isEmpty && slot.canStackWith(stack) && slot.count < slot.maxStackSize) {
+        const moved = Math.min(remaining, slot.maxStackSize - slot.count);
+        slot.count += moved;
+        remaining -= moved;
+      }
+    }
+    for (let i = 0; i < this.slots.length && remaining > 0; i++) {
+      if (this.slots[i].isEmpty) {
+        const moved = Math.min(remaining, stack.maxStackSize);
+        this.slots[i] = ItemStack.of(stack.item.id, moved, stack.damage, stack.data);
+        remaining -= moved;
+      }
+    }
+    return remaining;
+  }
+}
+
+export class Furnace {
+  constructor() {
+    this.input = ItemStack.EMPTY.clone();
+    this.fuel = ItemStack.EMPTY.clone();
+    this.output = ItemStack.EMPTY.clone();
+    /** Ticks of fuel left in the current burn. */
+    this.burnLeft = 0;
+    /** Length of the current burn, so a UI can draw the flame's fraction. */
+    this.burnTotal = 0;
+    /** Ticks of smelting completed toward SMELT_TICKS. */
+    this.cookProgress = 0;
+  }
+
+  /** The smelting result for the current input, or null. */
+  get recipe() {
+    if (this.input.isEmpty) return null;
+    return SMELTING.get(this.input.item.id) ?? null;
+  }
+
+  /** Whether the current input can be placed into the output slot right now. */
+  get canSmelt() {
+    const recipe = this.recipe;
+    if (!recipe) return false;
+    if (this.output.isEmpty) return true;
+    return this.output.item.id === recipe.result &&
+      this.output.count + recipe.count <= this.output.maxStackSize;
+  }
+
+  /** Advance the furnace by one tick. */
+  tick() {
+    const wasBurning = this.burnLeft > 0;
+    if (this.burnLeft > 0) this.burnLeft -= 1;
+
+    if (this.burnLeft === 0 && this.canSmelt && !this.fuel.isEmpty &&
+        this.fuel.item.fuelTicks > 0) {
+      this.burnTotal = this.fuel.item.fuelTicks;
+      this.burnLeft = this.burnTotal;
+      this.fuel = takeOne(this.fuel);
+    }
+
+    if (this.burnLeft > 0 && this.canSmelt) {
+      this.cookProgress += 1;
+      if (this.cookProgress >= SMELT_TICKS) {
+        this._finishSmelt();
+        this.cookProgress = 0;
+      }
+    } else {
+      this.cookProgress = Math.max(0, this.cookProgress - COOL_PER_TICK);
+    }
+
+    return wasBurning !== (this.burnLeft > 0);
+  }
+
+  _finishSmelt() {
+    const recipe = this.recipe;
+    this.input = takeOne(this.input);
+    if (this.output.isEmpty) {
+      this.output = ItemStack.of(recipe.result, recipe.count);
+    } else {
+      this.output.count += recipe.count;
+    }
+  }
+}
