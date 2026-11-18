@@ -41,3 +41,6 @@ The previous browser test attempt was blocked by the execution environment (`ERR
 - Browser integration tests were not verified in this environment. Node-compatible unit suites were run separately; the browser-only golden-save test uses browser `fetch` and was excluded from the Node run.
 
 - Added all 16 dye colors for wool, stained glass, terracotta, concrete and concrete powder, with procedural colored atlas textures.
+
+- Added survival fall damage (three-block safe distance, one health point per additional block) and a death/respawn screen. Respawn currently preserves inventory as a deliberate prototype convenience; this differs from vanilla death drops.
+- The current build still has no End portal/End dimension/dragon encounter, so it is not yet completable as a vanilla Minecraft 1.12.2 playthrough.
