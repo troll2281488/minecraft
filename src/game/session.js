@@ -53,6 +53,24 @@ export const SessionMixin = {
       const spawn = await this._findSafeSpawn();
       this.player.teleport(spawn.x, spawn.y, spawn.z);
       this._giveStartingItems();
+    } else {
+      // Old saves may contain the previous ocean fallback position. Inspect
+      // the player's feet column down to the first solid floor: if water is
+      // encountered first, move them to dry terrain before starting physics.
+      const x = Math.floor(this.player.x);
+      const z = Math.floor(this.player.z);
+      const feetY = Math.floor(this.player.y);
+      let waterBelow = false;
+      for (let depth = 0; depth <= 32; depth++) {
+        const block = this.world.getBlock(x, feetY - depth, z).block;
+        if (block.id === 'mc:water') { waterBelow = true; break; }
+        if (block.solid) break;
+      }
+      if (waterBelow || this.player._isInWater(this.world) || this.player._isHeadUnderwater(this.world)) {
+        const spawn = await this._findSafeSpawn();
+        this.player.teleport(spawn.x, spawn.y, spawn.z);
+        this.ui.toast('Старая точка появления была в воде — перенёс тебя на сушу.', { duration: 6000 });
+      }
     }
 
     this.craftingGrid = new CraftingGrid(2, RECIPES);
