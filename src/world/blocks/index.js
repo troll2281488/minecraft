@@ -37,10 +37,9 @@ function stoneLike(id, texture, hardness, resistance, harvestLevel = 0, extra = 
   });
 }
 
-/** An ore, plus its deepslate variant. Deepslate ores are harder but drop the same. */
+/** A 1.12.2 ore block. */
 function ore(name, harvestLevel, texture) {
   stoneLike(`mc:${name}`, texture, 3.0, 3.0, harvestLevel);
-  stoneLike(`mc:deepslate_${name}`, `deepslate_${texture}`, 4.5, 3.0, harvestLevel);
 }
 
 /** Log, planks, leaves, sapling for one tree species. */
@@ -103,13 +102,6 @@ stoneLike('mc:polished_andesite', 'polished_andesite', 1.5, 6);
 stoneLike('mc:sandstone', 'sandstone', 0.8, 0.8);
 stoneLike('mc:obsidian', 'obsidian', 50, 1200, 3);
 
-// Deepslate is directional: it has a distinct top texture and rotates on place.
-stoneLike('mc:deepslate', 'deepslate', 3, 6, 0, {
-  properties: { axis: PROPS.axis },
-  defaultValues: { axis: 'y' },
-  textures: { top: 'deepslate_top', bottom: 'deepslate_top', side: 'deepslate' },
-});
-stoneLike('mc:cobbled_deepslate', 'cobbled_deepslate', 3.5, 6);
 
 define('mc:bedrock', {
   hardness: -1, resistance: 3600000, texture: 'bedrock', soundGroup: 'stone',
@@ -177,7 +169,6 @@ define('mc:white_wool', {
 
 ore('coal_ore', 0, 'coal_ore');
 ore('iron_ore', 1, 'iron_ore');
-ore('copper_ore', 1, 'copper_ore');
 ore('gold_ore', 2, 'gold_ore');
 ore('redstone_ore', 2, 'redstone_ore');
 ore('lapis_ore', 1, 'lapis_ore');
@@ -186,12 +177,40 @@ ore('emerald_ore', 2, 'emerald_ore');
 
 stoneLike('mc:coal_block', 'coal_block', 5, 6);
 stoneLike('mc:iron_block', 'iron_block', 5, 6, 1);
-stoneLike('mc:copper_block', 'copper_block', 3, 6, 1);
 stoneLike('mc:gold_block', 'gold_block', 3, 6, 2);
 stoneLike('mc:diamond_block', 'diamond_block', 5, 6, 2);
 stoneLike('mc:emerald_block', 'emerald_block', 5, 6, 2);
 stoneLike('mc:lapis_block', 'lapis_block', 3, 3, 1);
 stoneLike('mc:redstone_block', 'redstone_block', 5, 6, 2);
+
+// ---------------------------------------------------------------------------
+// Additional classic 1.12.2 blocks
+// ---------------------------------------------------------------------------
+
+for (const [id, hardness, resistance, tool, texture, soundGroup] of [
+  ['mc:red_sandstone', 0.8, 0.8, 'pickaxe', 'sandstone', 'stone'],
+  ['mc:prismarine', 1.5, 6, 'pickaxe', 'stone', 'stone'],
+  ['mc:prismarine_bricks', 1.5, 6, 'pickaxe', 'stone', 'stone'],
+  ['mc:dark_prismarine', 1.5, 6, 'pickaxe', 'stone', 'stone'],
+  ['mc:sea_lantern', 0.3, 0.3, 'pickaxe', 'glass', 'glass'],
+  ['mc:end_stone', 3, 9, 'pickaxe', 'sandstone', 'stone'],
+  ['mc:end_bricks', 3, 9, 'pickaxe', 'sandstone', 'stone'],
+  ['mc:purpur_block', 1.5, 6, 'pickaxe', 'stone', 'stone'],
+  ['mc:purpur_pillar', 1.5, 6, 'pickaxe', 'stone', 'stone'],
+  ['mc:slime_block', 0, 0, null, 'white_wool', 'slime'],
+  ['mc:magma_block', 0.5, 0.5, 'pickaxe', 'stone', 'stone'],
+  ['mc:bone_block', 2, 2, 'pickaxe', 'white_wool', 'stone'],
+  ['mc:packed_ice', 0.5, 0.5, 'pickaxe', 'ice', 'glass'],
+  ['mc:sponge', 0.6, 0.6, 'hoe', 'white_wool', 'cloth'],
+  ['mc:wet_sponge', 0.6, 0.6, 'hoe', 'white_wool', 'cloth'],
+  ['mc:hay_block', 0.5, 0.5, 'hoe', 'white_wool', 'grass'],
+]) {
+  if (!BLOCKS.get(id)) define(id, {
+    hardness, resistance, tool, soundGroup, texture,
+    ...(id === 'mc:sea_lantern' ? { lightEmission: 15 } : {}),
+    ...(id === 'mc:slime_block' ? { slipperiness: 0.8 } : {}),
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Wood
@@ -200,6 +219,9 @@ stoneLike('mc:redstone_block', 'redstone_block', 5, 6, 2);
 woodSet('oak');
 woodSet('birch');
 woodSet('spruce');
+woodSet('jungle');
+woodSet('acacia');
+woodSet('dark_oak');
 
 // ---------------------------------------------------------------------------
 // Plants
@@ -267,11 +289,11 @@ function slab(baseId, { tool, harvestLevel = -1, requiresTool = false, sound = '
   define(`${baseId.replace('_planks', '')}_slab`, {
     hardness: base.hardness, resistance: base.resistance,
     tool, harvestLevel, requiresTool, soundGroup: sound,
-    renderShape: 'slab', opaqueCube: false, waterloggable: true,
+    renderShape: 'slab', opaqueCube: false,
     texture: base.texture ?? base.textures?.side,
     textures: base.textures,
-    properties: { type: PROPS.slabType, waterlogged: PROPS.waterlogged },
-    defaultValues: { type: 'bottom', waterlogged: false },
+    properties: { type: PROPS.slabType },
+    defaultValues: { type: 'bottom' },
   });
 }
 
@@ -280,14 +302,14 @@ function stairs(baseId, { tool, harvestLevel = -1, requiresTool = false, sound =
   define(`${baseId.replace('_planks', '')}_stairs`, {
     hardness: base.hardness, resistance: base.resistance,
     tool, harvestLevel, requiresTool, soundGroup: sound,
-    renderShape: 'stair', opaqueCube: false, waterloggable: true,
+    renderShape: 'stair', opaqueCube: false,
     texture: base.texture ?? base.textures?.side,
     textures: base.textures,
     properties: {
       facing: PROPS.facing, half: PROPS.half,
-      shape: PROPS.stairShape, waterlogged: PROPS.waterlogged,
+      shape: PROPS.stairShape,
     },
-    defaultValues: { facing: 'north', half: 'bottom', shape: 'straight', waterlogged: false },
+    defaultValues: { facing: 'north', half: 'bottom', shape: 'straight' },
   });
 }
 
@@ -309,16 +331,16 @@ for (const wood of ['oak', 'birch', 'spruce']) {
 
 BLOCK_TAGS.define('#mc:dirt', ['mc:dirt', 'mc:grass_block', 'mc:coarse_dirt', 'mc:podzol']);
 BLOCK_TAGS.define('#mc:base_stone_overworld', [
-  'mc:stone', 'mc:granite', 'mc:diorite', 'mc:andesite', 'mc:deepslate',
+  'mc:stone', 'mc:granite', 'mc:diorite', 'mc:andesite',
 ]);
-BLOCK_TAGS.define('#mc:coal_ores', ['mc:coal_ore', 'mc:deepslate_coal_ore']);
-BLOCK_TAGS.define('#mc:iron_ores', ['mc:iron_ore', 'mc:deepslate_iron_ore']);
-BLOCK_TAGS.define('#mc:gold_ores', ['mc:gold_ore', 'mc:deepslate_gold_ore']);
-BLOCK_TAGS.define('#mc:diamond_ores', ['mc:diamond_ore', 'mc:deepslate_diamond_ore']);
+BLOCK_TAGS.define('#mc:coal_ores', ['mc:coal_ore']);
+BLOCK_TAGS.define('#mc:iron_ores', ['mc:iron_ore']);
+BLOCK_TAGS.define('#mc:gold_ores', ['mc:gold_ore']);
+BLOCK_TAGS.define('#mc:diamond_ores', ['mc:diamond_ore']);
 
 ITEM_TAGS.define('#mc:planks', ['mc:oak_planks', 'mc:birch_planks', 'mc:spruce_planks']);
 ITEM_TAGS.define('#mc:logs', ['mc:oak_log', 'mc:birch_log', 'mc:spruce_log']);
-ITEM_TAGS.define('#mc:stone_tool_materials', ['mc:cobblestone', 'mc:cobbled_deepslate']);
+ITEM_TAGS.define('#mc:stone_tool_materials', ['mc:cobblestone']);
 ITEM_TAGS.define('#mc:coals', ['mc:coal', 'mc:charcoal']);
 
 // ---------------------------------------------------------------------------
@@ -340,11 +362,7 @@ const MATERIALS = [
   ['mc:stick', { fuelTicks: 100 }],
   ['mc:coal', { fuelTicks: 1600 }],
   ['mc:charcoal', { fuelTicks: 1600 }],
-  ['mc:raw_iron', {}],
-  ['mc:raw_copper', {}],
-  ['mc:raw_gold', {}],
-  ['mc:iron_ingot', {}],
-  ['mc:copper_ingot', {}],
+    ['mc:iron_ingot', {}],
   ['mc:gold_ingot', {}],
   ['mc:diamond', {}],
   ['mc:emerald', {}],
@@ -410,7 +428,6 @@ const TIER_KEYS = [
   ['iron', 'IRON', 'iron'],
   ['golden', 'GOLD', 'gold'],
   ['diamond', 'DIAMOND', 'diamond'],
-  ['netherite', 'NETHERITE', 'netherite'],
 ];
 
 for (const [prefix, tierKey, damageKey] of TIER_KEYS) {
