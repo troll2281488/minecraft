@@ -1,7 +1,7 @@
 import '../src/world/blocks/index.js';
 import { describe, it, assert, assertEqual } from './framework.js';
 import { ItemStack } from '../src/world/item.js';
-import { Chest, Furnace, SMELT_TICKS, CHEST_SLOTS } from '../src/game/containers.js';
+import { Chest, Furnace, SMELT_TICKS, CHEST_SLOTS, serializeContainer, deserializeContainer } from '../src/game/containers.js';
 import { RECIPES } from '../src/game/recipes.js';
 
 /**
@@ -54,6 +54,47 @@ describe('Java 1.12.2 furnace fuel values', () => {
     assertEqual(ITEMS.get('mc:crafting_table')?.fuelTicks, 300);
     assertEqual(ITEMS.get('mc:coal_block')?.fuelTicks, 16000);
     assertEqual(ITEMS.get('mc:golden_pickaxe')?.fuelTicks, 0);
+  });
+});
+
+describe('Container save data', () => {
+  it('round-trips chest slots including damaged and data-bearing stacks', () => {
+    const chest = new Chest();
+    chest.slots[0] = ItemStack.of('mc:oak_planks', 23);
+    chest.slots[1] = ItemStack.of('mc:wooden_pickaxe', 1, 17, { customName: 'Old pick' });
+    const restored = deserializeContainer(serializeContainer('chest', chest));
+    assertEqual(restored.type, 'chest');
+    assertEqual(restored.data.slots[0].item.id, 'mc:oak_planks');
+    assertEqual(restored.data.slots[0].count, 23);
+    assertEqual(restored.data.slots[1].damage, 17);
+    assertEqual(restored.data.slots[1].data.customName, 'Old pick');
+  });
+
+  it('round-trips furnace inventory and in-progress timers', () => {
+    const furnace = new Furnace();
+    furnace.input = ItemStack.of('mc:iron_ore', 3);
+    furnace.fuel = ItemStack.of('mc:coal', 2);
+    furnace.output = ItemStack.of('mc:iron_ingot', 4);
+    furnace.burnLeft = 721;
+    furnace.burnTotal = 1600;
+    furnace.cookProgress = 139;
+    const restored = deserializeContainer(serializeContainer('furnace', furnace));
+    assertEqual(restored.data.input.count, 3);
+    assertEqual(restored.data.fuel.count, 2);
+    assertEqual(restored.data.output.count, 4);
+    assertEqual(restored.data.burnLeft, 721);
+    assertEqual(restored.data.burnTotal, 1600);
+    assertEqual(restored.data.cookProgress, 139);
+  });
+
+  it('rejects malformed container records and clamps invalid furnace timers', () => {
+    assertEqual(deserializeContainer({ type: 'chest', slots: [] }), null);
+    assertEqual(deserializeContainer({ type: 'unknown' }), null);
+    const restored = deserializeContainer({
+      type: 'furnace', burnLeft: 900, burnTotal: 100, cookProgress: 9999,
+    });
+    assertEqual(restored.data.burnLeft, 100);
+    assertEqual(restored.data.cookProgress, SMELT_TICKS - 1);
   });
 });
 
