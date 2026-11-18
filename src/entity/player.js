@@ -182,8 +182,11 @@ export class Player {
       // changes the swim direction instead of behaving like walking on land.
       const pitch = this.pitch * Math.PI / 180;
       if (this.input.forward !== 0) this.vy += -Math.sin(pitch) * perTick(SPEED.SWIM) * 0.65;
-      if (this.input.jump) this.vy += 0.035;
-      if (this.input.sneak) this.vy -= 0.035;
+      // Holding jump while submerged must provide enough lift to break
+      // the surface and climb onto a one-block shore. A tiny additive impulse
+      // was being cancelled by water drag before the head could clear water.
+      if (this.input.jump) this.vy = Math.max(this.vy, 0.15);
+      if (this.input.sneak) this.vy = Math.min(this.vy, -0.045);
     } else if (this.input.jump && this.onGround) {
       this.vy = PHYSICS.JUMP_VELOCITY;
       if (this.sprinting) {
