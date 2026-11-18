@@ -1,6 +1,6 @@
 import { run } from './framework.js';
 
-for (const name of ['phase1_containers', 'version_112']) {
+for (const name of ['phase1_containers', 'version_112', 'keybinds']) {
   await import(`./${name}.test.js`);
 }
 
