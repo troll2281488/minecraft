@@ -36,6 +36,7 @@ export const InputMixin = {
     document.addEventListener('mousedown', (e) => {
       if (document.pointerLockElement !== canvas) return;
       this.mouseButtons.add(e.button);
+      if (e.button === 0 && this.player) this.player.attackTime = 8;
       if (e.button === 2) this._useOrPlace();
       if (e.button === 1) this._pickBlock();
     });
@@ -71,10 +72,13 @@ export const InputMixin = {
     });
 
     window.addEventListener('resize', () => this._resize());
-    window.addEventListener('beforeunload', () => {
-      // Best-effort: async work cannot be awaited here, but the synchronous
-      // encode still queues the write in most browsers.
-      if (this.running) this._save(false);
+    window.addEventListener('beforeunload', (event) => {
+      if (!this.running) return;
+      // Ask for confirmation where the browser permits it, and queue a
+      // best-effort save. Browsers still reserve Ctrl+W and may ignore this.
+      this._save(false);
+      event.preventDefault();
+      event.returnValue = '';
     });
 
     this._resize();
