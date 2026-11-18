@@ -2,6 +2,7 @@ import '../src/world/blocks/index.js';
 import { describe, it, assert, assertEqual } from './framework.js';
 import { Inventory, SLOT } from '../src/game/inventory.js';
 import { ItemStack } from '../src/world/item.js';
+import { calculateArmorDamage } from '../src/entity/mobs.js';
 
 /** Shift-click puts armour on (docs/TARGET_1_12_2.md, section 7.4). */
 describe('shift-click armour', () => {
@@ -9,15 +10,36 @@ describe('shift-click armour', () => {
     const inv = new Inventory();
     inv.slots[0] = ItemStack.of('mc:iron_helmet', 1);
     inv.shiftClickSlot(0);
-    assertEqual(inv.slots[SLOT.ARMOR_START].item.id, 'mc:iron_helmet');
+    assertEqual(inv.slots[SLOT.ARMOR_END].item.id, 'mc:iron_helmet');
     assert(inv.slots[0].isEmpty, 'hotbar slot should be empty');
   });
   it('swaps out the piece already worn', () => {
     const inv = new Inventory();
-    inv.slots[SLOT.ARMOR_START] = ItemStack.of('mc:leather_helmet', 1);
+    inv.slots[SLOT.ARMOR_END] = ItemStack.of('mc:leather_helmet', 1);
     inv.slots[9] = ItemStack.of('mc:diamond_helmet', 1);
     inv.shiftClickSlot(9);
-    assertEqual(inv.slots[SLOT.ARMOR_START].item.id, 'mc:diamond_helmet');
+    assertEqual(inv.slots[SLOT.ARMOR_END].item.id, 'mc:diamond_helmet');
     assertEqual(inv.slots[9].item.id, 'mc:leather_helmet');
+  });
+});
+
+
+describe('armour protection', () => {
+  it('registers the Java 1.12.2 armour sets and durability', () => {
+    assertEqual(ItemStack.of('mc:iron_helmet').item.maxDamage, 165);
+    assertEqual(ItemStack.of('mc:diamond_chestplate').item.armorPoints, 8);
+    assertEqual(ItemStack.of('mc:diamond_chestplate').item.armorToughness, 2);
+    assertEqual(ItemStack.of('mc:leather_boots').item.armorSlot, 'boots');
+  });
+
+  it('reduces damage using the 1.12 armour formula', () => {
+    assertEqual(calculateArmorDamage(10, 0, 0), 10);
+    assertEqual(calculateArmorDamage(10, 15, 0), 6);
+    assertEqual(calculateArmorDamage(10, 20, 8), 3);
+  });
+
+  it('does not turn invalid or zero damage into health loss', () => {
+    assertEqual(calculateArmorDamage(0, 20, 8), 0);
+    assertEqual(calculateArmorDamage(-4, 20, 8), 0);
   });
 });
