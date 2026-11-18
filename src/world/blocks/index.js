@@ -415,6 +415,7 @@ const MATERIALS = [
   ['mc:lapis_lazuli', {}],
   ['mc:redstone', {}],
   ['mc:flint', {}],
+  ['mc:snowball', {}],
   ['mc:clay_ball', {}],
   ['mc:string', {}],
   ['mc:bone', {}],
