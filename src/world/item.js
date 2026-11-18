@@ -27,6 +27,8 @@ const ITEM_DEFAULTS = {
   attackSpeed: 4.0,
   food: null,            // { nutrition, saturation, canAlwaysEat }
   armorSlot: null,       // 'helmet' | 'chestplate' | 'leggings' | 'boots'
+  armorPoints: 0,
+  armorToughness: 0,
   fuelTicks: 0,          // burn time in a furnace
   rarity: 'common',
 };
