@@ -1,5 +1,5 @@
 import { describe, it, assertEqual } from './framework.js';
-import { rollMobDrops, MOB_TYPES_112 } from '../src/entity/mobs.js';
+import { rollMobDrops, MOB_TYPES_112, MobSystem } from '../src/entity/mobs.js';
 
 describe('mob drops', () => {
   it('pigs drop one to three raw porkchops', () => {
@@ -39,5 +39,46 @@ describe('Minecraft Java 1.12.2 mob catalogue', () => {
     assertEqual(rollMobDrops('skeleton', () => 0.999)[0].id, 'mc:bone');
     assertEqual(rollMobDrops('spider', () => 0.999)[0].id, 'mc:string');
     assertEqual(rollMobDrops('enderman', () => 0.999)[0].id, 'mc:ender_pearl');
+  });
+});
+
+describe('mob world persistence', () => {
+  it('round-trips living mobs and sheep state', () => {
+    const system = new MobSystem({});
+    system.loadFrom([{
+      id: 7, type: 'sheep', x: 12.5, y: 70, z: -4.5,
+      yaw: 1.2, targetYaw: 1.4, health: 6, sheared: true,
+      walkPhase: 2.5, fuseTicks: 0,
+    }]);
+    const saved = system.toJSON();
+    assertEqual(saved.length, 1);
+    assertEqual(saved[0].id, 7);
+    assertEqual(saved[0].sheared, true);
+    const restored = new MobSystem({});
+    restored.loadFrom(saved);
+    assertEqual(restored.mobs[0].type, 'sheep');
+    assertEqual(restored.mobs[0].health, 6);
+    assertEqual(restored.mobs[0].sheared, true);
+    assertEqual(restored.mobs[0].x, 12.5);
+    assertEqual(restored.nextId, 8);
+  });
+
+  it('ignores invalid entries and caps restored mob count', () => {
+    const system = new MobSystem({});
+    system.loadFrom([
+      { type: 'creeper', x: 0, y: 70, z: 0, yaw: 0, health: 20 },
+      { type: 'not_a_mob', x: 0, y: 70, z: 0, yaw: 0, health: 20 },
+      { type: 'zombie', x: NaN, y: 70, z: 0, yaw: 0, health: 20 },
+    ]);
+    assertEqual(system.mobs.length, 1);
+    assertEqual(system.mobs[0].type, 'creeper');
+  });
+
+  it('clears mob ids when resetting a world', () => {
+    const system = new MobSystem({});
+    system.loadFrom([{ id: 12, type: 'pig', x: 0, y: 70, z: 0, yaw: 0, health: 10 }]);
+    system.reset();
+    assertEqual(system.mobs.length, 0);
+    assertEqual(system.nextId, 1);
   });
 });
