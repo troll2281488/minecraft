@@ -15,31 +15,88 @@ import { TILE_SIZE, TEXTURES } from './atlas.js';
 const STORAGE_KEY = 'mc-resource-pack';
 
 
-const ITSBRIAN_RAW = 'https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/block/';
+const ITSBRIAN_RAW = 'https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/';
 
-/** Load matching original block textures from ItsBrian's Java texture repository. */
-export async function loadItsBrianTextures() {
-  const names = Object.keys(TEXTURES);
-  const entries = await Promise.all(names.map(async (name) => {
-    try {
-      const response = await fetch(ITSBRIAN_RAW + encodeURIComponent(name) + '.png');
-      if (!response.ok) return null;
-      const bitmap = await createImageBitmap(await response.blob());
-      const canvas = document.createElement('canvas');
-      canvas.width = TILE_SIZE;
-      canvas.height = TILE_SIZE;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(bitmap, 0, 0, TILE_SIZE, TILE_SIZE);
-      bitmap.close();
-      return [name, new Uint8Array(ctx.getImageData(0, 0, TILE_SIZE, TILE_SIZE).data)];
-    } catch {
-      return null;
+async function fetchImage(path) {
+  const response = await fetch(ITSBRIAN_RAW + path);
+  if (!response.ok) return null;
+  return createImageBitmap(await response.blob());
+}
+
+function canvasFor(bitmap, width = TILE_SIZE, height = TILE_SIZE) {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(bitmap, 0, 0, width, height);
+  return { canvas, ctx };
+}
+
+async function mapWithLimit(values, limit, task) {
+  const out = new Array(values.length);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(limit, values.length) }, async () => {
+    while (next < values.length) {
+      const i = next++;
+      try { out[i] = await task(values[i]); } catch { out[i] = null; }
     }
   }));
-  const overrides = new Map(entries.filter(Boolean));
-  console.info('[textures] Loaded ' + overrides.size + ' ItsBrian block textures.');
-  return overrides;
+  return out.filter(Boolean);
+}
+
+/** Load every matching block/item texture and the legacy HUD sprites used by this game. */
+export async function loadItsBrianTextures(blocks, items) {
+  const blockNames = new Set();
+  for (const state of blocks.statesById) {
+    const t = state.block.textures;
+    if (t) {
+      for (const name of [t.bottom, t.top, t.north, t.south, t.west, t.east, t.side, t.all]) {
+        if (name) blockNames.add(name);
+      }
+    } else if (state.block.texture) blockNames.add(state.block.texture);
+  }
+
+  const blockEntries = await mapWithLimit([...blockNames], 10, async (name) => {
+    const bitmap = await fetchImage('block/' + encodeURIComponent(name) + '.png');
+    if (!bitmap) return null;
+    const { ctx } = canvasFor(bitmap);
+    const pixels = new Uint8Array(ctx.getImageData(0, 0, TILE_SIZE, TILE_SIZE).data);
+    bitmap.close();
+    return [name, pixels];
+  });
+
+  const itemEntries = await mapWithLimit([...items.items.values()], 10, async (item) => {
+    const name = item.id.slice(item.id.indexOf(':') + 1);
+    const bitmap = await fetchImage('item/' + encodeURIComponent(name) + '.png');
+    if (!bitmap) return null;
+    const { canvas } = canvasFor(bitmap);
+    bitmap.close();
+    return [item.id, canvas.toDataURL('image/png')];
+  });
+
+  const hud = {};
+  try {
+    const bitmap = await fetchImage('gui/icons.png');
+    if (bitmap) {
+      const crop = (key, sx, sy) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 9; canvas.height = 9;
+        canvas.getContext('2d').drawImage(bitmap, sx, sy, 9, 9, 0, 0, 9, 9);
+        hud[key] = canvas.toDataURL('image/png');
+      };
+      // Legacy Java HUD atlas: empty/full/half heart and food sprites.
+      crop('heart_empty', 16, 0); crop('heart_full', 52, 0); crop('heart_half', 61, 0);
+      crop('food_empty', 16, 27); crop('food_full', 52, 27); crop('food_half', 61, 27);
+      crop('bubble_empty', 16, 18); crop('bubble_full', 25, 18);
+      bitmap.close();
+    }
+  } catch { /* Keep the game's built-in HUD icons if the atlas cannot be read. */ }
+
+  const blockTextures = new Map(blockEntries);
+  const itemIcons = new Map(itemEntries);
+  console.info('[textures] ItsBrian: ' + blockTextures.size + ' block textures, ' + itemIcons.size + ' item icons, ' + Object.keys(hud).length + ' HUD sprites.');
+  return { blocks: blockTextures, items: itemIcons, hud };
 }
 
 export function loadPackRecord() {
