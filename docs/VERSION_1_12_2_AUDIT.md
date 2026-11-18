@@ -43,4 +43,5 @@ The previous browser test attempt was blocked by the execution environment (`ERR
 - Added all 16 dye colors for wool, stained glass, terracotta, concrete and concrete powder, with procedural colored atlas textures.
 
 - Added survival fall damage (three-block safe distance, one health point per additional block) and a death/respawn screen. Respawn currently preserves inventory as a deliberate prototype convenience; this differs from vanilla death drops.
+- Added leather, chainmail, iron, gold and diamond armour items; leather/iron/gold/diamond crafting recipes; shift-click equip/swap; and armour-point/toughness damage reduction with durability wear on hostile attacks. Armour enchantments and potion effects remain absent.
 - The current build still has no End portal/End dimension/dragon encounter, so it is not yet completable as a vanilla Minecraft 1.12.2 playthrough.
