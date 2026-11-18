@@ -124,7 +124,11 @@ export class Multiplayer {
     }
     this._listen(onValue, ref(this.db, 'minecraft_game/rooms'), (snap) => {
       rooms.replaceChildren();
-      const entries = Object.entries(snap.val() || {});
+      // Show only rooms that currently have at least one connected player.
+      // Each player's node is removed by Firebase onDisconnect when their tab
+      // loses its connection, so empty/stale rooms stay hidden from the lobby.
+      const entries = Object.entries(snap.val() || {}).filter(([, room]) =>
+        Object.keys(room?.players || {}).length > 0);
       if (!entries.length) {
         rooms.textContent = 'Активных комнат пока нет — создайте первую.';
         return;
