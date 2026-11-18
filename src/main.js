@@ -315,6 +315,10 @@ class Game {
     player.prevX = player.x;
     player.prevY = player.y;
     player.prevZ = player.z;
+    // Repeat the first-person mining swing while the mouse button is held.
+    if (this.mouseButtons.has(0) && !this.inventoryOpen && this.hit && this.tickCount % 10 < 5) {
+      player.attackTime = 8;
+    }
     player.tick(world);
     this.entities?.tick();
     if (player.health <= 0 && !this.deathScreenOpen) {
