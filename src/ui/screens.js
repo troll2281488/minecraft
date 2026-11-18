@@ -64,7 +64,9 @@ export const ScreensMixin = {
     chat.addEventListener('keydown', (event) => {
       event.stopPropagation();
       if (event.code === 'Enter') {
-        this.multiplayer.sendChat(chat.value);
+        const message = chat.value.trim();
+        if (message.startsWith('/')) this._runCommand(message);
+        else this.multiplayer.sendChat(message);
         chat.value = '';
         this.chatOpen = false;
         chat.classList.add('hidden');
