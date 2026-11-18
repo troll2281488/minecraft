@@ -10,6 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Check JavaScript syntax
+        run: |
+          find src tests -name '*.js' -print0 | while IFS= read -r -d '' file; do
+            node --input-type=module --check < "$file"
+          done
       - name: Create ZIP
         run: |
           zip -qr minecraft-1.12.2-prototype.zip . \
