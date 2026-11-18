@@ -211,6 +211,18 @@ export class Inventory {
     const slot = this.get(index);
     if (slot.isEmpty) return;
 
+    // Shift-click equips a matching armour piece into its dedicated slot.
+    // If that slot is occupied, swap the worn piece back into the source slot.
+    const armorTargets = { boots: 36, leggings: 37, chestplate: 38, helmet: 39 };
+    const armorTarget = armorTargets[slot.item?.armorSlot];
+    if (armorTarget !== undefined && index < SLOT.ARMOR_START) {
+      const worn = this.slots[armorTarget];
+      this.slots[armorTarget] = slot;
+      this.slots[index] = worn.isEmpty ? ItemStack.EMPTY.clone() : worn;
+      this.version++;
+      return;
+    }
+
     const toHotbar = index >= SLOT.MAIN_START;
     const start = toHotbar ? SLOT.HOTBAR_START : SLOT.MAIN_START;
     const end = toHotbar ? SLOT.HOTBAR_END : SLOT.MAIN_END;
