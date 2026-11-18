@@ -45,6 +45,18 @@ describe('1.12.2 crafting access to containers', () => {
   });
 });
 
+describe('Java 1.12.2 furnace fuel values', () => {
+  it('uses the vanilla burn duration for the registered wood fuels', async () => {
+    const { ITEMS } = await import('../src/world/item.js');
+    assertEqual(ITEMS.get('mc:oak_sapling')?.fuelTicks, 100);
+    assertEqual(ITEMS.get('mc:oak_slab')?.fuelTicks, 150);
+    assertEqual(ITEMS.get('mc:wooden_pickaxe')?.fuelTicks, 200);
+    assertEqual(ITEMS.get('mc:crafting_table')?.fuelTicks, 300);
+    assertEqual(ITEMS.get('mc:coal_block')?.fuelTicks, 16000);
+    assertEqual(ITEMS.get('mc:golden_pickaxe')?.fuelTicks, 0);
+  });
+});
+
 describe('Furnace', () => {
   it('smelts iron ore to an ingot after 200 ticks with coal', () => {
     const f = new Furnace();
