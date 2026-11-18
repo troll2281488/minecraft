@@ -13,7 +13,7 @@ describe('blockstate: canonical string form', () => {
   });
 
   it('properties serialize in alphabetical order regardless of declaration order', () => {
-    // oak_stairs declares facing, half, shape, waterlogged. Alphabetically that
+    // oak_stairs declares facing, half and shape. Alphabetically that
     // is facing, half, shape, waterlogged -- which happens to match. The real
     // guarantee is that the ORDER IS SORTED, not that it follows declaration,
     // so a block whose declaration order differs from alphabetical proves it.
@@ -35,8 +35,8 @@ describe('blockstate: canonical string form', () => {
   });
 
   it('enumerates the full cartesian product of property values', () => {
-    // facing(4) x half(2) x shape(5) x waterlogged(2) = 80
-    assertEqual(BLOCKS.get('mc:oak_stairs').states.length, 80);
+    // facing(4) x half(2) x shape(5) = 40 (no post-1.12 waterlogging).
+    assertEqual(BLOCKS.get('mc:oak_stairs').states.length, 40);
   });
 
   it('parseStateString round-trips every state of every registered block', () => {
