@@ -50,6 +50,8 @@ export class Player {
     this.underwater = false;
     this.air = 300;
     this.airDamageTicks = 0;
+    this.walkPhase = 0;
+    this.attackTime = 0;
 
     this.gamemode = GAMEMODE.SURVIVAL;
     this.health = MAX_HEALTH;
@@ -119,6 +121,9 @@ export class Player {
 
     this._applyInput(slipperiness);
     this._move(world);
+    const moved = Math.hypot(this.x - oldX, this.z - oldZ);
+    if (moved > 0.001) this.walkPhase += Math.min(0.9, moved * 9);
+    if (this.attackTime > 0) this.attackTime--;
     this._applyGravityAndFriction(slipperiness);
     this.vitals.tick(this, Math.hypot(this.x - oldX, this.z - oldZ), this.sprinting, jumped);
   }
