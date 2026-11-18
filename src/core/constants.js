@@ -69,8 +69,8 @@ export const BIOMES_PER_SECTION = 64; // 4*4*4
 export const MAX_LIGHT = 15;
 export const LIGHT_LEVELS = 16;
 
-/** Mobs spawn at or below this block light level (1.18+ surface rule). */
-export const HOSTILE_SPAWN_MAX_LIGHT = 0;
+/** Hostile surface spawning uses the classic 1.12.2 light threshold. */
+export const HOSTILE_SPAWN_MAX_LIGHT = 7;
 
 // ---------------------------------------------------------------------------
 // Physics
