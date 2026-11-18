@@ -7,5 +7,3 @@ import { scoopFluid, emptyBucket } from '../src/game/bucket.js';
 import { drawPower, canFire, FULL_DRAW_TICKS } from '../src/game/bow.js';
 import { equipArmor, armorSlotIndex } from '../src/game/armor_slots.js';
 import { SL_OT } from '../src/game/inventory.js';
-
-
