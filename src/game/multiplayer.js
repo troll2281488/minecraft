@@ -39,6 +39,7 @@ export class Multiplayer {
     this.pendingBlocks = new Map();
     this.unsubscribers = [];
     this.syncElapsed = 0;
+    this.presenceElapsed = 0;
     this.applyingRemoteBlock = false;
     this.connected = false;
   }
@@ -59,6 +60,8 @@ export class Multiplayer {
       await set(ref(this.db, `minecraft_game/users/${this.uid}`), {
         name: this.nickname, online: true, room: '', ts: Date.now(),
       });
+      onDisconnect(ref(this.db, `minecraft_game/users/${this.uid}`))
+        .update({ online: false, room: '', ts: Date.now() }).catch(() => {});
       onDisconnect(ref(this.db, `minecraft_game/players/${this.uid}`))
         .update({ online: false, room: '' }).catch(() => {});
       return true;
@@ -156,9 +159,8 @@ export class Multiplayer {
     const roomRef = ref(this.db, `minecraft_game/rooms/${code}`);
     let snapshot = await get(roomRef);
     if (!snapshot.exists()) {
-      const seed = String(Math.floor(Math.random() * 2147483647));
-      await set(roomRef, { seed, hostName: this.nickname, createdAt: Date.now(), players: {} });
-      snapshot = await get(roomRef);
+      this.game.ui.toast('Комната не найдена. Проверь код или попроси друга создать комнату заново.', { error: true });
+      return;
     }
     const room = snapshot.val() || {};
     const seed = String(room.seed ?? 424242);
@@ -175,6 +177,7 @@ export class Multiplayer {
     await set(playerRef, this._playerPayload());
     onDisconnect(playerRef).remove().catch(() => {});
     await update(ref(this.db, `minecraft_game/players/${this.uid}`), { room: code, name: this.nickname });
+    await update(ref(this.db, `minecraft_game/users/${this.uid}`), { room: code, name: this.nickname, online: true, ts: Date.now() });
 
     this._listen(onValue, ref(this.db, `minecraft_game/rooms/${code}/players`), (snap) => {
       const players = snap.val() || {};
@@ -250,10 +253,17 @@ export class Multiplayer {
     }
     if (!this.db || !this.roomId || !this.game.running || this.game.paused || !this.game.player) return;
     this.syncElapsed += dt;
-    if (this.syncElapsed < 0.12) return;
-    this.syncElapsed = 0;
-    update(ref(this.db, `minecraft_game/rooms/${this.roomId}/players/${this.uid}`), this._playerPayload())
-      .catch((error) => console.warn('[multiplayer] player sync:', error));
+    this.presenceElapsed += dt;
+    if (this.syncElapsed >= 0.12) {
+      this.syncElapsed = 0;
+      update(ref(this.db, `minecraft_game/rooms/${this.roomId}/players/${this.uid}`), this._playerPayload())
+        .catch((error) => console.warn('[multiplayer] player sync:', error));
+    }
+    if (this.presenceElapsed >= 5) {
+      this.presenceElapsed = 0;
+      update(ref(this.db, `minecraft_game/users/${this.uid}`), { online: true, room: this.roomId, name: this.nickname, ts: Date.now() })
+        .catch((error) => console.warn('[multiplayer] presence sync:', error));
+    }
   }
 
   pushBlockChange(x, y, z, state) {
@@ -292,6 +302,7 @@ export class Multiplayer {
     if (this.db && this.roomId) {
       await remove(ref(this.db, `minecraft_game/rooms/${this.roomId}/players/${this.uid}`)).catch(() => {});
       await update(ref(this.db, `minecraft_game/players/${this.uid}`), { room: '' }).catch(() => {});
+      await update(ref(this.db, `minecraft_game/users/${this.uid}`), { room: '', online: true, ts: Date.now() }).catch(() => {});
     }
     this.roomId = null;
     this.remotePlayers.clear();
