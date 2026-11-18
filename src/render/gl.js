@@ -9,7 +9,7 @@
  * is ever positioned more finely than this.
  *
  * word 0:  bits  0..8    x within chunk    (0..256, = 0..16 blocks)
- *          bits  9..21   y within chunk    (0..6144, = 0..384 blocks)
+ *          bits  9..21   y within chunk    (0..4096, = 0..256 blocks)
  *          bits 22..30   z within chunk    (0..256, = 0..16 blocks)
  *
  * word 1:  bits  0..11   texture layer     (0..4095)
