@@ -236,7 +236,8 @@ export class MobSystem {
     const animal = this.targetedMob();
     const held = this.game.inventory?.held;
     const player = this.game.player;
-    if (!animal || !player || player.gamemode !== 'survival') return false;
+    if (!animal || !player || !['survival', 'creative'].includes(player.gamemode)) return false;
+    const creative = player.gamemode === 'creative';
     const foods = {
       cow: ['mc:wheat'], sheep: ['mc:wheat'],
       pig: ['mc:carrot', 'mc:potato'],
@@ -244,11 +245,17 @@ export class MobSystem {
     };
     const accepted = foods[animal.type];
     if (!accepted || !held?.item || !accepted.includes(held.item.id)) return false;
-    if (animal.ageTicks < 0 || animal.breedCooldown > 0 || animal.loveTicks > 0) {
+    if (!creative && this.game.inventory.remove(held.item.id, 1) !== 1) return false;
+    // In Java 1.12, each feeding removes 10% of a baby's remaining growth time.
+    if (animal.ageTicks < 0) {
+      animal.ageTicks = Math.min(0, Math.ceil(animal.ageTicks * 0.9));
+      this.game.ui?.toast('Baby animal is growing');
+      return true;
+    }
+    if (animal.breedCooldown > 0 || animal.loveTicks > 0) {
       this.game.ui?.toast('This animal is not ready to breed');
       return true;
     }
-    if (this.game.inventory.remove(held.item.id, 1) !== 1) return false;
     animal.loveTicks = 600;
     const partner = this.mobs.find((other) =>
       other !== animal && other.type === animal.type &&
@@ -283,7 +290,7 @@ export class MobSystem {
       id: this.nextId++, type: first.type, x, y, z,
       yaw: first.yaw, targetYaw: first.yaw, speed: first.speed,
       thinkTicks: 0, attackTicks: 0, walkPhase: 0,
-      health: first.type === 'chicken' ? 4 : 10,
+      health: ({ cow: 10, pig: 10, chicken: 4, sheep: 8 })[first.type] ?? 10,
       sheared: false, hurtTicks: 0, fuseTicks: 0,
       ageTicks: -24000, loveTicks: 0, breedCooldown: 0,
       anim: { walk: 0, idle: 0, attack: 0, hurt: 0, fuse: 0 },
