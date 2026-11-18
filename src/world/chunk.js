@@ -1,7 +1,7 @@
 /**
  * Chunk storage: paletted sections with packed bit arrays.
  *
- * A chunk is 16 x 384 x 16 blocks, split into 24 sections of 16^3. Storing one
+ * A chunk is 16 x 256 x 16 blocks, split into 16 sections of 16^3. Storing one
  * 32-bit state ID per block would cost 24 KB per section and 576 KB per chunk;
  * at render distance 10 that is roughly 250 MB of block data alone, before any
  * mesh exists. The palette encoding below reduces the common cases by one to two
