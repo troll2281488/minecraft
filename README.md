@@ -28,6 +28,7 @@ Over 13,000 lines of JavaScript and 255 tests in a hand-written browser harness.
 | **Inventory and crafting** | Full inventory GUI with the vanilla slot layout and click rules. 2x2 personal grid, 3x3 crafting table, shaped / shapeless / tag (`#mc:planks`) recipe matching, tools and weapons across all six tiers, searchable creative block picker. |
 | **Saves** | Versioned `.mcw` files plus IndexedDB. Ordered migration chain, autosave every 30 s and on chunk unload, export and import including drag-and-drop. |
 | **Menus** | Title screen, world create / load / delete / export, pause menu, F3 debug overlay. |
+| **Multiplayer (prototype)** | Firebase room codes, remote player avatars, player position sync, shared placed/broken blocks, and text chat. Presence is refreshed and disconnected users are marked offline. This is an early co-op layer, not yet full shared survival: mobs, damage, inventory, containers, world time and all dimension state are not authoritative/shared. |
 | **Survival food** | Food level, saturation, exhaustion from sprinting and jumping, natural regeneration, normal-difficulty starvation, and right-click consumption of apples, bread, raw/cooked meat, carrots, and potatoes. |
 | **Farming (partial)** | Craftable tiered hoes till grass/dirt into farmland; wheat seeds plant crops, crops grow through seven blockstate ages near the player, mature wheat yields wheat and seeds; three wheat craft bread. Growth is simplified and only simulated near the player. |
 
@@ -62,7 +63,7 @@ what is working and what remains.
 | **Tests** | 255, in a hand-written browser harness (`tests.html`) |
 | **Server** | `serve.py` - Python stdlib static server, only needed because ES modules require `http://` |
 | **Saves** | Versioned `.mcw` files + IndexedDB, with an ordered migration chain |
-| **Mode** | Singleplayer |
+| **Mode** | Singleplayer + experimental online rooms |
 
 ## Running it
 
