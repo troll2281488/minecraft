@@ -106,5 +106,13 @@ describe('Vanilla block loot regression', () => {
     const drops = blockDrops(wheat.with('age', 7), ItemStack.EMPTY, 1, 0, 64, 0);
     assertEqual(drops[0].id, 'mc:wheat');
     assertEqual(drops[1].id, 'mc:wheat_seeds');
+    assert(drops[1].count >= 0 && drops[1].count <= 3, 'mature wheat yields zero to three seeds');
+
+    const seedCounts = new Set();
+    for (let seed = 0; seed < 100; seed++) {
+      seedCounts.add(blockDrops(wheat.with('age', 7), ItemStack.EMPTY, seed, 0, 64, 0)[1].count);
+    }
+    assert(seedCounts.has(0), 'wheat can yield no seeds');
+    assert(seedCounts.has(3), 'wheat can yield three seeds');
   });
 });
