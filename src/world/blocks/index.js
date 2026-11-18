@@ -268,6 +268,17 @@ define('mc:crafting_table', {
   textures: { top: 'crafting_table_top', bottom: 'oak_planks', side: 'crafting_table_side' },
 });
 
+// Storage and processing blocks from Java 1.12.2.
+define('mc:chest', {
+  hardness: 2.5, resistance: 2.5, tool: 'axe', soundGroup: 'wood', flammability: 5,
+  textures: { top: 'chest_top', bottom: 'chest_side', side: 'chest_side' },
+});
+define('mc:furnace', {
+  hardness: 3.5, resistance: 3.5, tool: 'pickaxe', harvestLevel: 0,
+  requiresTool: true, soundGroup: 'stone',
+  textures: { top: 'furnace_side', bottom: 'furnace_side', side: 'furnace_side' },
+});
+
 define('mc:farmland', {
   hardness: 0.6, resistance: 0.6, tool: 'shovel', soundGroup: 'grass',
   texture: 'farmland',
@@ -364,8 +375,14 @@ BLOCK_TAGS.define('#mc:iron_ores', ['mc:iron_ore']);
 BLOCK_TAGS.define('#mc:gold_ores', ['mc:gold_ore']);
 BLOCK_TAGS.define('#mc:diamond_ores', ['mc:diamond_ore']);
 
-ITEM_TAGS.define('#mc:planks', ['mc:oak_planks', 'mc:birch_planks', 'mc:spruce_planks']);
-ITEM_TAGS.define('#mc:logs', ['mc:oak_log', 'mc:birch_log', 'mc:spruce_log']);
+ITEM_TAGS.define('#mc:planks', [
+  'mc:oak_planks', 'mc:birch_planks', 'mc:spruce_planks',
+  'mc:jungle_planks', 'mc:acacia_planks', 'mc:dark_oak_planks',
+]);
+ITEM_TAGS.define('#mc:logs', [
+  'mc:oak_log', 'mc:birch_log', 'mc:spruce_log',
+  'mc:jungle_log', 'mc:acacia_log', 'mc:dark_oak_log',
+]);
 ITEM_TAGS.define('#mc:stone_tool_materials', ['mc:cobblestone']);
 ITEM_TAGS.define('#mc:coals', ['mc:coal', 'mc:charcoal']);
 
@@ -382,6 +399,8 @@ for (const block of BLOCKS.blocks.values()) {
     notInCreative: block.notInCreative === true,
   });
 }
+// A coal block burns for 16,000 ticks in a 1.12.2 furnace.
+ITEMS.get('mc:coal_block').fuelTicks = 16000;
 
 // Materials
 const MATERIALS = [
