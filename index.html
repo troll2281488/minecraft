@@ -224,6 +224,8 @@
   #hud-room { position:absolute; right:12px; top:12px; padding:.35rem .6rem; background:rgba(0,0,0,.6); font-size:.75rem; }
   #chat-messages { position:absolute; left:12px; bottom:72px; width:min(420px,70vw); font-size:.78rem; text-shadow:1px 1px #000; pointer-events:none; }
   #chat-messages div { margin:.15rem 0; }
+  #remote-player-tags { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+  .remote-player-tag { position:absolute; transform:translate(-50%,-100%); padding:2px 7px; border-radius:3px; background:rgba(0,0,0,.72); color:#fff; font:12px/1.4 system-ui,sans-serif; white-space:nowrap; text-shadow:1px 1px #000; border:1px solid rgba(255,255,255,.35); }
   #chat-entry { position:absolute; left:12px; bottom:42px; width:min(420px,70vw); padding:.45rem; background:#171717; color:white; border:1px solid #777; pointer-events:auto; }
   kbd {
     background: #2a2a2a; border: 1px solid #565656; border-radius: 2px;
@@ -280,6 +282,7 @@
   <div id="health" aria-label="Health"></div>
   <div id="food" aria-label="Food"></div>
   <div id="chat-messages"></div>
+  <div id="remote-player-tags" aria-hidden="true"></div>
   <input id="chat-entry" class="hidden" type="text" maxlength="240" placeholder="Enter — отправить, Esc — закрыть">
   <div id="debug" class="hidden"></div>
   <div id="hotbar-label"></div>
