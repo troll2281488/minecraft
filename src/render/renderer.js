@@ -458,7 +458,8 @@ export const RendererMixin = {
       const legs = mob.type === 'creeper' ? [2, 5] : mob.type === 'zombie' || mob.type === 'skeleton' || mob.type === 'stray' ? [4, 5]
         : mob.type === 'pig' ? [3, 6] : mob.type === 'cow' ? [2, 5]
         : mob.type === 'chicken' ? [4, 5] : mob.type === 'enderman' ? [4, 5] : [2, 9];
-      draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse, { hurt: (mob.hurtTicks || 0) > 0 });
+      const babyScale = mob.ageTicks < 0 ? 0.55 : 1;
+      draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, { hurt: (mob.hurtTicks || 0) > 0 });
     }
     if (!this.thirdPerson) {
       // First-person right arm and held item, positioned relative to the
