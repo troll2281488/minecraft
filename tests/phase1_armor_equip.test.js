@@ -3,6 +3,8 @@ import { describe, it, assert, assertEqual } from './framework.js';
 import { Inventory, SLOT } from '../src/game/inventory.js';
 import { ItemStack } from '../src/world/item.js';
 import { calculateArmorDamage } from '../src/entity/mobs.js';
+import { CraftingGrid } from '../src/game/inventory.js';
+import { RECIPES } from '../src/game/recipes.js';
 
 /** Shift-click puts armour on (docs/TARGET_1_12_2.md, section 7.4). */
 describe('shift-click armour', () => {
@@ -36,6 +38,14 @@ describe('armour protection', () => {
     assertEqual(calculateArmorDamage(10, 0, 0), 10);
     assertEqual(calculateArmorDamage(10, 15, 0), 6);
     assertEqual(calculateArmorDamage(10, 20, 8), 3);
+  });
+
+
+  it('crafts an iron helmet in the 3x3 table', () => {
+    const grid = new CraftingGrid(3, RECIPES);
+    for (const index of [0, 1, 2, 3, 5]) grid.set(index, ItemStack.of('mc:iron_ingot'));
+    assert(grid.matched, 'iron helmet recipe did not match');
+    assertEqual(grid.result.item.id, 'mc:iron_helmet');
   });
 
   it('does not turn invalid or zero damage into health loss', () => {
