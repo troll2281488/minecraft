@@ -42,6 +42,7 @@ import { ScreensMixin } from './ui/screens.js';
 import { InputMixin } from './game/input.js';
 import { InventoryControllerMixin } from './game/inventory_controller.js';
 import { BlockActionsMixin } from './game/block_actions.js';
+import { ContainerScreensMixin } from './game/container_screens.js';
 import { RendererMixin, SELECTION_EDGES } from './render/renderer.js';
 import { SessionMixin } from './game/session.js';
 import { Multiplayer } from './game/multiplayer.js';
@@ -295,6 +296,7 @@ class Game {
     if (!world || !player) return;
 
     world.time = (world.time + 1) % (TICKS_PER_DAY * 8);
+    this._tickFurnaces?.();
 
     if (!this.inventoryOpen) {
       player.input.forward =
@@ -429,6 +431,7 @@ Object.assign(
   InputMixin,
   InventoryControllerMixin,
   BlockActionsMixin,
+  ContainerScreensMixin,
   RendererMixin,
   DebugOverlayMixin,
 );
