@@ -1,8 +1,9 @@
 /**
- * Procedurally generated block textures.
+ * Block texture atlas.
  *
- * All original 16x16 pixel art, drawn in code at startup. Minecraft's actual
- * textures are copyrighted and are not used; see README.md.
+ * Built-in fallback textures are original procedural pixel art. Matching
+ * textures from ItsBrian's Java texture repository override them at startup;
+ * see README.md for attribution and permission.
  *
  * WHY A TEXTURE ARRAY RATHER THAN AN ATLAS
  *
