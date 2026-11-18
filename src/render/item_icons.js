@@ -237,10 +237,15 @@ export function iconToCanvas(pixels, scale = 2) {
  * changes, and regenerating icons on each redraw would be visibly slow with a
  * full inventory open.
  */
-export function buildItemIconCache(items, blocks, textureData, textureIndex) {
+export function buildItemIconCache(items, blocks, textureData, textureIndex, externalItemIcons = null) {
   const cache = new Map();
 
   for (const item of items.items.values()) {
+    const external = externalItemIcons?.get(item.id);
+    if (external) {
+      cache.set(item.id, external);
+      continue;
+    }
     let pixels = generateItemIcon(item);
 
     if (!pixels) {
