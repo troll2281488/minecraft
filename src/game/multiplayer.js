@@ -68,9 +68,14 @@ export class Multiplayer {
         initializeApp(CONFIG, 'minecraft-web');
       this.db = getDatabase(this.app);
       this.connected = true;
-      this._listen(onValue, ref(this.db, '.info/connected'), (snap) => {
+      this.connectionUnsubscribe?.();
+      this.connectionUnsubscribe = onValue(ref(this.db, '.info/connected'), (snap) => {
         this.firebaseConnected = snap.val() === true;
         if (this.firebaseConnected) this.firebaseError = '';
+        this._updateRoomHud();
+      }, (error) => {
+        this.firebaseError = error?.message || 'Firebase connection listener failed';
+        console.error('[multiplayer] connection listener failed:', error);
         this._updateRoomHud();
       });
       localStorage.setItem('mc_uid', this.uid);
