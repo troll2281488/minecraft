@@ -147,7 +147,7 @@ Reference target is **Minecraft: Java Edition 1.20.x**.
 | Autosave every 30 s and on chunk unload | yes | ✅ |
 | Export / import `.mcw`, drag-and-drop | yes | ✅ |
 
-## Not yet started
+## Multiplayer (experimental)\n\nRoom-code joining, remote avatar rendering, chat, shared overworld block edits and basic online presence are implemented. This is not yet a complete co-op survival session: each browser simulates its own mobs, player health/hunger and inventory; container contents, world time, weather and dimensions are not synchronized. Firebase access also depends on the configured Realtime Database being reachable and its deployed security rules allowing the intended operations.\n\n## Not yet started
 
 Survival is partial: health and hunger are present, with food consumption and basic starvation/
 regeneration; mob spawning, wandering, simple fleeing/pursuit, melee combat, sheep shearing,
@@ -164,7 +164,7 @@ brewing, dimensions, structures, villagers and audio are not implemented. See
 | System | How it differs | Why |
 |---|---|---|
 | Textures & sounds | Procedurally generated originals, not Minecraft's assets | Minecraft's assets are copyrighted. Mechanics are unaffected. |
-| Multiplayer | Absent | Singleplayer engine by design — see SPEC.md non-goals |
+| Multiplayer | 🟡 Experimental rooms sync player positions, chat and block edits; mobs, inventory, health, containers, world time and dimensions are not shared/authoritative yet | Co-op foundation exists; shared survival simulation remains incomplete |
 | Bedrock-specific behavior | Absent | Java Edition is the reference |
 | Water | Static; renders and blocks movement but does not flow | Full fluid mechanics are Phase 5. Terrain needs oceans to look right before then. |
 | Lighting scope | Computed per chunk; cross-chunk light does not bleed through a chunk border | Exact for the common case, slightly wrong beside a tall overhang in a neighbouring chunk. Incremental cross-chunk relighting is Phase 3. |
