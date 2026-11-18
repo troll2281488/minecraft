@@ -54,7 +54,7 @@ describe('Mob data and loot', () => {
     let calls = 0;
     const drops = rollMobDrops('zombie', () => {
       calls++;
-      return calls === 1 ? 0 : 0.01;
+      return calls === 1 ? 0.5 : 0.01;
     });
     assert(drops.some((drop) => drop.id === 'mc:rotten_flesh'));
     assert(drops.some((drop) => drop.id === 'mc:carrot'));
