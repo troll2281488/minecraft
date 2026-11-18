@@ -4,7 +4,7 @@
  * This file defines the canonical string form of a blockstate:
  *
  *     mc:stone
- *     mc:oak_stairs[facing=north,half=bottom,shape=straight,waterlogged=false]
+ *     mc:oak_stairs[facing=north,half=bottom,shape=straight]
  *
  * That string is what gets written into save files, which makes this module part
  * of the compatibility contract in docs/SAVE_FORMAT.md rather than an internal
@@ -75,7 +75,6 @@ export const PROPS = {
   stairShape: enumProp('shape', [
     'straight', 'inner_left', 'inner_right', 'outer_left', 'outer_right',
   ]),
-  waterlogged: boolProp('waterlogged'),
   powered: boolProp('powered'),
   lit: boolProp('lit'),
   open: boolProp('open'),
@@ -166,7 +165,6 @@ const BLOCK_DEFAULTS = {
   solid: true,          // participates in collision
   opaqueCube: true,     // full cube that hides neighbouring faces
   replaceable: false,   // grass, water -- placing into it replaces it
-  waterloggable: false,
   gravity: false,       // sand, gravel
   flammability: 0,
   soundGroup: 'stone',
