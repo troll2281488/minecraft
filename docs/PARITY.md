@@ -150,7 +150,7 @@ Reference target is **Minecraft: Java Edition 1.20.x**.
 ## Multiplayer (experimental)\n\nRoom-code joining, remote avatar rendering, chat, shared overworld block edits, player health/food status display, a host-synchronized day/night clock with deterministic handoff when the host leaves, and per-player local save persistence across reconnects are implemented. This is not yet a complete co-op survival session: each browser still simulates its own mobs and combat; mob damage, inventory/container contents, weather and dimensions are not shared/authoritative. Firebase access also depends on the configured Realtime Database being reachable and its deployed security rules allowing the intended operations.\n\n## Not yet started
 
 Survival is partial: health and hunger are present, with food consumption and basic starvation/
-regeneration; mob spawning, wandering, simple fleeing/pursuit, melee combat, sheep shearing,
+regeneration; mob spawning, wandering, simple fleeing/pursuit, melee combat with armour damage reduction/durability, sheep shearing,
 fishing, apple drops from oak leaves, wheat seed drops from grass, rare zombie carrot/potato drops, and drops for pigs, sheep, cows, chickens and zombies are implemented in simplified
 form. Basic wheat farming is now playable: hoes till soil, seeds plant crops, seven growth stages advance near the player, and mature wheat yields wheat/seeds; bread is craftable. Crop growth is a fixed 600-tick interval within a 6-block player radius, without vanilla light, hydration or neighbour checks. Still missing are full vanilla mob AI, breeding, chicken egg laying, equipment/
 armour combat, and a complete death/respawn loop. Fluids and flow, redstone, enchanting and
@@ -164,7 +164,7 @@ brewing, dimensions, structures, villagers and audio are not implemented. See
 | System | How it differs | Why |
 |---|---|---|
 | Textures & sounds | Procedurally generated originals, not Minecraft's assets | Minecraft's assets are copyrighted. Mechanics are unaffected. |
-| Multiplayer | 🟡 Experimental rooms sync player positions, chat and block edits; mobs, inventory, health, containers, world time and dimensions are not shared/authoritative yet | Co-op foundation exists; shared survival simulation remains incomplete |
+| Multiplayer | 🟡 Experimental rooms sync positions, health/food display, chat, block edits and world time; mobs, damage, inventory, containers and dimensions are not shared/authoritative yet | Co-op foundation exists; shared survival simulation remains incomplete |
 | Bedrock-specific behavior | Absent | Java Edition is the reference |
 | Water | Static; renders and blocks movement but does not flow | Full fluid mechanics are Phase 5. Terrain needs oceans to look right before then. |
 | Lighting scope | Computed per chunk; cross-chunk light does not bleed through a chunk border | Exact for the common case, slightly wrong beside a tall overhang in a neighbouring chunk. Incremental cross-chunk relighting is Phase 3. |
