@@ -200,6 +200,21 @@
     cursor: pointer;
   }
   #inventory-screen .slot:hover { background: #4d4d4d; }
+  #inventory-screen .panel {
+    background-color: rgba(198,198,198,.96);
+    background-image: linear-gradient(rgba(198,198,198,.88),rgba(198,198,198,.88)),url('https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/gui/container/inventory.png');
+    background-size: 100% 100%;
+    color: #242424;
+    border: 3px solid #171717;
+    box-shadow: inset 2px 2px 0 rgba(255,255,255,.35),0 12px 36px rgba(0,0,0,.55);
+  }
+  #inventory-screen .inv-section h3 { color:#333; text-shadow:1px 1px rgba(255,255,255,.4); }
+  #inventory-screen .slot {
+    background-color:rgba(55,55,55,.86);
+    border-color:#242424;
+    box-shadow:inset 2px 2px 0 rgba(0,0,0,.35),inset -1px -1px 0 rgba(255,255,255,.12);
+  }
+  #inventory-screen .slot:hover { background-color:rgba(95,95,95,.9); }
 
   .craft-row { display: flex; align-items: center; gap: 1rem; margin-bottom: .8rem; }
   .craft-grid-2 { display: grid; grid-template-columns: repeat(2, 44px); gap: 2px; }
