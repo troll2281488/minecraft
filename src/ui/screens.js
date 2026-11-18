@@ -110,12 +110,14 @@ export const ScreensMixin = {
         suggestions.replaceChildren();
         this.chatOpen = false;
         chat.classList.add('hidden');
-        if (this.running && !this.paused) this._requestPointerLock();
+        // Wait for the next canvas click to reacquire Pointer Lock.
+        // Keyboard events are not accepted consistently by all browsers.
       } else if (event.code === 'Escape') {
         this.chatOpen = false;
         chat.classList.add('hidden');
         suggestions.classList.add('hidden');
-        if (this.running && !this.paused) this._requestPointerLock();
+        // Wait for the next canvas click to reacquire Pointer Lock.
+        // Keyboard events are not accepted consistently by all browsers.
       }
     });
     byId('btn-import').onclick = () => this._importFromPicker();
