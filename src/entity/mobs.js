@@ -205,7 +205,7 @@ export class MobSystem {
       toughness += stack.item.armorToughness || 0;
       worn = true;
       if (stack.item.isDamageable && stack.applyDamage(1)) {
-        inventory.slots[36 + i] = inventory.slots[36 + i].constructor.EMPTY.clone();
+        inventory.slots[36 + i] = ItemStack.EMPTY.clone();
       }
     }
     if (worn && inventory) inventory.version++;
