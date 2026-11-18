@@ -98,6 +98,29 @@ recipes.push({
   key: { I: 'mc:iron_ingot' },
 });
 
+// -- Armour ---------------------------------------------------------------
+
+const ARMOR_PATTERNS = {
+  helmet: ['MMM', 'M M'],
+  chestplate: ['M M', 'MMM', 'MMM'],
+  leggings: ['MMM', 'M M', 'M M'],
+  boots: ['M M', 'M M'],
+};
+const ARMOR_MATERIALS = [
+  ['leather', 'mc:leather'],
+  ['iron', 'mc:iron_ingot'],
+  ['golden', 'mc:gold_ingot'],
+  ['diamond', 'mc:diamond'],
+];
+for (const [material, ingredient] of ARMOR_MATERIALS) {
+  for (const [piece, pattern] of Object.entries(ARMOR_PATTERNS)) {
+    recipes.push({
+      result: `mc:${material}_${piece}`, count: 1,
+      pattern, key: { M: ingredient },
+    });
+  }
+}
+
 // -- Gold currency (1.12.2) -----------------------------------------------
 
 recipes.push({
