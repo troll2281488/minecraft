@@ -64,22 +64,24 @@ function save() {
 
 /** True when `code` is bound to `action`. */
 export function isAction(code, action) {
-  return bindings[action].includes(code);
+  return Array.isArray(bindings[action]) && bindings[action].includes(code);
 }
 
 /** True when any key bound to `action` is in the set of held keys. */
 export function isDown(keys, action) {
-  return bindings[action].some((code) => keys.has(code));
+  return Array.isArray(bindings[action]) && bindings[action].some((code) => keys.has(code));
 }
 
 /** Rebind an action's primary key. Removes the key from any other action first. */
 export function bindKey(action, code) {
+  if (!Object.hasOwn(DEFAULTS, action) || typeof code !== 'string' || !code || code === 'Escape') return false;
   for (const other of Object.keys(bindings)) {
     bindings[other] = bindings[other].filter((c) => c !== code);
     if (bindings[other].length === 0) bindings[other] = [...DEFAULTS[other]].slice(0, 1);
   }
   bindings[action] = [code, ...bindings[action].slice(1)];
   save();
+  return true;
 }
 
 export function resetKeys() {
