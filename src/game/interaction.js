@@ -308,24 +308,12 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
   // fortune, silk touch, and per-block variance arrive in Phase 4.
   const SPECIAL = {
     'mc:stone': 'mc:cobblestone',
-    'mc:deepslate': 'mc:cobbled_deepslate',
     'mc:grass_block': 'mc:dirt',
     'mc:coal_ore': 'mc:coal',
-    'mc:deepslate_coal_ore': 'mc:coal',
-    'mc:iron_ore': 'mc:raw_iron',
-    'mc:deepslate_iron_ore': 'mc:raw_iron',
-    'mc:copper_ore': 'mc:raw_copper',
-    'mc:deepslate_copper_ore': 'mc:raw_copper',
-    'mc:gold_ore': 'mc:raw_gold',
-    'mc:deepslate_gold_ore': 'mc:raw_gold',
     'mc:diamond_ore': 'mc:diamond',
-    'mc:deepslate_diamond_ore': 'mc:diamond',
     'mc:emerald_ore': 'mc:emerald',
-    'mc:deepslate_emerald_ore': 'mc:emerald',
     'mc:redstone_ore': 'mc:redstone',
-    'mc:deepslate_redstone_ore': 'mc:redstone',
     'mc:lapis_ore': 'mc:lapis_lazuli',
-    'mc:deepslate_lapis_ore': 'mc:lapis_lazuli',
     'mc:clay': 'mc:clay_ball',
   };
 
