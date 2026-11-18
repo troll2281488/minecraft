@@ -276,7 +276,7 @@ define('mc:chest', {
 define('mc:furnace', {
   hardness: 3.5, resistance: 3.5, tool: 'pickaxe', harvestLevel: 0,
   requiresTool: true, soundGroup: 'stone',
-  textures: { top: 'furnace_side', bottom: 'furnace_side', side: 'furnace_side' },
+  textures: { top: 'furnace_top', bottom: 'furnace_side', side: 'furnace_front' },
 });
 
 define('mc:farmland', {
