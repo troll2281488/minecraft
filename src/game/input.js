@@ -9,6 +9,7 @@
 
 import { GAMEMODE } from '../entity/player.js';
 import { ITEMS } from '../world/item.js';
+import { BLOCKS, parseStateString } from '../world/block.js';
 
 export const InputMixin = {
   _setupInput() {
@@ -165,7 +166,34 @@ export const InputMixin = {
     };
     if (!command) return;
     if (command === 'help' || command === '?') {
-      reply('/gamemode creative|survival · /give <item> [кол-во] · /tp <x> <y> <z> · /time day|night · /heal · /fly');
+      reply('Команды: /gamemode creative|survival|spectator · /give <предмет> [кол-во] · /tp <x> <y> <z> · /setblock <x> <y> <z> <блок> · /time set day|night · /time add <тики> · /heal · /fly · /spawn · /save · /seed · /whereami');
+      return;
+    }
+    if (command === 'save') {
+      this._save(true).then(() => reply('Мир сохранён')).catch((error) => reply(`Ошибка сохранения: ${error.message}`, true));
+      return;
+    }
+    if (command === 'seed') {
+      reply(`Ключ мира: ${this.worldMeta?.seed ?? 'неизвестен'}`);
+      return;
+    }
+    if (command === 'whereami' || command === 'pos') {
+      reply(`Координаты: X ${this.player.x.toFixed(1)} Y ${this.player.y.toFixed(1)} Z ${this.player.z.toFixed(1)}`);
+      return;
+    }
+    if (command === 'spawn') {
+      this._findSafeSpawn().then((spawn) => {
+        this.player.teleport(spawn.x, spawn.y, spawn.z);
+        reply('Телепортировано на безопасную точку появления');
+      }).catch((error) => reply(error.message, true));
+      return;
+    }
+    if (command === 'heal') {
+      this.player.health = 20;
+      this.player.vitals.food = 20;
+      this.player.vitals.saturation = 5;
+      this.player.air = 300;
+      reply('Здоровье, голод и воздух восстановлены');
       return;
     }
     if (command === 'gamemode' || command === 'gm') {
@@ -201,17 +229,36 @@ export const InputMixin = {
       return;
     }
     if (command === 'time') {
-      const when = (args[0] || '').toLowerCase();
-      if (when !== 'day' && when !== 'night') { reply('Использование: /time day|night', true); return; }
-      this.world.time = when === 'day' ? 1000 : 13000;
-      reply(when === 'day' ? 'Установлено утро' : 'Установлена ночь');
+      const action = (args[0] || 'set').toLowerCase();
+      if (action === 'add') {
+        const amount = Number(args[1]);
+        if (!Number.isFinite(amount) || amount < 0 || amount > 24000) { reply('Использование: /time add <0..24000>', true); return; }
+        this.world.time = (this.world.time + Math.floor(amount)) % 24000;
+        reply(`Время мира: ${this.world.time} тиков`);
+        return;
+      }
+      const when = (action === 'set' ? args[1] : action || args[0] || '').toLowerCase();
+      if (when !== 'day' && when !== 'night' && when !== 'noon' && when !== 'midnight') {
+        reply('Использование: /time set day|noon|night|midnight или /time add <тики>', true); return;
+      }
+      this.world.time = ({ day: 1000, noon: 6000, night: 13000, midnight: 18000 })[when];
+      reply(`Установлено время: ${when}`);
       return;
     }
-    if (command === 'heal') {
-      this.player.health = 20;
-      this.player.vitals.food = 20;
-      this.player.vitals.saturation = 5;
-      reply('Здоровье и голод восстановлены');
+    if (command === 'setblock') {
+      const [sx, sy, sz, rawBlock] = args;
+      const x = Number(sx), y = Number(sy), z = Number(sz);
+      const id = String(rawBlock || '').includes(':') ? rawBlock : `mc:${rawBlock || ''}`;
+      if (![x, y, z].every(Number.isInteger) || y < 0 || y > 255 || !BLOCKS.get(id)) {
+        reply('Использование: /setblock <x> <y> <z> <блок>', true); return;
+      }
+      this.world.requestAround(x, z, this.renderDistance, 12);
+      const state = BLOCKS.get(id).defaultState;
+      if (!this.world.setBlock(x, y, z, state)) {
+        reply('Чанк ещё не загружен или блок не изменился. Попробуй снова через секунду.', true); return;
+      }
+      this.multiplayer?.pushBlockChange(x, y, z, state);
+      reply(`Установлен ${id} на ${x} ${y} ${z}`);
       return;
     }
     if (command === 'fly') {
