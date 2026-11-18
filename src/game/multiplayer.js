@@ -52,6 +52,8 @@ export class Multiplayer {
     this.isHost = false;
     this.applyingRemoteBlock = false;
     this.connected = false;
+    this.firebaseConnected = false;
+    this.firebaseError = '';
   }
 
   async init() {
@@ -66,6 +68,11 @@ export class Multiplayer {
         initializeApp(CONFIG, 'minecraft-web');
       this.db = getDatabase(this.app);
       this.connected = true;
+      this._listen(onValue, ref(this.db, '.info/connected'), (snap) => {
+        this.firebaseConnected = snap.val() === true;
+        if (this.firebaseConnected) this.firebaseError = '';
+        this._updateRoomHud();
+      });
       localStorage.setItem('mc_uid', this.uid);
       await set(ref(this.db, `minecraft_game/users/${this.uid}`), {
         name: this.nickname, online: true, room: '', ts: Date.now(),
@@ -146,7 +153,12 @@ export class Multiplayer {
   }
 
   _listen(subscribe, target, callback) {
-    this.unsubscribers.push(subscribe(target, callback));
+    this.unsubscribers.push(subscribe(target, callback, (error) => {
+      this.firebaseError = error?.message || 'Firebase permission/network error';
+      console.error('[multiplayer] listener failed:', error);
+      this.game.ui.toast(`Ошибка мультиплеера: ${this.firebaseError}`, { error: true, duration: 9000 });
+      this._updateRoomHud();
+    }));
   }
 
   async createRoom() {
@@ -212,6 +224,11 @@ export class Multiplayer {
       }
       knownPlayers = currentIds;
       // If the room creator leaves, elect the first remaining UID deterministically.
+      if (!knownPlayers || knownPlayers.size === 0) {
+        for (const [uid, joined] of Object.entries(players)) {
+          if (uid !== this.uid) this.addChat(`В комнате уже есть игрок: ${safeName(joined.name)}`);
+        }
+      }
       const hostUid = electRoomHost(room, players);
       if (hostUid) {
         this.isHost = hostUid === this.uid;
@@ -225,6 +242,8 @@ export class Multiplayer {
         current.name = safeName(p.name);
         current.health = Number.isFinite(p.health) ? p.health : 20;
         current.food = Number.isFinite(p.food) ? p.food : 20;
+        current.inWater = !!p.inWater;
+        current.airborne = p.onGround === false;
         current.targetX = p.x; current.targetY = p.y; current.targetZ = p.z; current.targetYaw = p.yaw || 0;
         this.remotePlayers.set(uid, current);
       }
@@ -256,7 +275,8 @@ export class Multiplayer {
       `${this.nickname} ${Math.ceil(local?.health ?? 20)}♥ ${Math.ceil(local?.vitals?.food ?? 20)}🍗`,
       ...[...this.remotePlayers.values()].map((p) => `${p.name} ${Math.ceil(p.health ?? 20)}♥ ${Math.ceil(p.food ?? 20)}🍗`),
     ];
-    hud.textContent = `Комната ${this.roomId} · ${players.length} игроков${this.isHost ? ' · хост' : ''} | ${players.join(' · ')}`;
+    const connection = this.firebaseError ? ' · ошибка соединения' : this.firebaseConnected ? ' · онлайн' : ' · подключение…';
+    hud.textContent = `Комната ${this.roomId} · ${players.length} игроков${this.isHost ? ' · хост' : ''}${connection} | ${players.join(' · ')}`;
   }
 
   _applyPendingBlocks() {
@@ -291,6 +311,8 @@ export class Multiplayer {
       gamemode: p.gamemode,
       health: p.health,
       food: p.vitals?.food ?? 20,
+      inWater: !!p.inWater,
+      onGround: !!p.onGround,
       ts: Date.now(),
     };
   }
@@ -299,6 +321,8 @@ export class Multiplayer {
     this._applyPendingBlocks();
     for (const p of this.remotePlayers.values()) {
       const alpha = Math.min(1, dt * 12);
+      const moving = Math.hypot(p.targetX - p.x, p.targetZ - p.z) > 0.002;
+      if (moving) p.walkPhase = (p.walkPhase || 0) + dt * 11;
       p.x += (p.targetX - p.x) * alpha;
       p.y += (p.targetY - p.y) * alpha;
       p.z += (p.targetZ - p.z) * alpha;
