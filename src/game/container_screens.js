@@ -16,21 +16,22 @@ const OVERLAY_ID = 'container-overlay';
 const STYLE = `
 #${OVERLAY_ID} { position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex;
   align-items:center; justify-content:center; z-index:50; font-family:system-ui,sans-serif; }
-#${OVERLAY_ID} .panel { background-color:#c6c6c6; background-image:linear-gradient(rgba(198,198,198,.90),rgba(198,198,198,.90)),url('https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/gui/container/generic_54.png'); background-size:100% 100%; border:3px solid #000; padding:12px; color:#222; min-width:340px; }
-#${OVERLAY_ID}[data-kind="furnace"] .panel { background-image:linear-gradient(rgba(198,198,198,.88),rgba(198,198,198,.88)),url('https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/gui/container/furnace.png'); }
-#${OVERLAY_ID}[data-kind="chest"] .panel { background-image:linear-gradient(rgba(198,198,198,.88),rgba(198,198,198,.88)),url('https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/gui/container/generic_54.png'); }
-#${OVERLAY_ID} h3 { margin:0 0 8px; font-size:16px; }
-#${OVERLAY_ID} .row { display:flex; gap:4px; margin-bottom:6px; flex-wrap:wrap; }
-#${OVERLAY_ID} .slot { width:40px; height:40px; background:#8b8b8b; border:2px solid #373737;
-  display:flex; align-items:center; justify-content:center; font-size:11px; cursor:pointer;
-  text-align:center; overflow:hidden; color:#fff; user-select:none; }
+#${OVERLAY_ID} .panel { position:relative; isolation:isolate; background:#c6c6c6; border:3px solid #000; padding:12px; color:#222; width:max-content; max-width:calc(100vw - 24px); box-sizing:border-box; box-shadow:0 12px 36px rgba(0,0,0,.5); }
+#${OVERLAY_ID} .panel::before { content:""; position:absolute; inset:0; z-index:-1; background-image:url("https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/gui/container/generic_54.png"); background-size:100% 100%; opacity:.42; pointer-events:none; }
+#${OVERLAY_ID}[data-kind="furnace"] .panel::before { background-image:url("https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/gui/container/furnace.png"); opacity:.48; }
+#${OVERLAY_ID} h3 { margin:0 0 8px; font-size:16px; color:#222; text-shadow:1px 1px rgba(255,255,255,.45); }
+#${OVERLAY_ID} .row { display:flex; gap:4px; margin-bottom:8px; flex-wrap:wrap; }
+#${OVERLAY_ID} .row.slots-9 { display:grid; grid-template-columns:repeat(9,40px); gap:4px; }
+#${OVERLAY_ID} .slot { box-sizing:border-box; width:40px; height:40px; background:#8b8b8b; border:2px solid #373737; border-radius:0; display:flex; align-items:center; justify-content:center; font-size:11px; cursor:pointer; text-align:center; overflow:hidden; color:#fff; user-select:none; box-shadow:inset 2px 2px 0 rgba(0,0,0,.32),inset -2px -2px 0 rgba(255,255,255,.22); }
 #${OVERLAY_ID} .slot.empty { background:#8b8b8b; }
-#${OVERLAY_ID} .slot .n { position:absolute; margin:26px 0 0 26px; color:#fff; text-shadow:1px 1px #000; font-size:12px; }
+#${OVERLAY_ID} .slot img { width:32px; height:32px; object-fit:contain; image-rendering:pixelated; }
+#${OVERLAY_ID} .slot .n { position:absolute; right:2px; bottom:0; color:#fff; text-shadow:1px 1px #000; font-size:12px; pointer-events:none; }
 #${OVERLAY_ID} .slot { position:relative; }
 #${OVERLAY_ID} .bar { height:8px; background:#555; margin:6px 0; }
 #${OVERLAY_ID} .bar > div { height:100%; background:#e8a53a; }
 #${OVERLAY_ID} .hint { font-size:12px; color:#333; margin-top:6px; }
 #${OVERLAY_ID} button { font:inherit; padding:4px 10px; margin-top:6px; }
+@media(max-width:480px) { #${OVERLAY_ID} .row.slots-9 { grid-template-columns:repeat(9,minmax(0,1fr)); } #${OVERLAY_ID} .slot { width:100%; height:auto; aspect-ratio:1; } }
 `;
 
 function ensureStyle() {
@@ -168,11 +169,12 @@ export const ContainerScreensMixin = {
       body += `<div class="row">${this._slotHtml('furnace-fuel', 0, f.fuel)}`;
       body += `<span class="hint">Топливо: ${Math.round(burn * 100)}%</span></div>`;
     }
-    body += '<h3>Инвентарь</h3><div class="row">';
-    for (let i = 0; i < inv.slots.length; i++) {
-      if (i === 36) body += '</div><div class="row">';
-      body += this._slotHtml('inv', i, inv.slots[i]);
-    }
+    body += '<h3>Инвентарь</h3><div class="row slots-9">';
+    // Java order: 27 main-inventory slots, followed by the 9-slot hotbar.
+    // Armour and offhand are omitted until this screen has dedicated slots.
+    for (let i = 9; i <= 35; i++) body += this._slotHtml('inv', i, inv.slots[i]);
+    body += '</div><div class="row slots-9">';
+    for (let i = 0; i <= 8; i++) body += this._slotHtml('inv', i, inv.slots[i]);
     body += '</div>';
     body += `<div class="hint">В курсоре: ${inv.cursor?.isEmpty ? 'пусто' : label(inv.cursor)}. Shift-клик переносит стак. Esc — закрыть.</div>`;
     body += '<button id="container-close">Закрыть</button>';
