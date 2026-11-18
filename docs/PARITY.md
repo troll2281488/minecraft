@@ -147,7 +147,7 @@ Reference target is **Minecraft: Java Edition 1.20.x**.
 | Autosave every 30 s and on chunk unload | yes | ✅ |
 | Export / import `.mcw`, drag-and-drop | yes | ✅ |
 
-## Multiplayer (experimental)\n\nRoom-code joining, remote avatar rendering, chat, shared overworld block edits and basic online presence are implemented. This is not yet a complete co-op survival session: each browser simulates its own mobs, player health/hunger and inventory; container contents, world time, weather and dimensions are not synchronized. Firebase access also depends on the configured Realtime Database being reachable and its deployed security rules allowing the intended operations.\n\n## Not yet started
+## Multiplayer (experimental)\n\nRoom-code joining, remote avatar rendering, chat, shared overworld block edits, player health/food status display, a host-synchronized day/night clock with deterministic handoff when the host leaves, and per-player local save persistence across reconnects are implemented. This is not yet a complete co-op survival session: each browser still simulates its own mobs and combat; mob damage, inventory/container contents, weather and dimensions are not shared/authoritative. Firebase access also depends on the configured Realtime Database being reachable and its deployed security rules allowing the intended operations.\n\n## Not yet started
 
 Survival is partial: health and hunger are present, with food consumption and basic starvation/
 regeneration; mob spawning, wandering, simple fleeing/pursuit, melee combat, sheep shearing,
