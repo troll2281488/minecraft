@@ -79,7 +79,55 @@ export class MobSystem {
   reset() {
     this.mobs.length = 0;
     this.spawnTicks = 0;
+    this.nextId = 1;
     this.fishing = null;
+  }
+
+  /** Return a compact, JSON-safe snapshot for the local world save. */
+  toJSON() {
+    return this.mobs.map((mob) => ({
+      id: mob.id,
+      type: mob.type,
+      x: mob.x, y: mob.y, z: mob.z,
+      yaw: mob.yaw,
+      targetYaw: mob.targetYaw,
+      health: mob.health,
+      sheared: !!mob.sheared,
+      fuseTicks: mob.fuseTicks || 0,
+      walkPhase: mob.walkPhase || 0,
+    }));
+  }
+
+  /** Restore only known, finite mob state; malformed save entries are ignored. */
+  loadFrom(entries) {
+    this.mobs.length = 0;
+    if (!Array.isArray(entries)) {
+      this.nextId = 1;
+      return;
+    }
+    const valid = entries.slice(0, 128).filter((mob) =>
+      mob && MOB_TYPES_112.includes(mob.type) &&
+      ['x', 'y', 'z', 'yaw', 'health'].every((key) => Number.isFinite(mob[key])) &&
+      mob.y >= -64 && mob.y <= 320 && mob.health > 0 && mob.health <= 2048
+    );
+    for (const mob of valid) {
+      this.mobs.push({
+        id: Number.isSafeInteger(mob.id) && mob.id > 0 ? mob.id : this.mobs.length + 1,
+        type: mob.type,
+        x: mob.x, y: mob.y, z: mob.z,
+        yaw: mob.yaw,
+        targetYaw: Number.isFinite(mob.targetYaw) ? mob.targetYaw : mob.yaw,
+        speed: ['zombie','skeleton','stray','creeper','spider'].includes(mob.type) ? 0.035 : mob.type === 'enderman' ? 0.045 : 0.018,
+        thinkTicks: 0, attackTicks: 0,
+        walkPhase: Number.isFinite(mob.walkPhase) ? mob.walkPhase : 0,
+        health: mob.health,
+        sheared: !!mob.sheared,
+        hurtTicks: 0,
+        fuseTicks: Number.isFinite(mob.fuseTicks) ? Math.max(0, Math.min(30, mob.fuseTicks)) : 0,
+        anim: { walk: 0, idle: 0, attack: 0, hurt: 0, fuse: 0 },
+      });
+    }
+    this.nextId = this.mobs.reduce((next, mob) => Math.max(next, mob.id + 1), 1);
   }
 
   _spawn(type, x, z) {
