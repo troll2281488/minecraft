@@ -338,7 +338,6 @@ function torchTile(seed) {
 // ---------------------------------------------------------------------------
 
 const STONE_GREY = hex(0x7d7d7d);
-const DEEPSLATE = hex(0x4f4f55);
 const DIRT_BROWN = hex(0x8a5f3c);
 const GRASS_GREEN = hex(0x7cb342);
 
@@ -346,6 +345,9 @@ const WOOD = {
   oak:    { bark: hex(0x6c5432), inner: hex(0xb08b52), planks: hex(0xb08b52), leaves: hex(0x4f8f38), sapling: hex(0x4f8f38) },
   birch:  { bark: hex(0xd7d3c9), inner: hex(0xd4c9a4), planks: hex(0xd4c9a4), leaves: hex(0x80a755), sapling: hex(0x80a755) },
   spruce: { bark: hex(0x4a3823), inner: hex(0x7b5a33), planks: hex(0x7b5a33), leaves: hex(0x3f6b3a), sapling: hex(0x3f6b3a) },
+  jungle: { bark: hex(0x60452c), inner: hex(0xa98255), planks: hex(0xa98255), leaves: hex(0x4b8a38), sapling: hex(0x4b8a38) },
+  acacia: { bark: hex(0x59433a), inner: hex(0xb66b43), planks: hex(0xb66b43), leaves: hex(0x7b8b42), sapling: hex(0x7b8b42) },
+  dark_oak: { bark: hex(0x30251b), inner: hex(0x49331f), planks: hex(0x49331f), leaves: hex(0x3e6530), sapling: hex(0x3e6530) },
 };
 
 /**
@@ -365,9 +367,6 @@ const TEXTURES = {
   polished_andesite:  () => grainy(hex(0x929292), 0.1, 'polished_andesite'),
   sandstone:          () => grainy(hex(0xdbd0a0), 0.14, 'sandstone'),
   obsidian:           () => grainy(hex(0x150c24), 0.55, 'obsidian', { clumps: 6, clumpColor: hex(0x2d1a4a) }),
-  deepslate:          () => barkSide(DEEPSLATE, 'deepslate'),
-  deepslate_top:      () => grainy(DEEPSLATE, 0.18, 'deepslate_top'),
-  cobbled_deepslate:  () => cobble(DEEPSLATE, 'cobbled_deepslate'),
   bedrock:            () => grainy(hex(0x565656), 0.55, 'bedrock', { clumps: 10, clumpColor: hex(0x2a2a2a), clumpSize: 3 }),
 
   dirt:               () => grainy(DIRT_BROWN, 0.26, 'dirt', { clumps: 6 }),
@@ -397,7 +396,6 @@ const TEXTURES = {
 
   coal_ore:           () => oreTile(STONE_GREY, hex(0x1b1b1b), 'coal_ore', 6),
   iron_ore:           () => oreTile(STONE_GREY, hex(0xd8a582), 'iron_ore', 5),
-  copper_ore:         () => oreTile(STONE_GREY, hex(0xd07f4a), 'copper_ore', 5),
   gold_ore:           () => oreTile(STONE_GREY, hex(0xf6d34a), 'gold_ore', 4),
   redstone_ore:       () => oreTile(STONE_GREY, hex(0xd42b2b), 'redstone_ore', 5),
   lapis_ore:          () => oreTile(STONE_GREY, hex(0x2a54c4), 'lapis_ore', 5),
@@ -406,7 +404,6 @@ const TEXTURES = {
 
   coal_block:         () => grainy(hex(0x1a1a1a), 0.3, 'coal_block'),
   iron_block:         () => grainy(hex(0xdcdcdc), 0.1, 'iron_block'),
-  copper_block:       () => grainy(hex(0xc26a3d), 0.12, 'copper_block'),
   gold_block:         () => grainy(hex(0xf7d54c), 0.1, 'gold_block'),
   diamond_block:      () => grainy(hex(0x53e2d4), 0.12, 'diamond_block'),
   emerald_block:      () => grainy(hex(0x2fc74e), 0.12, 'emerald_block'),
@@ -432,35 +429,6 @@ for (const [species, c] of Object.entries(WOOD)) {
   TEXTURES[`${species}_sapling`] = () =>
     crossPlant(`${species}_sapling`, (t, r) => grassBlades(t, r, c.sapling));
 }
-
-// Deepslate ore variants reuse the ore generator over a deepslate base.
-for (const oreName of [
-  'coal_ore', 'iron_ore', 'copper_ore', 'gold_ore',
-  'redstone_ore', 'lapis_ore', 'diamond_ore', 'emerald_ore',
-]) {
-  const gemColors = {
-    coal_ore: 0x1b1b1b, iron_ore: 0xd8a582, copper_ore: 0xd07f4a, gold_ore: 0xf6d34a,
-    redstone_ore: 0xd42b2b, lapis_ore: 0x2a54c4, diamond_ore: 0x4fe4d8, emerald_ore: 0x30c94f,
-  };
-  TEXTURES[`deepslate_${oreName}`] =
-    () => oreTile(DEEPSLATE, hex(gemColors[oreName]), `deepslate_${oreName}`, 5);
-}
-
-/** The magenta-and-black checker shown for any texture that failed to resolve. */
-function missingTexture() {
-  const tile = newTile();
-  for (let y = 0; y < TILE_SIZE; y++) {
-    for (let x = 0; x < TILE_SIZE; x++) {
-      const c = ((x >> 3) ^ (y >> 3)) & 1 ? [0, 0, 0] : [248, 0, 248];
-      setPx(tile, x, y, c[0], c[1], c[2]);
-    }
-  }
-  return tile;
-}
-
-// ---------------------------------------------------------------------------
-// Building the array
-// ---------------------------------------------------------------------------
 
 /**
  * Generate every texture and pack them into one Uint8Array laid out as
@@ -527,7 +495,7 @@ export function buildBlockTextureTable(blocks, textureIndex) {
       faces = [single, single, single, single, single, single];
     }
 
-    // Logs and deepslate rotate: an axis=x log shows its rings on the east and
+    // Logs rotate: an axis=x log shows its rings on the east and
     // west faces instead of top and bottom.
     const axis = states[i].values?.axis;
     if (axis === 'x') faces = [faces[2], faces[2], faces[0], faces[0], faces[1], faces[1]];
