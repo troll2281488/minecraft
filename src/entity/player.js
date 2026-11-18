@@ -365,6 +365,12 @@ export class Player {
   }
 
   _land() {
+    // Vanilla fall damage starts after three blocks; each additional block
+    // deals one half-heart (one health point). Apply before clearing distance.
+    if (this.gamemode === GAMEMODE.SURVIVAL && this.fallDistance > 3) {
+      const damage = Math.floor(this.fallDistance - 3);
+      this.health = Math.max(0, this.health - damage);
+    }
     this.fallDistance = 0;
   }
 
