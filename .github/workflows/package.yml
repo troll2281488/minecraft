@@ -16,6 +16,8 @@ jobs:
             echo "Checking $file"
             node --input-type=module --check < "$file" || exit 1
           done
+      - name: Run focused gameplay regression tests
+        run: node --experimental-default-type=module tests/run-node.mjs
       - name: Create ZIP
         run: |
           zip -qr minecraft-1.12.2-prototype.zip . \
