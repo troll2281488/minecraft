@@ -39,3 +39,5 @@ The previous browser test attempt was blocked by the execution environment (`ERR
 - Fluid simulation, redstone circuits, pistons, doors/gates, rails, minecarts, boats, dispensers, droppers, hoppers, brewing, enchanting, anvils, maps, banners, command blocks and commands are incomplete or absent.
 - Mob spawning, pathfinding, attacks, drops, breeding, riding and boss behavior are not complete for all 1.12.2 entities.
 - Browser integration tests were not verified in this environment. Node-compatible unit suites were run separately; the browser-only golden-save test uses browser `fetch` and was excluded from the Node run.
+
+- Added all 16 dye colors for wool, stained glass, terracotta, concrete and concrete powder, with procedural colored atlas textures.
