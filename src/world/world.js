@@ -265,32 +265,40 @@ export class World {
     return chunk.getHeight(blockToLocal(wx), blockToLocal(wz));
   }
 
-  /** A surface position safe to stand on, for initial spawn. */
-  findSpawn(wx = 0, wz = 0) {
-    const isWetOrBlocked = (x, y, z) => {
+  /** A dry, collision-free surface position in an already generated chunk. */
+  findSpawn(wx = 0, wz = 0, maxRadius = 192) {
+    const isClear = (x, y, z) => {
       const block = this.getBlock(x, y, z).block;
-      return block.id === 'mc:water' || block.solid;
+      return block.id !== 'mc:water' && !block.solid;
     };
-    // Search outward for a solid, dry floor with enough clear space for the
-    // full player hitbox. Never choose the ocean surface as a spawn point.
-    for (let radius = 0; radius < 128; radius++) {
+
+    // Search only generated columns. getHeight() returns MIN_Y - 1 for an
+    // unloaded chunk; treating that as a candidate used to fall through to
+    // the old y=80 fallback, which could land the player in an ocean.
+    for (let radius = 0; radius <= maxRadius; radius++) {
       for (let dz = -radius; dz <= radius; dz++) {
         for (let dx = -radius; dx <= radius; dx++) {
           if (Math.max(Math.abs(dx), Math.abs(dz)) !== radius) continue;
           const x = wx + dx;
           const z = wz + dz;
-          const height = this.getHeight(x, z);
-          if (height <= MIN_Y) continue;
-          const ground = this.getBlock(x, height, z).block;
-          if (!ground.solid || ground.id === 'mc:water') continue;
-          if (isWetOrBlocked(x, height + 1, z) || isWetOrBlocked(x, height + 2, z)) continue;
-          return { x: x + 0.5, y: height + 1, z: z + 0.5 };
+          const cx = blockToChunk(x), cz = blockToChunk(z);
+          if (!this.hasChunk(cx, cz)) continue;
+
+          let y = this.getHeight(x, z);
+          // Heightmaps include water. Walk down to the first solid, dry floor.
+          while (y >= MIN_Y) {
+            const ground = this.getBlock(x, y, z).block;
+            if (ground.solid && ground.id !== 'mc:water') {
+              if (isClear(x, y + 1, z) && isClear(x, y + 2, z)) {
+                return { x: x + 0.5, y: y + 1, z: z + 0.5 };
+              }
+            }
+            y--;
+          }
         }
       }
     }
-    // Rare all-ocean fallback: place the player above sea level rather than
-    // inside water, while nearby terrain finishes loading.
-    return { x: wx + 0.5, y: 80, z: wz + 0.5 };
+    return null;
   }
 
   // -- Meshing view -------------------------------------------------------
