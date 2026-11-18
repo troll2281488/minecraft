@@ -221,6 +221,14 @@ export const RendererMixin = {
       food.textContent = Array.from({ length: 10 }, (_, i) => points >= i * 2 + 2 ? '●' : points > i * 2 ? '◐' : '·').join('');
       food.title = `Food ${points}/20 · saturation ${this.player.vitals.saturation.toFixed(1)}`;
     }
+    const air = document.getElementById('air');
+    if (air) {
+      const bubbles = Math.ceil(Math.max(0, Math.min(300, this.player.air ?? 300)) / 30);
+      air.textContent = bubbles < 10 ? '◉'.repeat(bubbles) + '·'.repeat(10 - bubbles) : '';
+      air.classList.toggle('hidden', !this.player.underwater);
+      air.title = `Air ${this.player.air ?? 300}/300`;
+    }
+    document.getElementById('underwater-overlay')?.classList.toggle('hidden', !this.player.underwater);
     this.ui.updateHotbar(this.inventory);
     if (this.creativeOpen) this.ui.updateCreativeInventory(this.inventory);
     else if (this.inventoryOpen) this.ui.updateInventory(this.inventory, this.craftingGrid);
