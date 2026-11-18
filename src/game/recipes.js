@@ -43,6 +43,18 @@ recipes.push({
 });
 
 recipes.push({
+  result: 'mc:chest', count: 1,
+  pattern: ['PPP', 'P P', 'PPP'],
+  key: { P: '#mc:planks' },
+});
+
+recipes.push({
+  result: 'mc:furnace', count: 1,
+  pattern: ['CCC', 'C C', 'CCC'],
+  key: { C: 'mc:cobblestone' },
+});
+
+recipes.push({
   result: 'mc:torch', count: 4,
   pattern: ['C', 'S'],
   key: { C: '#mc:coals', S: 'mc:stick' },
