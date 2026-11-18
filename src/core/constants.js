@@ -6,7 +6,7 @@
  * claimed are all visible together. Scattered through twenty modules, a wrong
  * gravity value is invisible. Here it is one line next to its documented source.
  *
- * Reference target is Minecraft: Java Edition 1.20.x.
+ * Reference target is Minecraft: Java Edition 1.12.2.
  *
  * CONVENTIONS
  *   - "per tick" means per 1/20 second. The simulation runs at a fixed 20 TPS
@@ -51,9 +51,9 @@ export const CHUNK_SIZE = 16;
 export const SECTION_HEIGHT = 16;
 export const SECTION_VOLUME = CHUNK_SIZE * CHUNK_SIZE * SECTION_HEIGHT; // 4096
 
-export const MIN_Y = -64;
-export const MAX_Y = 320;                       // exclusive build ceiling
-export const WORLD_HEIGHT = MAX_Y - MIN_Y;      // 384
+export const MIN_Y = 0;
+export const MAX_Y = 256;                       // 1.12.2 exclusive build ceiling
+export const WORLD_HEIGHT = MAX_Y - MIN_Y;      // 256
 export const SECTION_COUNT = WORLD_HEIGHT / SECTION_HEIGHT; // 24
 
 export const SEA_LEVEL = 63;
@@ -117,7 +117,6 @@ export const SLIPPERINESS = {
   ICE: 0.98,
   PACKED_ICE: 0.98,
   FROSTED_ICE: 0.98,
-  BLUE_ICE: 0.989,
 };
 
 /** Movement speeds in blocks/second. */
@@ -143,13 +142,12 @@ export const TOOL_TIER = {
   STONE:     { level: 1, speed: 4,  durability: 131,  enchantability: 5,  damageBonus: 1 },
   IRON:      { level: 2, speed: 6,  durability: 250,  enchantability: 14, damageBonus: 2 },
   DIAMOND:   { level: 3, speed: 8,  durability: 1561, enchantability: 10, damageBonus: 3 },
-  NETHERITE: { level: 4, speed: 9,  durability: 2031, enchantability: 15, damageBonus: 4 },
   GOLD:      { level: 0, speed: 12, durability: 32,   enchantability: 22, damageBonus: 0 },
 };
 
 /** Harvest level required to get drops, by material class. */
 export const HARVEST_LEVEL = {
-  NONE: -1, WOOD: 0, STONE: 1, IRON: 2, DIAMOND: 3, NETHERITE: 4,
+  NONE: -1, WOOD: 0, STONE: 1, IRON: 2, DIAMOND: 3,
 };
 
 /**
@@ -182,10 +180,10 @@ export const MINING = {
 
 /** Base attack damage in half-hearts. Sword = 3 + tier bonus + 1. */
 export const WEAPON_DAMAGE = {
-  SWORD:   { wood: 4, stone: 5, iron: 6, diamond: 7, netherite: 8, gold: 4 },
-  AXE:     { wood: 7, stone: 9, iron: 9, diamond: 9, netherite: 10, gold: 7 },
-  PICKAXE: { wood: 2, stone: 3, iron: 4, diamond: 5, netherite: 6, gold: 2 },
-  SHOVEL:  { wood: 2.5, stone: 3.5, iron: 4.5, diamond: 5.5, netherite: 6.5, gold: 2.5 },
+  SWORD:   { wood: 4, stone: 5, iron: 6, diamond: 7, gold: 4 },
+  AXE:     { wood: 7, stone: 9, iron: 9, diamond: 9, gold: 7 },
+  PICKAXE: { wood: 2, stone: 3, iron: 4, diamond: 5, gold: 2 },
+  SHOVEL:  { wood: 2.5, stone: 3.5, iron: 4.5, diamond: 5.5, gold: 2.5 },
   FIST: 1,
 };
 
@@ -193,7 +191,7 @@ export const WEAPON_DAMAGE = {
 export const ATTACK_SPEED = {
   SWORD: 1.6,
   AXE_WOOD: 0.8, AXE_STONE: 0.8, AXE_IRON: 0.9,
-  AXE_DIAMOND: 1.0, AXE_NETHERITE: 1.0, AXE_GOLD: 1.0,
+  AXE_DIAMOND: 1.0, AXE_GOLD: 1.0,
   PICKAXE: 1.2,
   SHOVEL: 1.0,
   FIST: 4.0,
@@ -212,14 +210,13 @@ export const COMBAT = {
   BOW_MAX_VELOCITY: 3.0,     // blocks/tick at full draw
 };
 
-/** Armor points per piece. Totals: leather 7, chain 12, iron 15, gold 11, diamond/netherite 20. */
+/** Armor points per piece. Totals: leather 7, chain 12, iron 15, gold 11, diamond 20. */
 export const ARMOR = {
   LEATHER:   { helmet: 1, chestplate: 3, leggings: 2, boots: 1, toughness: 0, knockbackRes: 0 },
   CHAINMAIL: { helmet: 2, chestplate: 5, leggings: 4, boots: 1, toughness: 0, knockbackRes: 0 },
   IRON:      { helmet: 2, chestplate: 6, leggings: 5, boots: 2, toughness: 0, knockbackRes: 0 },
   GOLD:      { helmet: 2, chestplate: 5, leggings: 3, boots: 1, toughness: 0, knockbackRes: 0 },
   DIAMOND:   { helmet: 3, chestplate: 8, leggings: 6, boots: 3, toughness: 2, knockbackRes: 0 },
-  NETHERITE: { helmet: 3, chestplate: 8, leggings: 6, boots: 3, toughness: 3, knockbackRes: 0.1 },
 };
 
 /**
