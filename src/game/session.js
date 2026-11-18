@@ -100,6 +100,24 @@ export const SessionMixin = {
     this.inventory.addItem('mc:oak_planks', 64);
   },
 
+  async _respawnAfterDeath() {
+    if (!this.world || !this.player) return;
+    const spawn = this.world.findSpawn(0, 0);
+    this.player.teleport(spawn.x, spawn.y, spawn.z);
+    this.player.health = 20;
+    this.player.vitals = new this.player.vitals.constructor();
+    this.player.fallDistance = 0;
+    this.player.input = { forward: 0, strafe: 0, jump: false, sneak: false, sprint: false };
+    this.entities?.reset();
+    this.deathScreenOpen = false;
+    this.paused = false;
+    document.getElementById('death-screen')?.classList.add('hidden');
+    document.body.classList.remove('menu-active');
+    this._requestPointerLock();
+    await this._save(false);
+    this.ui.toast('Ты возродился на точке появления. Инвентарь сохранён.');
+  },
+
   async _quitToTitle() {
     await this._save(false);
     await this.multiplayer?.leaveRoom();
