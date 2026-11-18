@@ -61,7 +61,7 @@ export const ContainerScreensMixin = {
     this._containers = new Map();
     if (!Array.isArray(records)) return;
     for (const record of records) {
-      if (typeof record?.key !== 'string' || !/^-?\\d+,-?\\d+,-?\\d+$/.test(record.key)) continue;
+      if (typeof record?.key !== 'string' || !/^-?\d+,-?\d+,-?\d+$/.test(record.key)) continue;
       const restored = deserializeContainer(record);
       if (restored) this._containers.set(record.key, restored);
     }
