@@ -33,7 +33,7 @@ The previous browser test attempt was blocked by the execution environment (`ERR
 
 ## Remaining major blockers to full playability
 
-- The generator is still a simplified heightmap/noise generator, not the complete 1.12.2 biome/structure generator; current biome selection is only a small subset.
+- The generator is still a simplified heightmap/noise generator, not the complete 1.12.2 biome/structure generator; current biome selection is only a small subset, and it does not reproduce Java 1.12.2 world seeds exactly.
 - Nether and End world generation, portals, dragon fight and dimension-specific behavior are incomplete.
 - Most 1.12.2 blocks and block entities are still absent; some newly registered decorative blocks use placeholder textures and lack their special behavior.
 - Fluid simulation, redstone circuits, pistons, doors/gates, rails, minecarts, boats, dispensers, droppers, hoppers, brewing, enchanting, anvils, maps, banners, command blocks and commands are incomplete or absent.
