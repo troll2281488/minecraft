@@ -28,6 +28,16 @@ export function rollFishingCatch(random = Math.random) {
   return { id: 'mc:leather', count: 1 };
 }
 
+/** Apply the Java 1.12 armour formula and return health damage after reduction. */
+export function calculateArmorDamage(damage, armorPoints = 0, toughness = 0) {
+  if (!Number.isFinite(damage) || damage <= 0) return 0;
+  const effectiveArmor = Math.min(20, Math.max(
+    armorPoints / 5,
+    armorPoints - damage / (2 + toughness / 4),
+  ));
+  return damage * (1 - effectiveArmor / 25);
+}
+
 export function rollMobDrops(type, random = Math.random) {
   const amount = (min, max) => min + Math.floor(random() * (max - min + 1));
   if (type === 'pig') return [{ id: 'mc:raw_porkchop', count: amount(1, 3) }];
@@ -179,6 +189,31 @@ export class MobSystem {
     return true;
   }
 
+  _damagePlayer(amount) {
+    const player = this.game.player;
+    if (!player || player.gamemode !== 'survival' || amount <= 0) return 0;
+    const inventory = this.game.inventory;
+    let armorPoints = 0;
+    let toughness = 0;
+    let worn = false;
+    const expectedSlots = ['boots', 'leggings', 'chestplate', 'helmet'];
+
+    for (let i = 0; i < expectedSlots.length; i++) {
+      const stack = inventory?.get(36 + i);
+      if (stack?.isEmpty || stack?.item?.armorSlot !== expectedSlots[i]) continue;
+      armorPoints += stack.item.armorPoints || 0;
+      toughness += stack.item.armorToughness || 0;
+      worn = true;
+      if (stack.item.isDamageable && stack.applyDamage(1)) {
+        inventory.slots[36 + i] = inventory.slots[36 + i].constructor.EMPTY.clone();
+      }
+    }
+    if (worn && inventory) inventory.version++;
+    const finalDamage = calculateArmorDamage(amount, armorPoints, toughness);
+    player.health = Math.max(0, player.health - finalDamage);
+    return finalDamage;
+  }
+
   attackFromPlayer() {
     const mob = this.targetedMob();
     if (!mob) return false;
@@ -269,7 +304,7 @@ export class MobSystem {
         if (mob.fuseTicks >= 30) {
           if (distance < 4) {
             const damage = Math.max(0, Math.ceil((4 - distance) * 3));
-            player.health = Math.max(0, player.health - damage);
+            this._damagePlayer(damage);
             const knock = 0.35 / Math.max(distance, 0.2);
             player.vx += dx * knock; player.vz += dz * knock;
           }
@@ -313,7 +348,7 @@ export class MobSystem {
         mob.anim.attack = Math.min(1, mob.attackTicks / 18);
         if (mob.attackTicks >= 55) {
           mob.attackTicks = 0; mob.anim.attack = 0;
-          player.health = Math.max(0, player.health - 2);
+          this._damagePlayer(2);
           this.game.ui?.toast(mob.type === 'stray' ? 'Странник попал в тебя!' : 'Скелет попал в тебя!', { error: true, duration: 1000 });
         }
         mob.targetYaw = Math.atan2(dx, dz);
@@ -322,7 +357,7 @@ export class MobSystem {
         mob.anim.attack = Math.min(1, mob.attackTicks / 10);
         if (mob.attackTicks >= (mob.type === 'spider' ? 28 : 40)) {
           mob.attackTicks = 0; mob.anim.attack = 0;
-          player.health = Math.max(0, player.health - (mob.type === 'enderman' ? 4 : 1));
+          this._damagePlayer(mob.type === 'enderman' ? 4 : 1);
           player.vx += (dx / Math.max(distance, 0.01)) * 0.12;
           player.vz += (dz / Math.max(distance, 0.01)) * 0.12;
           this.game.ui?.toast(mob.type + ' атаковал тебя!', { error: true, duration: 1100 });
