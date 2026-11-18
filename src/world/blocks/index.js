@@ -442,10 +442,10 @@ ITEMS.define('mc:fishing_rod', { stackSize: 1, maxDamage: 64, tool: 'fishing_rod
 
 // Armour (Java 1.12.2). Slot values follow the inventory's vanilla order.
 const ARMOR_SLOTS = [
-  ['boots', 36, 1],
-  ['leggings', 37, 2],
-  ['chestplate', 38, 3],
-  ['helmet', 39, 4],
+  ['boots'],
+  ['leggings'],
+  ['chestplate'],
+  ['helmet'],
 ];
 const ARMOR_MATERIALS = [
   ['leather', [65, 75, 80, 55], [1, 2, 3, 1], 0],
@@ -455,7 +455,7 @@ const ARMOR_MATERIALS = [
   ['diamond', [429, 495, 528, 363], [3, 6, 8, 3], 2],
 ];
 for (const [material, durability, points, toughness] of ARMOR_MATERIALS) {
-  ARMOR_SLOTS.forEach(([slot, , index], i) => {
+  ARMOR_SLOTS.forEach(([slot], i) => {
     ITEMS.define(`mc:${material}_${slot}`, {
       stackSize: 1, maxDamage: durability[i], armorSlot: slot,
       armorPoints: points[i], armorToughness: toughness,
