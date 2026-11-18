@@ -288,7 +288,26 @@ export const InputMixin = {
   },
 
   _requestPointerLock() {
-    this.canvas.requestPointerLock?.();
+    // Pointer Lock must be requested from a fresh user gesture. Browsers can
+    // reject an immediate re-lock after Escape, so handle the rejection.
+    if (!this.running || this.paused || this.inventoryOpen ||
+        document.pointerLockElement === this.canvas) return;
+
+    try {
+      const request = this.canvas.requestPointerLock?.();
+      if (request && typeof request.catch === 'function') {
+        request.catch((error) => {
+          // This is expected when the browser requires another click after Escape.
+          if (error?.name !== 'SecurityError') {
+            console.warn('Не удалось захватить курсор:', error);
+          }
+        });
+      }
+    } catch (error) {
+      if (error?.name !== 'SecurityError') {
+        console.warn('Не удалось захватить курсор:', error);
+      }
+    }
   },
 
   _pause() {
@@ -301,7 +320,8 @@ export const InputMixin = {
     this.paused = false;
     this.ui.hideAllScreens();
     this.ui.setHudVisible(true);
-    this._requestPointerLock();
+    // Do not request Pointer Lock here: after Escape browsers may reject
+    // an immediate re-lock. The next click on the canvas acquires it.
     this.lastFrameTime = performance.now();
     this.accumulator = 0;
   },
