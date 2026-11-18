@@ -51,6 +51,18 @@ describe('Minecraft Java Edition 1.12.2 compatibility guardrails', () => {
     assert(atlas.index.has('dark_oak_leaves'));
     assert(atlas.index.has('magenta_stained_glass'));
     assert(atlas.index.has('black_concrete'));
+    assert(atlas.index.has('chest_top'));
+    assert(atlas.index.has('chest_side'));
+    assert(atlas.index.has('furnace_top'));
+    assert(atlas.index.has('furnace_side'));
+    assert(atlas.index.has('furnace_front'));
+  });
+
+  it('registers working 1.12.2 chest and furnace blocks', () => {
+    assert(BLOCKS.get('mc:chest'));
+    assert(BLOCKS.get('mc:furnace'));
+    assert(ITEMS.get('mc:chest'));
+    assert(ITEMS.get('mc:furnace'));
   });
 
   it('generates a classic-height chunk with no negative or over-height terrain', () => {
