@@ -390,6 +390,7 @@ const MATERIALS = [
   ['mc:charcoal', { fuelTicks: 1600 }],
     ['mc:iron_ingot', {}],
   ['mc:gold_ingot', {}],
+  ['mc:gold_nugget', {}],
   ['mc:diamond', {}],
   ['mc:emerald', {}],
   ['mc:lapis_lazuli', {}],
