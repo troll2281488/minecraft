@@ -25,6 +25,7 @@ import { ITEMS } from './world/item.js';
 import { buildTextures, buildBlockTextureTable, TILE_SIZE } from './render/atlas.js';
 import { buildItemIconCache } from './render/item_icons.js';
 import { loadItsBrianTextures } from './render/resource_pack.js';
+import { setHudSprites } from './ui/hud_bars.js';
 import { createContext, createTextureArray } from './render/gl.js';
 
 import { GAMEMODE, Player } from './entity/player.js';
@@ -65,11 +66,12 @@ export async function boot() {
   const gl = createContext(canvas);
 
   // Load available ItsBrian textures; missing files fall back to the built-in art.
-  const remoteTextures = await loadItsBrianTextures();
-  const textures = buildTextures(remoteTextures);
+  const remoteTextures = await loadItsBrianTextures(BLOCKS, ITEMS);
+  setHudSprites(remoteTextures.hud);
+  const textures = buildTextures(remoteTextures.blocks);
   const textureArray = createTextureArray(gl, textures, TILE_SIZE);
   const textureTable = buildBlockTextureTable(BLOCKS, textures.index);
-  const icons = buildItemIconCache(ITEMS, BLOCKS, textures.data, textures.index);
+  const icons = buildItemIconCache(ITEMS, BLOCKS, textures.data, textures.index, remoteTextures.items);
 
   const game = new Game({ canvas, gl, textureArray, textureTable, icons, textures });
 
