@@ -314,6 +314,42 @@
   #worlds-screen .row { margin-top:.5rem; }
   @media(max-width:520px) { .settings-row { grid-template-columns:1fr; gap:7px; } }
 
+
+  /* Additional Java GUI panels from ItsBrian's texture set. */
+  #inventory-screen .panel,
+  #creative-screen .panel {
+    background-color: rgba(198,198,198,.96);
+    background-image:
+      linear-gradient(rgba(198,198,198,.76),rgba(198,198,198,.76)),
+      url('https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/gui/container/inventory.png');
+    background-size: 100% 100%;
+    color: #242424;
+    border: 3px solid #171717;
+    box-shadow: inset 2px 2px 0 rgba(255,255,255,.3),0 12px 36px rgba(0,0,0,.55);
+  }
+  #creative-screen .panel { 
+    background-image:
+      linear-gradient(rgba(198,198,198,.82),rgba(198,198,198,.82)),
+      url('https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/gui/container/creative_inventory/tab_items.png');
+  }
+  #inventory-screen .panel h1,
+  #creative-screen .panel h1 { color:#292929; text-shadow:1px 1px rgba(255,255,255,.35); }
+  #inventory-screen .craft-row h3,
+  #inventory-screen .inv-section h3,
+  #creative-screen .inv-section h3 { color:#383838 !important; }
+  #creative-screen .sub { color:#454545; }
+  #creative-screen input[type=text] {
+    background:#e4e4e4; color:#222; border:2px solid #555;
+  }
+  #creative-screen .slot,
+  #inventory-screen .slot {
+    background-color:rgba(55,55,55,.78);
+    border:2px solid #292929;
+    box-shadow:inset 2px 2px 0 rgba(0,0,0,.3),inset -1px -1px 0 rgba(255,255,255,.12);
+  }
+  #creative-screen .slot:hover,
+  #inventory-screen .slot:hover { background-color:rgba(105,105,105,.88); }
+
 </style>
 </head>
 <body>
