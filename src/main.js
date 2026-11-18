@@ -50,6 +50,7 @@ import { SessionMixin } from './game/session.js';
 import { Multiplayer } from './game/multiplayer.js';
 import { MobSystem } from './entity/mobs.js';
 import { growNearbyWheat } from './game/farming.js';
+import { isDown } from './game/keybinds.js';
 
 const AUTOSAVE_TICKS = SAVE.AUTOSAVE_INTERVAL_TICKS;
 const MAX_CATCHUP_TICKS = 10;
@@ -304,12 +305,12 @@ class Game {
 
     if (!this.inventoryOpen) {
       player.input.forward =
-        (this.keys.has('KeyW') ? 1 : 0) - (this.keys.has('KeyS') ? 1 : 0);
+        (isDown(this.keys, 'forward') ? 1 : 0) - (isDown(this.keys, 'back') ? 1 : 0);
       player.input.strafe =
-        (this.keys.has('KeyD') ? 1 : 0) - (this.keys.has('KeyA') ? 1 : 0);
-      player.input.jump = this.keys.has('Space');
-      player.input.sneak = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
-      player.input.sprint = this.keys.has('ControlLeft') || this.keys.has('KeyR');
+        (isDown(this.keys, 'right') ? 1 : 0) - (isDown(this.keys, 'left') ? 1 : 0);
+      player.input.jump = isDown(this.keys, 'jump');
+      player.input.sneak = isDown(this.keys, 'sneak');
+      player.input.sprint = isDown(this.keys, 'sprint');
     } else {
       player.input.forward = 0;
       player.input.strafe = 0;
