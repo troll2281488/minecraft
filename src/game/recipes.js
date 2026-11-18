@@ -12,7 +12,7 @@
 
 import { RecipeBook } from './crafting.js';
 
-const WOODS = ['oak', 'birch', 'spruce'];
+const WOODS = ['oak', 'birch', 'spruce', 'jungle', 'acacia', 'dark_oak'];
 
 const recipes = [];
 
@@ -98,6 +98,19 @@ recipes.push({
   key: { I: 'mc:iron_ingot' },
 });
 
+// -- Gold currency (1.12.2) -----------------------------------------------
+
+recipes.push({
+  result: 'mc:gold_ingot', count: 1,
+  pattern: ['NNN', 'NNN', 'NNN'],
+  key: { N: 'mc:gold_nugget' },
+});
+
+recipes.push({
+  result: 'mc:gold_nugget', count: 9,
+  ingredients: ['mc:gold_ingot'],
+});
+
 // -- Mineral blocks --------------------------------------------------------
 
 /**
@@ -108,7 +121,6 @@ recipes.push({
 const PACKABLE = [
   ['mc:coal', 'mc:coal_block'],
   ['mc:iron_ingot', 'mc:iron_block'],
-  ['mc:copper_ingot', 'mc:copper_block'],
   ['mc:gold_ingot', 'mc:gold_block'],
   ['mc:diamond', 'mc:diamond_block'],
   ['mc:emerald', 'mc:emerald_block'],
