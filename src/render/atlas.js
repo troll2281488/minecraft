@@ -522,14 +522,14 @@ function missingTexture() {
  * @returns {{data: Uint8Array, layers: number, index: Map<string, number>, names: string[]}}
  */
 export function buildTextures(overrides = null) {
-  const names = ['__missing', ...Object.keys(TEXTURES).sort()];
+  const names = ['__missing', ...new Set([...Object.keys(TEXTURES), ...(overrides ? [...overrides.keys()] : [])])].sort((a, b) => a === '__missing' ? -1 : b === '__missing' ? 1 : a.localeCompare(b));
   const layers = names.length;
   const data = new Uint8Array(TILE_SIZE * TILE_SIZE * 4 * layers);
   const index = new Map();
 
   names.forEach((name, layer) => {
     index.set(name, layer);
-    const tile = name === '__missing' ? missingTexture() : (overrides?.get(name) ?? TEXTURES[name]());
+    const tile = name === '__missing' ? missingTexture() : (overrides?.get(name) ?? (TEXTURES[name] ? TEXTURES[name]() : missingTexture()));
     data.set(tile, layer * TILE_SIZE * TILE_SIZE * 4);
   });
 
