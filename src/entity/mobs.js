@@ -95,6 +95,9 @@ export class MobSystem {
       sheared: !!mob.sheared,
       fuseTicks: mob.fuseTicks || 0,
       walkPhase: mob.walkPhase || 0,
+      ageTicks: Number.isFinite(mob.ageTicks) ? mob.ageTicks : 0,
+      loveTicks: mob.loveTicks || 0,
+      breedCooldown: mob.breedCooldown || 0,
     }));
   }
 
@@ -120,6 +123,9 @@ export class MobSystem {
         speed: ['zombie','skeleton','stray','creeper','spider'].includes(mob.type) ? 0.035 : mob.type === 'enderman' ? 0.045 : 0.018,
         thinkTicks: 0, attackTicks: 0,
         walkPhase: Number.isFinite(mob.walkPhase) ? mob.walkPhase : 0,
+        ageTicks: Number.isFinite(mob.ageTicks) ? Math.max(-24000, Math.min(0, mob.ageTicks)) : 0,
+        loveTicks: Number.isFinite(mob.loveTicks) ? Math.max(0, Math.min(600, mob.loveTicks)) : 0,
+        breedCooldown: Number.isFinite(mob.breedCooldown) ? Math.max(0, Math.min(6000, mob.breedCooldown)) : 0,
         health: mob.health,
         sheared: !!mob.sheared,
         hurtTicks: 0,
@@ -142,6 +148,7 @@ export class MobSystem {
       thinkTicks: 0, attackTicks: 0, walkPhase: Math.random() * 6,
       health: ({ zombie:20, skeleton:20, stray:20, creeper:20, enderman:40, spider:16, cow:10, pig:10, chicken:4, sheep:8 })[type] ?? 10,
       sheared: false, hurtTicks: 0, fuseTicks: 0,
+      ageTicks: 0, loveTicks: 0, breedCooldown: 0,
       anim: { walk: 0, idle: Math.random() * Math.PI * 2, attack: 0, hurt: 0, fuse: 0 },
     });
   }
@@ -222,6 +229,65 @@ export class MobSystem {
     this.game.inventory.damageHeld(1);
     this.fishing = null;
     this.game.ui?.toast('Caught ' + caught.id.replace('mc:', ''));
+    return true;
+  }
+
+  feedAnimalFromPlayer() {
+    const animal = this.targetedMob();
+    const held = this.game.inventory?.held;
+    const player = this.game.player;
+    if (!animal || !player || player.gamemode !== 'survival') return false;
+    const foods = {
+      cow: ['mc:wheat'], sheep: ['mc:wheat'],
+      pig: ['mc:carrot', 'mc:potato'],
+      chicken: ['mc:wheat_seeds', 'mc:pumpkin_seeds', 'mc:melon_seeds'],
+    };
+    const accepted = foods[animal.type];
+    if (!accepted || !held?.item || !accepted.includes(held.item.id)) return false;
+    if (animal.ageTicks < 0 || animal.breedCooldown > 0 || animal.loveTicks > 0) {
+      this.game.ui?.toast('This animal is not ready to breed');
+      return true;
+    }
+    if (this.game.inventory.remove(held.item.id, 1) !== 1) return false;
+    animal.loveTicks = 600;
+    const partner = this.mobs.find((other) =>
+      other !== animal && other.type === animal.type &&
+      other.ageTicks >= 0 && other.breedCooldown <= 0 && other.loveTicks > 0 &&
+      Math.hypot(other.x - animal.x, other.y - animal.y, other.z - animal.z) <= 8
+    );
+    if (partner) {
+      const baby = this._spawnBaby(animal, partner);
+      if (baby) {
+        animal.loveTicks = 0;
+        partner.loveTicks = 0;
+        animal.breedCooldown = 6000;
+        partner.breedCooldown = 6000;
+        this.game.ui?.toast('Animal bred');
+      }
+    } else {
+      this.game.ui?.toast('Animal is ready to breed');
+    }
+    return true;
+  }
+
+  _spawnBaby(first, second) {
+    if (this.mobs.length >= 9) {
+      this.game.ui?.toast('Too many nearby creatures', { error: true });
+      return false;
+    }
+    const x = (first.x + second.x) / 2;
+    const z = (first.z + second.z) / 2;
+    const y = this.game.world.getHeight(Math.floor(x), Math.floor(z)) + 1;
+    if (y < -60 || !this.game.world.getBlock(Math.floor(x), y - 1, Math.floor(z)).block.solid) return false;
+    this.mobs.push({
+      id: this.nextId++, type: first.type, x, y, z,
+      yaw: first.yaw, targetYaw: first.yaw, speed: first.speed,
+      thinkTicks: 0, attackTicks: 0, walkPhase: 0,
+      health: first.type === 'chicken' ? 4 : 10,
+      sheared: false, hurtTicks: 0, fuseTicks: 0,
+      ageTicks: -24000, loveTicks: 0, breedCooldown: 0,
+      anim: { walk: 0, idle: 0, attack: 0, hurt: 0, fuse: 0 },
+    });
     return true;
   }
 
@@ -315,6 +381,9 @@ export class MobSystem {
 
     for (let i = this.mobs.length - 1; i >= 0; i--) {
       const mob = this.mobs[i];
+      if (mob.ageTicks < 0) mob.ageTicks++;
+      if (mob.loveTicks > 0) mob.loveTicks--;
+      if (mob.breedCooldown > 0) mob.breedCooldown--;
       mob.thinkTicks--;
       const dx = player.x - mob.x;
       const dz = player.z - mob.z;
