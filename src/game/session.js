@@ -50,6 +50,9 @@ export const SessionMixin = {
     this.player = new Player().loadFrom(playerJson);
     this.inventory.loadFrom(playerJson?.inventory);
     this.inventory.selectedSlot = playerJson?.selectedSlot ?? 0;
+    // Container inventories are block-entity state. Keep them out of online
+    // rooms until their authoritative state is synchronized by the server.
+    this._restoreContainers?.(this.multiplayer?.roomId ? [] : playerJson?.containers);
 
     const isNew = !playerJson;
     await this._waitForSpawnChunks(isNew);
@@ -202,6 +205,8 @@ export const SessionMixin = {
       // copy that nothing ever assigned, so this persisted as 0 every time and
       // the selected slot was silently lost on reload.
       selectedSlot: this.inventory.selectedSlot,
+      // Chest contents and furnace timers survive reloads and world exports.
+      containers: this.multiplayer?.roomId ? [] : this._serializeContainers?.() ?? [],
     });
     await storage.putWorld({ ...this.worldMeta, time: this.world.time });
 
