@@ -41,6 +41,7 @@ export class Multiplayer {
     this.syncElapsed = 0;
     this.presenceElapsed = 0;
     this.worldSyncElapsed = 0;
+    this.hudElapsed = 0;
     this.isHost = false;
     this.applyingRemoteBlock = false;
     this.connected = false;
@@ -191,6 +192,13 @@ export class Multiplayer {
     });
     this._listen(onValue, ref(this.db, `minecraft_game/rooms/${code}/players`), (snap) => {
       const players = snap.val() || {};
+      // If the room creator leaves, elect the first remaining UID deterministically.
+      const hostUid = room.hostUid && players[room.hostUid] ? room.hostUid : Object.keys(players).sort()[0];
+      if (hostUid) {
+        this.isHost = hostUid === this.uid;
+        if (room.hostUid !== hostUid) update(ref(this.db, `minecraft_game/rooms/${code}`), { hostUid })
+          .catch((error) => console.warn('[multiplayer] host election:', error));
+      }
       for (const uid of this.remotePlayers.keys()) if (!players[uid]) this.remotePlayers.delete(uid);
       for (const [uid, p] of Object.entries(players)) {
         if (uid === this.uid || !Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.z)) continue;
@@ -201,6 +209,7 @@ export class Multiplayer {
         current.targetX = p.x; current.targetY = p.y; current.targetZ = p.z; current.targetYaw = p.yaw || 0;
         this.remotePlayers.set(uid, current);
       }
+      this._updateRoomHud();
     });
     const applyBlockSnapshot = (snap) => {
       const block = snap.val();
@@ -218,6 +227,17 @@ export class Multiplayer {
     document.getElementById('hud-room').classList.remove('hidden');
     document.getElementById('mp-screen').classList.add('hidden');
     this.game.ui.toast(`Подключено к комнате ${code}`);
+  }
+
+  _updateRoomHud() {
+    const hud = document.getElementById('hud-room');
+    if (!hud || !this.roomId) return;
+    const local = this.game.player;
+    const players = [
+      `${this.nickname} ${Math.ceil(local?.health ?? 20)}♥ ${Math.ceil(local?.vitals?.food ?? 20)}🍗`,
+      ...[...this.remotePlayers.values()].map((p) => `${p.name} ${Math.ceil(p.health ?? 20)}♥ ${Math.ceil(p.food ?? 20)}🍗`),
+    ];
+    hud.textContent = `Комната ${this.roomId} · ${players.length} игроков${this.isHost ? ' · хост' : ''} | ${players.join(' · ')}`;
   }
 
   _applyPendingBlocks() {
@@ -270,6 +290,11 @@ export class Multiplayer {
     this.syncElapsed += dt;
     this.presenceElapsed += dt;
     this.worldSyncElapsed += dt;
+    this.hudElapsed += dt;
+    if (this.hudElapsed >= 1) {
+      this.hudElapsed = 0;
+      this._updateRoomHud();
+    }
     if (this.syncElapsed >= 0.12) {
       this.syncElapsed = 0;
       update(ref(this.db, `minecraft_game/rooms/${this.roomId}/players/${this.uid}`), this._playerPayload())
