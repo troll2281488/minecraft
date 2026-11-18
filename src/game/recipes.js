@@ -11,6 +11,11 @@
  */
 
 import { RecipeBook } from './crafting.js';
+import { ITEMS } from '../world/item.js';
+
+// Keep the gold-nugget material available even if a cached/older block catalog
+// is loaded by a browser. The catalog remains the canonical registration site.
+if (!ITEMS.get('mc:gold_nugget')) ITEMS.define('mc:gold_nugget', {});
 
 const WOODS = ['oak', 'birch', 'spruce', 'jungle', 'acacia', 'dark_oak'];
 
