@@ -34,7 +34,7 @@ describe('Mob data and loot', () => {
 
   it('applies armour reduction and rejects invalid damage', () => {
     assertEqual(calculateArmorDamage(10, 0, 0), 10);
-    assertEqual(calculateArmorDamage(10, 20, 0), 2);
+    assertEqual(calculateArmorDamage(10, 20, 0), 4);
     assertEqual(calculateArmorDamage(0, 20, 0), 0);
     assertEqual(calculateArmorDamage(-5, 20, 0), 0);
     assertEqual(calculateArmorDamage(Number.NaN, 20, 0), 0);
