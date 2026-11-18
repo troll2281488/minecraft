@@ -2,7 +2,7 @@ import '../src/world/blocks/index.js';
 import { describe, it, assert, assertEqual } from './framework.js';
 import { Inventory, SLOT } from '../src/game/inventory.js';
 import { ItemStack } from '../src/world/item.js';
-import { calculateArmorDamage } from '../src/entity/mobs.js';
+import { calculateArmorDamage, MobSystem } from '../src/entity/mobs.js';
 import { CraftingGrid } from '../src/game/inventory.js';
 import { RECIPES } from '../src/game/recipes.js';
 
@@ -40,6 +40,17 @@ describe('armour protection', () => {
     assertEqual(calculateArmorDamage(10, 20, 8), 3);
   });
 
+
+  it('reduces hostile damage and wears equipped armour', () => {
+    const inventory = new Inventory();
+    inventory.set(SLOT.ARMOR_START, ItemStack.of('mc:iron_boots'));
+    const player = { gamemode: 'survival', health: 20 };
+    const mobs = new MobSystem({ player, inventory });
+    const dealt = mobs._damagePlayer(10);
+    assert(Math.abs(dealt - 9.84) < 0.001, `expected 9.84 damage, got ${dealt}`);
+    assert(Math.abs(player.health - 10.16) < 0.001);
+    assertEqual(inventory.get(SLOT.ARMOR_START).damage, 1, 'armour should lose durability');
+  });
 
   it('crafts an iron helmet in the 3x3 table', () => {
     const grid = new CraftingGrid(3, RECIPES);
