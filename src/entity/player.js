@@ -47,6 +47,9 @@ export class Player {
     this.sprinting = false;
     this.flying = false;
     this.inWater = false;
+    this.underwater = false;
+    this.air = 300;
+    this.airDamageTicks = 0;
 
     this.gamemode = GAMEMODE.SURVIVAL;
     this.health = MAX_HEALTH;
@@ -95,6 +98,8 @@ export class Player {
     this.sprinting = this.input.sprint && this.input.forward > 0 && !this.sneaking;
 
     this.inWater = this._isInWater(world);
+    this.underwater = this._isHeadUnderwater(world);
+    this._tickAir();
 
     const oldX = this.x, oldZ = this.z;
     const jumped = this.input.jump && this.onGround;
@@ -147,7 +152,7 @@ export class Player {
    */
   _applyInput(slipperiness) {
     const target = perTick(
-      this.inWater ? SPEED.SWIM
+      this.inWater ? (this.onGround ? SPEED.SNEAK : SPEED.SWIM)
         : this.sneaking ? SPEED.SNEAK
         : this.sprinting ? SPEED.SPRINT
         : SPEED.WALK,
@@ -166,20 +171,21 @@ export class Player {
     this.vx += ax;
     this.vz += az;
 
-    if (this.input.jump) {
-      if (this.inWater) {
-        this.vy = perTick(SPEED.SWIM) * 3;
-      } else if (this.onGround) {
-        this.vy = PHYSICS.JUMP_VELOCITY;
-        // Sprint-jumping gets a forward impulse, which is why it is the fastest
-        // way to travel on foot in Minecraft.
-        if (this.sprinting) {
-          const yaw = (this.yaw * Math.PI) / 180;
-          this.vx += -Math.sin(yaw) * 0.2;
-          this.vz += Math.cos(yaw) * 0.2;
-        }
-        this.onGround = false;
+    if (this.inWater) {
+      // Water movement is deliberately damped; looking up/down while moving
+      // changes the swim direction instead of behaving like walking on land.
+      const pitch = this.pitch * Math.PI / 180;
+      if (this.input.forward !== 0) this.vy += -Math.sin(pitch) * perTick(SPEED.SWIM) * 0.65;
+      if (this.input.jump) this.vy += 0.035;
+      if (this.input.sneak) this.vy -= 0.035;
+    } else if (this.input.jump && this.onGround) {
+      this.vy = PHYSICS.JUMP_VELOCITY;
+      if (this.sprinting) {
+        const yaw = (this.yaw * Math.PI) / 180;
+        this.vx += -Math.sin(yaw) * 0.2;
+        this.vz += Math.cos(yaw) * 0.2;
       }
+      this.onGround = false;
     }
   }
 
@@ -241,10 +247,36 @@ export class Player {
   }
 
   _isInWater(world) {
-    const block = world.getBlock(
-      Math.floor(this.x), Math.floor(this.y + 0.4), Math.floor(this.z),
-    ).block;
-    return block.id === 'mc:water';
+    const x = Math.floor(this.x), z = Math.floor(this.z);
+    return [0.25, 0.9, 1.5].some((height) =>
+      world.getBlock(x, Math.floor(this.y + height), z).block.id === 'mc:water');
+  }
+
+  _isHeadUnderwater(world) {
+    return world.getBlock(
+      Math.floor(this.x), Math.floor(this.eyeY), Math.floor(this.z),
+    ).block.id === 'mc:water';
+  }
+
+  _tickAir() {
+    if (this.gamemode !== GAMEMODE.SURVIVAL) {
+      this.air = 300;
+      this.airDamageTicks = 0;
+      return;
+    }
+    if (this.underwater) {
+      this.air = Math.max(0, this.air - 1);
+      if (this.air === 0) {
+        this.airDamageTicks++;
+        if (this.airDamageTicks >= 20) {
+          this.health = Math.max(0, this.health - 2);
+          this.airDamageTicks = 0;
+        }
+      }
+    } else {
+      this.air = Math.min(300, this.air + 4);
+      this.airDamageTicks = 0;
+    }
   }
 
   /**
@@ -425,6 +457,7 @@ export class Player {
       pos: { x: this.x, y: this.y, z: this.z },
       rot: { yaw: this.yaw, pitch: this.pitch },
       health: this.health,
+      air: this.air,
       vitals: this.vitals.toJSON(),
       gamemode: this.gamemode,
       flying: this.flying,
@@ -436,6 +469,7 @@ export class Player {
     if (json.pos) { this.x = json.pos.x; this.y = json.pos.y; this.z = json.pos.z; }
     if (json.rot) { this.yaw = json.rot.yaw; this.pitch = json.rot.pitch; }
     this.health = json.health ?? MAX_HEALTH;
+    this.air = Math.max(0, Math.min(300, json.air ?? 300));
     this.vitals.loadFrom(json.vitals);
     this.gamemode = json.gamemode ?? GAMEMODE.SURVIVAL;
     this.flying = json.flying ?? false;
