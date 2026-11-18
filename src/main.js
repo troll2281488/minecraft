@@ -312,6 +312,15 @@ class Game {
 
     player.tick(world);
     this.entities?.tick();
+    if (player.health <= 0 && !this.deathScreenOpen) {
+      this.deathScreenOpen = true;
+      this.paused = true;
+      this.keys.clear();
+      this.mouseButtons.clear();
+      document.exitPointerLock?.();
+      document.getElementById('death-screen')?.classList.remove('hidden');
+      document.body.classList.add('menu-active');
+    }
     for (const change of growNearbyWheat(world, player, this.tickCount)) {
       this.multiplayer?.pushBlockChange(change.x, change.y, change.z, change.state);
     }
