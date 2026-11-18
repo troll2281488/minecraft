@@ -350,3 +350,19 @@ describe('underwater air', () => {
     assertEqual(player.air, 300);
   });
 });
+
+
+describe('water exit movement', () => {
+  it('gives a submerged player enough upward velocity while jump is held', () => {
+    const player = new Player(0.5, 0, 0.5);
+    player.input.jump = true;
+    const world = {
+      getBlock: (x, y, z) => ({
+        block: y >= 0 && y <= 2 ? BLOCKS.get('mc:water') : BLOCKS.get('mc:air'),
+      }),
+    };
+    player.tick(world);
+    assert(player.vy > 0.09, 'jump should overcome water drag and buoyancy');
+    assert(player.y > 0, 'player should rise toward the water surface');
+  });
+});
