@@ -329,6 +329,7 @@ export class Multiplayer {
       const alpha = Math.min(1, dt * 12);
       const moving = Math.hypot(p.targetX - p.x, p.targetZ - p.z) > 0.002;
       if (moving) p.walkPhase = (p.walkPhase || 0) + dt * 11;
+      else if (p.inWater) p.walkPhase = (p.walkPhase || 0) + dt * 2.4;
       p.x += (p.targetX - p.x) * alpha;
       p.y += (p.targetY - p.y) * alpha;
       p.z += (p.targetZ - p.z) * alpha;
