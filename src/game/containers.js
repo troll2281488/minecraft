@@ -73,6 +73,52 @@ export class Chest {
   }
 }
 
+/**
+ * JSON-safe block-entity state for local world saves.
+ * Slot stacks use the same stable namespaced item IDs as player inventories.
+ */
+export function serializeContainer(type, data) {
+  if (type === 'chest' && data instanceof Chest) {
+    return { type, slots: data.slots.map((stack) => stack.toJSON()) };
+  }
+  if (type === 'furnace' && data instanceof Furnace) {
+    return {
+      type,
+      input: data.input.toJSON(),
+      fuel: data.fuel.toJSON(),
+      output: data.output.toJSON(),
+      burnLeft: data.burnLeft,
+      burnTotal: data.burnTotal,
+      cookProgress: data.cookProgress,
+    };
+  }
+  return null;
+}
+
+/** Restore a validated record; malformed or unknown records are safely ignored. */
+export function deserializeContainer(record) {
+  if (!record || typeof record !== 'object') return null;
+  if (record.type === 'chest') {
+    if (!Array.isArray(record.slots) || record.slots.length !== CHEST_SLOTS) return null;
+    const chest = new Chest();
+    chest.slots = record.slots.map((stack) => ItemStack.fromJSON(stack));
+    return { type: 'chest', data: chest };
+  }
+  if (record.type === 'furnace') {
+    const furnace = new Furnace();
+    furnace.input = ItemStack.fromJSON(record.input);
+    furnace.fuel = ItemStack.fromJSON(record.fuel);
+    furnace.output = ItemStack.fromJSON(record.output);
+    const finiteInt = (value, max) =>
+      Number.isFinite(value) ? Math.max(0, Math.min(max, Math.floor(value))) : 0;
+    furnace.burnTotal = finiteInt(record.burnTotal, 1_000_000);
+    furnace.burnLeft = Math.min(finiteInt(record.burnLeft, 1_000_000), furnace.burnTotal);
+    furnace.cookProgress = finiteInt(record.cookProgress, SMELT_TICKS - 1);
+    return { type: 'furnace', data: furnace };
+  }
+  return null;
+}
+
 export class Furnace {
   constructor() {
     this.input = ItemStack.EMPTY.clone();
