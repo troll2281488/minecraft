@@ -82,3 +82,63 @@ describe('mob world persistence', () => {
     assertEqual(system.nextId, 1);
   });
 });
+
+describe('animal breeding', () => {
+  it('breeds nearby fed adults and creates a growing baby', () => {
+    const inventory = {
+      held: { item: { id: 'mc:wheat' } },
+      removed: 0,
+      remove(id, count) { this.removed += count; return id === 'mc:wheat' ? count : 0; },
+    };
+    const game = {
+      inventory,
+      player: { gamemode: 'survival' },
+      world: {
+        getHeight: () => 64,
+        getBlock: () => ({ block: { solid: true } }),
+      },
+      ui: { toast() {} },
+    };
+    const system = new MobSystem(game);
+    const cow = (id, x) => ({
+      id, type: 'cow', x, y: 65, z: 0, yaw: 0, targetYaw: 0,
+      speed: 0.018, health: 10, ageTicks: 0, loveTicks: 0,
+      breedCooldown: 0, walkPhase: 0, anim: {},
+    });
+    const first = cow(1, 0);
+    const second = cow(2, 2);
+    system.mobs.push(first, second);
+    system.targetedMob = () => first;
+    assertEqual(system.feedAnimalFromPlayer(), true);
+    assertEqual(first.loveTicks, 600);
+    system.targetedMob = () => second;
+    assertEqual(system.feedAnimalFromPlayer(), true);
+    assertEqual(system.mobs.length, 3);
+    assertEqual(system.mobs[2].type, 'cow');
+    assertEqual(system.mobs[2].ageTicks, -24000);
+    assertEqual(first.breedCooldown, 6000);
+    assertEqual(second.breedCooldown, 6000);
+    assertEqual(inventory.removed, 2);
+  });
+
+  it('persists baby age and breeding timers', () => {
+    const system = new MobSystem({});
+    system.loadFrom([{
+      id: 3, type: 'chicken', x: 1, y: 65, z: 2,
+      yaw: 0, health: 4, ageTicks: -12000, loveTicks: 300, breedCooldown: 500,
+    }]);
+    const saved = system.toJSON()[0];
+    assertEqual(saved.ageTicks, -12000);
+    assertEqual(saved.loveTicks, 300);
+    assertEqual(saved.breedCooldown, 500);
+  });
+
+  it('does not allow hostile mobs to breed with food', () => {
+    const system = new MobSystem({
+      inventory: { held: { item: { id: 'mc:wheat' } } },
+      player: { gamemode: 'survival' },
+    });
+    system.targetedMob = () => ({ type: 'zombie' });
+    assertEqual(system.feedAnimalFromPlayer(), false);
+  });
+});
