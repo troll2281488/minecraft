@@ -308,6 +308,9 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
   // Silk Touch is not implemented yet, so these correctly yield nothing.
   if (id === 'mc:glass' || id === 'mc:ice') return [];
 
+  // A shovel breaks a snow block into four snowballs in Java 1.12.2.
+  if (id === 'mc:snow_block') return [{ id: 'mc:snowball', count: 4 }];
+
   if (id === 'mc:wheat') {
     if (state.get('age') < 7) return [];
     return [
