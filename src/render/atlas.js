@@ -333,6 +333,52 @@ function torchTile(seed) {
   return tile;
 }
 
+function chestSideTile(seed) {
+  const tile = planks(hex(0x9a6a32), seed);
+  const dark = hex(0x4b321a), iron = hex(0xceb45c);
+  for (let x = 0; x < TILE_SIZE; x++) {
+    for (const y of [0, 1, 14, 15]) {
+      const c = shade(dark, 0.9 + ((x + y) % 3) * 0.08);
+      setPx(tile, x, y, c[0], c[1], c[2]);
+    }
+  }
+  for (let y = 6; y <= 9; y++) for (let x = 7; x <= 8; x++) {
+    setPx(tile, x, y, iron[0], iron[1], iron[2]);
+  }
+  return tile;
+}
+
+function chestTopTile(seed) {
+  const tile = planks(hex(0xa4763b), seed);
+  const edge = hex(0x4b321a), latch = hex(0xd8bd63);
+  for (let i = 0; i < TILE_SIZE; i++) {
+    for (const p of [[i, 0], [i, 15], [0, i], [15, i]]) {
+      setPx(tile, p[0], p[1], edge[0], edge[1], edge[2]);
+    }
+  }
+  for (let y = 6; y <= 9; y++) for (let x = 7; x <= 8; x++) {
+    setPx(tile, x, y, latch[0], latch[1], latch[2]);
+  }
+  return tile;
+}
+
+function furnaceSideTile(seed) {
+  return grainy(hex(0x777777), 0.18, seed, { clumps: 7, clumpColor: hex(0x555555) });
+}
+
+function furnaceFrontTile(seed) {
+  const tile = furnaceSideTile(seed);
+  const opening = hex(0x252525), ember = hex(0xd65a1f), glow = hex(0xf3a33a);
+  for (let y = 4; y <= 12; y++) for (let x = 3; x <= 12; x++) {
+    setPx(tile, x, y, opening[0], opening[1], opening[2]);
+  }
+  for (const [x, y] of [[6, 10], [7, 9], [8, 10], [9, 8], [10, 10]]) {
+    setPx(tile, x, y, ember[0], ember[1], ember[2]);
+  }
+  setPx(tile, 8, 8, glow[0], glow[1], glow[2]);
+  return tile;
+}
+
 // ---------------------------------------------------------------------------
 // The texture table
 // ---------------------------------------------------------------------------
@@ -412,6 +458,11 @@ const TEXTURES = {
 
   crafting_table_top:  () => planks(hex(0x9a7442), 'craft_top'),
   crafting_table_side: () => planks(hex(0x8d6a3c), 'craft_side'),
+  chest_top:           () => chestTopTile('chest_top'),
+  chest_side:          () => chestSideTile('chest_side'),
+  furnace_top:         () => furnaceSideTile('furnace_top'),
+  furnace_side:        () => furnaceSideTile('furnace_side'),
+  furnace_front:       () => furnaceFrontTile('furnace_front'),
 
   short_grass:        () => crossPlant('short_grass', (t, r) => grassBlades(t, r, GRASS_GREEN)),
   fern:               () => crossPlant('fern', (t, r) => grassBlades(t, r, hex(0x5f9440))),
