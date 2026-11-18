@@ -1,3 +1,32 @@
+import { Player, GAMEMODE } from '../src/entity/player.js';
+
+describe('survival fall damage', () => {
+  it('takes no fall damage at or below three blocks', () => {
+    const player = new Player();
+    player.gamemode = GAMEMODE.SURVIVAL;
+    player.fallDistance = 3;
+    player._land();
+    assertEqual(player.health, 20);
+  });
+
+  it('takes one health point per block beyond three', () => {
+    const player = new Player();
+    player.gamemode = GAMEMODE.SURVIVAL;
+    player.fallDistance = 7;
+    player._land();
+    assertEqual(player.health, 16);
+    assertEqual(player.fallDistance, 0);
+  });
+
+  it('does not take fall damage in creative mode', () => {
+    const player = new Player();
+    player.gamemode = GAMEMODE.CREATIVE;
+    player.fallDistance = 20;
+    player._land();
+    assertEqual(player.health, 20);
+  });
+});
+
 import '../src/world/blocks/index.js';
 import { describe, it, assert, assertEqual } from './framework.js';
 import { Player, GAMEMODE } from '../src/entity/player.js';
