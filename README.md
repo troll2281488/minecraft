@@ -60,7 +60,7 @@ what is working and what remains.
 | **Platform** | Browser, WebGL2, vanilla ES modules |
 | **Dependencies** | None. No npm, no bundler, no framework, no `package.json`. |
 | **Size** | Over 13,000 lines of JavaScript |
-| **Tests** | 255, in a hand-written browser harness (`tests.html`) |
+| **Tests** | Hand-written browser harness (`tests.html`); run locally to verify the current branch |
 | **Server** | `serve.py` - Python stdlib static server, only needed because ES modules require `http://` |
 | **Saves** | Versioned `.mcw` files + IndexedDB, with an ordered migration chain |
 | **Mode** | Singleplayer + experimental online rooms |
