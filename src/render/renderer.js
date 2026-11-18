@@ -309,12 +309,12 @@ export const RendererMixin = {
     const gl = this.gl;
     const { program, uniforms } = this.avatarProgram;
     const human = [
-      [[0, 1.62, 0], [0.38, 0.38, 0.38], [0.72, 0.48, 0.32, 1]],
-      [[0, 1.00, 0], [0.50, 0.65, 0.25], [0.12, 0.48, 0.72, 1]],
-      [[-0.37, 1.00, 0], [0.24, 0.65, 0.25], [0.12, 0.48, 0.72, 1]],
-      [[0.37, 1.00, 0], [0.24, 0.65, 0.25], [0.12, 0.48, 0.72, 1]],
-      [[-0.13, 0.35, 0], [0.25, 0.70, 0.25], [0.16, 0.24, 0.48, 1]],
-      [[0.13, 0.35, 0], [0.25, 0.70, 0.25], [0.16, 0.24, 0.48, 1]],
+      [[0, 1.55, 0], [0.50, 0.50, 0.50], [0.72, 0.48, 0.32, 1]],
+      [[0, 1.00, 0], [0.50, 0.75, 0.25], [0.12, 0.48, 0.72, 1]],
+      [[-0.375, 1.00, 0], [0.25, 0.75, 0.25], [0.12, 0.48, 0.72, 1]],
+      [[0.375, 1.00, 0], [0.25, 0.75, 0.25], [0.12, 0.48, 0.72, 1]],
+      [[-0.125, 0.375, 0], [0.25, 0.75, 0.25], [0.16, 0.24, 0.48, 1]],
+      [[0.125, 0.375, 0], [0.25, 0.75, 0.25], [0.16, 0.24, 0.48, 1]],
     ];
     const zombie = human.map(([o, size, color], i) => [
       o, size, i === 0 || i === 2 || i === 3 ? [0.28, 0.62, 0.25, 1] :
@@ -407,7 +407,7 @@ export const RendererMixin = {
         let swing = 0;
         let pivotY = offset[1];
         if (isArm || isLeg) {
-          pivotY = pose.firstPerson ? offset[1] : isArm ? 1.30 : 0.70;
+          pivotY = pose.firstPerson ? offset[1] : isArm ? 1.375 : 0.75;
           if (pose.firstPerson) swing = pose.attack ? -1.0 : Math.sin(walkPhase * 2) * 0.035;
           else if (pose.swimming) swing = isArm ? Math.sin(walkPhase * 1.7 + phase) * 0.72 : Math.sin(walkPhase * 1.7 + phase) * 0.42;
           else if (pose.airborne) swing = isArm ? -0.22 : 0.25;
