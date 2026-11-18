@@ -197,8 +197,20 @@ export class Multiplayer {
       const time = snap.val();
       if (Number.isFinite(time) && this.game.world && !this.isHost) this.game.world.time = time;
     });
+    let knownPlayers = null;
     this._listen(onValue, ref(this.db, `minecraft_game/rooms/${code}/players`), (snap) => {
       const players = snap.val() || {};
+      const currentIds = new Set(Object.keys(players));
+      if (knownPlayers) {
+        for (const [uid, joined] of Object.entries(players)) {
+          if (uid !== this.uid && !knownPlayers.has(uid)) {
+            const name = safeName(joined.name);
+            this.addChat(`§ ${name} зашёл в комнату`);
+            this.game.ui.toast(`${name} зашёл в игру`, { duration: 3500 });
+          }
+        }
+      }
+      knownPlayers = currentIds;
       // If the room creator leaves, elect the first remaining UID deterministically.
       const hostUid = electRoomHost(room, players);
       if (hostUid) {
