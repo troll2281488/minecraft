@@ -17,12 +17,25 @@ import {
   placementTarget, orientPlacement, blockDrops, wouldTrapPlayer,
 } from './interaction.js';
 import { USABLE_BLOCKS } from './usable_blocks.js';
+import { drainContainer } from './containers.js';
 
 export const BlockActionsMixin = {
   _breakBlock() {
     if (!this.hit) return;
     const { x, y, z, state } = this.hit;
     if (state.block.isUnbreakable && this.player.gamemode !== GAMEMODE.CREATIVE) return;
+
+    // Container block entities belong to this exact position. Remove them on
+    // every break (including creative) so replacing the block cannot resurrect
+    // old contents. Survival receives the stored stacks with damage/data intact.
+    const containerKey = `${x},${y},${z}`;
+    const container = this._containers?.get(containerKey);
+    if (container) {
+      this._containers.delete(containerKey);
+      if (this.player.gamemode === GAMEMODE.SURVIVAL) {
+        for (const stack of drainContainer(container.type, container.data)) this.inventory.add(stack);
+      }
+    }
 
     if (this.player.gamemode === GAMEMODE.SURVIVAL) {
       // Seeded from the world seed and block position, so drops are
