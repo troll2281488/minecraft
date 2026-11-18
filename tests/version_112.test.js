@@ -100,6 +100,16 @@ describe('Vanilla block loot regression', () => {
     }
   });
 
+  it('drops four snowballs from snow blocks when harvested with a shovel', () => {
+    const snow = BLOCKS.get('mc:snow_block').defaultState;
+    const shovel = ItemStack.of('mc:wooden_shovel');
+    const drops = blockDrops(snow, shovel, 1, 0, 64, 0);
+    assertEqual(drops.length, 1);
+    assertEqual(drops[0].id, 'mc:snowball');
+    assertEqual(drops[0].count, 4);
+    assertEqual(blockDrops(snow, ItemStack.EMPTY, 1, 0, 64, 0).length, 0);
+  });
+
   it('only drops wheat from mature crops', () => {
     const wheat = BLOCKS.get('mc:wheat').defaultState;
     assertEqual(blockDrops(wheat.with('age', 6), ItemStack.EMPTY, 1, 0, 64, 0).length, 0);
