@@ -245,15 +245,15 @@ export class MobSystem {
     };
     const accepted = foods[animal.type];
     if (!accepted || !held?.item || !accepted.includes(held.item.id)) return false;
+    if (animal.ageTicks >= 0 && (animal.breedCooldown > 0 || animal.loveTicks > 0)) {
+      this.game.ui?.toast('This animal is not ready to breed');
+      return true;
+    }
     if (!creative && this.game.inventory.remove(held.item.id, 1) !== 1) return false;
     // In Java 1.12, each feeding removes 10% of a baby's remaining growth time.
     if (animal.ageTicks < 0) {
       animal.ageTicks = Math.min(0, Math.ceil(animal.ageTicks * 0.9));
       this.game.ui?.toast('Baby animal is growing');
-      return true;
-    }
-    if (animal.breedCooldown > 0 || animal.loveTicks > 0) {
-      this.game.ui?.toast('This animal is not ready to breed');
       return true;
     }
     animal.loveTicks = 600;
