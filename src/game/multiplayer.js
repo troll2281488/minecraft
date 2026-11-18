@@ -206,16 +206,27 @@ export class Multiplayer {
 
     // New clients must not all appear at the exact same coordinates. That made
     // remote avatars overlap the local camera and look like they were missing.
-    if (!savedPlayer) {
+    const occupied = Object.values(room.players || {}).filter((p) =>
+      Number.isFinite(p.x) && Number.isFinite(p.z));
+    const overlapsAnotherPlayer = occupied.some((p) =>
+      Math.hypot(p.x - this.game.player.x, p.z - this.game.player.z) < 1.5);
+    if ((!savedPlayer && occupied.length > 0) || overlapsAnotherPlayer) {
       let hash = 2166136261;
       for (const char of this.uid) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619) >>> 0;
-      const angle = (hash % 8) * (Math.PI / 4);
-      const radius = 2.5 + ((hash >>> 3) % 3);
       const base = this.game.player;
-      const desiredX = Math.floor(base.x + Math.cos(angle) * radius);
-      const desiredZ = Math.floor(base.z + Math.sin(angle) * radius);
-      const offsetSpawn = this.game.world.findSpawn(desiredX, desiredZ, 7);
-      if (offsetSpawn) base.teleport(offsetSpawn.x, offsetSpawn.y, offsetSpawn.z);
+      for (let attempt = 0; attempt < 16; attempt++) {
+        const angle = ((hash + attempt * 3) % 16) * (Math.PI / 8);
+        const radius = 2.5 + (attempt % 4);
+        const desiredX = Math.floor(base.x + Math.cos(angle) * radius);
+        const desiredZ = Math.floor(base.z + Math.sin(angle) * radius);
+        const offsetSpawn = this.game.world.findSpawn(desiredX, desiredZ, 5);
+        if (!offsetSpawn) continue;
+        const occupiedSpot = occupied.some((p) =>
+          Math.hypot(p.x - offsetSpawn.x, p.z - offsetSpawn.z) < 1.5);
+        if (occupiedSpot) continue;
+        base.teleport(offsetSpawn.x, offsetSpawn.y, offsetSpawn.z);
+        break;
+      }
     }
 
     const playerRef = ref(this.db, `minecraft_game/rooms/${code}/players/${this.uid}`);
