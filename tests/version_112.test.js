@@ -35,12 +35,22 @@ describe('Minecraft Java Edition 1.12.2 compatibility guardrails', () => {
     }
   });
 
+  it('registers the 16-color wool, stained-glass, terracotta and concrete families', () => {
+    for (const color of ['white','orange','magenta','light_blue','yellow','lime','pink','gray','light_gray','cyan','purple','blue','brown','green','red','black']) {
+      for (const family of ['wool','stained_glass','terracotta','concrete','concrete_powder']) {
+        assert(BLOCKS.get(`mc:${color}_${family}`), `missing ${color}_${family}`);
+      }
+    }
+  });
+
   it('can build every registered block texture without missing atlas entries', () => {
     const atlas = buildTextures();
     assert(atlas.layers > 0);
     assert(atlas.index.has('jungle_log'));
     assert(atlas.index.has('acacia_planks'));
     assert(atlas.index.has('dark_oak_leaves'));
+    assert(atlas.index.has('magenta_stained_glass'));
+    assert(atlas.index.has('black_concrete'));
   });
 
   it('generates a classic-height chunk with no negative or over-height terrain', () => {
