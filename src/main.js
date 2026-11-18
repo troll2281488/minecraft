@@ -24,6 +24,7 @@ import { ITEMS } from './world/item.js';
 
 import { buildTextures, buildBlockTextureTable, TILE_SIZE } from './render/atlas.js';
 import { buildItemIconCache } from './render/item_icons.js';
+import { loadItsBrianTextures } from './render/resource_pack.js';
 import { createContext, createTextureArray } from './render/gl.js';
 
 import { GAMEMODE, Player } from './entity/player.js';
@@ -63,8 +64,9 @@ export async function boot() {
   const canvas = document.getElementById('canvas');
   const gl = createContext(canvas);
 
-  // Textures are generated once and shared by the renderer and the inventory.
-  const textures = buildTextures();
+  // Load available ItsBrian textures; missing files fall back to the built-in art.
+  const remoteTextures = await loadItsBrianTextures();
+  const textures = buildTextures(remoteTextures);
   const textureArray = createTextureArray(gl, textures, TILE_SIZE);
   const textureTable = buildBlockTextureTable(BLOCKS, textures.index);
   const icons = buildItemIconCache(ITEMS, BLOCKS, textures.data, textures.index);
