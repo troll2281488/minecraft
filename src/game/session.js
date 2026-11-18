@@ -9,6 +9,7 @@
 import { SAVE } from '../core/constants.js';
 import { World } from '../world/world.js';
 import { Player } from '../entity/player.js';
+import { BLOCKS } from '../world/block.js';
 import { Inventory, CraftingGrid } from './inventory.js';
 import { RECIPES } from './recipes.js';
 import * as storage from '../save/storage.js';
@@ -49,7 +50,7 @@ export const SessionMixin = {
     await this._waitForSpawnChunks(isNew);
 
     if (isNew) {
-      const spawn = this.world.findSpawn(0, 0);
+      const spawn = await this._findSafeSpawn();
       this.player.teleport(spawn.x, spawn.y, spawn.z);
       this._giveStartingItems();
     }
@@ -70,6 +71,33 @@ export const SessionMixin = {
       this._loopStarted = true;
       requestAnimationFrame((t) => this._frame(t));
     }
+  },
+
+  async _findSafeSpawn() {
+    // Expand the generated search area instead of silently falling back into
+    // the ocean when the initial chunks happen to be offshore.
+    for (const radiusBlocks of [48, 96, 192]) {
+      const radiusChunks = Math.ceil(radiusBlocks / 16);
+      const deadline = performance.now() + 2500;
+      while (performance.now() < deadline) {
+        this.world.requestAround(0, 0, radiusChunks, 64);
+        const spawn = this.world.findSpawn(0, 0, radiusBlocks);
+        if (spawn) return spawn;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+    }
+
+    // A fully oceanic generated area is rare, but never put the player in
+    // water: make a small temporary safe platform at the world origin.
+    const stone = BLOCKS.get('mc:stone')?.defaultState;
+    if (!stone || !this.world.hasChunk(0, 0)) {
+      throw new Error('Не удалось подготовить безопасную точку появления: центральный чанк не загружен.');
+    }
+    for (let z = -2; z <= 2; z++) {
+      for (let x = -2; x <= 2; x++) this.world.setBlock(x, 79, z, stone);
+    }
+    this.ui.toast('Рядом не нашлось суши — создана временная платформа для безопасного появления.', { duration: 6000 });
+    return { x: 0.5, y: 80, z: 0.5 };
   },
 
   async _waitForSpawnChunks(isNew) {
@@ -102,7 +130,7 @@ export const SessionMixin = {
 
   async _respawnAfterDeath() {
     if (!this.world || !this.player) return;
-    const spawn = this.world.findSpawn(0, 0);
+    const spawn = await this._findSafeSpawn();
     this.player.teleport(spawn.x, spawn.y, spawn.z);
     this.player.health = 20;
     this.player.vitals = new this.player.vitals.constructor();
