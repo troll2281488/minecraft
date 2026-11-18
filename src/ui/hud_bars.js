@@ -2,9 +2,9 @@
  * HUD health, hunger and air bars drawn as 9x9 pixel icons, the way the 1.12.2
  * HUD shows them: ten icons per row, two points each, half icons for odd values.
  *
- * The shapes and colours are original; they are not copies of vanilla sprites.
- * Each icon is cached as SVG markup, and a row is rebuilt only when its value
- * changes, so this costs nothing per frame.
+ * Matching sprites from ItsBrian's Java GUI atlas are used when available;
+ * the original SVG pixel icons remain as a fallback. Rows are rebuilt only
+ * when their value changes, so this costs nothing per frame.
  */
 
 const SHAPES = {
