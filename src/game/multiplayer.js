@@ -35,7 +35,11 @@ export class Multiplayer {
     this.game = game;
     this.app = null;
     this.db = null;
-    const savedUid = localStorage.getItem('mc_uid');
+    // A localStorage UID is shared by every tab in the same browser. Two test
+    // clients opened side-by-side therefore overwrote one Firebase player node
+    // and each ignored the other as 'self'. sessionStorage gives each tab its
+    // own stable identity while preserving it across reloads in that tab.
+    const savedUid = sessionStorage.getItem('mc_uid');
     // The supplied Firebase rules allow user IDs up to 32 characters.
     this.uid = savedUid && savedUid.length <= 32
       ? savedUid
@@ -78,7 +82,7 @@ export class Multiplayer {
         console.error('[multiplayer] connection listener failed:', error);
         this._updateRoomHud();
       });
-      localStorage.setItem('mc_uid', this.uid);
+      sessionStorage.setItem('mc_uid', this.uid);
       await set(ref(this.db, `minecraft_game/users/${this.uid}`), {
         name: this.nickname, online: true, room: '', ts: Date.now(),
       });
