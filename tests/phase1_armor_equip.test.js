@@ -1,9 +1,8 @@
 import '../src/world/blocks/index.js';
 import { describe, it, assert, assertEqual } from './framework.js';
-import { Inventory, SLOT } from '../src/game/inventory.js';
+import { Inventory, CraftingGrid, SLOT } from '../src/game/inventory.js';
 import { ItemStack } from '../src/world/item.js';
 import { calculateArmorDamage, MobSystem } from '../src/entity/mobs.js';
-import { CraftingGrid } from '../src/game/inventory.js';
 import { RECIPES } from '../src/game/recipes.js';
 
 /** Shift-click puts armour on (docs/TARGET_1_12_2.md, section 7.4). */
