@@ -28,17 +28,19 @@ describe('math: negative coordinates', () => {
     assertEqual(floorMod(-17, 16), 15);
   });
 
-  it('section index and local Y are correct below y = 0', () => {
-    assertEqual(yToSectionIndex(MIN_Y), 0);
-    assertEqual(yToSectionLocal(MIN_Y), 0);
-    assertEqual(yToSectionIndex(-1), 3);   // (-1 - -64) / 16 = 3
-    assertEqual(yToSectionLocal(-1), 15);
-    assertEqual(yToSectionIndex(0), 4);
+  it('section index and local Y match the 1.12.2 range 0..255', () => {
+    assertEqual(yToSectionIndex(0), 0);
+    assertEqual(yToSectionLocal(0), 0);
+    assertEqual(yToSectionIndex(15), 0);
+    assertEqual(yToSectionLocal(15), 15);
+    assertEqual(yToSectionIndex(16), 1);
+    assertEqual(yToSectionIndex(255), 15);
+    assertEqual(yToSectionLocal(255), 15);
   });
 
   it('returns -1 for Y outside the build range', () => {
     assertEqual(yToSectionIndex(MIN_Y - 1), -1);
-    assertEqual(yToSectionIndex(320), -1);
+    assertEqual(yToSectionIndex(256), -1);
   });
 });
 
@@ -257,7 +259,7 @@ describe('Chunk', () => {
 
   it('stores and retrieves blocks across the full height range', () => {
     const c = new Chunk(0, 0);
-    for (const y of [MIN_Y, MIN_Y + 1, -1, 0, 63, 100, 319]) {
+    for (const y of [0, 1, 15, 16, 63, 100, 255]) {
       c.setBlock(3, y, 7, STONE);
       assertEqual(c.getBlock(3, y, 7), STONE, `y = ${y}`);
     }
@@ -266,7 +268,7 @@ describe('Chunk', () => {
   it('ignores writes outside the build range instead of throwing', () => {
     const c = new Chunk(0, 0);
     assertEqual(c.setBlock(0, MIN_Y - 1, 0, STONE), false);
-    assertEqual(c.setBlock(0, 320, 0, STONE), false);
+    assertEqual(c.setBlock(0, 256, 0, STONE), false);
   });
 
   it('tracks the heightmap as the topmost non-air block', () => {
@@ -301,12 +303,12 @@ describe('Chunk', () => {
 
   it('biome indices stay within the container for the full height range', () => {
     const c = new Chunk(0, 0);
-    for (const y of [MIN_Y, 0, 100, 319]) {
+    for (const y of [0, 16, 100, 255]) {
       c.setBiome(0, y, 0, 'mc:desert');
       assertEqual(c.getBiome(0, y, 0), 'mc:desert', `y = ${y}`);
     }
-    c.setBiome(15, 319, 15, 'mc:taiga');
-    assertEqual(c.getBiome(15, 319, 15), 'mc:taiga');
+    c.setBiome(15, 255, 15, 'mc:taiga');
+    assertEqual(c.getBiome(15, 255, 15), 'mc:taiga');
   });
 
   it('compaction drops sections emptied by mining', () => {
