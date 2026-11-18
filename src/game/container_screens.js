@@ -155,7 +155,7 @@ export const ContainerScreensMixin = {
     const inv = this.inventory;
     let body = '';
     if (spec.kind === 'chest') {
-      body += `<h3>${spec.title}</h3><div class="row">`;
+      body += `<h3>${spec.title}</h3><div class="row slots-9">`;
       for (let i = 0; i < spec.slots.length; i++) body += this._slotHtml('chest', i, spec.slots[i]);
       body += '</div>';
     } else {
