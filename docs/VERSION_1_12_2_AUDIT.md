@@ -1,21 +1,12 @@
 # Minecraft Java Edition 1.12.2 compatibility audit
 
-**Status: NOT 1.12.2-compatible. This document is an audit, not a completion claim.**
+**Status: INCOMPLETE 1.12.2-targeted prototype. This document is an audit, not a completion claim.**
 
-The current codebase cannot honestly be described as a complete Minecraft Java Edition 1.12.2 implementation. Its own `src/core/constants.js` names 1.20.x as its reference target, and the world generator documents 1.18-era terrain/ore behavior. Hiding a few newer blocks would not make the simulation compatible.
+The current codebase is being corrected toward Minecraft Java Edition 1.12.2. The compatibility pass now uses the classic 0..255 build height, classic ore bands and no registered deepslate, copper or netherite gameplay content. It is still not a complete Minecraft Java Edition 1.12.2 implementation.
 
-## Confirmed post-1.12 content found in source
+## Compatibility removals applied
 
-The source currently registers or references at least:
-
-- Deepslate and cobbled deepslate, including deepslate ore variants.
-- Copper ore, copper blocks, raw copper and copper ingots.
-- Netherite tool/armor tier, netherite harvest level and netherite smithing concepts.
-- 1.18-style negative-Y/deepslate terrain and triangular ore distributions.
-- Bamboo jungle and other biome/feature concepts identified in `docs/SPEC.md` that postdate 1.12.2.
-- Sculk-related identifiers in tests (including sculk catalyst and sculk shrieker).
-
-These are incompatible with the 1.12.2 target and must not appear in a 1.12.2 game.
+The active block/item registries, world generator and atlas no longer provide deepslate, copper or netherite content. Stairs and slabs also no longer carry the post-1.12 `waterlogged` state. Tests retain a parser fixture for an unknown future block ID only to verify forward-compatible save handling; that fixture does not register or expose the block in gameplay.
 
 ## Major 1.12.2 parity work still required
 
@@ -34,3 +25,17 @@ This list is a minimum work breakdown, not an assertion that it exhausts every e
 ## Current verification limits
 
 The previous browser test attempt was blocked by the execution environment (`ERR_BLOCKED_BY_ADMINISTRATOR`). Therefore no claim is made here that browser integration tests pass. This audit does not claim full game parity, and it does not claim that incompatible content has already been removed.
+
+
+- Added the three missing classic wood families (jungle, acacia, dark oak), including logs, planks, leaves and saplings, their atlas materials, and plank conversion recipes.
+- Registered a first batch of 1.12.2-era building blocks: red sandstone, prismarine variants, sea lantern, end stone/bricks, purpur, slime, magma, bone, packed ice, sponge variants and hay bale. Some use placeholder atlas materials; their specialized behavior is not yet complete.
+- Removed the post-1.13 waterlogged state from slabs and stairs.
+
+## Remaining major blockers to full playability
+
+- The generator is still a simplified heightmap/noise generator, not the complete 1.12.2 biome/structure generator; current biome selection is only a small subset.
+- Nether and End world generation, portals, dragon fight and dimension-specific behavior are incomplete.
+- Most 1.12.2 blocks and block entities are still absent; some newly registered decorative blocks use placeholder textures and lack their special behavior.
+- Fluid simulation, redstone circuits, pistons, doors/gates, rails, minecarts, boats, dispensers, droppers, hoppers, brewing, enchanting, anvils, maps, banners, command blocks and commands are incomplete or absent.
+- Mob spawning, pathfinding, attacks, drops, breeding, riding and boss behavior are not complete for all 1.12.2 entities.
+- Browser integration tests were not verified in this environment. Node-compatible unit suites were run separately; the browser-only golden-save test uses browser `fetch` and was excluded from the Node run.
