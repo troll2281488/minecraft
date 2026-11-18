@@ -48,7 +48,7 @@ describe('armour protection', () => {
     const dealt = mobs._damagePlayer(10);
     assert(Math.abs(dealt - 9.84) < 0.001, `expected 9.84 damage, got ${dealt}`);
     assert(Math.abs(player.health - 10.16) < 0.001);
-    assertEqual(inventory.get(SLOT.ARMOR_START).damage, 1, 'armour should lose durability');
+    assertEqual(inventory.get(SLOT.ARMOR_START).damage, 10, 'armour durability should scale with incoming damage');
   });
 
   it('crafts an iron helmet in the 3x3 table', () => {
