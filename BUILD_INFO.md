@@ -23,6 +23,6 @@ This build is a playable survival sandbox, but it is not yet possible to complet
 
 ## Verification
 
-The Node-compatible regression suites report 365 passed and 0 failed. The browser-only golden-save test and live browser integration were not verified in this environment. Run `tests.html` in a browser to perform the full browser suite.
+The browser test harness is `tests.html`. Tests and live browser integration were not executed for this build in the current environment; run `tests.html` in a browser to verify the current branch.
 
 See [`docs/VERSION_1_12_2_AUDIT.md`](docs/VERSION_1_12_2_AUDIT.md) and [`docs/PARITY.md`](docs/PARITY.md) for the remaining work. Procedural art is original and does not include Mojang assets.
