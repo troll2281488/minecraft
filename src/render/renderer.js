@@ -408,7 +408,7 @@ export const RendererMixin = {
         let pivotY = offset[1];
         if (isArm || isLeg) {
           pivotY = pose.firstPerson ? offset[1] : isArm ? 1.375 : 0.75;
-          if (pose.firstPerson) swing = pose.attack ? -1.0 : Math.sin(walkPhase * 2) * 0.035;
+          if (pose.firstPerson) swing = pose.attack ? -1.35 : pose.sneaking ? 1.05 : 0.78 + Math.sin(walkPhase * 2) * 0.07;
           else if (pose.swimming) swing = isArm ? Math.sin(walkPhase * 1.7 + phase) * 0.72 : Math.sin(walkPhase * 1.7 + phase) * 0.42;
           else if (pose.airborne) swing = isArm ? -0.22 : 0.25;
           else swing = Math.sin(walkPhase + phase) * 0.58;
@@ -463,9 +463,9 @@ export const RendererMixin = {
       const yaw = this.player.yaw * Math.PI / 180;
       const forwardX = -Math.sin(yaw), forwardZ = Math.cos(yaw);
       const rightX = -Math.cos(yaw), rightZ = -Math.sin(yaw);
-      const handX = this.renderPosition.x + forwardX * 0.48 + rightX * 0.30;
-      const handY = this.renderPosition.y + this.player.eyeHeight - 0.48;
-      const handZ = this.renderPosition.z + forwardZ * 0.48 + rightZ * 0.30;
+      const handX = this.renderPosition.x + forwardX * 0.43 + rightX * 0.31;
+      const handY = this.renderPosition.y + this.player.eyeHeight - 0.50;
+      const handZ = this.renderPosition.z + forwardZ * 0.43 + rightZ * 0.31;
       const handBob = Math.sin(this.player.walkPhase * 2) * 0.025;
       const armParts = [
         [[0, 0, 0], [0.001, 0.001, 0.001], [0, 0, 0, 0]],
@@ -474,20 +474,23 @@ export const RendererMixin = {
         [[0, -handBob, 0], [0.22, 0.58, 0.22], [0.12, 0.48, 0.72, 1]],
       ];
       draw(handX, handY, handZ, yaw, armParts, this.player.walkPhase, -1, -1, 1,
-        { firstPerson: true, attack: this.player.attackTime > 0, swimming: this.player.inWater }, true);
+        { firstPerson: true, attack: this.player.attackTime > 0, sneaking: this.player.sneaking, swimming: this.player.inWater }, true);
 
+      // Use the same pixel-art icon as the selected hotbar slot instead of a placeholder coloured cube.
       const held = this.inventory?.held;
-      if (held && !held.isEmpty) {
-        const id = held.item?.id || '';
-        let itemColor = [0.55, 0.55, 0.55, 1];
-        if (/sword|pickaxe|axe|shovel|hoe/.test(id)) itemColor = [0.62, 0.62, 0.66, 1];
-        else if (/wood|planks|log|stick/.test(id)) itemColor = [0.48, 0.30, 0.14, 1];
-        else if (/grass|leaves|sapling/.test(id)) itemColor = [0.30, 0.52, 0.20, 1];
-        else if (/diamond/.test(id)) itemColor = [0.20, 0.78, 0.88, 1];
-        const itemParts = [[[0, 0, 0], [0.20, 0.20, 0.20], itemColor]];
-        const attackDip = this.player.attackTime > 0 ? -0.16 : 0;
-        draw(handX + forwardX * 0.12, handY - 0.10 + attackDip,
-          handZ + forwardZ * 0.12, yaw, itemParts, 0, -1, -1, 1);
+      const itemView = document.getElementById('held-item-view');
+      if (itemView) {
+        const icon = held && !held.isEmpty ? this.ui.icons.get(held.item.id) : null;
+        if (icon) {
+          if (itemView.src !== icon) itemView.src = icon;
+          itemView.classList.remove('hidden');
+          const swing = this.player.attackTime > 0 ? Math.sin((8 - this.player.attackTime) / 8 * Math.PI) : 0;
+          const bob = Math.sin(this.player.walkPhase * 2) * 3;
+          itemView.style.transform = 'rotate(' + (-28 + swing * 38) + 'deg) translateY(' + (bob - swing * 10) + 'px)';
+        } else {
+          itemView.classList.add('hidden');
+          itemView.removeAttribute('src');
+        }
       }
     }
     gl.bindVertexArray(null);
