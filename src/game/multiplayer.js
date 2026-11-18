@@ -213,6 +213,7 @@ export class Multiplayer {
     this._listen(onValue, ref(this.db, `minecraft_game/rooms/${code}/players`), (snap) => {
       const players = snap.val() || {};
       const currentIds = new Set(Object.keys(players));
+      const firstSnapshot = knownPlayers === null;
       if (knownPlayers) {
         for (const [uid, joined] of Object.entries(players)) {
           if (uid !== this.uid && !knownPlayers.has(uid)) {
@@ -222,13 +223,13 @@ export class Multiplayer {
           }
         }
       }
-      knownPlayers = currentIds;
-      // If the room creator leaves, elect the first remaining UID deterministically.
-      if (!knownPlayers || knownPlayers.size === 0) {
+      if (firstSnapshot) {
         for (const [uid, joined] of Object.entries(players)) {
           if (uid !== this.uid) this.addChat(`В комнате уже есть игрок: ${safeName(joined.name)}`);
         }
       }
+      knownPlayers = currentIds;
+      // If the room creator leaves, elect the first remaining UID deterministically.
       const hostUid = electRoomHost(room, players);
       if (hostUid) {
         this.isHost = hostUid === this.uid;
