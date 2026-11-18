@@ -3,6 +3,8 @@ import { describe, it, assert, assertEqual } from './framework.js';
 import { BLOCKS } from '../src/world/block.js';
 import { AABB } from '../src/core/math.js';
 import { forwardVector } from '../src/core/mat4.js';
+import { Player, GAMEMODE } from '../src/entity/player.js';
+import { World } from '../src/world/world.js';
 
 describe('survival fall damage', () => {
   it('takes no fall damage at or below three blocks', () => {
@@ -284,5 +286,67 @@ describe('physics: collision', () => {
     const y0 = p.y;
     for (let i = 0; i < 40; i++) p.tick(world);
     assert(Math.abs(p.y - y0) < 1e-6, `flying player drifted from ${y0} to ${p.y}`);
+  });
+});
+
+
+describe('spawn safety: dry generated terrain only', () => {
+  function stubWorld(surface) {
+    const world = Object.create(World.prototype);
+    world.hasChunk = () => true;
+    world.getHeight = () => 2;
+    world.getBlock = (x, y, z) => {
+      if (y === 2) return { block: surface };
+      if (y === 1) return { block: surface.id === 'mc:water' ? surface : BLOCKS.get('mc:air') };
+      if (y === 0) return { block: BLOCKS.get('mc:stone') };
+      return { block: BLOCKS.get('mc:air') };
+    };
+    return world;
+  }
+
+  it('does not select an ocean column', () => {
+    const world = stubWorld(BLOCKS.get('mc:water'));
+    assertEqual(world.findSpawn(0, 0, 3), null);
+  });
+
+  it('selects a dry solid surface with two clear blocks above it', () => {
+    const world = stubWorld(BLOCKS.get('mc:stone'));
+    const spawn = world.findSpawn(0, 0, 3);
+    assert(spawn, 'no dry spawn was returned');
+    assertEqual(spawn.x, 0.5);
+    assertEqual(spawn.y, 3);
+    assertEqual(spawn.z, 0.5);
+  });
+});
+
+describe('underwater air', () => {
+  it('loses air while submerged and restores it at the surface', () => {
+    const player = new Player();
+    player.gamemode = GAMEMODE.SURVIVAL;
+    player.underwater = true;
+    player.air = 3;
+    player._tickAir();
+    assertEqual(player.air, 2);
+    player.underwater = false;
+    player._tickAir();
+    assertEqual(player.air, 6);
+  });
+
+  it('takes drowning damage after air runs out', () => {
+    const player = new Player();
+    player.gamemode = GAMEMODE.SURVIVAL;
+    player.underwater = true;
+    player.air = 0;
+    for (let i = 0; i < 20; i++) player._tickAir();
+    assertEqual(player.health, 18);
+  });
+
+  it('does not consume air in creative mode', () => {
+    const player = new Player();
+    player.gamemode = GAMEMODE.CREATIVE;
+    player.underwater = true;
+    player.air = 1;
+    player._tickAir();
+    assertEqual(player.air, 300);
   });
 });
