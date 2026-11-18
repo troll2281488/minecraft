@@ -518,6 +518,27 @@ for (const [prefix, tierKey, damageKey] of TIER_KEYS) {
   }
 }
 
+// Exact Java 1.12.2 furnace fuel values for the wood items currently in this catalog.
+// Values are ticks at 20 TPS; only registered items are touched.
+const VANILLA_FUEL_TICKS_112 = {
+  'mc:oak_sapling': 100, 'mc:spruce_sapling': 100, 'mc:birch_sapling': 100,
+  'mc:jungle_sapling': 100, 'mc:acacia_sapling': 100, 'mc:dark_oak_sapling': 100,
+  'mc:oak_slab': 150, 'mc:spruce_slab': 150, 'mc:birch_slab': 150,
+  'mc:jungle_slab': 150, 'mc:acacia_slab': 150, 'mc:dark_oak_slab': 150,
+  'mc:oak_stairs': 300, 'mc:spruce_stairs': 300, 'mc:birch_stairs': 300,
+  'mc:jungle_stairs': 300, 'mc:acacia_stairs': 300, 'mc:dark_oak_stairs': 300,
+  'mc:crafting_table': 300, 'mc:chest': 300, 'mc:trapped_chest': 300,
+  'mc:bookshelf': 300, 'mc:jukebox': 300, 'mc:note_block': 300,
+  'mc:ladder': 300, 'mc:fence': 300, 'mc:fence_gate': 300,
+  'mc:wooden_door': 200, 'mc:wooden_trapdoor': 300,
+  'mc:wooden_pickaxe': 200, 'mc:wooden_axe': 200,
+  'mc:wooden_shovel': 200, 'mc:wooden_hoe': 200, 'mc:wooden_sword': 200,
+};
+for (const [id, ticks] of Object.entries(VANILLA_FUEL_TICKS_112)) {
+  const item = ITEMS.get(id);
+  if (item) item.fuelTicks = ticks;
+}
+
 /**
  * Close the registries to further registration.
  *
