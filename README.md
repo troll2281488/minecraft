@@ -137,3 +137,8 @@ the section, then a paletted container. Loading each section's 18x18x18 neighbou
 reusable scratch buffer once brought that to 5,832 lookups per section instead of ~250,000 per
 chunk, for a measured 2.3x speedup. Greedy meshing was considered and rejected: merged coplanar
 quads cannot carry differing per-vertex ambient occlusion and light values.
+
+
+## 1.12.2 compatibility work
+
+The current compatibility pass targets the classic Java 1.12.2 world height (Y=0..255), removes registered deepslate/copper/netherite content, removes post-1.12 waterlogging states from stairs/slabs, restores classic ore height bands, adds jungle/acacia/dark-oak wood families, and registers an additional batch of blocks available by 1.12.2. This remains an actively incomplete voxel sandbox, not a complete Minecraft implementation; see [the compatibility audit](docs/VERSION_1_12_2_AUDIT.md) for what is and is not implemented.
