@@ -16,7 +16,9 @@ const OVERLAY_ID = 'container-overlay';
 const STYLE = `
 #${OVERLAY_ID} { position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex;
   align-items:center; justify-content:center; z-index:50; font-family:system-ui,sans-serif; }
-#${OVERLAY_ID} .panel { background:#c6c6c6; border:3px solid #000; padding:12px; color:#222; min-width:340px; }
+#${OVERLAY_ID} .panel { background-color:#c6c6c6; background-image:linear-gradient(rgba(198,198,198,.90),rgba(198,198,198,.90)),url('https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/gui/container/generic_54.png'); background-size:100% 100%; border:3px solid #000; padding:12px; color:#222; min-width:340px; }
+#${OVERLAY_ID}[data-kind="furnace"] .panel { background-image:linear-gradient(rgba(198,198,198,.88),rgba(198,198,198,.88)),url('https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/gui/container/furnace.png'); }
+#${OVERLAY_ID}[data-kind="chest"] .panel { background-image:linear-gradient(rgba(198,198,198,.88),rgba(198,198,198,.88)),url('https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/gui/container/generic_54.png'); }
 #${OVERLAY_ID} h3 { margin:0 0 8px; font-size:16px; }
 #${OVERLAY_ID} .row { display:flex; gap:4px; margin-bottom:6px; flex-wrap:wrap; }
 #${OVERLAY_ID} .slot { width:40px; height:40px; background:#8b8b8b; border:2px solid #373737;
@@ -108,6 +110,7 @@ export const ContainerScreensMixin = {
     document.exitPointerLock?.();
     const overlay = document.createElement('div');
     overlay.id = OVERLAY_ID;
+    overlay.dataset.kind = spec.kind;
     document.body.appendChild(overlay);
     this._renderContainer();
     this._containerTimer = setInterval(() => this._renderContainer(), 250);
@@ -135,7 +138,13 @@ export const ContainerScreensMixin = {
   },
 
   _slotHtml(kind, index, stack) {
-    return `<div class="slot ${stack?.isEmpty ? 'empty' : ''}" data-kind="${kind}" data-index="${index}">${label(stack)}</div>`;
+    if (!stack || stack.isEmpty) {
+      return `<div class="slot empty" data-kind="${kind}" data-index="${index}"></div>`;
+    }
+    const icon = this.ui?.icons?.get(stack.item.id);
+    const image = icon ? `<img src="${icon}" alt="" style="width:32px;height:32px;object-fit:contain;image-rendering:pixelated">` : '';
+    const count = stack.count > 1 ? `<span class="n">${stack.count}</span>` : '';
+    return `<div class="slot" data-kind="${kind}" data-index="${index}">${image}${count}</div>`;
   },
 
   _renderContainer() {
