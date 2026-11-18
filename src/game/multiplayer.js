@@ -23,6 +23,13 @@ const CONFIG = {
 const safeName = (value) => String(value || 'Игрок').replace(/[.#$]/g, '').replaceAll('[', '').replaceAll(']', '').replaceAll('/', '').slice(0, 20) || 'Игрок';
 const roomCode = () => Math.random().toString(36).slice(2, 7).toUpperCase();
 
+/** Keep the current host while present; otherwise elect the lowest remaining UID. */
+export function electRoomHost(room, players) {
+  const current = room?.hostUid;
+  if (current && players?.[current]) return current;
+  return Object.keys(players || {}).sort()[0] || null;
+}
+
 export class Multiplayer {
   constructor(game) {
     this.game = game;
@@ -193,7 +200,7 @@ export class Multiplayer {
     this._listen(onValue, ref(this.db, `minecraft_game/rooms/${code}/players`), (snap) => {
       const players = snap.val() || {};
       // If the room creator leaves, elect the first remaining UID deterministically.
-      const hostUid = room.hostUid && players[room.hostUid] ? room.hostUid : Object.keys(players).sort()[0];
+      const hostUid = electRoomHost(room, players);
       if (hostUid) {
         this.isHost = hostUid === this.uid;
         if (room.hostUid !== hostUid) update(ref(this.db, `minecraft_game/rooms/${code}`), { hostUid })
