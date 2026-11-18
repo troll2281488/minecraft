@@ -12,4 +12,6 @@
  */
 export const USABLE_BLOCKS = {
   'mc:crafting_table': (game) => game._openCraftingTable(),
+  'mc:chest': (game) => game._openChest(game.hit.x, game.hit.y, game.hit.z),
+  'mc:furnace': (game) => game._openFurnace(game.hit.x, game.hit.y, game.hit.z),
 };
