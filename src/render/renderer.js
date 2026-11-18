@@ -207,6 +207,7 @@ export const RendererMixin = {
     this.chunkRenderer.update(this.world, player.x, player.z, 6, this.frustum);
     this._drawTerrain(daylight, fogColor, far);
     this._drawPlayers();
+    this._updateRemotePlayerTags();
     this._drawSelection();
 
     const health = document.getElementById('health');
@@ -412,6 +413,41 @@ export const RendererMixin = {
       draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse);
     }
     gl.bindVertexArray(null);
+  },
+
+
+
+  _updateRemotePlayerTags() {
+    const container = document.getElementById('remote-player-tags');
+    if (!container) return;
+    const remotes = [...(this.multiplayer?.remotePlayers?.values?.() ?? [])];
+    if (!this._remoteTagNodes) this._remoteTagNodes = new Map();
+    const active = new Set();
+    const m = this.viewProjection;
+    for (const player of remotes) {
+      active.add(player.id);
+      let tag = this._remoteTagNodes.get(player.id);
+      if (!tag) {
+        tag = document.createElement('div');
+        tag.className = 'remote-player-tag';
+        container.appendChild(tag);
+        this._remoteTagNodes.set(player.id, tag);
+      }
+      tag.textContent = player.name || 'Игрок';
+      const x = player.x, y = player.y + 2.15, z = player.z;
+      const cx = m[0] * x + m[4] * y + m[8] * z + m[12];
+      const cy = m[1] * x + m[5] * y + m[9] * z + m[13];
+      const cz = m[2] * x + m[6] * y + m[10] * z + m[14];
+      const cw = m[3] * x + m[7] * y + m[11] * z + m[15];
+      const visible = cw > 0.05 && cz / cw >= -1 && cz / cw <= 1;
+      if (!visible) { tag.hidden = true; continue; }
+      tag.hidden = false;
+      tag.style.left = `${(cx / cw * 0.5 + 0.5) * 100}%`;
+      tag.style.top = `${(1 - (cy / cw * 0.5 + 0.5)) * 100}%`;
+    }
+    for (const [id, tag] of this._remoteTagNodes) {
+      if (!active.has(id)) { tag.remove(); this._remoteTagNodes.delete(id); }
+    }
   },
 
   _drawSelection() {
