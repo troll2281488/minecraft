@@ -50,10 +50,22 @@ const PALETTE = {
 };
 
 const cache = new Map();
+let externalSprites = null;
+
+export function setHudSprites(sprites) {
+  externalSprites = sprites && Object.keys(sprites).length ? sprites : null;
+  cache.clear();
+}
 
 function icon(kind, state) {
   const key = kind + ':' + state;
   if (cache.has(key)) return cache.get(key);
+  const spriteKey = kind + '_' + state;
+  if (externalSprites?.[spriteKey]) {
+    const html = `<img src="${externalSprites[spriteKey]}" width="18" height="18" style="image-rendering:pixelated;vertical-align:middle" alt="">`;
+    cache.set(key, html);
+    return html;
+  }
   const shape = SHAPES[kind];
   const pal = PALETTE[kind];
   let rects = '';
