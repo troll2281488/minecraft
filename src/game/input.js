@@ -105,6 +105,20 @@ export const InputMixin = {
 
     if (!this.running || this.paused) return;
 
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (this.player?.gamemode === GAMEMODE.CREATIVE) {
+        const now = performance.now();
+        if (this.lastCreativeJump && now - this.lastCreativeJump < 300) {
+          this.player.flying = !this.player.flying;
+          this.lastCreativeJump = 0;
+          this.ui.toast(this.player.flying ? 'Полёт включён · Space вверх · Shift вниз' : 'Полёт выключен', { duration: 1800 });
+        } else {
+          this.lastCreativeJump = now;
+        }
+      }
+    }
+
     if (e.code === 'KeyE') {
       e.preventDefault();
       if (this.inventoryOpen) this._closeInventory();
