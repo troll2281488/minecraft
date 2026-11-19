@@ -51,6 +51,11 @@ export const InputMixin = {
       // Ctrl+wheel and Cmd+wheel are browser zoom gestures. While the game is
       // active, consume them instead of letting the page resize the game UI.
       if (this.running && (e.ctrlKey || e.metaKey)) {
+        if (!this.paused && !this.inventoryOpen && Math.sign(e.deltaY) !== 0) {
+          this.inventory.selectedSlot = (this.inventory.selectedSlot + Math.sign(e.deltaY) + 9) % 9;
+          this.ui.flashItemName(this.inventory.held);
+          this.ui.updateHotbar(this.inventory);
+        }
         e.preventDefault();
         return;
       }
@@ -184,7 +189,7 @@ export const InputMixin = {
     }
 
     if (isAction(e.code, 'drop')) {
-      this.inventory.consumeHeld(1);
+      this.ui.toast('Выбрасывание предметов ещё не подключено', { error: true, duration: 1800 });
       return;
     }
 
