@@ -107,7 +107,8 @@ export function getVillagerOffers(villager) {
     .map((entry, index) => {
       const inputCount = entry.minInput + rng.nextInt(entry.maxInput - entry.minInput + 1);
       const outputCount = entry.minOutput + rng.nextInt(entry.maxOutput - entry.minOutput + 1);
-      const uses = Math.max(0, villager?.villagerOfferUses?.[entry.id] ?? 0);
+      const rawUses = villager?.villagerOfferUses?.[entry.id] ?? 0;
+      const uses = Number.isFinite(rawUses) ? Math.max(0, Math.floor(rawUses)) : 0;
       return {
         id: entry.id, tier: entry.tier, input: entry.input, inputCount,
         input2: entry.input2, input2Count: entry.input2Count,
@@ -122,14 +123,43 @@ function careerTiers(careerKey) {
   return career.offers.map((entry) => entry.tier);
 }
 
-function canFitOutput(inventory, itemId, count) {
+function canFitOutput(inventory, itemId, count, costs = []) {
   const item = ITEMS.get(itemId);
   if (!item) return false;
+  const slots = inventory.slots.slice(0, 36).map((stack) => ({
+    id: stack.isEmpty ? null : stack.item.id,
+    count: stack.isEmpty ? 0 : stack.count,
+    stackSize: stack.isEmpty ? 64 : stack.maxStackSize,
+    stackable: !stack.isEmpty && stack.item.isStackable,
+  }));
+
+  // Simulate consuming the inputs first; a full inventory can still trade if
+  // the payment itself frees enough space for the result.
+  for (const [costId, costCount] of costs) {
+    let remaining = costCount;
+    for (const slot of slots) {
+      if (slot.id !== costId || remaining <= 0) continue;
+      const removed = Math.min(slot.count, remaining);
+      slot.count -= removed;
+      remaining -= removed;
+      if (slot.count <= 0) slot.id = null;
+    }
+    if (remaining > 0) return false;
+  }
+
   let remaining = count;
-  for (const stack of inventory.slots.slice(0, 36)) {
-    if (stack.isEmpty) remaining -= Math.min(item.stackSize, remaining);
-    else if (stack.item === item && item.isStackable) {
-      remaining -= Math.min(item.stackSize - stack.count, remaining);
+  for (const slot of slots) {
+    if (slot.id === itemId && slot.stackable && item.isStackable) {
+      const moved = Math.min(item.stackSize - slot.count, remaining);
+      slot.count += moved;
+      remaining -= moved;
+    } else if (slot.id === null) {
+      const moved = Math.min(item.stackSize, remaining);
+      slot.id = itemId;
+      slot.count = moved;
+      slot.stackSize = item.stackSize;
+      slot.stackable = item.isStackable;
+      remaining -= moved;
     }
     if (remaining <= 0) return true;
   }
@@ -144,7 +174,9 @@ export function executeVillagerTrade(villager, offerId, inventory) {
       (selected.input2 && inventory.countOf(selected.input2) < selected.input2Count)) {
     return { ok: false, reason: 'Не хватает предметов для обмена.' };
   }
-  if (!canFitOutput(inventory, selected.output, selected.outputCount)) {
+  const costs = [[selected.input, selected.inputCount]];
+  if (selected.input2) costs.push([selected.input2, selected.input2Count]);
+  if (!canFitOutput(inventory, selected.output, selected.outputCount, costs)) {
     return { ok: false, reason: 'В инвентаре нет места.' };
   }
 
