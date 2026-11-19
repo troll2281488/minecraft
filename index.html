@@ -203,7 +203,7 @@
   #inventory-screen .slot:hover { background: #4d4d4d; }
   #inventory-screen .panel {
     background-color: rgba(198,198,198,.96);
-    background-image: linear-gradient(rgba(198,198,198,.88),rgba(198,198,198,.88)),var(--mc-gui-inventory, url('https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/gui/container/inventory.png'));
+    background-image: none !important;
     background-size: 100% 100%;
     color: #242424;
     border: 3px solid #171717;
@@ -226,6 +226,7 @@
      background atlas underneath independently positioned DOM slots. */
   #inventory-screen .inventory-panel {
     width:min(700px, calc(100vw - 28px)); min-width:0; max-width:700px;
+    background-image:none !important;
     padding:18px 22px 20px; box-sizing:border-box;
     background:#c6c6c6; color:#252525;
     border:3px solid #171717;
