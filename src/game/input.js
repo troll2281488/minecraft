@@ -166,8 +166,12 @@ export const InputMixin = {
 
     if (e.code === 'F5') {
       e.preventDefault();
-      this.thirdPerson = !this.thirdPerson;
-      this.ui.toast(this.thirdPerson ? 'Third-person camera mode selected' : 'First-person camera mode selected', { duration: 1200 });
+      // Vanilla-style F5 cycle: rear third-person -> front third-person -> first-person.
+      this.cameraMode = ((this.cameraMode ?? 2) + 1) % 3;
+      this.thirdPerson = this.cameraMode !== 2;
+      this.frontThirdPerson = this.cameraMode === 1;
+      const cameraNames = ['Вид со спины', 'Вид спереди', 'От первого лица'];
+      this.ui.toast(cameraNames[this.cameraMode], { duration: 1200 });
       return;
     }
 
