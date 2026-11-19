@@ -396,6 +396,10 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     this._updateRemotePlayerTags();
     this._drawSelection();
 
+    const creativeHud = this.player?.gamemode !== 'survival';
+    document.getElementById('health')?.classList.toggle('hidden', creativeHud);
+    document.getElementById('food')?.classList.toggle('hidden', creativeHud);
+    document.getElementById('armor')?.classList.toggle('hidden', creativeHud);
     const health = document.getElementById('health');
     if (health) renderBar(health, this.player.health, 'heart');
     const armor = document.getElementById('armor');
@@ -703,6 +707,17 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       size.map((value) => value + (index === 0 ? 0.035 : 0.025)),
       color,
     ]);
+    // Dropped stacks bob and spin on the ground; pickup is handled by MobSystem.
+    for (const drop of this.entities?.droppedItems ?? []) {
+      const phase = (drop.age || 0) * 0.08;
+      const color = drop.stack?.item?.block ? [0.62,0.62,0.62,1]
+        : /sword|pickaxe|axe|shovel|hoe/.test(drop.stack?.item?.id || '') ? [0.72,0.68,0.58,1]
+        : [0.78,0.70,0.48,1];
+      const size = drop.stack?.item?.block ? [0.22,0.22,0.22] : [0.16,0.10,0.08];
+      draw(drop.x, drop.y + 0.10 + Math.sin(phase)*0.035, drop.z, phase, [
+        [[0,0,0],size,color],
+      ], 0, -1, -1, 1, { itemModel: true, itemSwing: 0 });
+    }
     if (this.thirdPerson) {
       document.getElementById('held-item-view')?.classList.add('hidden');
       draw(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, jumping: !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking, walking: this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035, attack: this.player.attackTime > 0, attackTime: this.player.attackTime }, true);
@@ -761,7 +776,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       // During an attack lift it vertically; do not thrust it toward the camera.
       const handDistance = 0.48;
       const handX = this.renderPosition.x + forwardX * handDistance + rightX * 0.34;
-      const handY = this.renderPosition.y + this.player.eyeHeight + forwardY * handDistance - 0.40;
+      const handY = this.renderPosition.y + this.player.eyeHeight + forwardY * handDistance - 0.43;
       const handZ = this.renderPosition.z + forwardZ * handDistance + rightZ * 0.34;
       const handBob = Math.sin(this.player.walkPhase * 2) * 0.006;
       const armParts = [
@@ -803,9 +818,9 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           const isBlock = !!held.item.block;
           const size = isBlock ? [0.135, 0.135, 0.135] : [0.16, 0.27, 0.025];
           const itemParts = [[[0, 0, 0], size, [1, 1, 1, 1], null, null, [0.22, 0, -0.42]]];
-          const itemX = handX + forwardX * 0.035 + rightX * 0.025;
-          const itemY = handY - 0.12;
-          const itemZ = handZ + forwardZ * 0.035 + rightZ * 0.025;
+          const itemX = handX + forwardX * 0.055 + rightX * 0.025;
+          const itemY = handY + 0.015;
+          const itemZ = handZ + forwardZ * 0.055 + rightZ * 0.025;
           const itemSwing = this.player.attackTime > 0
             ? -0.55 * Math.sin((8 - this.player.attackTime) / 8 * Math.PI) : -0.12;
           draw(itemX, itemY, itemZ, yaw, itemParts, 0, -1, -1, 1,
