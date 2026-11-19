@@ -459,6 +459,8 @@ export class MobSystem {
         (mob.type !== 'enderman' || endermanAngry || distance < 2.5);
       if (hostile && mob.type !== 'skeleton' && mob.type !== 'stray' && !creeperNear) {
         mob.targetYaw = Math.atan2(dx, dz);
+      }
+
       const fleeing = !hostileType && distance < 4;
       if (fleeing) mob.targetYaw = Math.atan2(mob.x - player.x, mob.z - player.z);
 
