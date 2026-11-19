@@ -189,7 +189,7 @@ export class UI {
     const screen = $('inventory-screen');
     screen.oncontextmenu = (e) => e.preventDefault();
     screen.onmousedown = (e) => {
-      if (e.target === screen || e.target.classList?.contains('inventory-panel')) {
+      if (!e.target.closest?.('.slot, button, input, textarea, select')) {
         e.preventDefault();
         handlers.onDropCursor?.(e.button);
       }
@@ -295,6 +295,19 @@ export class UI {
       el.onmousedown = (e) => { e.preventDefault(); handlers.onHotbar(index, e.button, e.shiftKey); };
       hb.appendChild(el);
       this.creativeHotbarSlots.push(el);
+    }
+
+    let trash = $('creative-trash');
+    if (!trash) {
+      trash = document.createElement('button');
+      trash.id = 'creative-trash';
+      trash.type = 'button';
+      trash.textContent = '×';
+      trash.title = 'Удалить предмет из курсора';
+      trash.setAttribute('aria-label', 'Удалить предмет');
+      trash.className = 'creative-trash';
+      trash.onmousedown = (e) => { e.preventDefault(); handlers.onTrash?.(); };
+      panel.appendChild(trash);
     }
 
     const search = $('creative-search');
