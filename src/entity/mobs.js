@@ -235,27 +235,33 @@ export class MobSystem {
 
   useFishingRod() {
     const stack = this.game.inventory?.held;
-    if (stack?.item?.id !== 'mc:fishing_rod' || this.game.player?.gamemode !== 'survival') return false;
+    const player = this.game.player;
+    if (stack?.item?.id !== 'mc:fishing_rod' || !player) return false;
     if (!this.fishing) {
       if (!this._waterInSight()) {
-        this.game.ui?.toast('Aim at water to cast the fishing line');
+        this.game.ui?.toast('Смотри на воду и нажми ПКМ, чтобы забросить удочку');
         return true;
       }
-      this.fishing = { ticks: 80 + Math.floor(Math.random() * 121) };
-      this.game.ui?.toast('Fishing line cast');
+      this.fishing = { ticks: 80 + Math.floor(Math.random() * 121), bite: false, window: 0 };
+      this.game.sounds?.play('cast');
+      this.game.ui?.toast('Поплавок заброшен. Жди поклёвку…');
       return true;
     }
-    if (this.fishing.ticks > 0) {
+    if (!this.fishing.bite) {
       this.fishing = null;
-      this.game.ui?.toast('Fishing line reeled in too early');
+      this.game.sounds?.play('reel');
+      this.game.ui?.toast('Ты вытащил удочку слишком рано');
       return true;
     }
     const caught = rollFishingCatch();
-    const leftover = this.game.inventory.addItem(caught.id, caught.count);
-    if (leftover > 0) this.game.ui?.toast('Inventory full: catch not collected', { error: true });
-    this.game.inventory.damageHeld(1);
+    if (player.gamemode !== 'creative') {
+      const leftover = this.game.inventory.addItem(caught.id, caught.count);
+      if (leftover > 0) this.game.ui?.toast('Инвентарь заполнен: улов потерян', { error: true });
+      this.game.inventory.damageHeld(1);
+    }
+    this.game.sounds?.play('catch');
     this.fishing = null;
-    this.game.ui?.toast('Caught ' + caught.id.replace('mc:', ''));
+    this.game.ui?.toast('Поймано: ' + caught.id.replace('mc:', ''));
     return true;
   }
 
@@ -405,7 +411,21 @@ export class MobSystem {
     const player = this.game.player;
     if (!world || !player) return;
     this.spawnTicks++;
-    if (this.fishing && this.fishing.ticks > 0) this.fishing.ticks--;
+    if (this.fishing && !this.fishing.bite) {
+      this.fishing.ticks--;
+      if (this.fishing.ticks <= 0) {
+        this.fishing.bite = true;
+        this.fishing.window = 40;
+        this.game.sounds?.play('bite');
+        this.game.ui?.toast('ПОКЛЁВКА! Быстро нажми ПКМ!', { duration: 1800 });
+      }
+    } else if (this.fishing?.bite) {
+      this.fishing.window--;
+      if (this.fishing.window <= 0) {
+        this.fishing = null;
+        this.game.ui?.toast('Рыба сорвалась с крючка');
+      }
+    }
     if (this.attackCooldown > 0) this.attackCooldown--;
     // Populate nearby loaded chunks quickly so a new world does not feel empty.
     if (this.spawnTicks >= 180 && this.mobs.length < 7) {
