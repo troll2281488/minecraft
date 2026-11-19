@@ -820,6 +820,7 @@ export class TerrainGenerator {
     const isAcacia = species === 'acacia';
     const isBirch = species === 'birch';
     const isDarkOak = species === 'dark_oak';
+    const acaciaLean = isAcacia && rng.nextBoolean() ? 1 : -1;
     const height = isSpruce ? 7 + rng.nextInt(3)
       : isJungle ? 9 + rng.nextInt(5)
       : isAcacia ? 6 + rng.nextInt(3)
@@ -835,7 +836,7 @@ export class TerrainGenerator {
       }
     } else {
       for (let dy = 0; dy < height; dy++) {
-        const ox = isAcacia && dy >= Math.floor(height * 0.55) ? Math.sign(dy - height * 0.55) : 0;
+        const ox = isAcacia && dy >= Math.floor(height * 0.55) ? acaciaLean : 0;
         if (y + dy < MAX_Y) chunk.setBlock(x + ox, y + dy, z, log);
       }
     }
@@ -867,7 +868,7 @@ export class TerrainGenerator {
 
     if (isAcacia) {
       // Acacia: a visibly leaning upper trunk and a broad, flat umbrella crown.
-      const lean = rng.nextBoolean() ? 1 : -1;
+      const lean = acaciaLean;
       const crownX = x + lean * 2;
       for (let step = 1; step <= 2; step++) {
         const branchY = y + height - 2 + step;
