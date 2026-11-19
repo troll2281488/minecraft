@@ -481,7 +481,7 @@ ITEMS.define('mc:fishing_rod', { stackSize: 1, maxDamage: 64, tool: 'fishing_rod
 // Creative-only spawn eggs for the mobs currently supported by the renderer.
 for (const mobType of [
   'cow','pig','sheep','chicken','zombie','skeleton','stray',
-  'creeper','enderman','spider','cave_spider','mooshroom','rabbit','wolf','polar_bear',
+  'creeper','enderman','spider','cave_spider','mooshroom','rabbit','wolf','polar_bear','villager',
 ]) {
   ITEMS.define(`mc:${mobType}_spawn_egg`, {
     stackSize: 64, spawnEggMob: mobType,
