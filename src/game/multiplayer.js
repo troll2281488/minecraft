@@ -4,8 +4,9 @@
  * uploaded reference game. No Three.js objects or globals are used here.
  */
 let initializeApp, getApps, getDatabase, ref, set, get, update, push, remove;
-let onValue, onChildAdded, onChildChanged, onDisconnect;
+let onValue, onChildAdded, onChildChanged, onDisconnect, runTransaction;
 import { BLOCKS, parseStateString } from '../world/block.js';
+import { ItemStack } from '../world/item.js';
 import * as storage from '../save/storage.js';
 import { GENERATOR_VERSION } from '../world/gen/terrain.js';
 import { DATA_VERSION } from '../save/migrate.js';
@@ -66,7 +67,7 @@ export class Multiplayer {
         const appSdk = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
         const dbSdk = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js');
         ({ initializeApp, getApps } = appSdk);
-        ({ getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded, onChildChanged, onDisconnect } = dbSdk);
+        ({ getDatabase, ref, set, get, update, push, remove, onValue, onChildAdded, onChildChanged, onDisconnect, runTransaction } = dbSdk);
       }
       this.app = getApps().find((app) => app.name === 'minecraft-web') ||
         initializeApp(CONFIG, 'minecraft-web');
@@ -327,6 +328,34 @@ export class Multiplayer {
       }
       this._applyPendingBlocks();
     });
+    // Dropped item stacks are room entities too: every client sees the same
+    // inventory icon in-world, and Firebase transactions ensure only one
+    // player can successfully pick up a particular stack.
+    this._listen(onValue, ref(this.db, `minecraft_game/rooms/${code}/droppedItems`), (snap) => {
+      const entries = snap.val() || {};
+      const seen = new Set();
+      const drops = this.game.entities?.droppedItems;
+      if (!drops) return;
+      for (const [key, value] of Object.entries(entries)) {
+        if (!value || value.ownerUid === this.uid || value.claimedBy || !value.stack) continue;
+        if (![value.x, value.y, value.z, value.vx, value.vy, value.vz].every(Number.isFinite)) continue;
+        seen.add(key);
+        let drop = drops.find((item) => item.networkKey === key);
+        if (!drop) {
+          drop = {
+            id: this.game.entities.nextId++, networkKey: key, networkOwner: value.ownerUid,
+            stack: ItemStack.fromJSON(value.stack),
+            x: value.x, y: value.y, z: value.z, vx: value.vx, vy: value.vy, vz: value.vz,
+            age: 0, pickupDelay: Math.max(12, Number(value.pickupDelay) || 12),
+          };
+          if (!drop.stack.isEmpty) drops.push(drop);
+        }
+      }
+      for (let i = drops.length - 1; i >= 0; i--) {
+        const drop = drops[i];
+        if (drop.networkKey && drop.networkOwner !== this.uid && !seen.has(drop.networkKey)) drops.splice(i, 1);
+      }
+    });
     this._listen(onChildAdded, ref(this.db, `minecraft_game/rooms/${code}/chat`), (snap) => {
       const msg = snap.val();
       if (msg?.text) this.addChat(`<${safeName(msg.sender)}> ${String(msg.text).slice(0, 240)}`);
@@ -459,6 +488,40 @@ export class Multiplayer {
     }
   }
 
+  publishDroppedItem(drop) {
+    if (!this.db || !this.roomId || !drop?.stack || drop.stack.isEmpty) return false;
+    const itemRef = push(ref(this.db, `minecraft_game/rooms/${this.roomId}/droppedItems`));
+    drop.networkKey = itemRef.key;
+    drop.networkOwner = this.uid;
+    set(itemRef, {
+      ownerUid: this.uid, stack: drop.stack.toJSON(),
+      x: drop.x, y: drop.y, z: drop.z, vx: drop.vx, vy: drop.vy, vz: drop.vz,
+      pickupDelay: drop.pickupDelay, createdAt: Date.now(),
+    }).catch((error) => {
+      console.warn('[multiplayer] dropped item publish:', error);
+      this.game.ui.toast(`Не удалось показать предмет другим игрокам: ${error.message}`, { error: true });
+    });
+    return true;
+  }
+
+  async claimDroppedItem(drop) {
+    if (!this.db || !this.roomId || !drop?.networkKey || !runTransaction) return false;
+    const itemRef = ref(this.db, `minecraft_game/rooms/${this.roomId}/droppedItems/${drop.networkKey}`);
+    try {
+      const result = await runTransaction(itemRef, (current) => {
+        if (!current || current.claimedBy) return;
+        return { ...current, claimedBy: this.uid };
+      });
+      if (!result.committed || result.snapshot.val()?.claimedBy !== this.uid) return false;
+      await remove(itemRef);
+      return true;
+    } catch (error) {
+      console.warn('[multiplayer] dropped item pickup:', error);
+      this.game.ui.toast(`Не удалось подобрать сетевой предмет: ${error.message}`, { error: true });
+      return false;
+    }
+  }
+
   pushBlockChange(x, y, z, state) {
     if (!this.db || !this.roomId || this.applyingRemoteBlock) return;
     const stateString = state?.toString?.();
@@ -501,6 +564,9 @@ export class Multiplayer {
     this.isHost = false;
     this.remotePlayers.clear();
     this.pendingBlocks.clear();
+    for (let i = (this.game.entities?.droppedItems?.length ?? 0) - 1; i >= 0; i--) {
+      if (this.game.entities.droppedItems[i].networkOwner && this.game.entities.droppedItems[i].networkOwner !== this.uid) this.game.entities.droppedItems.splice(i, 1);
+    }
     document.getElementById('hud-room')?.classList.add('hidden');
     if (markOffline && this.db) {
       await update(ref(this.db, `minecraft_game/players/${this.uid}`), { online: false, room: '' }).catch(() => {});
