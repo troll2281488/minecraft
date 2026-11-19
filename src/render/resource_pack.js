@@ -89,9 +89,26 @@ export async function loadItsBrianTextures(blocks, items) {
 
   const blockEntries = await mapWithLimit([...blockNames], 24, async (name) => {
     const sourceName = BLOCK_TEXTURE_ALIASES[name] ?? name;
-    // Chest textures live under entity/chest in the source pack, not block/.
-    // Keep the procedural chest fallback until the renderer has a chest model/UVs.
-    if (name === 'chest_side' || name === 'chest_top') return null;
+    if (name === 'chest_side' || name === 'chest_top') {
+      // Vanilla stores the chest as a 64x64 model skin rather than a block tile.
+      // Rebuild the two 16x16 face tiles from the front/top UV regions.
+      const skin = await fetchImage('entity/chest/normal.png');
+      if (!skin) return null;
+      const canvas = document.createElement('canvas');
+      canvas.width = TILE_SIZE;
+      canvas.height = TILE_SIZE;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.imageSmoothingEnabled = false;
+      if (name === 'chest_top') {
+        ctx.drawImage(skin, 14, 0, 14, 14, 0, 0, TILE_SIZE, TILE_SIZE);
+      } else {
+        ctx.drawImage(skin, 0, 14, 14, 5, 0, 0, TILE_SIZE, 5);
+        ctx.drawImage(skin, 0, 33, 14, 10, 0, 5, TILE_SIZE, 11);
+      }
+      const pixels = new Uint8Array(ctx.getImageData(0, 0, TILE_SIZE, TILE_SIZE).data);
+      skin.close();
+      return [name, pixels];
+    }
     const bitmap = await fetchImage('block/' + encodeURIComponent(sourceName) + '.png');
     if (!bitmap) return null;
     const { ctx } = canvasFor(bitmap);
