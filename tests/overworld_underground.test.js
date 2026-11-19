@@ -1,6 +1,6 @@
 import { describe, it, assert, assertEqual } from './framework.js';
 import '../src/world/blocks/index.js';
-import { TerrainGenerator, caveLakeCandidateForCell, mineshaftCandidateForCell, dungeonCandidateForCell } from '../src/world/gen/terrain.js';
+import { TerrainGenerator, caveLakeCandidateForCell, fossilCandidateForCell, mineshaftCandidateForCell, dungeonCandidateForCell } from '../src/world/gen/terrain.js';
 import { Chunk } from '../src/world/chunk.js';
 import { BLOCKS } from '../src/world/block.js';
 import { buildTextures, buildBlockTextureTable } from '../src/render/atlas.js';
@@ -38,6 +38,36 @@ describe('Overworld underground structures and deterministic placement', () => {
       for (let face = 0; face < 6; face++) {
         assert(table[state.id * 6 + face] !== missing, id + ' face ' + face + ' uses missing texture');
       }
+    }
+  });
+
+  it('places stable fossil candidates and builds a textured fossil chamber', () => {
+    const a = fossilCandidateForCell('fossil-world', -4, 2);
+    const b = fossilCandidateForCell('fossil-world', -4, 2);
+    assertEqual(JSON.stringify(a), JSON.stringify(b));
+    let found = 0;
+    for (let z = -15; z <= 15; z++) for (let x = -15; x <= 15; x++) {
+      if (fossilCandidateForCell('fossil-world', x, z)) found++;
+    }
+    assert(found > 0, 'fossil placement produced no candidates');
+
+    const generator = new TerrainGenerator('fossil-build-test');
+    const chunk = new Chunk(0, 0);
+    const stone = BLOCKS.get('mc:stone').defaultState;
+    for (let y = 8; y <= 24; y++) {
+      for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {
+        chunk.setBlock(x, y, z, stone);
+      }
+    }
+    generator.placeFossil(chunk, 0, 0, { x: 8, z: 8, y: 12 });
+    assertEqual(chunk.getBlock(8, 13, 8).block.id, 'mc:bone_block');
+    assertEqual(chunk.getBlock(8, 16, 8).block.id, 'mc:air');
+    const atlas = buildTextures();
+    const table = buildBlockTextureTable(BLOCKS, atlas.index);
+    const bone = BLOCKS.get('mc:bone_block').defaultState;
+    const missing = atlas.index.get('__missing');
+    for (let face = 0; face < 6; face++) {
+      assert(table[bone.id * 6 + face] !== missing, 'bone block face ' + face + ' uses missing texture');
     }
   });
 
