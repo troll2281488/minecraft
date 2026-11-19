@@ -313,12 +313,30 @@ precision highp float;
 in vec2 vScreen;
 uniform vec3 uTopColor;
 uniform vec3 uHorizonColor;
+uniform float uDaylight;
 out vec4 fragColor;
+float circle(vec2 p, vec2 c, float r) { return 1.0 - smoothstep(r-0.006,r+0.006,length(p-c)); }
+float cloudBlob(vec2 p, vec2 c, vec2 r) { vec2 q=(p-c)/r; return 1.0-smoothstep(0.78,1.0,length(q)); }
 void main() {
-  // Bias the gradient toward the horizon so the transition sits where the
-  // player is actually looking rather than halfway up the sky.
-  float t = clamp(vScreen.y * 0.5 + 0.5, 0.0, 1.0);
-  fragColor = vec4(mix(uHorizonColor, uTopColor, pow(t, 0.65)), 1.0);
+  vec2 p=vScreen;
+  float t=clamp(p.y*0.5+0.5,0.0,1.0);
+  vec3 color=mix(uHorizonColor,uTopColor,pow(t,0.65));
+  float sun=circle(p,vec2(0.62,0.58),0.075);
+  float moon=circle(p,vec2(-0.62,0.58),0.065);
+  float moonCut=circle(p,vec2(-0.59,0.605),0.057);
+  color=mix(color,vec3(1.0,0.91,0.57),sun*uDaylight);
+  float moonMask=moon*(1.0-moonCut)*(1.0-uDaylight);
+  color=mix(color,vec3(0.88,0.92,1.0),moonMask);
+  float cloud=0.0;
+  cloud=max(cloud,cloudBlob(p,vec2(-0.48,0.22),vec2(0.16,0.055)));
+  cloud=max(cloud,cloudBlob(p,vec2(-0.39,0.25),vec2(0.10,0.075)));
+  cloud=max(cloud,cloudBlob(p,vec2(-0.28,0.21),vec2(0.12,0.05)));
+  cloud=max(cloud,cloudBlob(p,vec2(0.18,0.42),vec2(0.15,0.05)));
+  cloud=max(cloud,cloudBlob(p,vec2(0.28,0.45),vec2(0.10,0.07)));
+  cloud=max(cloud,cloudBlob(p,vec2(0.38,0.41),vec2(0.13,0.05)));
+  float cloudAlpha=cloud*0.82*(0.55+0.45*uDaylight);
+  color=mix(color,vec3(0.96,0.98,1.0),cloudAlpha);
+  fragColor=vec4(color,1.0);
 }
 `;
 
