@@ -247,16 +247,16 @@
   #inventory-screen .craft-arrow { color:#555; font-size:24px; }
   #inventory-screen .inv-section { margin:0 0 10px; }
   #inventory-screen .inv-section h3 { color:#333; font-size:11px; margin:0 0 5px; }
-  #inventory-screen .inv-grid { grid-template-columns:repeat(9,minmax(0,1fr)); gap:3px; width:100%; }
+  #inventory-screen .inv-grid { grid-template-columns:repeat(9,44px); gap:3px; width:max-content; }
   #inventory-screen .craft-grid-2 { grid-template-columns:repeat(2,44px); width:auto; }
   #inventory-screen .craft-grid-3 { grid-template-columns:repeat(3,44px); width:auto; }
   #inventory-screen .slot { width:44px; height:44px; box-sizing:border-box; }
-  #inventory-screen .inv-grid .slot { width:100%; aspect-ratio:1; height:auto; }
+  #inventory-screen .inv-grid .slot { width:44px; height:44px; }
   #inventory-screen .slot img { image-rendering:pixelated; }
   #creative-screen .creative-panel { width:min(700px,calc(100vw - 28px)); min-width:0; max-width:700px; padding:20px; }
-  #creative-screen .creative-panel #creative-grid { grid-template-columns:repeat(9,minmax(0,1fr)); max-height:min(48vh,390px); gap:3px; }
-  #creative-screen .creative-panel #creative-hotbar { grid-template-columns:repeat(9,minmax(0,1fr)); gap:3px; }
-  #creative-screen .creative-panel .slot { width:100%; aspect-ratio:1; height:auto; box-sizing:border-box; }
+  #creative-screen .creative-panel #creative-grid { grid-template-columns:repeat(9,44px); max-height:min(48vh,390px); gap:3px; }
+  #creative-screen .creative-panel #creative-hotbar { grid-template-columns:repeat(9,44px); gap:3px; }
+  #creative-screen .creative-panel .slot { width:44px; height:44px; box-sizing:border-box; }
   @media (max-width:560px) {
     #inventory-screen .inventory-panel { padding:12px; }
     #inventory-screen .inventory-top { gap:8px; }
