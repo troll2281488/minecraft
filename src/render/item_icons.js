@@ -172,6 +172,28 @@ export function generateItemIcon(item) {
 
   const icon = blankIcon();
 
+  if (item.spawnEggMob) {
+    const colors = {
+      cow: ['#6a4a32','#f1eee5'], pig: ['#e9a0a5','#f5c4c4'],
+      sheep: ['#ddd9ce','#f7f4e9'], chicken: ['#f0e6c8','#d6b56c'],
+      zombie: ['#477d55','#315b3e'], skeleton: ['#d7d4c8','#8e8b83'],
+      stray: ['#b7d4d5','#6c9da4'], creeper: ['#4f9b42','#2d692d'],
+      enderman: ['#25202e','#8d58c7'], spider: ['#44302a','#171313'],
+      cave_spider: ['#397e70','#182d2a'],
+    };
+    const [shell, spot] = colors[item.spawnEggMob] ?? ['#ded6c8','#8c8c8c'];
+    const shellPixels = [];
+    const spotPixels = [];
+    for (let y = 3; y <= 13; y++) for (let x = 4; x <= 11; x++) {
+      const nx = (x - 7.5) / 4, ny = (y - 8) / 5.5;
+      if (nx * nx + ny * ny <= 1) shellPixels.push([x, y]);
+    }
+    for (const [x, y] of [[6,5],[7,5],[8,5],[7,6],[8,6],[9,6],[6,7],[7,7],[8,7]]) spotPixels.push([x,y]);
+    plot(icon, shellPixels, shell, '#b8b0a3');
+    plot(icon, spotPixels, spot, '#38302a');
+    return icon;
+  }
+
   if (item.id === 'mc:fishing_rod') {
     const icon = blankIcon();
     plot(icon, TOOL_SHAPES.fishing_rod.M, '#b7a17b', '#826b4c');
