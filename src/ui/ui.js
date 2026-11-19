@@ -187,10 +187,11 @@ export class UI {
     };
 
     const screen = $('inventory-screen');
+    screen.oncontextmenu = (e) => e.preventDefault();
     screen.onmousedown = (e) => {
       if (e.target === screen || e.target.classList?.contains('inventory-panel')) {
         e.preventDefault();
-        handlers.onDropCursor?.();
+        handlers.onDropCursor?.(e.button);
       }
     };
     this.invMainSlots = build($('inv-main'), 27, (i) => SLOT.MAIN_START + i, 'inventory');
