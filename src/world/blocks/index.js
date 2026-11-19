@@ -135,6 +135,11 @@ define('mc:sand', {
   gravity: true, texture: 'sand',
 });
 
+define('mc:red_sand', {
+  hardness: 0.5, resistance: 0.5, tool: 'shovel', soundGroup: 'sand',
+  gravity: true, texture: 'red_sand',
+});
+
 define('mc:gravel', {
   hardness: 0.6, resistance: 0.6, tool: 'shovel', soundGroup: 'gravel',
   gravity: true, texture: 'gravel',
@@ -189,7 +194,7 @@ stoneLike('mc:redstone_block', 'redstone_block', 5, 6, 2);
 // ---------------------------------------------------------------------------
 
 for (const [id, hardness, resistance, tool, texture, soundGroup] of [
-  ['mc:red_sandstone', 0.8, 0.8, 'pickaxe', 'sandstone', 'stone'],
+  ['mc:red_sandstone', 0.8, 0.8, 'pickaxe', 'red_sandstone', 'stone'],
   ['mc:prismarine', 1.5, 6, 'pickaxe', 'stone', 'stone'],
   ['mc:prismarine_bricks', 1.5, 6, 'pickaxe', 'stone', 'stone'],
   ['mc:dark_prismarine', 1.5, 6, 'pickaxe', 'stone', 'stone'],
