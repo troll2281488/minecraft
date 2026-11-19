@@ -8,7 +8,7 @@
 const ROOT = new URL('../../assets/vanilla-models/', import.meta.url);
 
 async function readJson(url) {
-  const response = await fetch(url);
+  const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
   if (!response.ok) throw new Error(`Entity model asset failed: ${url} (${response.status})`);
   return response.json();
 }
@@ -20,24 +20,51 @@ function safePath(path) {
   return path;
 }
 
+function emptyEntityModelPack() {
+  const models = new Map();
+  const animations = new Map();
+  return Object.freeze({
+    source: null, commit: null, minecraftVersion: null, models, animations,
+    getModel() { return null; },
+    toLegacyParts() { return null; },
+    getAnimations() { return null; },
+  });
+}
+
 export async function loadEntityModelPack() {
-  const manifest = await readJson(new URL('manifest.json', ROOT));
+  let manifest;
+  try {
+    manifest = await readJson(new URL('manifest.json', ROOT));
+  } catch (error) {
+    console.warn('[models] Model pack unavailable; using built-in mob rendering.', error);
+    return emptyEntityModelPack();
+  }
   if (manifest.minecraftVersion !== '1.20.1' || !Array.isArray(manifest.models) || !Array.isArray(manifest.animations)) {
-    throw new Error('Unsupported or incomplete entity model manifest');
+    console.warn('[models] Model pack manifest is invalid; using built-in mob rendering.');
+    return emptyEntityModelPack();
   }
 
   const models = new Map();
   const animations = new Map();
+  let failedAssets = 0;
   const loadAll = async (paths, target) => {
     const concurrency = 12;
     let cursor = 0;
     const workers = Array.from({ length: Math.min(concurrency, paths.length) }, async () => {
       while (cursor < paths.length) {
         const index = cursor++;
-        const path = safePath(paths[index]);
-        const data = await readJson(new URL(path, ROOT));
-        if (!data || typeof data !== 'object' || typeof data.id !== 'string') continue;
-        target.set(data.id, data);
+        try {
+          const path = safePath(paths[index]);
+          const data = await readJson(new URL(path, ROOT));
+          if (!data || typeof data !== 'object' || typeof data.id !== 'string') {
+            failedAssets++;
+            continue;
+          }
+          target.set(data.id, data);
+        } catch {
+          // One missing/corrupt model must not prevent the rest of the game booting.
+          failedAssets++;
+        }
       }
     });
     await Promise.all(workers);
@@ -47,6 +74,7 @@ export async function loadEntityModelPack() {
     loadAll(manifest.models, models),
     loadAll(manifest.animations, animations),
   ]);
+  if (failedAssets) console.warn(`[models] Skipped ${failedAssets} unavailable model asset(s).`);
 
   const toLegacyParts = (id, color = [0.55, 0.48, 0.40, 1]) => {
     const model = models.get(id.startsWith('minecraft:') ? id : `minecraft:${id}`);
