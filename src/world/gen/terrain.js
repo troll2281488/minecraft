@@ -344,6 +344,7 @@ export class TerrainGenerator {
     this.placeCaveLakes(chunk, baseX, baseZ);
     this.placeFossils(chunk, baseX, baseZ);
     this.placeVillages(chunk, baseX, baseZ);
+    this.placeSurfaceStructures(chunk, baseX, baseZ);
     this.placeUndergroundStructures(chunk, baseX, baseZ);
 
     chunk.rebuildHeightmap();
@@ -495,6 +496,229 @@ export class TerrainGenerator {
         }
       }
     }
+  }
+
+  /** Surface structures are world-grid anchored and clipped to this chunk. */
+  placeSurfaceStructures(chunk, baseX, baseZ) {
+    const min256X = Math.floor((baseX - 32) / 256);
+    const max256X = Math.floor((baseX + CHUNK_SIZE + 32) / 256);
+    const min256Z = Math.floor((baseZ - 32) / 256);
+    const max256Z = Math.floor((baseZ + CHUNK_SIZE + 32) / 256);
+    for (let gz = min256Z; gz <= max256Z; gz++) {
+      for (let gx = min256X; gx <= max256X; gx++) {
+        const desert = desertTempleCandidateForCell(this.seed, gx, gz);
+        if (desert) {
+          const site = this.validateStructureSite(desert.x, desert.z, 10, [BIOME.DESERT], 4.5);
+          if (site) this.placeDesertTemple(chunk, baseX, baseZ, desert, site.y);
+        }
+        const jungle = jungleTempleCandidateForCell(this.seed, gx, gz);
+        if (jungle) {
+          const site = this.validateStructureSite(jungle.x, jungle.z, 7, [BIOME.JUNGLE, BIOME.BAMBOO_JUNGLE], 4.5);
+          if (site) this.placeJungleTemple(chunk, baseX, baseZ, jungle, site.y);
+        }
+        const swamp = swampHutCandidateForCell(this.seed, gx, gz);
+        if (swamp) {
+          const site = this.validateStructureSite(swamp.x, swamp.z, 5, [BIOME.SWAMP], 5.5);
+          if (site) this.placeSwampHut(chunk, baseX, baseZ, swamp, site.y);
+        }
+        const igloo = iglooCandidateForCell(this.seed, gx, gz);
+        if (igloo) {
+          const site = this.validateStructureSite(igloo.x, igloo.z, 4, [BIOME.SNOWY_PLAINS, BIOME.SNOWY_TAIGA, BIOME.ICE_SPIKES], 3.5);
+          if (site) this.placeIgloo(chunk, baseX, baseZ, igloo, site.y);
+        }
+      }
+    }
+
+    const min512X = Math.floor((baseX - 32) / 512);
+    const max512X = Math.floor((baseX + CHUNK_SIZE + 32) / 512);
+    const min512Z = Math.floor((baseZ - 32) / 512);
+    const max512Z = Math.floor((baseZ + CHUNK_SIZE + 32) / 512);
+    for (let gz = min512Z; gz <= max512Z; gz++) {
+      for (let gx = min512X; gx <= max512X; gx++) {
+        const mansion = mansionCandidateForCell(this.seed, gx, gz);
+        if (mansion) {
+          const site = this.validateStructureSite(mansion.x, mansion.z, 14, [BIOME.DARK_FOREST], 6);
+          if (site && site.y < 105) this.placeWoodlandMansion(chunk, baseX, baseZ, mansion, site.y);
+        }
+        const monument = oceanMonumentCandidateForCell(this.seed, gx, gz);
+        if (monument) {
+          const biome = this.biomeAt(monument.x, monument.z, this.heightAt(monument.x, monument.z));
+          if ([BIOME.DEEP_OCEAN, BIOME.DEEP_COLD_OCEAN, BIOME.DEEP_FROZEN_OCEAN, BIOME.DEEP_LUKEWARM_OCEAN].includes(biome)) {
+            this.placeOceanMonument(chunk, baseX, baseZ, monument);
+          }
+        }
+      }
+    }
+  }
+
+  validateStructureSite(x, z, radius, allowedBiomes, maxSlope) {
+    let min = Infinity, max = -Infinity;
+    for (const dz of [-radius, 0, radius]) {
+      for (const dx of [-radius, 0, radius]) {
+        const wx = x + dx, wz = z + dz;
+        const height = this.heightAt(wx, wz);
+        if (!allowedBiomes.includes(this.biomeAt(wx, wz, height))) return null;
+        min = Math.min(min, height);
+        max = Math.max(max, height);
+      }
+    }
+    if (min < SEA_LEVEL + 1 || max - min > maxSlope) return null;
+    return { y: Math.floor((min + max) / 2) };
+  }
+
+  placeDesertTemple(chunk, baseX, baseZ, site, groundY) {
+    const S = this.states.byId, sandstone = S['mc:sandstone'], air = S['mc:air'];
+    if (!sandstone || !air) return;
+    const put = (x, y, z, state) => this.setVillageBlock(chunk, baseX, baseZ, x, y, z, state);
+    // Four stepped sandstone tiers with a hollow central chamber.
+    for (let layer = 0; layer < 9; layer++) {
+      const radius = 10 - layer;
+      const y = groundY + 1 + layer;
+      for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) {
+        if (Math.abs(dx) === radius || Math.abs(dz) === radius) put(site.x + dx, y, site.z + dz, sandstone);
+      }
+    }
+    for (let y = groundY + 1; y <= groundY + 8; y++) {
+      for (let dx = -3; dx <= 3; dx++) for (let dz = -3; dz <= 3; dz++) put(site.x + dx, y, site.z + dz, air);
+    }
+    for (let dx = -4; dx <= 4; dx++) for (let dz = -4; dz <= 4; dz++) put(site.x + dx, groundY + 1, site.z + dz, sandstone);
+    const chests = S['mc:chest'];
+    if (chests) for (const [dx, dz] of [[-3,-3],[-3,3],[3,-3],[3,3]]) put(site.x + dx, groundY + 2, site.z + dz, chests);
+    for (const dx of [-2, 2]) for (const dz of [-2, 2]) put(site.x + dx, groundY + 2, site.z + dz, sandstone);
+  }
+
+  placeJungleTemple(chunk, baseX, baseZ, site, groundY) {
+    const S = this.states.byId, air = S['mc:air'];
+    const stone = S['mc:mossy_cobblestone'] || S['mc:cobblestone'];
+    const brick = S['mc:stone_bricks'] || S['mc:cobblestone'];
+    if (!air || !stone || !brick) return;
+    const put = (x, y, z, state) => this.setVillageBlock(chunk, baseX, baseZ, x, y, z, state);
+    for (let dz = 0; dz < 13; dz++) for (let dx = 0; dx < 13; dx++) {
+      put(site.x + dx, groundY + 1, site.z + dz, stone);
+      for (let dy = 2; dy <= 7; dy++) {
+        const edge = dx === 0 || dx === 12 || dz === 0 || dz === 12;
+        if (edge) put(site.x + dx, groundY + dy, site.z + dz, ((dx + dz + dy) % 3 === 0) ? stone : brick);
+      }
+    }
+    for (let dy = 2; dy <= 7; dy++) for (let dx = 1; dx < 12; dx++) for (let dz = 1; dz < 12; dz++) put(site.x + dx, groundY + dy, site.z + dz, air);
+    for (let dx = 2; dx < 11; dx++) for (let dz = 2; dz < 11; dz++) put(site.x + dx, groundY + 8, site.z + dz, stone);
+    for (let dy = 2; dy <= 5; dy++) put(site.x + 6, groundY + dy, site.z, air);
+    const chest = S['mc:chest'];
+    if (chest) {
+      put(site.x + 2, groundY + 2, site.z + 2, chest);
+      put(site.x + 10, groundY + 2, site.z + 10, chest);
+    }
+    if (S['mc:torch']) {
+      put(site.x + 3, groundY + 3, site.z + 3, S['mc:torch']);
+      put(site.x + 9, groundY + 3, site.z + 9, S['mc:torch']);
+    }
+  }
+
+  placeSwampHut(chunk, baseX, baseZ, site, groundY) {
+    const S = this.states.byId, air = S['mc:air'];
+    const plank = S['mc:oak_planks'], log = S['mc:oak_log'];
+    if (!air || !plank || !log) return;
+    const put = (x, y, z, state) => this.setVillageBlock(chunk, baseX, baseZ, x, y, z, state);
+    for (const [dx, dz] of [[0,0],[6,0],[0,8],[6,8]]) {
+      for (let y = groundY - 1; y <= groundY + 3; y++) put(site.x + dx, y, site.z + dz, log);
+    }
+    for (let dz = 0; dz <= 8; dz++) for (let dx = 0; dx <= 6; dx++) {
+      put(site.x + dx, groundY + 3, site.z + dz, plank);
+      const edge = dx === 0 || dx === 6 || dz === 0 || dz === 8;
+      if (edge) for (let dy = 4; dy <= 6; dy++) put(site.x + dx, groundY + dy, site.z + dz, plank);
+    }
+    for (let dy = 4; dy <= 5; dy++) put(site.x + 3, groundY + dy, site.z, air);
+    for (let dz = 1; dz < 8; dz++) for (let dx = 1; dx < 6; dx++) {
+      put(site.x + dx, groundY + 4, site.z + dz, air);
+      put(site.x + dx, groundY + 5, site.z + dz, air);
+    }
+    for (let dz = -1; dz <= 9; dz++) for (let dx = -1; dx <= 7; dx++) {
+      const radius = Math.min(dx + 1, 7 - dx);
+      const roofY = groundY + 7 + Math.max(0, 3 - Math.min(3, radius));
+      put(site.x + dx, roofY, site.z + dz, plank);
+    }
+    if (S['mc:cauldron']) put(site.x + 2, groundY + 4, site.z + 2, S['mc:cauldron']);
+    if (S['mc:crafting_table']) put(site.x + 4, groundY + 4, site.z + 5, S['mc:crafting_table']);
+  }
+
+  placeIgloo(chunk, baseX, baseZ, site, groundY) {
+    const S = this.states.byId, snow = S['mc:snow_block'], air = S['mc:air'];
+    if (!snow || !air) return;
+    const put = (x, y, z, state) => this.setVillageBlock(chunk, baseX, baseZ, x, y, z, state);
+    for (let layer = 0; layer < 5; layer++) {
+      const radius = 4 - Math.floor(layer * 0.75);
+      const y = groundY + 1 + layer;
+      for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) {
+        if (dx * dx + dz * dz <= radius * radius + 2) put(site.x + dx, y, site.z + dz, snow);
+      }
+    }
+    for (let dy = 2; dy <= 4; dy++) for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) put(site.x + dx, groundY + dy, site.z + dz, air);
+    for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) put(site.x + dx, groundY + 1, site.z + dz, snow);
+    for (let dy = 2; dy <= 3; dy++) put(site.x, groundY + dy, site.z - 4, air);
+    if (S['mc:torch']) put(site.x + 2, groundY + 2, site.z + 2, S['mc:torch']);
+  }
+
+  placeWoodlandMansion(chunk, baseX, baseZ, site, groundY) {
+    const S = this.states.byId, air = S['mc:air'];
+    const plank = S['mc:dark_oak_planks'] || S['mc:oak_planks'];
+    const log = S['mc:dark_oak_log'] || S['mc:oak_log'];
+    const stone = S['mc:cobblestone'];
+    const glass = S['mc:glass'];
+    if (!air || !plank || !log || !stone) return;
+    const put = (x, y, z, state) => this.setVillageBlock(chunk, baseX, baseZ, x, y, z, state);
+    const size = 27;
+    for (let floor = 0; floor < 3; floor++) {
+      const baseY = groundY + 1 + floor * 5;
+      for (let dz = 0; dz < size; dz++) for (let dx = 0; dx < size; dx++) {
+        put(site.x + dx, baseY, site.z + dz, floor === 0 ? stone : plank);
+        const edge = dx === 0 || dx === size - 1 || dz === 0 || dz === size - 1;
+        if (edge) {
+          for (let dy = 1; dy <= 4; dy++) {
+            const window = glass && dy === 2 && (dx % 6 === 3 || dz % 6 === 3);
+            put(site.x + dx, baseY + dy, site.z + dz, window ? glass : plank);
+          }
+        }
+      }
+      for (let y = baseY + 1; y <= baseY + 4; y++) {
+        for (let dx = 1; dx < size - 1; dx++) for (let dz = 1; dz < size - 1; dz++) {
+          if (dx % 8 === 0 || dz % 8 === 0) put(site.x + dx, y, site.z + dz, plank);
+          else put(site.x + dx, y, site.z + dz, air);
+        }
+      }
+      for (const [dx, dz] of [[0,0],[size-1,0],[0,size-1],[size-1,size-1]]) {
+        for (let dy = 0; dy <= 5; dy++) put(site.x + dx, baseY + dy, site.z + dz, log);
+      }
+    }
+    const roofY = groundY + 16;
+    for (let dz = -1; dz <= size; dz++) for (let dx = -1; dx <= size; dx++) {
+      if (dx < 2 || dx > size - 3 || dz < 2 || dz > size - 3) put(site.x + dx, roofY, site.z + dz, plank);
+    }
+  }
+
+  placeOceanMonument(chunk, baseX, baseZ, site) {
+    const S = this.states.byId;
+    const prismarine = S['mc:prismarine'], bricks = S['mc:prismarine_bricks'] || prismarine;
+    const dark = S['mc:dark_prismarine'] || prismarine;
+    if (!prismarine) return;
+    const put = (x, y, z, state) => this.setVillageBlock(chunk, baseX, baseZ, x, y, z, state);
+    const floorY = SEA_LEVEL - 9;
+    const roofY = SEA_LEVEL + 2;
+    for (let dy = floorY; dy <= roofY; dy++) {
+      const radius = dy === floorY || dy === roofY ? 12 : 10;
+      for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) {
+        const edge = Math.abs(dx) === radius || Math.abs(dz) === radius;
+        if (edge || dy === floorY || dy === roofY) put(site.x + dx, dy, site.z + dz, dy === roofY ? dark : bricks);
+      }
+    }
+    for (const [dx, dz] of [[-8,-8],[-8,8],[8,-8],[8,8]]) {
+      for (let dy = floorY; dy <= roofY + 8; dy++) {
+        const radius = dy > roofY + 4 ? 1 : 2;
+        for (let ox = -radius; ox <= radius; ox++) for (let oz = -radius; oz <= radius; oz++) {
+          if (Math.abs(ox) === radius || Math.abs(oz) === radius) put(site.x + dx + ox, dy, site.z + dz + oz, prismarine);
+        }
+      }
+    }
+    if (S['mc:sea_lantern']) put(site.x, SEA_LEVEL - 1, site.z, S['mc:sea_lantern']);
   }
 
   /**
@@ -983,6 +1207,42 @@ export function mineshaftCandidateForCell(seed, gridX, gridZ) {
   if (rng.nextInt(5) !== 0) return null;
   return { x: gridX * 96 + 20 + rng.nextInt(48), z: gridZ * 96 + 20 + rng.nextInt(48),
     y: 12 + rng.nextInt(25), axis: rng.nextInt(2), phase: rng.nextDouble() * Math.PI * 2 };
+}
+
+export function desertTempleCandidateForCell(seed, gridX, gridZ) {
+  const rng = positionalRandom(seed, gridX, 2501, gridZ, 2501);
+  if (rng.nextInt(8) !== 0) return null;
+  return { x: gridX * 256 + 32 + rng.nextInt(192), z: gridZ * 256 + 32 + rng.nextInt(192) };
+}
+
+export function jungleTempleCandidateForCell(seed, gridX, gridZ) {
+  const rng = positionalRandom(seed, gridX, 2601, gridZ, 2601);
+  if (rng.nextInt(10) !== 0) return null;
+  return { x: gridX * 256 + 32 + rng.nextInt(192), z: gridZ * 256 + 32 + rng.nextInt(192) };
+}
+
+export function swampHutCandidateForCell(seed, gridX, gridZ) {
+  const rng = positionalRandom(seed, gridX, 2701, gridZ, 2701);
+  if (rng.nextInt(10) !== 0) return null;
+  return { x: gridX * 256 + 32 + rng.nextInt(192), z: gridZ * 256 + 32 + rng.nextInt(192) };
+}
+
+export function iglooCandidateForCell(seed, gridX, gridZ) {
+  const rng = positionalRandom(seed, gridX, 2801, gridZ, 2801);
+  if (rng.nextInt(12) !== 0) return null;
+  return { x: gridX * 256 + 32 + rng.nextInt(192), z: gridZ * 256 + 32 + rng.nextInt(192) };
+}
+
+export function mansionCandidateForCell(seed, gridX, gridZ) {
+  const rng = positionalRandom(seed, gridX, 2901, gridZ, 2901);
+  if (rng.nextInt(18) !== 0) return null;
+  return { x: gridX * 512 + 48 + rng.nextInt(416), z: gridZ * 512 + 48 + rng.nextInt(416) };
+}
+
+export function oceanMonumentCandidateForCell(seed, gridX, gridZ) {
+  const rng = positionalRandom(seed, gridX, 3001, gridZ, 3001);
+  if (rng.nextInt(16) !== 0) return null;
+  return { x: gridX * 512 + 48 + rng.nextInt(416), z: gridZ * 512 + 48 + rng.nextInt(416) };
 }
 
 export function dungeonCandidateForCell(seed, gridX, gridZ) {
