@@ -129,6 +129,30 @@ function cobble(base, seed) {
   return tile;
 }
 
+/** Mossy masonry: the same readable stone layout as cobble, with irregular green growth. */
+function mossyCobble(seed) {
+  const tile = cobble(hex(0x7d7d7d), seed);
+  const rng = new Random(seed);
+  const moss = hex(0x557b3b);
+  const darkMoss = hex(0x36552c);
+  for (let patch = 0; patch < 13; patch++) {
+    const cx = rng.nextInt(TILE_SIZE), cy = rng.nextInt(TILE_SIZE);
+    const width = 1 + rng.nextInt(3), height = 1 + rng.nextInt(3);
+    for (let dy = 0; dy < height; dy++) for (let dx = 0; dx < width; dx++) {
+      if (rng.nextDouble() < 0.28) continue;
+      const x = (cx + dx) % TILE_SIZE, y = (cy + dy) % TILE_SIZE;
+      const i = (y * TILE_SIZE + x) * 4;
+      if (tile[i + 3] === 0) continue;
+      const shadeFactor = rng.nextDouble() < 0.3 ? darkMoss : moss;
+      const blend = 0.68 + rng.nextDouble() * 0.24;
+      tile[i] = Math.round(tile[i] * (1 - blend) + shadeFactor[0] * blend);
+      tile[i + 1] = Math.round(tile[i + 1] * (1 - blend) + shadeFactor[1] * blend);
+      tile[i + 2] = Math.round(tile[i + 2] * (1 - blend) + shadeFactor[2] * blend);
+    }
+  }
+  return tile;
+}
+
 /** Horizontal planks with grain lines and seams. */
 function planks(base, seed) {
   const rng = new Random(seed);
@@ -406,6 +430,7 @@ const WOOD = {
 const TEXTURES = {
   stone:              () => grainy(STONE_GREY, 0.2, 'stone', { clumps: 5 }),
   cobblestone:        () => cobble(STONE_GREY, 'cobblestone'),
+  mossy_cobblestone:  () => mossyCobble('mossy_cobblestone'),
   granite:            () => grainy(hex(0x9a6a5a), 0.24, 'granite', { clumps: 7 }),
   polished_granite:   () => grainy(hex(0xa2705f), 0.1, 'polished_granite'),
   diorite:            () => grainy(hex(0xcfcfcf), 0.26, 'diorite', { clumps: 7, clumpColor: hex(0x9d9d9d) }),
@@ -423,6 +448,8 @@ const TEXTURES = {
   podzol_top:         () => grainy(hex(0x6f4f22), 0.24, 'podzol_top', { clumps: 6 }),
   podzol_side:        () => grassSide(DIRT_BROWN, hex(0x6f4f22), 'podzol_side'),
   sand:               () => grainy(hex(0xe0d5a6), 0.12, 'sand'),
+  red_sand:           () => grainy(hex(0xb86b43), 0.16, 'red_sand', { clumps: 7, clumpColor: hex(0x985236) }),
+  red_sandstone:      () => grainy(hex(0xb86b43), 0.12, 'red_sandstone', { clumps: 8, clumpColor: hex(0x985236) }),
   gravel:             () => grainy(hex(0x8d8a86), 0.32, 'gravel', { clumps: 12, clumpSize: 3 }),
   clay:               () => grainy(hex(0xa4a8b4), 0.14, 'clay'),
   snow:               () => grainy(hex(0xf4f8f8), 0.07, 'snow'),
