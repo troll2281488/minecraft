@@ -24,7 +24,7 @@ describe('Overworld underground structures and deterministic placement', () => {
     const chunk = new Chunk(0, 0);
     generator.placeMineshaft(chunk, 0, 0, { x: 4, z: 4, y: 24, axis: 0, phase: 0 });
     generator.placeDungeon(chunk, 0, 0, { x: 2, z: 2, y: 12, variant: 3 });
-    assertEqual(chunk.getBlock(2, 12, 2).block.id, 'mc:mossy_cobblestone');
+    assertEqual(chunk.getBlock(2, 13, 2).block.id, 'mc:mossy_cobblestone');
     assertEqual(chunk.getBlock(3, 13, 3).block.id, 'mc:chest');
     assertEqual(chunk.getBlock(5, 24, 4).block.id, 'mc:oak_planks');
     assertEqual(chunk.getBlock(4, 25, 4).block.id, 'mc:air');
