@@ -259,6 +259,7 @@ export class TerrainGenerator {
     this.placeOres(chunk, baseX, baseZ);
     this.applySurface(chunk, baseX, baseZ, heights, biomes);
     this.placeFeatures(chunk, baseX, baseZ, heights, biomes);
+    this.placeCaveLakes(chunk, baseX, baseZ);
     this.placeVillages(chunk, baseX, baseZ);
     this.placeUndergroundStructures(chunk, baseX, baseZ);
 
@@ -443,6 +444,62 @@ export class TerrainGenerator {
    * chunk slice. Adjacent workers therefore produce identical structures
    * regardless of generation order.
    */
+  /** Deterministic flooded cave chambers, clipped to the owning chunk. */
+  placeCaveLakes(chunk, baseX, baseZ) {
+    const minX = Math.floor((baseX - 16) / 112);
+    const maxX = Math.floor((baseX + CHUNK_SIZE + 16) / 112);
+    const minZ = Math.floor((baseZ - 16) / 112);
+    const maxZ = Math.floor((baseZ + CHUNK_SIZE + 16) / 112);
+    for (let gz = minZ; gz <= maxZ; gz++) {
+      for (let gx = minX; gx <= maxX; gx++) {
+        const lake = caveLakeCandidateForCell(this.seed, gx, gz);
+        if (lake) this.placeCaveLake(chunk, baseX, baseZ, lake);
+      }
+    }
+  }
+
+  placeCaveLake(chunk, baseX, baseZ, lake) {
+    const S = this.states.byId;
+    const air = S['mc:air'], water = S['mc:water'];
+    const stone = S['mc:stone'], gravel = S['mc:gravel'];
+    if (!air || !water || !stone) return;
+    const put = (wx, y, wz, state) => {
+      const x = wx - baseX, z = wz - baseZ;
+      if (!state || x < 0 || x >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE || y <= MIN_Y || y >= MAX_Y) return;
+      chunk.setBlock(x, y, z, state);
+    };
+    const radiusX = lake.radius;
+    const radiusZ = lake.radius - 1;
+    // Elliptical vaulted chamber with a shallow, level pool in its lowest part.
+    for (let dx = -radiusX; dx <= radiusX; dx++) {
+      for (let dz = -radiusZ; dz <= radiusZ; dz++) {
+        const radial = (dx * dx) / (radiusX * radiusX) + (dz * dz) / (radiusZ * radiusZ);
+        if (radial > 1.12) continue;
+        const ceiling = lake.y + 3 + Math.floor((1 - Math.min(1, radial)) * 2);
+        for (let y = lake.y - 1; y <= ceiling; y++) {
+          const wx = lake.x + dx, wz = lake.z + dz;
+          const localX = wx - baseX, localZ = wz - baseZ;
+          if (localX < 0 || localX >= CHUNK_SIZE || localZ < 0 || localZ >= CHUNK_SIZE) continue;
+          const existing = chunk.getBlock(localX, y, localZ).block.id;
+          if (y === lake.y - 1) {
+            if (STONE_REPLACEABLE.has(existing)) put(wx, y, wz, gravel || stone);
+          } else if (STONE_REPLACEABLE.has(existing) || existing === 'mc:water') {
+            put(wx, y, wz, y <= lake.y ? water : air);
+          }
+        }
+      }
+    }
+    // A few uneven stone shoulders make the pool blend into the cave floor.
+    for (let dx = -radiusX - 1; dx <= radiusX + 1; dx++) {
+      for (const dz of [-radiusZ - 1, radiusZ + 1]) {
+        const wx = lake.x + dx, wz = lake.z + dz;
+        const x = wx - baseX, z = wz - baseZ;
+        if (x < 0 || x >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE) continue;
+        if (chunk.getBlock(x, lake.y - 1, z).block.id === 'mc:air') put(wx, lake.y - 1, wz, stone);
+      }
+    }
+  }
+
   placeUndergroundStructures(chunk, baseX, baseZ) {
     const minX = Math.floor((baseX - 36) / 96);
     const maxX = Math.floor((baseX + CHUNK_SIZE + 36) / 96);
@@ -685,6 +742,17 @@ export function villageCandidateForCell(seed, gridX, gridZ) {
  * what makes diamonds cluster near y = -59 rather than spreading evenly.
  */
 /** Deterministic world-grid anchors for underground structures. */
+export function caveLakeCandidateForCell(seed, gridX, gridZ) {
+  const rng = positionalRandom(seed, gridX, 1601, gridZ, 1601);
+  if (rng.nextInt(5) !== 0) return null;
+  return {
+    x: gridX * 112 + 24 + rng.nextInt(64),
+    z: gridZ * 112 + 24 + rng.nextInt(64),
+    y: 12 + rng.nextInt(28),
+    radius: 4 + rng.nextInt(3),
+  };
+}
+
 export function mineshaftCandidateForCell(seed, gridX, gridZ) {
   const rng = positionalRandom(seed, gridX, 1701, gridZ, 1701);
   if (rng.nextInt(9) !== 0) return null;
