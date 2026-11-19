@@ -193,6 +193,18 @@ function barkSide(base, seed) {
       setPx(tile, x, y, c[0], c[1], c[2]);
     }
   }
+  // Birch bark is white with short, irregular charcoal-grey horizontal marks.
+  if (seed === 'birch_log') {
+    for (let mark = 0; mark < 13; mark++) {
+      const x = 1 + rng.nextInt(TILE_SIZE - 3);
+      const y = rng.nextInt(TILE_SIZE);
+      const width = 1 + rng.nextInt(3);
+      const ink = shade(hex(0x45433f), 0.8 + rng.nextDouble() * 0.35);
+      for (let dx = 0; dx < width && x + dx < TILE_SIZE; dx++) {
+        setPx(tile, x + dx, y, ink[0], ink[1], ink[2]);
+      }
+    }
+  }
   return tile;
 }
 
