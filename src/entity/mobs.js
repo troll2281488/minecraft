@@ -140,7 +140,10 @@ export class MobSystem {
   _spawn(type, x, z) {
     const world = this.game.world;
     const y = world.getHeight(x, z) + 1;
-    if (y < -60 || !world.getBlock(x, y - 1, z).block.solid) return;
+    if (y < -60 || !world.getBlock(x, y - 1, z).block.solid) return false;
+    const feet = world.getBlock(x, y, z).block;
+    const head = world.getBlock(x, y + 1, z).block;
+    if (feet.solid || head.solid || feet.id === 'mc:water' || head.id === 'mc:water') return false;
     this.mobs.push({
       id: this.nextId++, type, x: x + 0.5, y, z: z + 0.5,
       yaw: Math.random() * Math.PI * 2,
@@ -152,6 +155,7 @@ export class MobSystem {
       ageTicks: 0, loveTicks: 0, breedCooldown: 0,
       anim: { walk: 0, idle: Math.random() * Math.PI * 2, attack: 0, hurt: 0, fuse: 0 },
     });
+    return true;
   }
 
 
@@ -373,18 +377,20 @@ export class MobSystem {
     this.spawnTicks++;
     if (this.fishing && this.fishing.ticks > 0) this.fishing.ticks--;
     if (this.attackCooldown > 0) this.attackCooldown--;
-    if (this.spawnTicks >= 240 && this.mobs.length < 9) {
+    // Populate nearby loaded chunks quickly so a new world does not feel empty.
+    if (this.spawnTicks >= 40 && this.mobs.length < 12) {
       this.spawnTicks = 0;
-      const angle = Math.random() * Math.PI * 2;
-      const distance = 7 + Math.random() * 10;
-      const x = Math.floor(player.x + Math.cos(angle) * distance);
-      const z = Math.floor(player.z + Math.sin(angle) * distance);
-      if (world.hasChunk(Math.floor(x / 16), Math.floor(z / 16))) {
+      for (let attempt = 0; attempt < 3 && this.mobs.length < 12; attempt++) {
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 5 + Math.random() * 7;
+        const x = Math.floor(player.x + Math.cos(angle) * distance);
+        const z = Math.floor(player.z + Math.sin(angle) * distance);
+        if (!world.hasChunk(Math.floor(x / 16), Math.floor(z / 16))) continue;
         const roll = Math.random();
         const night = this.game.daylight < 0.55;
         const type = night
-          ? (roll < 0.24 ? 'zombie' : roll < 0.39 ? 'skeleton' : roll < 0.52 ? 'creeper' : roll < 0.62 ? 'spider' : roll < 0.67 ? 'enderman' : roll < 0.79 ? 'sheep' : roll < 0.86 ? 'pig' : roll < 0.94 ? 'cow' : 'chicken')
-          : (roll < 0.28 ? 'sheep' : roll < 0.50 ? 'pig' : roll < 0.76 ? 'cow' : 'chicken');
+          ? (roll < 0.15 ? 'zombie' : roll < 0.25 ? 'skeleton' : roll < 0.33 ? 'creeper' : roll < 0.40 ? 'spider' : roll < 0.44 ? 'enderman' : roll < 0.58 ? 'sheep' : roll < 0.72 ? 'pig' : roll < 0.88 ? 'cow' : 'chicken')
+          : (roll < 0.30 ? 'sheep' : roll < 0.55 ? 'pig' : roll < 0.82 ? 'cow' : 'chicken');
         this._spawn(type, x, z);
       }
     }
