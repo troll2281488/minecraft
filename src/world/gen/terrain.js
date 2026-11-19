@@ -26,7 +26,7 @@ import { CHUNK_SIZE, MIN_Y, MAX_Y, SEA_LEVEL } from '../../core/constants.js';
 import { clamp } from '../../core/math.js';
 
 /** Bumped whenever generation output changes. Stored per world. */
-export const GENERATOR_VERSION = 7;
+export const GENERATOR_VERSION = 8;
 
 
 // ---------------------------------------------------------------------------
@@ -76,16 +76,16 @@ export const BIOME_SURFACE = {
   [BIOME.PLAINS]: { top:'mc:grass_block', filler:'mc:dirt', trees:0, grass:0.24 },
   [BIOME.SUNFLOWER_PLAINS]: { top:'mc:grass_block', filler:'mc:dirt', trees:0, grass:0.34, flowers:0.24 },
   [BIOME.FOREST]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.052, grass:0.15, species:'oak' },
-  [BIOME.FLOWER_FOREST]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.035, grass:0.38, species:'birch', flowers:0.5 },
-  [BIOME.BIRCH_FOREST]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.05, grass:0.16, species:'birch' },
-  [BIOME.TALL_BIRCH_FOREST]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.062, grass:0.12, species:'birch' },
+  [BIOME.FLOWER_FOREST]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.045, grass:0.52, species:'oak', flowers:0.82 },
+  [BIOME.BIRCH_FOREST]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.065, grass:0.16, species:'birch' },
+  [BIOME.TALL_BIRCH_FOREST]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.075, grass:0.12, species:'birch' },
   [BIOME.DARK_FOREST]: { top:'mc:podzol', filler:'mc:dirt', trees:0.075, grass:0.08, species:'dark_oak' },
   [BIOME.JUNGLE]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.072, grass:0.18, species:'jungle', ferns:0.2 },
   [BIOME.SPARSE_JUNGLE]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.035, grass:0.2, species:'jungle', ferns:0.12 },
   [BIOME.BAMBOO_JUNGLE]: { top:'mc:podzol', filler:'mc:dirt', trees:0.08, grass:0.18, species:'jungle', ferns:0.24 },
   [BIOME.DESERT]: { top:'mc:sand', filler:'mc:sand', trees:0, grass:0, deadBush:0.025 },
-  [BIOME.SAVANNA]: { top:'mc:coarse_dirt', filler:'mc:dirt', trees:0.022, grass:0.13, species:'acacia' },
-  [BIOME.SAVANNA_PLATEAU]: { top:'mc:coarse_dirt', filler:'mc:stone', trees:0.016, grass:0.1, species:'acacia' },
+  [BIOME.SAVANNA]: { top:'mc:coarse_dirt', filler:'mc:dirt', trees:0.032, grass:0.18, species:'acacia' },
+  [BIOME.SAVANNA_PLATEAU]: { top:'mc:coarse_dirt', filler:'mc:stone', trees:0.025, grass:0.14, species:'acacia' },
   [BIOME.SHATTERED_SAVANNA]: { top:'mc:stone', filler:'mc:coarse_dirt', trees:0.012, grass:0.08, species:'acacia' },
   [BIOME.BADLANDS]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0, grass:0, deadBush:0.02 },
   [BIOME.WOODED_BADLANDS]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0.012, grass:0.015, species:'oak', deadBush:0.012 },
@@ -516,12 +516,22 @@ export class TerrainGenerator {
 
         const site = this.validateVillageSite(candidate.x, candidate.z);
         if (!site) continue;
-        this.placeVillageHouse(chunk, baseX, baseZ, candidate.x, candidate.z, site.y);
-        this.placeVillageHouse(chunk, baseX, baseZ, candidate.x + 9, candidate.z + 1, site.y);
-        this.placeVillageFarm(chunk, baseX, baseZ, candidate.x + 18, candidate.z + 2, site.y);
-        // A compact path visually connects the houses to the farm.
-        for (let dx = 6; dx <= 19; dx++) {
-          this.setVillageBlock(chunk, baseX, baseZ, candidate.x + dx, site.y, candidate.z + 8, this.states.byId['mc:coarse_dirt']);
+        // Four small homes and a farm form a recognizable village cluster,
+        // rather than the old two-box outpost. All pieces are clipped per chunk.
+        this.placeVillageHouse(chunk, baseX, baseZ, candidate.x, candidate.z, site.y, site.biome, 0);
+        this.placeVillageHouse(chunk, baseX, baseZ, candidate.x + 10, candidate.z, site.y, site.biome, 1);
+        this.placeVillageHouse(chunk, baseX, baseZ, candidate.x, candidate.z + 10, site.y, site.biome, 2);
+        this.placeVillageHouse(chunk, baseX, baseZ, candidate.x + 10, candidate.z + 10, site.y, site.biome, 3);
+        this.placeVillageFarm(chunk, baseX, baseZ, candidate.x + 20, candidate.z + 10, site.y);
+        const path = this.states.byId['mc:coarse_dirt'];
+        // Main lane and two cross-lanes link the doors, farm and village centre.
+        for (let dx = 3; dx <= 23; dx++) {
+          this.setVillageBlock(chunk, baseX, baseZ, candidate.x + dx, site.y, candidate.z + 8, path);
+          this.setVillageBlock(chunk, baseX, baseZ, candidate.x + dx, site.y, candidate.z + 18, path);
+        }
+        for (let dz = 3; dz <= 18; dz++) {
+          this.setVillageBlock(chunk, baseX, baseZ, candidate.x + 8, site.y, candidate.z + dz, path);
+          this.setVillageBlock(chunk, baseX, baseZ, candidate.x + 18, site.y, candidate.z + dz, path);
         }
       }
     }
@@ -720,12 +730,15 @@ export class TerrainGenerator {
   }
 
   validateVillageSite(x, z) {
+    // Classic villages belong in plains, deserts, savannas, taigas and
+    // snowy plains; forests are not treated as generic village terrain.
     const allowed = new Set([
-      BIOME.PLAINS, BIOME.SUNFLOWER_PLAINS, BIOME.FOREST, BIOME.FLOWER_FOREST,
-      BIOME.BIRCH_FOREST, BIOME.SAVANNA, BIOME.TAIGA,
+      BIOME.PLAINS, BIOME.SUNFLOWER_PLAINS, BIOME.DESERT,
+      BIOME.SAVANNA, BIOME.SAVANNA_PLATEAU, BIOME.TAIGA,
+      BIOME.SNOWY_PLAINS,
     ]);
-    const offsetsX = [0, 6, 12, 18, 24];
-    const offsetsZ = [0, 5, 10];
+    const offsetsX = [0, 7, 14, 21, 27];
+    const offsetsZ = [0, 7, 14, 21, 27];
     let min = Infinity, max = -Infinity;
     for (const dz of offsetsZ) {
       for (const dx of offsetsX) {
@@ -738,7 +751,7 @@ export class TerrainGenerator {
       }
     }
     if (min < SEA_LEVEL + 2 || max - min > 4.5) return null;
-    return { y: Math.floor((min + max) / 2) };
+    return { y: Math.floor((min + max) / 2), biome: this.biomeAt(x + 14, z + 14, this.heightAt(x + 14, z + 14)) };
   }
 
   setVillageBlock(chunk, baseX, baseZ, wx, y, wz, state) {
@@ -748,15 +761,20 @@ export class TerrainGenerator {
     chunk.setBlock(x, y, z, state);
   }
 
-  placeVillageHouse(chunk, baseX, baseZ, x, z, groundY) {
+  placeVillageHouse(chunk, baseX, baseZ, x, z, groundY, biome = BIOME.PLAINS, variant = 0) {
     const S = this.states.byId;
-    const planks = S['mc:oak_planks'];
-    const log = S['mc:oak_log'];
+    const desert = biome === BIOME.DESERT;
+    const wood = desert ? 'oak'
+      : biome === BIOME.SAVANNA || biome === BIOME.SAVANNA_PLATEAU ? 'acacia'
+      : biome === BIOME.TAIGA || biome === BIOME.SNOWY_PLAINS ? 'spruce' : 'oak';
+    const planks = S[desert ? 'mc:sandstone' : `mc:${wood}_planks`];
+    const log = S[`mc:${wood}_log`] || S['mc:oak_log'];
+    const roof = S[desert ? 'mc:sandstone' : `mc:${wood}_planks`];
     const glass = S['mc:glass'];
-    if (!planks || !log) return;
+    if (!planks || !log || !roof) return;
 
     const put = (wx, y, wz, state) => this.setVillageBlock(chunk, baseX, baseZ, wx, y, wz, state);
-    // Raised plank floor and a simple timber frame.
+    // Solid floor, timber corner posts and three-block walls, with a real door opening.
     for (let dz = 0; dz < 7; dz++) {
       for (let dx = 0; dx < 7; dx++) {
         put(x + dx, groundY + 1, z + dz, planks);
@@ -768,23 +786,28 @@ export class TerrainGenerator {
         }
       }
     }
-
-    // Doorway and windows are cut after the wall frame is built.
     for (const dy of [2, 3]) put(x + 3, groundY + dy, z, S['mc:air']);
     if (glass) {
-      for (const [wx, wz] of [[x + 1, z], [x + 5, z], [x, z + 3], [x + 6, z + 3]]) {
+      for (const [wx, wz] of [[x + 1, z], [x + 5, z], [x, z + 3], [x + 6, z + 3], [x + 3, z + 6]]) {
         put(wx, groundY + 3, wz, glass);
       }
     }
-    // Low pitched-looking overhang roof; the flat profile is deliberate so it
-    // remains composed of existing full-cube blocks and has no unsupported mesh.
+
+    // A stepped gable roof replaces the old flat plank lid.
     for (let dz = -1; dz <= 7; dz++) {
-      for (let dx = -1; dx <= 7; dx++) put(x + dx, groundY + 5, z + dz, planks);
+      for (let dx = -1; dx <= 7; dx++) {
+        const rise = dx < 0 || dx > 6 ? 0 : Math.min(dx, 6 - dx);
+        put(x + dx, groundY + 5 + rise, z + dz, roof);
+      }
     }
 
+    // Interiors vary slightly so every house is not a duplicated empty shell.
     put(x + 2, groundY + 2, z + 3, S['mc:furnace']);
-    put(x + 4, groundY + 2, z + 3, S['mc:crafting_table']);
+    put(x + 4, groundY + 2, z + 3, variant === 2 ? S['mc:chest'] : S['mc:crafting_table']);
     put(x + 3, groundY + 4, z + 2, S['mc:torch']);
+    if (variant === 1 || variant === 3) {
+      put(x + 2, groundY + 2, z + 5, S['mc:crafting_table']);
+    }
   }
 
   placeVillageFarm(chunk, baseX, baseZ, x, z, groundY) {
