@@ -51,6 +51,12 @@ export const BlockActionsMixin = {
   },
 
   _useOrPlace() {
+    const heldItem = this.inventory?.held?.item;
+    if (heldItem?.spawnEggMob && this.player?.gamemode === GAMEMODE.CREATIVE && this.hit) {
+      const spawned = this.entities?.spawnFromEgg(heldItem.spawnEggMob, this.hit.x, this.hit.z);
+      if (spawned) this.ui.toast(`Spawned ${heldItem.spawnEggMob}`);
+      return;
+    }
     if (this.entities?.useFishingRod()) return;
     if (this.entities?.shearFromPlayer()) return;
     if (this.entities?.feedAnimalFromPlayer()) return;
