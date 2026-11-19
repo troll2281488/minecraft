@@ -209,7 +209,7 @@ vec4 mobSample(){
 vec4 itemSample(){ vec2 uv; bool front=vNormal.z>0.5, back=vNormal.z< -0.5, right=vNormal.x>0.5, left=vNormal.x< -0.5, top=vNormal.y>0.5; if(front) uv=vec2(vLocalPos.x,1.0-vLocalPos.y); else if(back) uv=vec2(1.0-vLocalPos.x,1.0-vLocalPos.y); else if(right) uv=vec2(1.0-vLocalPos.z,1.0-vLocalPos.y); else if(left) uv=vec2(vLocalPos.z,1.0-vLocalPos.y); else if(top) uv=vec2(vLocalPos.x,vLocalPos.z); else uv=vec2(vLocalPos.x,1.0-vLocalPos.z); return texture(uMobTexture,uv);}
 void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
   if(uSkinPart>=0.0){ vec4 texel=skinSample(); color=texel.rgb; if(texel.a<0.1) discard; }
-  else if(uItemSprite>0.5){ vec4 texel=itemSample(); color=texel.rgb; if(texel.a<0.1) discard; }
+  else if(uItemSprite>0.5){ if(abs(vNormal.z)<0.5) discard; vec4 texel=itemSample(); color=texel.rgb; if(texel.a<0.1) discard; }
   else if(uMobEnabled>0.5){ vec4 texel=mobSample(); color=texel.rgb*uColor.rgb; if(texel.a<0.1) discard; }
   else { float patchValue=mod(cell.x*3.0+cell.y*5.0+cell.z*7.0,11.0); color*=mix(0.80,1.08,step(3.0,patchValue)); }
   float pixel=0.94+mod(cell.x+cell.y+cell.z,2.0)*0.06; fragColor=vec4(color*vLight*pixel,uColor.a);
@@ -708,6 +708,44 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       size.map((value) => value + (index === 0 ? 0.035 : 0.025)),
       color,
     ]);
+    // World-space sky objects follow the world clock and camera position.
+    const skyTime = ((this.world?.time ?? 0) % 24000 + 24000) % 24000;
+    const skyAngle = skyTime / 24000 * Math.PI * 2;
+    const sunX = Math.sin(skyAngle) * 118;
+    const sunY = 48 + Math.sin(skyAngle) * 76;
+    const sunZ = -Math.cos(skyAngle) * 118;
+    const moonX = -sunX, moonY = 48 - Math.sin(skyAngle) * 76, moonZ = -sunZ;
+    const skyCenterX = Math.floor(this.renderPosition.x / 64) * 64;
+    const skyCenterZ = Math.floor(this.renderPosition.z / 64) * 64;
+    const cloudColor = [0.94, 0.96, 1, 1];
+    const cloudParts = [
+      [[-8, 0, -3], [16, 1.1, 6], cloudColor],
+      [[-5, 0.55, -5], [9, 0.7, 4], cloudColor],
+      [[2, 0.35, -2], [7, 0.8, 5], cloudColor],
+    ];
+    const cloudDrift = (skyTime / 24000) * 12;
+    for (let cx = -1; cx <= 1; cx++) for (let cz = -1; cz <= 1; cz++) {
+      draw(skyCenterX + cx * 54 + cloudDrift, 112, skyCenterZ + cz * 54, 0,
+        cloudParts, 0, -1, -1, 1, {});
+    }
+    if (sunY > 0) {
+      draw(this.renderPosition.x + sunX, sunY, this.renderPosition.z + sunZ, 0,
+        [[[0, 0, 0], [8, 8, 0.45], [1, 0.94, 0.58, 1]]], 0, -1, -1, 1, {});
+    }
+    if (moonY > 0) {
+      const moonRows = ['..####..', '.######.', '########', '########', '########', '########', '.######.', '..####..'];
+      const moonParts = [];
+      for (let row = 0; row < moonRows.length; row++) {
+        for (let col = 0; col < moonRows[row].length; col++) {
+          if (moonRows[row][col] !== '#') continue;
+          if (col >= 4 && row >= 1 && row <= 6) continue;
+          moonParts.push([[col - 4, 3.5 - row, 0], [0.95, 0.95, 0.42], [0.78, 0.84, 0.96, 1]]);
+        }
+      }
+      draw(this.renderPosition.x + moonX, moonY, this.renderPosition.z + moonZ, 0,
+        moonParts, 0, -1, -1, 1, {});
+    }
+
     // Dropped stacks use the exact inventory icon for their item, not a generic cube.
     for (const drop of this.entities?.droppedItems ?? []) {
       const id = drop.stack?.item?.id;
@@ -733,7 +771,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       }
       if (!entry.ready) continue;
       const isBlock = !!drop.stack.item.block;
-      const size = isBlock ? [0.34,0.34,0.34] : /sword|pickaxe|axe|shovel|hoe/.test(id) ? [0.14,0.42,0.07] : [0.30,0.24,0.07];
+      const size = isBlock ? [0.46,0.46,0.012] : /sword|pickaxe|axe|shovel|hoe/.test(id) ? [0.24,0.56,0.012] : [0.40,0.40,0.012];
       const phase = drop.spin ?? (drop.age || 0) * 0.08;
       draw(drop.x, drop.y + 0.08, drop.z, phase, [
         [[0,0,0],size,[1,1,1,1]],
