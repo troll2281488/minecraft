@@ -447,6 +447,8 @@ const TEXTURES = {
   grass_block_side:   () => grassSide(DIRT_BROWN, GRASS_GREEN, 'grass_side'),
   podzol_top:         () => grainy(hex(0x6f4f22), 0.24, 'podzol_top', { clumps: 6 }),
   podzol_side:        () => grassSide(DIRT_BROWN, hex(0x6f4f22), 'podzol_side'),
+  mycelium_top:       () => grainy(hex(0x755b82), 0.18, 'mycelium_top', { clumps: 7 }),
+  mycelium_side:      () => grassSide(DIRT_BROWN, hex(0x755b82), 'mycelium_side'),
   sand:               () => grainy(hex(0xe0d5a6), 0.12, 'sand'),
   red_sand:           () => grainy(hex(0xb86b43), 0.16, 'red_sand', { clumps: 7, clumpColor: hex(0x985236) }),
   red_sandstone:      () => grainy(hex(0xb86b43), 0.12, 'red_sandstone', { clumps: 8, clumpColor: hex(0x985236) }),
@@ -495,6 +497,9 @@ const TEXTURES = {
   short_grass:        () => crossPlant('short_grass', (t, r) => grassBlades(t, r, GRASS_GREEN)),
   fern:               () => crossPlant('fern', (t, r) => grassBlades(t, r, hex(0x5f9440))),
   dead_bush:          () => crossPlant('dead_bush', (t, r) => grassBlades(t, r, hex(0x8a6a35))),
+  red_mushroom:       () => crossPlant('red_mushroom', (t) => { for (let y=3;y<13;y++) for (let x=4;x<12;x++) if ((x-8)**2+(y-7)**2<19) setPx(t,x,y,190,48,42); setPx(t,8,12,224,210,184); }),
+  brown_mushroom:     () => crossPlant('brown_mushroom', (t) => { for (let y=4;y<12;y++) for (let x=4;x<12;x++) if ((x-8)**2+(y-7)**2<20) setPx(t,x,y,126,83,54); setPx(t,8,12,224,210,184); }),
+  bamboo:             () => crossPlant('bamboo', (t) => { for (let y=1;y<15;y++) { setPx(t,7,y,75,139,48); setPx(t,8,y,105,170,61); } for (let x=5;x<11;x++) setPx(t,x,5,54,105,39); for (let x=5;x<11;x++) setPx(t,x,11,54,105,39); }),
   dandelion:          () => crossPlant('dandelion', (t, r) => flower(t, r, hex(0x4f8f38), hex(0xf5d63a), hex(0xfff2a0))),
   poppy:              () => crossPlant('poppy', (t, r) => flower(t, r, hex(0x4f8f38), hex(0xd93b30), hex(0x2a2a2a))),
 };

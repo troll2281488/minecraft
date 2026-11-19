@@ -26,7 +26,7 @@ import { CHUNK_SIZE, MIN_Y, MAX_Y, SEA_LEVEL } from '../../core/constants.js';
 import { clamp } from '../../core/math.js';
 
 /** Bumped whenever generation output changes. Stored per world. */
-export const GENERATOR_VERSION = 4;
+export const GENERATOR_VERSION = 5;
 
 
 // ---------------------------------------------------------------------------
@@ -99,7 +99,7 @@ export const BIOME_SURFACE = {
   [BIOME.GIANT_TREE_TAIGA]: { top:'mc:podzol', filler:'mc:dirt', trees:0.062, grass:0.12, species:'spruce' },
   [BIOME.GIANT_SPRUCE_TAIGA]: { top:'mc:podzol', filler:'mc:dirt', trees:0.072, grass:0.1, species:'spruce' },
   [BIOME.SWAMP]: { top:'mc:clay', filler:'mc:dirt', trees:0.035, grass:0.12, species:'oak', ferns:0.06 },
-  [BIOME.MUSHROOM_FIELDS]: { top:'mc:podzol', filler:'mc:dirt', trees:0.002, grass:0.02, mushrooms:0.05 },
+  [BIOME.MUSHROOM_FIELDS]: { top:'mc:mycelium', filler:'mc:dirt', trees:0.002, grass:0.02, mushrooms:0.13 },
 };
 
 // ---------------------------------------------------------------------------
@@ -477,7 +477,12 @@ export class TerrainGenerator {
           }
         }
 
-        if (surface.grass > 0 && groundId === 'mc:grass_block' && rng.nextDouble() < surface.grass) {
+        if (biomes[i] === BIOME.MUSHROOM_FIELDS && groundId === 'mc:mycelium' && rng.nextDouble() < (surface.mushrooms ?? 0)) {
+          const mushroom = rng.nextBoolean() ? S.byId['mc:red_mushroom'] : S.byId['mc:brown_mushroom'];
+          if (mushroom) chunk.setBlock(x, top + 1, z, mushroom);
+        } else if (biomes[i] === BIOME.BAMBOO_JUNGLE && groundId === 'mc:podzol' && rng.nextDouble() < 0.075) {
+          if (S.byId['mc:bamboo']) chunk.setBlock(x, top + 1, z, S.byId['mc:bamboo']);
+        } else if (surface.grass > 0 && groundId === 'mc:grass_block' && rng.nextDouble() < surface.grass) {
           const flowerChance = surface.flowers ?? 0.12;
           const plant = rng.nextDouble() < flowerChance
             ? (rng.nextBoolean() ? S.byId['mc:poppy'] : S.byId['mc:dandelion'])

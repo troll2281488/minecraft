@@ -264,6 +264,14 @@ plant('mc:fern', 'fern', 'grass');
 plant('mc:dandelion', 'dandelion');
 plant('mc:poppy', 'poppy');
 plant('mc:dead_bush', 'dead_bush');
+plant('mc:red_mushroom', 'red_mushroom');
+plant('mc:brown_mushroom', 'brown_mushroom');
+plant('mc:bamboo', 'bamboo');
+
+define('mc:mycelium', {
+  hardness: 0.6, resistance: 0.6, tool: 'shovel', soundGroup: 'grass',
+  textures: { top: 'mycelium_top', bottom: 'dirt', side: 'mycelium_side' },
+});
 
 // ---------------------------------------------------------------------------
 // Functional
@@ -427,6 +435,7 @@ const MATERIALS = [
   ['mc:bone', {}],
   ['mc:leather', {}],
   ['mc:feather', {}],
+  ['mc:rabbit_hide', {}],
   ['mc:wheat_seeds', {}],
   ['mc:wheat', {}],
 ];
@@ -446,6 +455,8 @@ const FOODS = [
   ['mc:potato', 1, 0.3],
   ['mc:baked_potato', 5, 0.6],
   ['mc:raw_mutton', 2, 0.3],
+  ['mc:raw_rabbit', 3, 0.3],
+  ['mc:cooked_rabbit', 5, 0.6],
   ['mc:rotten_flesh', 4, 0.1],
   ['mc:cooked_mutton', 6, 0.8],
   ['mc:raw_cod', 2, 0.2],
@@ -470,7 +481,7 @@ ITEMS.define('mc:fishing_rod', { stackSize: 1, maxDamage: 64, tool: 'fishing_rod
 // Creative-only spawn eggs for the mobs currently supported by the renderer.
 for (const mobType of [
   'cow','pig','sheep','chicken','zombie','skeleton','stray',
-  'creeper','enderman','spider','cave_spider',
+  'creeper','enderman','spider','cave_spider','mooshroom','rabbit','wolf','polar_bear',
 ]) {
   ITEMS.define(`mc:${mobType}_spawn_egg`, {
     stackSize: 64, spawnEggMob: mobType,
