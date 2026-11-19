@@ -33,6 +33,17 @@ const ITEM_TEXTURE_ALIASES = Object.freeze({
   raw_salmon: 'salmon',
 });
 
+const UI_TEXTURES = Object.freeze({
+  widgets: 'gui/widgets.png',
+  icons: 'gui/icons.png',
+  inventory: 'gui/container/inventory.png',
+  genericContainer: 'gui/container/generic_54.png',
+  furnace: 'gui/container/furnace.png',
+  craftingTable: 'gui/container/crafting_table.png',
+  titleLogo: 'gui/title/minecraft.png',
+  optionsBackground: 'gui/options_background.png',
+});
+
 async function fetchImage(path) {
   const response = await fetch(ITSBRIAN_RAW + path, { signal: AbortSignal.timeout(8000) });
   if (!response.ok) return null;
@@ -96,6 +107,21 @@ export async function loadItsBrianTextures(blocks, items) {
     return [item.id, canvas.toDataURL('image/png')];
   });
 
+  const uiEntries = await Promise.all(Object.entries(UI_TEXTURES).map(async ([key, path]) => {
+    try {
+      const bitmap = await fetchImage(path);
+      if (!bitmap) return null;
+      const canvas = document.createElement('canvas');
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      canvas.getContext('2d').drawImage(bitmap, 0, 0);
+      bitmap.close();
+      return [key, canvas.toDataURL('image/png')];
+    } catch {
+      return null;
+    }
+  }));
+
   const hud = {};
   try {
     const bitmap = await fetchImage('gui/icons.png');
@@ -116,8 +142,9 @@ export async function loadItsBrianTextures(blocks, items) {
 
   const blockTextures = new Map(blockEntries);
   const itemIcons = new Map(itemEntries);
-  console.info('[textures] ItsBrian: ' + blockTextures.size + ' block textures, ' + itemIcons.size + ' item icons, ' + Object.keys(hud).length + ' HUD sprites.');
-  return { blocks: blockTextures, items: itemIcons, hud };
+  const ui = Object.fromEntries(uiEntries.filter(Boolean));
+  console.info('[textures] ItsBrian: ' + blockTextures.size + '/' + blockNames.size + ' block textures, ' + itemIcons.size + ' item icons, ' + Object.keys(hud).length + ' HUD sprites, ' + Object.keys(ui).length + ' GUI assets.');
+  return { blocks: blockTextures, items: itemIcons, hud, ui };
 }
 
 export function loadPackRecord() {
@@ -292,4 +319,24 @@ export async function downloadTemplate() {
   a.download = 'texture_pack_template.zip';
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+
+/** Apply the downloaded vanilla GUI sheets to CSS without making UI depend on remote requests. */
+export function setMinecraftUiTextures(textures) {
+  if (!textures) return;
+  const root = document.documentElement;
+  const variables = {
+    widgets: '--mc-gui-widgets',
+    icons: '--mc-gui-icons',
+    inventory: '--mc-gui-inventory',
+    genericContainer: '--mc-gui-generic-container',
+    furnace: '--mc-gui-furnace',
+    craftingTable: '--mc-gui-crafting-table',
+    titleLogo: '--mc-gui-title-logo',
+    optionsBackground: '--mc-gui-options-background',
+  };
+  for (const [key, variable] of Object.entries(variables)) {
+    if (textures[key]) root.style.setProperty(variable, 'url("' + textures[key] + '")');
+  }
 }
