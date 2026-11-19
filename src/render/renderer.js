@@ -717,39 +717,12 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       size.map((value) => value + (index === 0 ? 0.035 : 0.025)),
       color,
     ]);
-    // World-space sky objects follow the world clock and camera position.
+    // Clouds and the sun are intentionally disabled. Keep the world clock
+    // only for the moon's night/day visibility.
     const skyTime = ((this.world?.time ?? 0) % 24000 + 24000) % 24000;
     const skyAngle = skyTime / 24000 * Math.PI * 2;
     const sunX = Math.sin(skyAngle) * 118;
-    const sunY = 48 + Math.sin(skyAngle) * 76;
-    const sunZ = -Math.cos(skyAngle) * 118;
-    const moonX = -sunX, moonY = 48 - Math.sin(skyAngle) * 76, moonZ = -sunZ;
-    const skyCenterX = Math.floor(this.renderPosition.x / 64) * 64;
-    const skyCenterZ = Math.floor(this.renderPosition.z / 64) * 64;
-    // Volumetric voxel clouds: several overlapping layers give each cloud a
-    // readable underside, rounded silhouette and real height instead of one
-    // translucent-looking white slab. They sit well above mountain peaks.
-    const cloudColor = [0.96, 0.98, 1, 1];
-    const cloudShade = [0.78, 0.84, 0.94, 1];
-    const cloudParts = [
-      [[-11, 0, -4], [18, 3.2, 9], cloudShade],
-      [[-8, 2.2, -5], [13, 4.2, 8], cloudColor],
-      [[1, 1.3, -3], [12, 3.5, 8], cloudColor],
-      [[-4, 4.1, -2], [9, 3.0, 6], cloudColor],
-      [[-13, 1.0, 0], [7, 2.4, 6], cloudColor],
-      [[4, 0.6, 1], [7, 2.6, 5], cloudShade],
-      [[-7, -0.8, -3], [12, 1.0, 7], [0.88, 0.91, 0.97, 1]],
-    ];
-    const cloudDrift = (skyTime / 24000) * 12;
-    for (let cx = -1; cx <= 1; cx++) for (let cz = -1; cz <= 1; cz++) {
-      const variation = Math.sin((cx + 2) * 7.1 + (cz + 2) * 3.7) * 2.5;
-      draw(skyCenterX + cx * 72 + cloudDrift, 148 + variation, skyCenterZ + cz * 72, 0,
-        cloudParts, 0, -1, -1, 1, {});
-    }
-    if (sunY > 0) {
-      draw(this.renderPosition.x + sunX, sunY, this.renderPosition.z + sunZ, 0,
-        [[[0, 0, 0], [8, 8, 0.45], [1, 0.94, 0.58, 1]]], 0, -1, -1, 1, {});
-    }
+    const moonX = -sunX, moonY = 48 - Math.sin(skyAngle) * 76, moonZ = Math.cos(skyAngle) * 118;
     if (moonY > 0) {
       const moonRows = ['..####..', '.######.', '########', '########', '########', '########', '.######.', '..####..'];
       const moonParts = [];
@@ -848,7 +821,8 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       const babyScale = mob.ageTicks < 0 ? 0.55 : 1;
       const animal = ['sheep', 'pig', 'cow', 'chicken', 'mooshroom', 'rabbit', 'wolf', 'polar_bear'].includes(mob.type);
       const humanoid = ['zombie', 'skeleton', 'stray'].includes(mob.type);
-      draw(mob.x, mob.y, mob.z, mob.yaw + Math.PI, parts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
+      // Mob movement advances along +sin(yaw), +cos(yaw); render the model on that same forward axis.
+      draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
         hurt: (mob.hurtTicks || 0) > 0, animal, humanoid, vanillaModel: !!vanillaParts,
         mobType: mob.type, mobTextureKey: mob.type,
         idle: mob.anim?.idle ?? 0, walking: !!mob.anim?.walking,
