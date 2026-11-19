@@ -2,7 +2,7 @@ import { describe, it, assert, assertEqual } from './framework.js';
 import { MobSystem } from '../src/entity/mobs.js';
 
 function fishingGame() {
-  const player = { x: 0.5, y: 64, eyeHeight: 1.62, eyeY: 65.62, yaw: 0, pitch: 0, attackTime: 0, gamemode: 'survival' };
+  const player = { x: 0.5, y: 64, z: 0.5, eyeHeight: 1.62, eyeY: 65.62, yaw: 0, pitch: 0, attackTime: 0, gamemode: 'survival' };
   const game = {
     player,
     world: {
