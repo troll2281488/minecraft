@@ -57,10 +57,16 @@ export const BlockActionsMixin = {
     if (heldItem?.armorSlot && this.player?.gamemode === GAMEMODE.SURVIVAL) {
       const slots = { boots: 36, leggings: 37, chestplate: 38, helmet: 39 };
       const slot = slots[heldItem.armorSlot];
-      if (slot !== undefined && this.inventory.get(slot).isEmpty) {
+      if (slot !== undefined) {
         const equipped = this.inventory.held;
-        this.inventory.set(slot, new ItemStack(equipped.item, 1, equipped.damage, equipped.data));
-        this.inventory.consumeHeld(1);
+        const worn = this.inventory.get(slot);
+        if (worn.isEmpty) {
+          this.inventory.set(slot, new ItemStack(equipped.item, 1, equipped.damage, equipped.data));
+          this.inventory.consumeHeld(1);
+        } else {
+          this.inventory.set(slot, new ItemStack(equipped.item, 1, equipped.damage, equipped.data));
+          this.inventory.set(this.inventory.selectedSlot, new ItemStack(worn.item, 1, worn.damage, worn.data));
+        }
         this.sounds?.play('equip');
         this.ui.toast('Надето: ' + heldItem.armorSlot);
       }
