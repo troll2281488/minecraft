@@ -133,7 +133,7 @@ const MOB_TEXTURE_FILES = Object.freeze({
 });
 
 const VILLAGER_CAREER_TEXTURES = Object.freeze([
-  'farmer','fisherman','shepherd','fletcher','librarian','cleric',
+  'farmer','fisherman','shepherd','librarian','cleric',
   'armorer','toolsmith','butcher','leatherworker','nitwit',
 ]);
 const MOB_UV = Object.freeze({
