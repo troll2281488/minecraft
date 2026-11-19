@@ -22,7 +22,7 @@ describe('Overworld biome expansion', () => {
       assert(BIOME_SURFACE[id], `missing surface rules for ${key}`);
     }
     assertEqual(Object.keys(BIOME_SURFACE).length, expected.length, 'a biome is missing surface rules');
-    assert(GENERATOR_VERSION >= 4, 'generator version was not advanced');
+    assert(GENERATOR_VERSION >= 6, 'generator version was not advanced for biome distribution changes');
   });
 
   it('keeps climate selection deterministic for a given seed and coordinate', () => {
@@ -40,16 +40,17 @@ describe('Overworld biome expansion', () => {
     const generator = new TerrainGenerator('biome-distribution-regression');
     const counts = new Map();
     let total = 0;
-    for (let x = -2048; x <= 2048; x += 256) {
-      for (let z = -2048; z <= 2048; z += 256) {
+    for (let x = -4096; x <= 4096; x += 128) {
+      for (let z = -4096; z <= 4096; z += 128) {
         const height = generator.heightAt(x, z);
         const biome = generator.biomeAt(x, z, height);
         counts.set(biome, (counts.get(biome) || 0) + 1);
         total++;
       }
     }
-    assert(counts.size >= 7, `biome map is too uniform: only ${counts.size} biomes in sample`);
-    assert((counts.get(BIOME.FOREST) || 0) / total < 0.55, 'oak forest dominates the sampled world');
+    assert(counts.size >= 9, `biome map is too uniform: only ${counts.size} biomes in sample`);
+    assert((counts.get(BIOME.FOREST) || 0) / total < 0.45, 'oak forest dominates the sampled world');
+    assert((counts.get(BIOME.DESERT) || 0) > 0, 'hot and dry climates never generate deserts');
   });
 
   it('generates a chunk with registered blocks and a populated biome palette', () => {
