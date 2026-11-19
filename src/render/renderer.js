@@ -455,9 +455,14 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         const isLeg = skin && (partIndex === 4 || partIndex === 5);
         const phase = partIndex === 2 || partIndex === 4 ? 0 : Math.PI;
         let swing = 0;
-        let pivotY = offset[1];
+        const partOffset = offset.slice();
+        if (pose.sneaking && !pose.firstPerson) {
+          if (partIndex === 0 || partIndex === 1) partOffset[1] -= 0.09;
+          else if (isArm) partOffset[1] -= 0.06;
+        }
+        let pivotY = partOffset[1];
         if (isArm || isLeg) {
-          pivotY = pose.firstPerson ? offset[1] : isArm ? 1.375 : 0.75;
+          pivotY = pose.firstPerson ? offset[1] : isArm ? (pose.sneaking ? 1.30 : 1.375) : (pose.sneaking ? 0.70 : 0.75);
           if (pose.firstPerson) {
             // Blend from the resting pose into a forward punch and back. attackTime
             // counts down from 8 ticks; the previous fixed -2.5 rad pose flipped
@@ -470,12 +475,13 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           }
           else if (pose.swimming) swing = isArm ? Math.sin(walkPhase * 1.7 + phase) * 0.72 : Math.sin(walkPhase * 1.7 + phase) * 0.42;
           else if (pose.airborne) swing = isArm ? -0.22 : 0.25;
+          else if (pose.sneaking) swing = isArm ? 0.12 + Math.sin(walkPhase + phase) * 0.08 : 0.44 + Math.sin(walkPhase + phase) * 0.10;
           else swing = Math.sin(walkPhase + phase) * 0.58;
           // First-person attack swing is already applied above; do not add a second rotation.
         } else if (!skin && partIndex >= legStart && partIndex <= legEnd) {
           swing = Math.sin(walkPhase + phase) * 0.16;
         }
-        gl.uniform3f(uniforms.uPartOffset, offset[0], offset[1], offset[2]);
+        gl.uniform3f(uniforms.uPartOffset, partOffset[0], partOffset[1], partOffset[2]);
         gl.uniform3f(uniforms.uPartScale, scale[0] * pulse, scale[1] * pulse, scale[2] * pulse);
         gl.uniform1f(uniforms.uPartSwing, swing);
         gl.uniform1f(uniforms.uPartPivotY, pivotY);
@@ -501,10 +507,10 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     gl.bindVertexArray(this.avatarVao);
     if (this.thirdPerson) {
       document.getElementById('held-item-view')?.classList.add('hidden');
-      draw(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, attack: this.player.attackTime > 0 }, true);
+      draw(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, sneaking: this.player.sneaking, attack: this.player.attackTime > 0 }, true);
     }
     for (const remote of this.multiplayer?.remotePlayers?.values?.() ?? []) {
-      draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, human, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne }, true);
+      draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, human, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, sneaking: !!remote.sneaking }, true);
     }
     for (const mob of this.entities?.mobs ?? []) {
       const parts = mob.type === 'zombie' ? zombie
