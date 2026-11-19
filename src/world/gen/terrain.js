@@ -63,6 +63,13 @@ const BIOME_SURFACE = {
   [BIOME.MOUNTAINS]:    { top: 'mc:stone',       filler: 'mc:stone', trees: 0.002, grass: 0.02 },
   [BIOME.SNOWY_PLAINS]: { top: 'mc:snow_block',  filler: 'mc:dirt',  trees: 0.004, grass: 0 },
   [BIOME.TAIGA]:        { top: 'mc:grass_block', filler: 'mc:dirt',  trees: 0.05, grass: 0.10, species: 'spruce' },
+  [BIOME.BIRCH_FOREST]: { top: 'mc:grass_block', filler: 'mc:dirt',  trees: 0.055, grass: 0.15, species: 'birch' },
+  [BIOME.JUNGLE]:       { top: 'mc:grass_block', filler: 'mc:dirt',  trees: 0.075, grass: 0.24, species: 'jungle', ferns: 0.16 },
+  [BIOME.SAVANNA]:      { top: 'mc:coarse_dirt',  filler: 'mc:dirt',  trees: 0.018, grass: 0.08, species: 'acacia' },
+  [BIOME.SWAMP]:        { top: 'mc:grass_block', filler: 'mc:dirt',  trees: 0.035, grass: 0.12, species: 'oak', ferns: 0.04 },
+  [BIOME.DARK_FOREST]:  { top: 'mc:podzol',      filler: 'mc:dirt',  trees: 0.085, grass: 0.08, species: 'dark_oak' },
+  [BIOME.GIANT_TREE_TAIGA]: { top: 'mc:podzol',   filler: 'mc:dirt',  trees: 0.065, grass: 0.12, species: 'spruce' },
+  [BIOME.BADLANDS]:     { top: 'mc:red_sand',     filler: 'mc:red_sand', trees: 0, grass: 0, deadBush: 0.018 },
 };
 
 // ---------------------------------------------------------------------------
