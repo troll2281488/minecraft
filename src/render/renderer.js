@@ -618,7 +618,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         ) ? MOB_UV[pose.mobType]?.[partIndex] : null;
         gl.uniform1f(uniforms.uMobEnabled, mobUv ? 1.0 : 0.0);
         gl.uniform2f(uniforms.uMobUV, mobUv?.[0] ?? 0, mobUv?.[1] ?? 0);
-        gl.uniform3f(uniforms.uMobBox, mobUv ? mobUv.slice(2, 5) : [1, 1, 1]);
+        gl.uniform3f(uniforms.uMobBox, mobUv?.[2] ?? 1, mobUv?.[3] ?? 1, mobUv?.[4] ?? 1);
         if (pose.hurt) {
           const flash = 0.42;
           gl.uniform4f(uniforms.uColor,
