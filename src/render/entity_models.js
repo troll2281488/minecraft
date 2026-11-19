@@ -54,6 +54,7 @@ export async function loadEntityModelPack() {
     if (!root) return null;
     const parts = [];
     const legIndices = new Set();
+    const armIndices = new Set();
     const visit = (bone, parentOffset = [0, 0, 0], boneName = 'root') => {
       const pose = bone.pose ?? {};
       const offset = [
@@ -70,17 +71,24 @@ export async function loadEntityModelPack() {
           offset[2] + origin[2] + size[2] / 2,
         ];
         const index = parts.length;
+        const partColor = id.replace('minecraft:', '') === 'player'
+          ? (/head/i.test(boneName) ? [0.72, 0.48, 0.32, 1]
+            : /arm/i.test(boneName) ? [0.12, 0.48, 0.72, 1]
+            : /leg/i.test(boneName) ? [0.16, 0.24, 0.48, 1]
+            : [0.12, 0.48, 0.72, 1])
+          : color;
         parts.push([
           [center[0] / 16, (24 - center[1]) / 16, -center[2] / 16],
           [size[0] / 16, size[1] / 16, size[2] / 16],
-          color,
+          partColor,
         ]);
         if (/leg|foot|wing/i.test(boneName)) legIndices.add(index);
+        if (/arm/i.test(boneName)) armIndices.add(index);
       }
       for (const [name, child] of Object.entries(bone.children ?? {})) visit(child, offset, name);
     };
     visit(root);
-    return parts.length ? { parts, legIndices } : null;
+    return parts.length ? { parts, legIndices, armIndices } : null;
   };
 
   return Object.freeze({
