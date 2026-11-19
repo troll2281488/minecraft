@@ -243,10 +243,9 @@ export class TerrainGenerator {
     // birch forest, flower forest, plains and a smaller share of oak forest.
     if (temp > -0.42 && temp < 0.58) {
       if (humid > 0.08) {
-        if (rare < 0.12) return BIOME.BIRCH_FOREST;
-        if (rare > 0.48) return BIOME.FLOWER_FOREST;
-        if (detail > 0.62 && rare > 0.28) return BIOME.DARK_FOREST;
-        return BIOME.FOREST;
+        if (rare < -0.08) return BIOME.BIRCH_FOREST;
+        if (detail > 0.7 && rare < 0.16) return BIOME.FOREST;
+        return BIOME.FLOWER_FOREST;
       }
       if (rare > 0.72) return BIOME.SUNFLOWER_PLAINS;
       return BIOME.PLAINS;
