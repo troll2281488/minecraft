@@ -337,7 +337,12 @@ export class Multiplayer {
       const drops = this.game.entities?.droppedItems;
       if (!drops) return;
       for (const [key, value] of Object.entries(entries)) {
-        if (!value || value.ownerUid === this.uid || value.claimedBy || !value.stack) continue;
+        if (!value) continue;
+        if (value.ownerUid === this.uid) {
+          seen.add(key);
+          continue;
+        }
+        if (value.claimedBy || !value.stack) continue;
         if (![value.x, value.y, value.z, value.vx, value.vy, value.vz].every(Number.isFinite)) continue;
         seen.add(key);
         let drop = drops.find((item) => item.networkKey === key);
@@ -353,7 +358,7 @@ export class Multiplayer {
       }
       for (let i = drops.length - 1; i >= 0; i--) {
         const drop = drops[i];
-        if (drop.networkKey && drop.networkOwner !== this.uid && !seen.has(drop.networkKey)) drops.splice(i, 1);
+        if (drop.networkKey && !seen.has(drop.networkKey)) drops.splice(i, 1);
       }
     });
     this._listen(onChildAdded, ref(this.db, `minecraft_game/rooms/${code}/chat`), (snap) => {
