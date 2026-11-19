@@ -576,9 +576,32 @@ export class MobSystem {
         if (!world.hasChunk(Math.floor(x / 16), Math.floor(z / 16))) continue;
         const roll = Math.random();
         const night = this.game.daylight < 0.55;
-        const type = night
-          ? (roll < 0.15 ? 'zombie' : roll < 0.25 ? 'skeleton' : roll < 0.33 ? 'creeper' : roll < 0.40 ? 'spider' : roll < 0.44 ? 'enderman' : roll < 0.58 ? 'sheep' : roll < 0.72 ? 'pig' : roll < 0.88 ? 'cow' : 'chicken')
-          : (roll < 0.30 ? 'sheep' : roll < 0.55 ? 'pig' : roll < 0.82 ? 'cow' : 'chicken');
+        const chunk = world.getChunk(Math.floor(x / 16), Math.floor(z / 16));
+        const localX = ((x % 16) + 16) % 16, localZ = ((z % 16) + 16) % 16;
+        const surfaceY = world.getHeight(x, z);
+        const biome = chunk?.getBiome(localX, surfaceY, localZ) || 'mc:plains';
+        let type;
+        if (night) {
+          const snowy = ['mc:snowy_plains','mc:snowy_taiga','mc:ice_spikes','mc:frozen_ocean','mc:deep_frozen_ocean'].includes(biome);
+          type = snowy
+            ? (roll < 0.24 ? 'stray' : roll < 0.43 ? 'skeleton' : roll < 0.62 ? 'zombie' : roll < 0.76 ? 'spider' : roll < 0.86 ? 'creeper' : 'enderman')
+            : (roll < 0.17 ? 'zombie' : roll < 0.29 ? 'skeleton' : roll < 0.39 ? 'creeper' : roll < 0.48 ? 'spider' : roll < 0.53 ? 'enderman' : roll < 0.66 ? 'sheep' : roll < 0.78 ? 'pig' : roll < 0.9 ? 'cow' : 'chicken');
+        } else {
+          const dry = ['mc:desert','mc:mesa','mc:wooded_badlands','mc:eroded_badlands','mc:savanna','mc:savanna_plateau','mc:shattered_savanna'].includes(biome);
+          const jungle = ['mc:jungle','mc:sparse_jungle','mc:bamboo_jungle'].includes(biome);
+          const cold = ['mc:snowy_plains','mc:snowy_taiga','mc:ice_spikes','mc:taiga','mc:mega_taiga','mc:giant_spruce_taiga'].includes(biome);
+          if (biome === 'mc:mushroom_island') {
+            type = roll < 0.78 ? 'cow' : roll < 0.9 ? 'sheep' : 'chicken';
+          } else if (dry) {
+            type = roll < 0.48 ? 'sheep' : roll < 0.78 ? 'chicken' : 'pig';
+          } else if (jungle) {
+            type = roll < 0.42 ? 'chicken' : roll < 0.76 ? 'pig' : 'sheep';
+          } else if (cold) {
+            type = roll < 0.48 ? 'sheep' : roll < 0.76 ? 'pig' : 'chicken';
+          } else {
+            type = roll < 0.28 ? 'sheep' : roll < 0.52 ? 'pig' : roll < 0.82 ? 'cow' : 'chicken';
+          }
+        }
         this._spawn(type, x, z);
       }
     }

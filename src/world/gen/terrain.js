@@ -26,7 +26,7 @@ import { CHUNK_SIZE, MIN_Y, MAX_Y, SEA_LEVEL } from '../../core/constants.js';
 import { clamp } from '../../core/math.js';
 
 /** Bumped whenever generation output changes. Stored per world. */
-export const GENERATOR_VERSION = 3;
+export const GENERATOR_VERSION = 4;
 
 
 // ---------------------------------------------------------------------------
@@ -37,39 +37,69 @@ export const GENERATOR_VERSION = 3;
 // ---------------------------------------------------------------------------
 
 export const BIOME = {
-  OCEAN: 'mc:ocean',
-  BEACH: 'mc:beach',
-  PLAINS: 'mc:plains',
-  FOREST: 'mc:forest',
-  DESERT: 'mc:desert',
-  MOUNTAINS: 'mc:mountains',
-  SNOWY_PLAINS: 'mc:snowy_plains',
-  TAIGA: 'mc:taiga',
-  BIRCH_FOREST: 'mc:birch_forest',
-  JUNGLE: 'mc:jungle',
-  SAVANNA: 'mc:savanna',
-  SWAMP: 'mc:swampland',
-  DARK_FOREST: 'mc:roofed_forest',
-  GIANT_TREE_TAIGA: 'mc:mega_taiga',
-  BADLANDS: 'mc:mesa',
+  OCEAN:'mc:ocean', DEEP_OCEAN:'mc:deep_ocean', WARM_OCEAN:'mc:warm_ocean',
+  LUKEWARM_OCEAN:'mc:lukewarm_ocean', DEEP_LUKEWARM_OCEAN:'mc:deep_lukewarm_ocean',
+  COLD_OCEAN:'mc:cold_ocean', DEEP_COLD_OCEAN:'mc:deep_cold_ocean',
+  FROZEN_OCEAN:'mc:frozen_ocean', DEEP_FROZEN_OCEAN:'mc:deep_frozen_ocean',
+  BEACH:'mc:beach', SNOWY_BEACH:'mc:snowy_beach', STONE_SHORE:'mc:stone_shore',
+  RIVER:'mc:river', FROZEN_RIVER:'mc:frozen_river',
+  PLAINS:'mc:plains', SUNFLOWER_PLAINS:'mc:sunflower_plains',
+  FOREST:'mc:forest', FLOWER_FOREST:'mc:flower_forest',
+  BIRCH_FOREST:'mc:birch_forest', TALL_BIRCH_FOREST:'mc:tall_birch_forest',
+  DARK_FOREST:'mc:roofed_forest', JUNGLE:'mc:jungle',
+  SPARSE_JUNGLE:'mc:sparse_jungle', BAMBOO_JUNGLE:'mc:bamboo_jungle',
+  DESERT:'mc:desert', SAVANNA:'mc:savanna', SAVANNA_PLATEAU:'mc:savanna_plateau',
+  SHATTERED_SAVANNA:'mc:shattered_savanna', BADLANDS:'mc:mesa',
+  WOODED_BADLANDS:'mc:wooded_badlands', ERODED_BADLANDS:'mc:eroded_badlands',
+  MOUNTAINS:'mc:mountains', WINDSWEPT_HILLS:'mc:windswept_hills',
+  SNOWY_PLAINS:'mc:snowy_plains', ICE_SPIKES:'mc:ice_spikes',
+  TAIGA:'mc:taiga', SNOWY_TAIGA:'mc:snowy_taiga',
+  GIANT_TREE_TAIGA:'mc:mega_taiga', GIANT_SPRUCE_TAIGA:'mc:giant_spruce_taiga',
+  SWAMP:'mc:swampland', MUSHROOM_FIELDS:'mc:mushroom_island',
 };
 
-const BIOME_SURFACE = {
-  [BIOME.OCEAN]:        { top: 'mc:gravel',      filler: 'mc:dirt',  trees: 0,    grass: 0 },
-  [BIOME.BEACH]:        { top: 'mc:sand',        filler: 'mc:sand',  trees: 0,    grass: 0 },
-  [BIOME.PLAINS]:       { top: 'mc:grass_block', filler: 'mc:dirt',  trees: 0.004, grass: 0.18, species: 'oak' },
-  [BIOME.FOREST]:       { top: 'mc:grass_block', filler: 'mc:dirt',  trees: 0.06, grass: 0.12, species: 'oak' },
-  [BIOME.DESERT]:       { top: 'mc:sand',        filler: 'mc:sand',  trees: 0,    grass: 0,    deadBush: 0.01 },
-  [BIOME.MOUNTAINS]:    { top: 'mc:stone',       filler: 'mc:stone', trees: 0.002, grass: 0.02 },
-  [BIOME.SNOWY_PLAINS]: { top: 'mc:snow_block',  filler: 'mc:dirt',  trees: 0.004, grass: 0 },
-  [BIOME.TAIGA]:        { top: 'mc:grass_block', filler: 'mc:dirt',  trees: 0.05, grass: 0.10, species: 'spruce' },
-  [BIOME.BIRCH_FOREST]: { top: 'mc:grass_block', filler: 'mc:dirt',  trees: 0.055, grass: 0.15, species: 'birch' },
-  [BIOME.JUNGLE]:       { top: 'mc:grass_block', filler: 'mc:dirt',  trees: 0.075, grass: 0.24, species: 'jungle', ferns: 0.16 },
-  [BIOME.SAVANNA]:      { top: 'mc:coarse_dirt',  filler: 'mc:dirt',  trees: 0.018, grass: 0.08, species: 'acacia' },
-  [BIOME.SWAMP]:        { top: 'mc:grass_block', filler: 'mc:dirt',  trees: 0.035, grass: 0.12, species: 'oak', ferns: 0.04 },
-  [BIOME.DARK_FOREST]:  { top: 'mc:podzol',      filler: 'mc:dirt',  trees: 0.085, grass: 0.08, species: 'dark_oak' },
-  [BIOME.GIANT_TREE_TAIGA]: { top: 'mc:podzol',   filler: 'mc:dirt',  trees: 0.065, grass: 0.12, species: 'spruce' },
-  [BIOME.BADLANDS]:     { top: 'mc:red_sand',     filler: 'mc:red_sand', trees: 0, grass: 0, deadBush: 0.018 },
+export const BIOME_SURFACE = {
+  [BIOME.OCEAN]: { top:'mc:gravel', filler:'mc:dirt', trees:0, grass:0 },
+  [BIOME.DEEP_OCEAN]: { top:'mc:gravel', filler:'mc:stone', trees:0, grass:0 },
+  [BIOME.WARM_OCEAN]: { top:'mc:sand', filler:'mc:sand', trees:0, grass:0 },
+  [BIOME.LUKEWARM_OCEAN]: { top:'mc:sand', filler:'mc:sand', trees:0, grass:0 },
+  [BIOME.DEEP_LUKEWARM_OCEAN]: { top:'mc:gravel', filler:'mc:stone', trees:0, grass:0 },
+  [BIOME.COLD_OCEAN]: { top:'mc:gravel', filler:'mc:dirt', trees:0, grass:0 },
+  [BIOME.DEEP_COLD_OCEAN]: { top:'mc:gravel', filler:'mc:stone', trees:0, grass:0 },
+  [BIOME.FROZEN_OCEAN]: { top:'mc:ice', filler:'mc:gravel', trees:0, grass:0 },
+  [BIOME.DEEP_FROZEN_OCEAN]: { top:'mc:ice', filler:'mc:stone', trees:0, grass:0 },
+  [BIOME.BEACH]: { top:'mc:sand', filler:'mc:sand', trees:0, grass:0 },
+  [BIOME.SNOWY_BEACH]: { top:'mc:snow_block', filler:'mc:sand', trees:0, grass:0 },
+  [BIOME.STONE_SHORE]: { top:'mc:stone', filler:'mc:stone', trees:0, grass:0 },
+  [BIOME.RIVER]: { top:'mc:gravel', filler:'mc:sand', trees:0, grass:0 },
+  [BIOME.FROZEN_RIVER]: { top:'mc:ice', filler:'mc:gravel', trees:0, grass:0 },
+  [BIOME.PLAINS]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.006, grass:0.2, species:'oak' },
+  [BIOME.SUNFLOWER_PLAINS]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.004, grass:0.34, species:'oak', flowers:0.24 },
+  [BIOME.FOREST]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.052, grass:0.15, species:'oak' },
+  [BIOME.FLOWER_FOREST]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.035, grass:0.38, species:'birch', flowers:0.5 },
+  [BIOME.BIRCH_FOREST]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.05, grass:0.16, species:'birch' },
+  [BIOME.TALL_BIRCH_FOREST]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.062, grass:0.12, species:'birch' },
+  [BIOME.DARK_FOREST]: { top:'mc:podzol', filler:'mc:dirt', trees:0.075, grass:0.08, species:'dark_oak' },
+  [BIOME.JUNGLE]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.072, grass:0.18, species:'jungle', ferns:0.2 },
+  [BIOME.SPARSE_JUNGLE]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.035, grass:0.2, species:'jungle', ferns:0.12 },
+  [BIOME.BAMBOO_JUNGLE]: { top:'mc:podzol', filler:'mc:dirt', trees:0.08, grass:0.18, species:'jungle', ferns:0.24 },
+  [BIOME.DESERT]: { top:'mc:sand', filler:'mc:sand', trees:0, grass:0, deadBush:0.025 },
+  [BIOME.SAVANNA]: { top:'mc:coarse_dirt', filler:'mc:dirt', trees:0.022, grass:0.13, species:'acacia' },
+  [BIOME.SAVANNA_PLATEAU]: { top:'mc:coarse_dirt', filler:'mc:stone', trees:0.016, grass:0.1, species:'acacia' },
+  [BIOME.SHATTERED_SAVANNA]: { top:'mc:stone', filler:'mc:coarse_dirt', trees:0.012, grass:0.08, species:'acacia' },
+  [BIOME.BADLANDS]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0, grass:0, deadBush:0.02 },
+  [BIOME.WOODED_BADLANDS]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0.012, grass:0.015, species:'oak', deadBush:0.012 },
+  [BIOME.ERODED_BADLANDS]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0, grass:0, deadBush:0.01 },
+  [BIOME.MOUNTAINS]: { top:'mc:stone', filler:'mc:stone', trees:0.004, grass:0.025, species:'oak' },
+  [BIOME.WINDSWEPT_HILLS]: { top:'mc:stone', filler:'mc:stone', trees:0.012, grass:0.04, species:'oak' },
+  [BIOME.SNOWY_PLAINS]: { top:'mc:snow_block', filler:'mc:dirt', trees:0.002, grass:0 },
+  [BIOME.ICE_SPIKES]: { top:'mc:packed_ice', filler:'mc:snow_block', trees:0, grass:0 },
+  [BIOME.TAIGA]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.05, grass:0.12, species:'spruce' },
+  [BIOME.SNOWY_TAIGA]: { top:'mc:snow_block', filler:'mc:dirt', trees:0.045, grass:0, species:'spruce' },
+  [BIOME.GIANT_TREE_TAIGA]: { top:'mc:podzol', filler:'mc:dirt', trees:0.062, grass:0.12, species:'spruce' },
+  [BIOME.GIANT_SPRUCE_TAIGA]: { top:'mc:podzol', filler:'mc:dirt', trees:0.072, grass:0.1, species:'spruce' },
+  [BIOME.SWAMP]: { top:'mc:clay', filler:'mc:dirt', trees:0.035, grass:0.12, species:'oak', ferns:0.06 },
+  [BIOME.MUSHROOM_FIELDS]: { top:'mc:podzol', filler:'mc:dirt', trees:0.002, grass:0.02, mushrooms:0.05 },
 };
 
 // ---------------------------------------------------------------------------
@@ -112,6 +142,8 @@ export class TerrainGenerator {
     this.temperature = new OctaveNoise(root.fork('temperature'), 3, 0.5, 2.0);
     this.humidity = new OctaveNoise(root.fork('humidity'), 3, 0.5, 2.0);
     this.biomeDetail = new OctaveNoise(root.fork('biome_detail'), 2, 0.55, 2.0);
+    this.biomeRarity = new OctaveNoise(root.fork('biome_rarity'), 2, 0.5, 2.0);
+    this.river = new OctaveNoise(root.fork('river'), 2, 0.5, 2.0);
     this.density = new OctaveNoise(root.fork('density'), 3, 0.5, 2.0);
     this.caveA = new PerlinNoise(root.fork('cave_a'));
     this.caveB = new PerlinNoise(root.fork('cave_b'));
@@ -143,32 +175,82 @@ export class TerrainGenerator {
       height = SEA_LEVEL - 4 - (SEA_LEVEL - 4 - height) * 0.55;
     }
 
+    // A low-frequency river field carves connected, gently sloped channels
+    // down to the water table. The same field labels the channel biome below.
+    const riverDistance = Math.abs(this.river.sample2(wx, wz, 0.0017));
+    if (riverDistance < 0.018) height = Math.min(height, SEA_LEVEL - 1.1);
+    else if (riverDistance < 0.04) {
+      const bank = (riverDistance - 0.018) / 0.022;
+      height = Math.min(height, SEA_LEVEL - 1.1 + bank * 7);
+    }
     return height;
   }
 
   biomeAt(wx, wz, height) {
-    if (height < SEA_LEVEL - 2) return BIOME.OCEAN;
-    if (height <= SEA_LEVEL + 1) return BIOME.BEACH;
-    if (height > SEA_LEVEL + 52) return BIOME.MOUNTAINS;
+    const riverDistance = Math.abs(this.river.sample2(wx, wz, 0.0017));
+    const riverTemp = this.temperature.sample2(wx, wz, 0.0021);
+    if (riverDistance < 0.018 && height >= SEA_LEVEL - 2) {
+      return riverTemp < -0.48 ? BIOME.FROZEN_RIVER : BIOME.RIVER;
+    }
+    const temp = this.temperature.sample2(wx, wz, 0.0021);
+    const humid = this.humidity.sample2(wx, wz, 0.0023);
+    const detail = this.biomeDetail.sample2(wx, wz, 0.0031);
+    const rare = this.biomeRarity.sample2(wx, wz, 0.00115);
 
-    const temp = this.temperature.sample2(wx, wz, 0.00058);
-    const humid = this.humidity.sample2(wx, wz, 0.00062);
-    const detail = this.biomeDetail.sample2(wx, wz, 0.00082);
+    if (height < SEA_LEVEL - 2) {
+      const deep = height < SEA_LEVEL - 13;
+      if (temp < -0.48) return deep ? BIOME.DEEP_FROZEN_OCEAN : BIOME.FROZEN_OCEAN;
+      if (temp < -0.12) return deep ? BIOME.DEEP_COLD_OCEAN : BIOME.COLD_OCEAN;
+      if (temp > 0.48) return deep ? BIOME.DEEP_LUKEWARM_OCEAN : BIOME.WARM_OCEAN;
+      return deep ? BIOME.DEEP_OCEAN : BIOME.LUKEWARM_OCEAN;
+    }
+    if (height <= SEA_LEVEL + 1) {
+      if (temp < -0.48) return BIOME.SNOWY_BEACH;
+      return detail > 0.68 ? BIOME.STONE_SHORE : BIOME.BEACH;
+    }
+    if (height > SEA_LEVEL + 42) return detail > 0.2 ? BIOME.WINDSWEPT_HILLS : BIOME.MOUNTAINS;
 
-    // Temperature and rainfall establish the broad climate; a slower detail
-    // field separates neighbouring forest variants without noisy biome speckle.
+    // Mushroom islands are deliberately scarce, isolated climate pockets.
+    if (humid > 0.12 && rare > 0.79 && detail > -0.15) return BIOME.MUSHROOM_FIELDS;
+
+    // Cold climates: snowy plains are common; ice spikes and snowy taiga are
+    // uncommon variants, while giant conifer forests remain a rarer subregion.
     if (temp < -0.48) {
-      if (humid > 0.18 && detail > 0.05) return BIOME.GIANT_TREE_TAIGA;
-      return humid > 0 ? BIOME.TAIGA : BIOME.SNOWY_PLAINS;
+      if (rare > 0.72 && detail > 0.2) return BIOME.ICE_SPIKES;
+      if (humid > 0.12 && rare < -0.42) return BIOME.GIANT_SPRUCE_TAIGA;
+      if (humid > -0.05) return rare > 0.38 ? BIOME.SNOWY_TAIGA : BIOME.TAIGA;
+      return BIOME.SNOWY_PLAINS;
     }
-    if (temp > 0.52 && humid < -0.18) {
-      return detail > 0.25 ? BIOME.BADLANDS : BIOME.DESERT;
+
+    // Hot and dry: savanna is more frequent than the much rarer badlands.
+    if (temp > 0.48 && humid < -0.12) {
+      if (rare > 0.72) return detail > 0.45 ? BIOME.ERODED_BADLANDS : BIOME.BADLANDS;
+      if (rare > 0.42) return BIOME.WOODED_BADLANDS;
+      if (detail > 0.48) return BIOME.SHATTERED_SAVANNA;
+      return rare > 0.05 ? BIOME.SAVANNA : BIOME.SAVANNA_PLATEAU;
     }
-    if (temp > 0.38 && humid > 0.12) return BIOME.JUNGLE;
-    if (temp > 0.25 && humid < 0.08) return BIOME.SAVANNA;
-    if (humid > 0.32 && temp > -0.05 && temp < 0.45) return BIOME.SWAMP;
-    if (humid > 0.12 && detail > 0.38) return BIOME.DARK_FOREST;
-    if (humid > 0.12 && detail < -0.25) return BIOME.BIRCH_FOREST;
+    if (temp > 0.3 && humid < 0.08) return detail > 0.45 ? BIOME.SAVANNA_PLATEAU : BIOME.SAVANNA;
+
+    // Warm, wet climates: jungle is a normal region, bamboo jungle is rare.
+    if (temp > 0.28 && humid > 0.12) {
+      if (rare > 0.7) return BIOME.BAMBOO_JUNGLE;
+      return detail > 0.45 ? BIOME.SPARSE_JUNGLE : BIOME.JUNGLE;
+    }
+    if (humid > 0.36 && temp > -0.02 && temp < 0.42) return BIOME.SWAMP;
+
+    // Temperate regions deliberately distribute plains, forest and birch
+    // variants instead of defaulting almost every coordinate to oak forest.
+    if (temp > -0.18 && temp < 0.38) {
+      if (humid > 0.12) {
+        if (rare > 0.66) return BIOME.FLOWER_FOREST;
+        if (detail > 0.46) return BIOME.DARK_FOREST;
+        if (detail < -0.3) return rare < -0.35 ? BIOME.TALL_BIRCH_FOREST : BIOME.BIRCH_FOREST;
+        return BIOME.FOREST;
+      }
+      if (rare > 0.66) return BIOME.SUNFLOWER_PLAINS;
+      return BIOME.PLAINS;
+    }
+    if (humid > 0.28 && detail > 0.5) return BIOME.DARK_FOREST;
     if (humid > 0.12) return BIOME.FOREST;
     return BIOME.PLAINS;
   }
@@ -376,9 +458,8 @@ export class TerrainGenerator {
 
         let top = -1;
         for (let y = Math.min(MAX_Y - 2, heights[i] + 4); y >= SEA_LEVEL; y--) {
-          if (chunk.getBlock(x, y, z).block.id === 'mc:grass_block' ||
-              chunk.getBlock(x, y, z).block.id === 'mc:sand' ||
-              chunk.getBlock(x, y, z).block.id === 'mc:red_sand') {
+          const state = chunk.getBlock(x, y, z);
+          if (state.block.solid && state.block.id !== 'mc:water') {
             top = y;
             break;
           }
@@ -386,7 +467,7 @@ export class TerrainGenerator {
         if (top < 0) continue;
         const groundId = chunk.getBlock(x, top, z).block.id;
 
-        if (surface.trees > 0 && groundId === 'mc:grass_block' && rng.nextDouble() < surface.trees) {
+        if (surface.trees > 0 && ['mc:grass_block', 'mc:podzol', 'mc:coarse_dirt', 'mc:snow_block'].includes(groundId) && rng.nextDouble() < surface.trees) {
           // Keep trunks away from the chunk edge: this generator writes only
           // into its own chunk, so a canopy crossing the border would be
           // clipped. Cross-chunk feature placement arrives in Phase 2.
@@ -397,7 +478,8 @@ export class TerrainGenerator {
         }
 
         if (surface.grass > 0 && groundId === 'mc:grass_block' && rng.nextDouble() < surface.grass) {
-          const plant = rng.nextDouble() < 0.12
+          const flowerChance = surface.flowers ?? 0.12;
+          const plant = rng.nextDouble() < flowerChance
             ? (rng.nextBoolean() ? S.byId['mc:poppy'] : S.byId['mc:dandelion'])
             : S.byId['mc:short_grass'];
           if (plant) chunk.setBlock(x, top + 1, z, plant);
@@ -889,4 +971,3 @@ export function generateChunk(generator, cx, cz) {
   return generator.generate(new Chunk(cx, cz));
 }
 
-export { BIOME_SURFACE };
