@@ -56,8 +56,8 @@ describe('Classic overworld structure generation', () => {
 
     const mansion = new Chunk(0, 0);
     generator.placeWoodlandMansion(mansion, 0, 0, { x: 8, z: 8 }, 64);
-    assert(['mc:dark_oak_planks', 'mc:oak_planks'].includes(mansion.getBlock(8, 65, 8).block.id));
-    assert(['mc:dark_oak_planks', 'mc:oak_planks'].includes(mansion.getBlock(8, 70, 8).block.id));
+    assert(['mc:dark_oak_planks', 'mc:oak_planks'].includes(mansion.getBlock(9, 65, 9).block.id));
+    assert(['mc:dark_oak_planks', 'mc:oak_planks'].includes(mansion.getBlock(9, 70, 9).block.id));
   });
 
   it('builds a prismarine monument and underground stronghold rooms', () => {
