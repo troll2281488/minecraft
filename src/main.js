@@ -50,6 +50,7 @@ import { RendererMixin, SELECTION_EDGES } from './render/renderer.js';
 import { SessionMixin } from './game/session.js';
 import { Multiplayer } from './game/multiplayer.js';
 import { MobSystem } from './entity/mobs.js';
+import { GameSounds } from './game/sounds.js';
 import { growNearbyWheat } from './game/farming.js';
 import { isDown } from './game/keybinds.js';
 
@@ -104,6 +105,7 @@ class Game {
     this.entityModels = entityModels; // Full upstream geometry + animation data, loaded locally.
 
     this.ui = new UI(icons);
+    this.sounds = new GameSounds();
     this.multiplayer = new Multiplayer(this);
     this.entities = new MobSystem(this);
     this.frustum = new Frustum();
@@ -336,6 +338,10 @@ class Game {
       player.attackTime = 8;
     }
     player.tick(world);
+    if (player.onGround && Math.hypot(player.vx ?? 0, player.vz ?? 0) > 0.09) {
+      const under = world.getBlock(Math.floor(player.x), Math.floor(player.y - 0.15), Math.floor(player.z)).block;
+      this.sounds?.step(under.soundGroup || 'stone');
+    }
     this.entities?.tick();
     if (player.health <= 0 && !this.deathScreenOpen) {
       this.deathScreenOpen = true;
