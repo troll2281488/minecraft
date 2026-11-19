@@ -488,7 +488,7 @@ export class TerrainGenerator {
     }
 
     // Doorway and windows are cut after the wall frame is built.
-    for (const dy of [2, 3]) put(x + 3, groundY + dy, z, null);
+    for (const dy of [2, 3]) put(x + 3, groundY + dy, z, S['mc:air']);
     if (glass) {
       for (const [wx, wz] of [[x + 1, z], [x + 5, z], [x, z + 3], [x + 6, z + 3]]) {
         put(wx, groundY + 3, wz, glass);
