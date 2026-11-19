@@ -4,6 +4,43 @@ import { ItemStack } from '../world/item.js';
  * Lightweight voxel creature simulation. Mobs use deterministic game ticks,
  * ground-following movement and simple species-specific behaviour.
  */
+/**
+ * Per-species combat and awareness tuning. These are game-only creature rules:
+ * each hostile has a readable counterplay window instead of sharing one generic AI.
+ */
+/** Pick a walkable local detour that still trends toward the target. */
+export function chooseMobDetourYaw(currentYaw, desiredYaw, options) {
+  let bestYaw = null;
+  let bestScore = Infinity;
+  for (const option of options ?? []) {
+    if (!option?.walkable || !Number.isFinite(option.yaw) || !Number.isFinite(option.distance)) continue;
+    const turn = Math.abs(Math.atan2(
+      Math.sin(option.yaw - currentYaw),
+      Math.cos(option.yaw - currentYaw),
+    ));
+    const alignment = Math.abs(Math.atan2(
+      Math.sin(option.yaw - desiredYaw),
+      Math.cos(option.yaw - desiredYaw),
+    ));
+    const score = option.distance + turn * 0.18 + alignment * 0.12;
+    if (score < bestScore) {
+      bestScore = score;
+      bestYaw = option.yaw;
+    }
+  }
+  return bestYaw;
+}
+
+export const MOB_AI_PROFILES = Object.freeze({
+  zombie: Object.freeze({ detectionRange: 14, speedMultiplier: 1, meleeRange: 1.35, attackCooldown: 40, damage: 1, role: 'pursuer' }),
+  skeleton: Object.freeze({ detectionRange: 20, speedMultiplier: 0.82, rangedRange: 14, preferredRange: 8, attackCooldown: 55, damage: 2, role: 'ranged' }),
+  stray: Object.freeze({ detectionRange: 20, speedMultiplier: 0.82, rangedRange: 14, preferredRange: 8, attackCooldown: 55, damage: 2, role: 'chilling-ranged' }),
+  creeper: Object.freeze({ detectionRange: 12, speedMultiplier: 0.9, fuseRange: 3, fuseTicks: 30, blastRange: 4, role: 'exploder' }),
+  spider: Object.freeze({ detectionRange: 16, speedMultiplier: 1.48, meleeRange: 1.55, attackCooldown: 28, damage: 2, role: 'ambusher' }),
+  cave_spider: Object.freeze({ detectionRange: 16, speedMultiplier: 1.35, meleeRange: 1.5, attackCooldown: 30, damage: 2, role: 'ambusher' }),
+  enderman: Object.freeze({ detectionRange: 16, speedMultiplier: 1.25, meleeRange: 1.5, attackCooldown: 30, damage: 4, role: 'stalker' }),
+});
+
 export const MOB_TYPES_112 = Object.freeze([
   'bat','blaze','cave_spider','chicken','cow','creeper','donkey','elder_guardian',
   'ender_dragon','enderman','endermite','evoker','ghast','guardian','horse','husk','illusioner',
@@ -508,7 +545,8 @@ export class MobSystem {
       if (mob.hurtTicks > 0) mob.hurtTicks--;
       mob.anim.hurt = mob.hurtTicks > 0 ? mob.hurtTicks / 8 : 0;
 
-      const hostileType = ['zombie','skeleton','stray','creeper','spider','enderman'].includes(mob.type);
+      const profile = MOB_AI_PROFILES[mob.type] ?? null;
+      const hostileType = profile !== null;
       const targeted = this.targetedMob(32) === mob;
       const endermanWater = mob.type === 'enderman' && (
         world.getBlock(Math.floor(mob.x), Math.floor(mob.y), Math.floor(mob.z)).block.id === 'mc:water' ||
@@ -530,14 +568,14 @@ export class MobSystem {
         }
       }
 
-      const creeperNear = mob.type === 'creeper' && player.gamemode === 'survival' && distance < 3 && distance > 0.01;
+      const creeperNear = mob.type === 'creeper' && player.gamemode === 'survival' && distance < profile.fuseRange && distance > 0.01;
       if (creeperNear) {
         mob.fuseTicks = Math.min(30, mob.fuseTicks + 1);
         mob.anim.fuse = mob.fuseTicks / 30;
         mob.targetYaw = Math.atan2(dx, dz);
-        if (mob.fuseTicks >= 30) {
-          if (distance < 4) {
-            const damage = Math.max(0, Math.ceil((4 - distance) * 3));
+        if (mob.fuseTicks >= profile.fuseTicks) {
+          if (distance < profile.blastRange) {
+            const damage = Math.max(0, Math.ceil((profile.blastRange - distance) * 3));
             this._damagePlayer(damage);
             const knock = 0.35 / Math.max(distance, 0.2);
             player.vx += dx * knock; player.vz += dz * knock;
@@ -551,7 +589,7 @@ export class MobSystem {
 
       const endermanAngry = mob.type === 'enderman' && targeted && distance < 16;
       const hostile = hostileType && player.gamemode === 'survival' &&
-        distance < ((mob.type === 'skeleton' || mob.type === 'stray') ? 16 : 12) &&
+        distance < profile.detectionRange &&
         (mob.type !== 'enderman' || endermanAngry || distance < 2.5);
       if (hostile && mob.type !== 'skeleton' && mob.type !== 'stray' && !creeperNear) {
         mob.targetYaw = Math.atan2(dx, dz);
@@ -579,7 +617,7 @@ export class MobSystem {
         }
       }
       const moving = hostile || fleeing || mob.moveTicks > 0;
-      const speed = moving ? (hostile ? (mob.type === 'spider' ? 0.052 : mob.speed) : fleeing ? 0.105 : mob.speed) : 0;
+      const speed = moving ? (hostile ? mob.speed * profile.speedMultiplier : fleeing ? 0.105 : mob.speed) : 0;
       if (moving || Math.abs(mob.knockbackX || 0) + Math.abs(mob.knockbackZ || 0) > 0.005) {
         mob.yaw += Math.atan2(Math.sin(mob.targetYaw - mob.yaw), Math.cos(mob.targetYaw - mob.yaw)) * (fleeing ? 0.38 : 0.12);
       }
@@ -604,6 +642,33 @@ export class MobSystem {
           if (zFree) mob.z = nz;
           if (!xFree) mob.knockbackX *= -0.12;
           if (!zFree) mob.knockbackZ *= -0.12;
+
+          // If both axes are blocked, look for a nearby safe step around the
+          // obstacle. This prevents hostile mobs from endlessly pushing into
+          // the same wall while pursuing the player.
+          if (!xFree && !zFree && hostile) {
+            mob.blockedTicks = (mob.blockedTicks || 0) + 1;
+            if (mob.blockedTicks >= 3) {
+              const options = [];
+              for (const offset of [-Math.PI / 2, Math.PI / 2, -Math.PI / 3, Math.PI / 3, Math.PI]) {
+                const yaw = mob.yaw + offset;
+                const stepX = mob.x + Math.sin(yaw) * Math.max(speed, 0.045);
+                const stepZ = mob.z + Math.cos(yaw) * Math.max(speed, 0.045);
+                if (canMove(stepX, stepZ)) {
+                  options.push({
+                    yaw,
+                    distance: Math.hypot(player.x - stepX, player.z - stepZ),
+                    walkable: true,
+                  });
+                }
+              }
+              const detour = chooseMobDetourYaw(mob.yaw, mob.targetYaw, options);
+              mob.targetYaw = detour ?? (mob.targetYaw + (mob.id % 2 ? 1 : -1) * Math.PI / 2);
+              mob.blockedTicks = 0;
+            }
+          } else {
+            mob.blockedTicks = 0;
+          }
         }
         mob.knockbackX = (mob.knockbackX || 0) * 0.72;
         mob.knockbackZ = (mob.knockbackZ || 0) * 0.72;
@@ -615,21 +680,22 @@ export class MobSystem {
       mob.anim.walking = moving;
 
       // Skeletons and strays keep their distance and fire ranged attacks.
-      if ((mob.type === 'skeleton' || mob.type === 'stray') && hostile && distance < 14 && distance > 3) {
+      if (profile?.rangedRange && hostile && distance < profile.rangedRange && distance > 3) {
         mob.attackTicks++;
         mob.anim.attack = Math.min(1, mob.attackTicks / 18);
-        if (mob.attackTicks >= 55) {
+        if (mob.attackTicks >= profile.attackCooldown) {
           mob.attackTicks = 0; mob.anim.attack = 0;
-          this._damagePlayer(2);
+          this._damagePlayer(profile.damage);
+          if (mob.type === 'stray') { player.vx *= 0.72; player.vz *= 0.72; }
           this.game.ui?.toast(mob.type === 'stray' ? 'Странник попал в тебя!' : 'Скелет попал в тебя!', { error: true, duration: 1000 });
         }
         mob.targetYaw = Math.atan2(dx, dz);
-      } else if (hostile && distance < 1.35 && mob.type !== 'creeper') {
+      } else if (hostile && distance < (profile?.meleeRange ?? 1.35) && mob.type !== 'creeper') {
         mob.attackTicks++;
         mob.anim.attack = Math.min(1, mob.attackTicks / 10);
-        if (mob.attackTicks >= (mob.type === 'spider' ? 28 : 40)) {
+        if (mob.attackTicks >= (profile?.attackCooldown ?? 40)) {
           mob.attackTicks = 0; mob.anim.attack = 0;
-          this._damagePlayer(mob.type === 'enderman' ? 4 : 1);
+          this._damagePlayer(profile?.damage ?? 1);
           player.vx += (dx / Math.max(distance, 0.01)) * 0.12;
           player.vz += (dz / Math.max(distance, 0.01)) * 0.12;
           this.game.ui?.toast(mob.type + ' атаковал тебя!', { error: true, duration: 1100 });
