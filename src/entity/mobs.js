@@ -123,6 +123,8 @@ export class MobSystem {
         speed: ['zombie','skeleton','stray','creeper','spider'].includes(mob.type) ? 0.035 : mob.type === 'enderman' ? 0.045 : 0.018,
         thinkTicks: 0, attackTicks: 0,
         walkPhase: Number.isFinite(mob.walkPhase) ? mob.walkPhase : 0,
+        moveTicks: Number.isFinite(mob.moveTicks) ? Math.max(0, mob.moveTicks) : 0,
+        pauseTicks: Number.isFinite(mob.pauseTicks) ? Math.max(0, mob.pauseTicks) : 0,
         ageTicks: Number.isFinite(mob.ageTicks) ? Math.max(-24000, Math.min(0, mob.ageTicks)) : 0,
         loveTicks: Number.isFinite(mob.loveTicks) ? Math.max(0, Math.min(600, mob.loveTicks)) : 0,
         breedCooldown: Number.isFinite(mob.breedCooldown) ? Math.max(0, Math.min(6000, mob.breedCooldown)) : 0,
@@ -150,6 +152,7 @@ export class MobSystem {
       targetYaw: Math.random() * Math.PI * 2,
       speed: ['zombie','skeleton','stray','spider','creeper'].includes(type) ? 0.035 : type === 'enderman' ? 0.045 : 0.018,
       thinkTicks: 0, attackTicks: 0, walkPhase: Math.random() * 6,
+      moveTicks: 0, pauseTicks: 45 + Math.floor(Math.random() * 100),
       health: ({ zombie:20, skeleton:20, stray:20, creeper:20, enderman:40, spider:16, cow:10, pig:10, chicken:4, sheep:8 })[type] ?? 10,
       sheared: false, hurtTicks: 0, fuseTicks: 0,
       ageTicks: 0, loveTicks: 0, breedCooldown: 0,
@@ -456,16 +459,32 @@ export class MobSystem {
         (mob.type !== 'enderman' || endermanAngry || distance < 2.5);
       if (hostile && mob.type !== 'skeleton' && mob.type !== 'stray' && !creeperNear) {
         mob.targetYaw = Math.atan2(dx, dz);
-      } else if (!hostile && mob.thinkTicks <= 0) {
-        mob.targetYaw += (Math.random() - 0.5) * 2.2;
-        mob.thinkTicks = 35 + Math.floor(Math.random() * 70);
-      }
-
       const fleeing = !hostileType && distance < 4;
       if (fleeing) mob.targetYaw = Math.atan2(mob.x - player.x, mob.z - player.z);
-      const speed = hostile ? (mob.type === 'spider' ? 0.052 : mob.speed) : fleeing ? 0.045 : mob.speed;
-      mob.yaw += Math.atan2(Math.sin(mob.targetYaw - mob.yaw), Math.cos(mob.targetYaw - mob.yaw)) * 0.12;
-      if (!creeperNear && !endermanWater) {
+
+      // Passive mobs now pause between short wandering bursts instead of
+      // sliding and cycling their legs continuously while apparently idle.
+      if (hostile || fleeing) {
+        mob.moveTicks = 2;
+        mob.pauseTicks = 0;
+      } else {
+        mob.moveTicks = Math.max(0, (mob.moveTicks || 0) - 1);
+        mob.pauseTicks = Math.max(0, (mob.pauseTicks || 0) - 1);
+        if (mob.moveTicks === 0 && mob.pauseTicks === 0) {
+          if (Math.random() < 0.58) {
+            mob.moveTicks = 28 + Math.floor(Math.random() * 52);
+            mob.targetYaw += (Math.random() - 0.5) * 2.2;
+          } else {
+            mob.pauseTicks = 65 + Math.floor(Math.random() * 125);
+          }
+        }
+      }
+      const moving = hostile || fleeing || mob.moveTicks > 0;
+      const speed = moving ? (hostile ? (mob.type === 'spider' ? 0.052 : mob.speed) : fleeing ? 0.045 : mob.speed) : 0;
+      if (moving || Math.abs(mob.knockbackX || 0) + Math.abs(mob.knockbackZ || 0) > 0.005) {
+        mob.yaw += Math.atan2(Math.sin(mob.targetYaw - mob.yaw), Math.cos(mob.targetYaw - mob.yaw)) * 0.12;
+      }
+      if (!creeperNear && !endermanWater && (moving || mob.knockbackX || mob.knockbackZ)) {
         const nx = mob.x + Math.sin(mob.yaw) * speed + (mob.knockbackX || 0);
         const nz = mob.z + Math.cos(mob.yaw) * speed + (mob.knockbackZ || 0);
         const ground = world.getHeight(Math.floor(nx), Math.floor(nz));
@@ -478,8 +497,9 @@ export class MobSystem {
         if (Math.abs(mob.knockbackX) < 0.006) mob.knockbackX = 0;
         if (Math.abs(mob.knockbackZ) < 0.006) mob.knockbackZ = 0;
       }
-      mob.walkPhase += speed * (hostile ? 12 : 8);
+      if (moving) mob.walkPhase += speed * (hostile ? 12 : 8);
       mob.anim.walk = mob.walkPhase;
+      mob.anim.walking = moving;
 
       // Skeletons and strays keep their distance and fire ranged attacks.
       if ((mob.type === 'skeleton' || mob.type === 'stray') && hostile && distance < 14 && distance > 3) {
