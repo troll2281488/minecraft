@@ -59,8 +59,7 @@ describe('Pre-1.14 villager careers', () => {
       villagerUsedOffers: [], villagerOfferUses: {}, villagerTradeCount: 0,
     };
     const inventory = new Inventory();
-    for (let i = 0; i < 35; i++) inventory.addItem('mc:stone', 64);
-    inventory.addItem('mc:wheat', 64);
+    for (let i = 0; i < 36; i++) inventory.addItem('mc:wheat', 64);
     const before = inventory.countOf('mc:wheat');
     const result = executeVillagerTrade(villager, 'wheat', inventory);
     assertEqual(result.ok, false);
