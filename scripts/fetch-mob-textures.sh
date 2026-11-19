@@ -3,7 +3,7 @@ set -euo pipefail
 
 # The project owner has permission to redistribute ItsBrian's self-created textures.
 # Pin to a known repository commit so production builds are reproducible.
-SOURCE_COMMIT="86fbb8183419f3bdddf1d8cf6ef25fb1fafe3ede"
+SOURCE_COMMIT="894006ad417c27f767b66bbcfc1afd1b77655531"
 BASE="https://raw.githubusercontent.com/ItsBrian/minecraft-textures/${SOURCE_COMMIT}/entity"
 OUT="assets/mob-textures"
 mkdir -p "$OUT"
