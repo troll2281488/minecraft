@@ -1,6 +1,6 @@
 import { describe, it, assert, assertEqual } from './framework.js';
 import {
-  MOB_TYPES_112, shearSheep, rollFishingCatch, calculateArmorDamage, rollMobDrops,
+  MOB_TYPES_112, MOB_AI_PROFILES, shearSheep, rollFishingCatch, calculateArmorDamage, rollMobDrops,
 } from '../src/entity/mobs.js';
 
 describe('Mob data and loot', () => {
@@ -8,6 +8,19 @@ describe('Mob data and loot', () => {
     assert(MOB_TYPES_112.includes('ender_dragon'));
     assert(MOB_TYPES_112.includes('villager'));
     assertEqual(new Set(MOB_TYPES_112).size, MOB_TYPES_112.length);
+  });
+
+  it('gives hostile species distinct detection, movement, and attack profiles', () => {
+    assertEqual(MOB_AI_PROFILES.zombie.role, 'pursuer');
+    assertEqual(MOB_AI_PROFILES.skeleton.role, 'ranged');
+    assertEqual(MOB_AI_PROFILES.stray.role, 'chilling-ranged');
+    assertEqual(MOB_AI_PROFILES.creeper.role, 'exploder');
+    assertEqual(MOB_AI_PROFILES.spider.role, 'ambusher');
+    assertEqual(MOB_AI_PROFILES.enderman.role, 'stalker');
+    assert(MOB_AI_PROFILES.spider.speedMultiplier > MOB_AI_PROFILES.zombie.speedMultiplier);
+    assert(MOB_AI_PROFILES.enderman.damage > MOB_AI_PROFILES.zombie.damage);
+    assert(MOB_AI_PROFILES.skeleton.rangedRange > MOB_AI_PROFILES.skeleton.preferredRange);
+    assert(Object.isFrozen(MOB_AI_PROFILES));
   });
 
   it('allows a sheep to be sheared only once', () => {
