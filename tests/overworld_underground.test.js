@@ -61,7 +61,7 @@ describe('Overworld underground structures and deterministic placement', () => {
     }
     generator.placeFossil(chunk, 0, 0, { x: 8, z: 8, y: 12 });
     assertEqual(chunk.getBlock(8, 13, 8).block.id, 'mc:bone_block');
-    assertEqual(chunk.getBlock(8, 16, 8).block.id, 'mc:air');
+    assertEqual(chunk.getBlock(8, 15, 8).block.id, 'mc:air');
     const atlas = buildTextures();
     const table = buildBlockTextureTable(BLOCKS, atlas.index);
     const bone = BLOCKS.get('mc:bone_block').defaultState;
