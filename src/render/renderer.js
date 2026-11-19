@@ -398,6 +398,16 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
 
     const health = document.getElementById('health');
     if (health) renderBar(health, this.player.health, 'heart');
+    const armor = document.getElementById('armor');
+    if (armor) {
+      let points = 0;
+      for (let slot = 36; slot <= 39; slot++) {
+        const stack = this.inventory.get(slot);
+        if (!stack.isEmpty) points += stack.item.armorPoints || 0;
+      }
+      armor.textContent = points > 0 ? '◆'.repeat(Math.ceil(points / 2)) : '';
+      armor.title = `Armour ${points}/20`;
+    }
     const food = document.getElementById('food');
     if (food) {
       renderBar(food, this.player.vitals.food, 'food');
