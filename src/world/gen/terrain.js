@@ -684,6 +684,21 @@ export function villageCandidateForCell(seed, gridX, gridZ) {
  * Averaging two uniform draws produces a triangle -- the standard trick, and
  * what makes diamonds cluster near y = -59 rather than spreading evenly.
  */
+/** Deterministic world-grid anchors for underground structures. */
+export function mineshaftCandidateForCell(seed, gridX, gridZ) {
+  const rng = positionalRandom(seed, gridX, 1701, gridZ, 1701);
+  if (rng.nextInt(9) !== 0) return null;
+  return { x: gridX * 96 + 20 + rng.nextInt(48), z: gridZ * 96 + 20 + rng.nextInt(48),
+    y: 12 + rng.nextInt(25), axis: rng.nextInt(2), phase: rng.nextDouble() * Math.PI * 2 };
+}
+
+export function dungeonCandidateForCell(seed, gridX, gridZ) {
+  const rng = positionalRandom(seed, gridX, 1801, gridZ, 1801);
+  if (rng.nextInt(7) !== 0) return null;
+  return { x: gridX * 80 + 20 + rng.nextInt(36), z: gridZ * 80 + 20 + rng.nextInt(36),
+    y: 8 + rng.nextInt(32), variant: rng.nextInt(5) };
+}
+
 function triangularY(rng, minY, maxY, peak) {
   const lower = rng.nextIntRange(minY, maxY);
   const upper = rng.nextIntRange(minY, maxY);
