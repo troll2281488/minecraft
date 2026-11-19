@@ -82,6 +82,13 @@ export const InventoryControllerMixin = {
         this.inventory.cursor = new ItemStack(item, count);
         this.ui.updateCreativeInventory(this.inventory);
       },
+      onTrash: () => {
+        if (!this.inventory.cursor.isEmpty) {
+          this.inventory.cursor = ItemStack.EMPTY.clone();
+          this.inventory.version++;
+          this.ui.updateCreativeInventory(this.inventory);
+        }
+      },
       onHotbar: (index, button) => {
         if (button === 2) this.inventory.rightClickSlot(index);
         else this.inventory.clickSlot(index);
