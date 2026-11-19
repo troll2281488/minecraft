@@ -507,15 +507,19 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
             // A negative rotation moves the forearm/fist forward (+Z) from the
             // shoulder, matching the direction the player is looking.
             // Punch arcs up and forward while preserving the resting hand position.
-            swing = pose.attack ? -1.28 * attackSwing : pose.swimming
+            swing = pose.attack ? -1.78 * attackSwing : pose.swimming
               ? Math.sin(walkPhase * 1.7) * 0.68
-              : pose.airborne ? -0.12
+              : pose.airborne ? (pose.jumping ? -0.42 : -0.10)
               : pose.sneaking ? 0.30
               : 0.18 + Math.sin(walkPhase * 2) * 0.035;
           }
-          else if (pose.swimming) swing = isArm ? Math.sin(walkPhase * 1.7 + phase) * 0.72 : Math.sin(walkPhase * 1.7 + phase) * 0.42;
-          else if (pose.airborne) swing = isArm ? -0.22 : 0.25;
-          else if (pose.sneaking) swing = isArm ? 0.12 + Math.sin(walkPhase + phase) * 0.08 : 0.44 + Math.sin(walkPhase + phase) * 0.10;
+          else if (pose.attack && isArm && partIndex === 3) {
+            const attackProgress = Math.max(0, Math.min(1, (8 - (pose.attackTime ?? 0)) / 8));
+            swing = -1.45 * Math.sin(attackProgress * Math.PI);
+          }
+          else if (pose.swimming) swing = isArm ? Math.sin(walkPhase * 1.7 + phase) * 0.82 : Math.sin(walkPhase * 1.7 + phase) * 0.52;
+          else if (pose.airborne) swing = isArm ? (pose.jumping ? -0.72 : -0.18) : (pose.jumping ? 0.58 : 0.22);
+          else if (pose.sneaking) swing = isArm ? 0.18 + Math.sin(walkPhase + phase) * 0.09 : 0.48 + Math.sin(walkPhase + phase) * 0.10;
           else swing = Math.sin(walkPhase + phase) * (isArm ? 0.58 : 0.62);
           // First-person attack swing is already applied above; do not add a second rotation.
         } else if (!skin && partIndex >= legStart && partIndex <= legEnd) {
@@ -554,11 +558,11 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     ]);
     if (this.thirdPerson) {
       document.getElementById('held-item-view')?.classList.add('hidden');
-      draw(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, sneaking: this.player.sneaking, walking: this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035, attack: this.player.attackTime > 0 }, true);
+      draw(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, jumping: !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking, walking: this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035, attack: this.player.attackTime > 0, attackTime: this.player.attackTime }, true);
       draw(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z, this.player.yaw * Math.PI / 180, outerHuman, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, sneaking: this.player.sneaking, skinLayer: true }, true);
     }
     for (const remote of this.multiplayer?.remotePlayers?.values?.() ?? []) {
-      draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, human, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, sneaking: !!remote.sneaking, walking: !!remote.walking }, true);
+      draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, human, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, jumping: !!remote.jumping, sneaking: !!remote.sneaking, walking: !!remote.walking, attack: !!remote.attacking, attackTime: remote.attackTime ?? 0 }, true);
       draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, outerHuman, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, sneaking: !!remote.sneaking, skinLayer: true }, true);
     }
     for (const mob of this.entities?.mobs ?? []) {
@@ -592,7 +596,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       const attackThrust = this.player.attackTime > 0 ? Math.sin(attackProgress * Math.PI) : 0;
       const handDistance = 0.48 + attackThrust * 0.20;
       const handX = this.renderPosition.x + forwardX * handDistance + rightX * 0.34;
-      const handY = this.renderPosition.y + this.player.eyeHeight + forwardY * handDistance - 0.10 - attackThrust * 0.08;
+      const handY = this.renderPosition.y + this.player.eyeHeight + forwardY * handDistance - 0.24 - attackThrust * 0.08;
       const handZ = this.renderPosition.z + forwardZ * handDistance + rightZ * 0.34;
       const handBob = Math.sin(this.player.walkPhase * 2) * 0.025;
       const armParts = [
