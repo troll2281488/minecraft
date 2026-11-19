@@ -189,7 +189,7 @@ stoneLike('mc:redstone_block', 'redstone_block', 5, 6, 2);
 // ---------------------------------------------------------------------------
 
 for (const [id, hardness, resistance, tool, texture, soundGroup] of [
-  ['mc:red_sandstone', 0.8, 0.8, 'pickaxe', 'sandstone', 'stone'],
+  ['mc:red_sandstone', 0.8, 0.8, 'pickaxe', 'red_sandstone', 'stone'],
   ['mc:prismarine', 1.5, 6, 'pickaxe', 'stone', 'stone'],
   ['mc:prismarine_bricks', 1.5, 6, 'pickaxe', 'stone', 'stone'],
   ['mc:dark_prismarine', 1.5, 6, 'pickaxe', 'stone', 'stone'],
