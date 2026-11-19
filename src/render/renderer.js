@@ -117,7 +117,7 @@ function vanillaLayerParts(model, layerName = 'main') {
       result.push([
         [modelCenter[0] / 16, (24 - modelCenter[1]) / 16, -modelCenter[2] / 16],
         expanded.map(v => v / 16), [1, 1, 1, 1], cube.uv, size,
-        [-rotation[0], rotation[1], rotation[2]], name, (24 - pivot[1]) / 16,
+        [rotation[0], -rotation[1], -rotation[2]], name, (24 - pivot[1]) / 16,
       ]);
     }
     for (const [childName, child] of Object.entries(bone.children ?? {})) visit(child, pivot, rotation, childName);
@@ -204,7 +204,7 @@ vec4 mobSample(){
   else if(top){x=u+dz;y=v;w=dx;h=dz;p=vec2(vLocalPos.x,vLocalPos.z);}
   else{x=u+dz+dx;y=v;w=dx;h=dz;p=vec2(vLocalPos.x,1.0-vLocalPos.z);}
   vec2 pixel=vec2(x,y)+p*vec2(w,h);
-  return texture(uMobTexture,vec2(pixel.x/uMobTextureSize.x,1.0-pixel.y/uMobTextureSize.y));
+  return texture(uMobTexture,vec2(pixel.x/uMobTextureSize.x,pixel.y/uMobTextureSize.y));
 }
 vec4 itemSample(){ vec2 uv; bool front=vNormal.z>0.5, back=vNormal.z< -0.5, right=vNormal.x>0.5, left=vNormal.x< -0.5, top=vNormal.y>0.5; if(front) uv=vec2(vLocalPos.x,1.0-vLocalPos.y); else if(back) uv=vec2(1.0-vLocalPos.x,1.0-vLocalPos.y); else if(right) uv=vec2(1.0-vLocalPos.z,1.0-vLocalPos.y); else if(left) uv=vec2(vLocalPos.z,1.0-vLocalPos.y); else if(top) uv=vec2(vLocalPos.x,vLocalPos.z); else uv=vec2(vLocalPos.x,1.0-vLocalPos.z); return texture(uMobTexture,uv);}
 void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
@@ -620,7 +620,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
             const attackSwing = Math.sin(attackProgress * Math.PI);
             // The attack lift is applied to handY above. Keep arm rotation
             // modest so the fist rises vertically instead of lunging forward.
-            swing = pose.attack ? -0.32 * attackSwing : pose.swimming
+            swing = pose.attack ? -1.05 * attackSwing : pose.swimming
               ? Math.sin(walkPhase * 1.7) * 0.68
               : pose.airborne ? (pose.jumping ? -0.42 : -0.10)
               : pose.sneaking ? 0.30
@@ -749,9 +749,9 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       const attackThrust = this.player.attackTime > 0 ? Math.sin(attackProgress * Math.PI) : 0;
       // Keep the resting hand lower in the bottom-right of the view.
       // During an attack lift it vertically; do not thrust it toward the camera.
-      const handDistance = 0.48;
+      const handDistance = 0.48 + attackThrust * 0.14;
       const handX = this.renderPosition.x + forwardX * handDistance + rightX * 0.34;
-      const handY = this.renderPosition.y + this.player.eyeHeight + forwardY * handDistance - 0.40 + attackThrust * 0.46;
+      const handY = this.renderPosition.y + this.player.eyeHeight + forwardY * handDistance - 0.40;
       const handZ = this.renderPosition.z + forwardZ * handDistance + rightZ * 0.34;
       const handBob = Math.sin(this.player.walkPhase * 2) * 0.025;
       const armParts = [
@@ -791,13 +791,13 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         }
         if (this.heldItemTextureReady) {
           const isBlock = !!held.item.block;
-          const size = isBlock ? [0.22, 0.22, 0.22] : [0.30, 0.40, 0.035];
+          const size = isBlock ? [0.135, 0.135, 0.135] : [0.16, 0.27, 0.025];
           const itemParts = [[[0, 0, 0], size, [1, 1, 1, 1], null, null, [0.22, 0, -0.42]]];
-          const itemX = handX + forwardX * 0.10 + rightX * 0.025;
-          const itemY = handY + 0.045;
-          const itemZ = handZ + forwardZ * 0.10 + rightZ * 0.025;
+          const itemX = handX + forwardX * 0.035 + rightX * 0.025;
+          const itemY = handY - 0.235;
+          const itemZ = handZ + forwardZ * 0.035 + rightZ * 0.025;
           const itemSwing = this.player.attackTime > 0
-            ? -0.24 * Math.sin((8 - this.player.attackTime) / 8 * Math.PI) : -0.20;
+            ? -0.55 * Math.sin((8 - this.player.attackTime) / 8 * Math.PI) : -0.12;
           draw(itemX, itemY, itemZ, yaw, itemParts, 0, -1, -1, 1,
             { itemModel: true, itemSprite: true, itemSwing });
         }
