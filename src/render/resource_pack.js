@@ -17,8 +17,15 @@ const STORAGE_KEY = 'mc-resource-pack';
 
 const ITSBRIAN_RAW = 'https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/';
 
+const BLOCK_TEXTURE_ALIASES = Object.freeze({
+  // The game uses a few descriptive keys that differ from vanilla asset names.
+  short_grass: 'grass',
+  wheat_crop: 'wheat_stage7',
+  water: 'water_still',
+});
+
 async function fetchImage(path) {
-  const response = await fetch(ITSBRIAN_RAW + path);
+  const response = await fetch(ITSBRIAN_RAW + path, { signal: AbortSignal.timeout(8000) });
   if (!response.ok) return null;
   return createImageBitmap(await response.blob());
 }
@@ -57,8 +64,8 @@ export async function loadItsBrianTextures(blocks, items) {
     } else if (state.block.texture) blockNames.add(state.block.texture);
   }
 
-  const blockEntries = await mapWithLimit([...blockNames], 10, async (name) => {
-    const bitmap = await fetchImage('block/' + encodeURIComponent(name) + '.png');
+  const blockEntries = await mapWithLimit([...blockNames], 24, async (name) => {
+    const sourceName = BLOCK_TEXTURE_ALIASES[name] ?? name;\n    // Chest textures live under entity/chest in the source pack, not block/.\n    // Keep the procedural chest fallback until the renderer has a chest model/UVs.\n    if (name === 'chest_side' || name === 'chest_top') return null;\n    const bitmap = await fetchImage('block/' + encodeURIComponent(sourceName) + '.png');
     if (!bitmap) return null;
     const { ctx } = canvasFor(bitmap);
     const pixels = new Uint8Array(ctx.getImageData(0, 0, TILE_SIZE, TILE_SIZE).data);
