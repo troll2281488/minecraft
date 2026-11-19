@@ -31,5 +31,11 @@ describe('Overworld villages', () => {
     const chunk = generator.generate(new Chunk(cx, cz));
     const lx = ((wx % 16) + 16) % 16, lz = ((wz % 16) + 16) % 16;
     assertEqual(chunk.getBlock(lx, site.y + 2, lz).block.id, 'mc:furnace');
+    const roofX = site.x + 3, roofZ = site.z + 3;
+    const roofChunk = generator.generate(new Chunk(Math.floor(roofX / 16), Math.floor(roofZ / 16)));
+    const roofLx = ((roofX % 16) + 16) % 16, roofLz = ((roofZ % 16) + 16) % 16;
+    assert(['mc:oak_planks', 'mc:acacia_planks', 'mc:spruce_planks', 'mc:sandstone'].includes(
+      roofChunk.getBlock(roofLx, site.y + 8, roofLz).block.id,
+    ), 'village house should have a raised gable roof, not a flat lid');
   });
 });
