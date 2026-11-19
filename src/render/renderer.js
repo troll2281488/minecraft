@@ -946,7 +946,13 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     const time = fishing.elapsed ?? 0;
     const bob = Math.sin(time * 0.19) * 0.035 + Math.sin(time * 0.071) * 0.018;
     const dip = fishing.bite ? Math.sin(Math.min(1, fishing.biteAnim ?? 0) * Math.PI * 0.5) * 0.48 : 0;
-    const bobber = { x: fishing.x, y: fishing.y + bob - dip, z: fishing.z };
+    const castProgress = Math.max(0, Math.min(1, fishing.castProgress ?? 1));
+    const flightArc = Math.sin(castProgress * Math.PI) * 0.72;
+    const bobber = {
+      x: hand.x + (fishing.x - hand.x) * castProgress,
+      y: hand.y + (fishing.y - hand.y) * castProgress + flightArc + bob * castProgress - dip,
+      z: hand.z + (fishing.z - hand.z) * castProgress,
+    };
 
     gl.useProgram(program);
     gl.uniformMatrix4fv(uniforms.uViewProjection, false, this.viewProjection);
