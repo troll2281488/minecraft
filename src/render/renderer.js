@@ -518,15 +518,15 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     gl.bindTexture(gl.TEXTURE_2D, this.avatarSkinTexture);
     gl.uniform1i(uniforms.uSkinTexture, 1);
     gl.bindVertexArray(this.avatarVao);
+    // Shared geometry for the transparent second skin layer.
+    const outerHuman = human.map(([offset, size, color], index) => [
+      offset,
+      size.map((value) => value + (index === 0 ? 0.035 : 0.025)),
+      color,
+    ]);
     if (this.thirdPerson) {
       document.getElementById('held-item-view')?.classList.add('hidden');
       draw(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, sneaking: this.player.sneaking, attack: this.player.attackTime > 0 }, true);
-      // Second transparent skin layer (hat, jacket, sleeves and trousers).
-      const outerHuman = human.map(([offset, size, color], index) => [
-        offset,
-        size.map((value) => value + (index === 0 ? 0.035 : 0.025)),
-        color,
-      ]);
       draw(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z, this.player.yaw * Math.PI / 180, outerHuman, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, sneaking: this.player.sneaking, skinLayer: true }, true);
     }
     for (const remote of this.multiplayer?.remotePlayers?.values?.() ?? []) {
