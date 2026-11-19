@@ -188,12 +188,15 @@ export class UI {
 
     const screen = $('inventory-screen');
     screen.oncontextmenu = (e) => e.preventDefault();
-    screen.onmousedown = (e) => {
-      if (!e.target.closest?.('.slot, button, input, textarea, select')) {
-        e.preventDefault();
-        handlers.onDropCursor?.(e.button);
-      }
+    const dropOnEmpty = (e) => {
+      if (e.target.closest?.('.slot, button, input, textarea, select')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      handlers.onDropCursor?.(e.button);
     };
+    screen.onmousedown = dropOnEmpty;
+    const inventoryPanel = screen.querySelector('.inventory-panel');
+    if (inventoryPanel) inventoryPanel.onmousedown = dropOnEmpty;
     this.invMainSlots = build($('inv-main'), 27, (i) => SLOT.MAIN_START + i, 'inventory');
     this.invHotbarSlots = build($('inv-hotbar'), 9, (i) => SLOT.HOTBAR_START + i, 'inventory');
     this.invArmorSlots = build($('inv-armor'), 4, (i) => SLOT.ARMOR_START + i, 'inventory');
