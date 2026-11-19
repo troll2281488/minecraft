@@ -372,6 +372,7 @@ export class MobSystem {
     const held = this.game.inventory?.held;
     const damage = Math.max(1, held?.item?.attackDamage || 1);
     mob.health = Math.max(0, mob.health - damage);
+    this.game.sounds?.play('hit');
     mob.hurtTicks = 8;
     this.attackCooldown = 10;
     const dx = mob.x - player.x;
@@ -382,7 +383,7 @@ export class MobSystem {
     mob.knockbackX = (dx / length) * 0.62;
     mob.knockbackZ = (dz / length) * 0.62;
     if (!['zombie','skeleton','stray','creeper','spider','cave_spider','enderman'].includes(mob.type)) {
-      mob.fleeTicks = 100;
+      mob.fleeTicks = 180;
       mob.moveTicks = 100;
       mob.pauseTicks = 0;
       mob.targetYaw = Math.atan2(mob.x - player.x, mob.z - player.z);
@@ -508,9 +509,9 @@ export class MobSystem {
         }
       }
       const moving = hostile || fleeing || mob.moveTicks > 0;
-      const speed = moving ? (hostile ? (mob.type === 'spider' ? 0.052 : mob.speed) : fleeing ? 0.045 : mob.speed) : 0;
+      const speed = moving ? (hostile ? (mob.type === 'spider' ? 0.052 : mob.speed) : fleeing ? 0.105 : mob.speed) : 0;
       if (moving || Math.abs(mob.knockbackX || 0) + Math.abs(mob.knockbackZ || 0) > 0.005) {
-        mob.yaw += Math.atan2(Math.sin(mob.targetYaw - mob.yaw), Math.cos(mob.targetYaw - mob.yaw)) * 0.12;
+        mob.yaw += Math.atan2(Math.sin(mob.targetYaw - mob.yaw), Math.cos(mob.targetYaw - mob.yaw)) * (fleeing ? 0.38 : 0.12);
       }
       if (!creeperNear && !endermanWater && (moving || mob.knockbackX || mob.knockbackZ)) {
         const nx = mob.x + Math.sin(mob.yaw) * speed + (mob.knockbackX || 0);
