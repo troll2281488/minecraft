@@ -438,6 +438,8 @@ const MATERIALS = [
   ['mc:rabbit_hide', {}],
   ['mc:wheat_seeds', {}],
   ['mc:wheat', {}],
+  ['mc:paper', {}],
+  ['mc:book', {}],
 ];
 for (const [id, opts] of MATERIALS) ITEMS.define(id, opts);
 
