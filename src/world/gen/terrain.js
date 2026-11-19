@@ -891,6 +891,66 @@ export class TerrainGenerator {
         if (room) this.placeDungeon(chunk, baseX, baseZ, room);
       }
     }
+
+    const strongholdMinX = Math.floor((baseX - 24) / 512);
+    const strongholdMaxX = Math.floor((baseX + CHUNK_SIZE + 24) / 512);
+    const strongholdMinZ = Math.floor((baseZ - 24) / 512);
+    const strongholdMaxZ = Math.floor((baseZ + CHUNK_SIZE + 24) / 512);
+    for (let gz = strongholdMinZ; gz <= strongholdMaxZ; gz++) {
+      for (let gx = strongholdMinX; gx <= strongholdMaxX; gx++) {
+        const stronghold = strongholdCandidateForCell(this.seed, gx, gz);
+        if (stronghold) this.placeStronghold(chunk, baseX, baseZ, stronghold);
+      }
+    }
+  }
+
+  placeStronghold(chunk, baseX, baseZ, site) {
+    const S = this.states.byId, air = S['mc:air'];
+    const brick = S['mc:stone_bricks'] || S['mc:cobblestone'];
+    const mossy = S['mc:mossy_stone_bricks'] || S['mc:mossy_cobblestone'] || brick;
+    if (!air || !brick) return;
+    const put = (x, y, z, state) => this.setVillageBlock(chunk, baseX, baseZ, x, y, z, state);
+    const y0 = site.y, x0 = site.x, z0 = site.z;
+    // Main entry hall and two connected rooms.
+    for (let room = 0; room < 3; room++) {
+      const ox = room === 1 ? -12 : room === 2 ? 15 : 0;
+      const oz = room === 0 ? 0 : 2;
+      const width = room === 0 ? 15 : 9, depth = room === 0 ? 13 : 11;
+      for (let dx = 0; dx < width; dx++) for (let dz = 0; dz < depth; dz++) {
+        put(x0 + ox + dx, y0, z0 + oz + dz, brick);
+        put(x0 + ox + dx, y0 + 5, z0 + oz + dz, brick);
+        for (let dy = 1; dy < 5; dy++) {
+          const edge = dx === 0 || dx === width - 1 || dz === 0 || dz === depth - 1;
+          put(x0 + ox + dx, y0 + dy, z0 + oz + dz, edge ? ((dx + dz + dy) % 4 === 0 ? mossy : brick) : air);
+        }
+      }
+    }
+    // Portal chamber with a recessed lava well and the classic 3x3 frame ring.
+    const px = x0 + 18, pz = z0 + 5;
+    const frame = S['mc:end_portal_frame'];
+    const lava = S['mc:lava'];
+    for (let dx = 0; dx < 11; dx++) for (let dz = 0; dz < 11; dz++) {
+      put(px + dx, y0, pz + dz, brick);
+      if (dx === 0 || dx === 10 || dz === 0 || dz === 10) {
+        for (let dy = 1; dy <= 5; dy++) put(px + dx, y0 + dy, pz + dz, brick);
+      }
+    }
+    if (lava) for (let dx = 3; dx <= 7; dx++) for (let dz = 3; dz <= 7; dz++) put(px + dx, y0, pz + dz, lava);
+    if (frame) {
+      for (let i = 0; i < 3; i++) {
+        put(px + 4 + i, y0 + 1, pz + 2, frame);
+        put(px + 4 + i, y0 + 1, pz + 8, frame);
+        put(px + 2, y0 + 1, pz + 4 + i, frame);
+        put(px + 8, y0 + 1, pz + 4 + i, frame);
+      }
+    }
+    if (S['mc:bookshelf']) {
+      for (let dx = 1; dx < 8; dx++) {
+        put(x0 - 11 + dx, y0 + 1, z0 + 4, S['mc:bookshelf']);
+        put(x0 - 11 + dx, y0 + 2, z0 + 4, S['mc:bookshelf']);
+      }
+    }
+    if (S['mc:chest']) put(x0 + 2, y0 + 1, z0 + 2, S['mc:chest']);
   }
 
   placeMineshaft(chunk, baseX, baseZ, site) {
@@ -1243,6 +1303,16 @@ export function oceanMonumentCandidateForCell(seed, gridX, gridZ) {
   const rng = positionalRandom(seed, gridX, 3001, gridZ, 3001);
   if (rng.nextInt(16) !== 0) return null;
   return { x: gridX * 512 + 48 + rng.nextInt(416), z: gridZ * 512 + 48 + rng.nextInt(416) };
+}
+
+export function strongholdCandidateForCell(seed, gridX, gridZ) {
+  const rng = positionalRandom(seed, gridX, 3101, gridZ, 3101);
+  if (rng.nextInt(24) !== 0) return null;
+  return {
+    x: gridX * 512 + 32 + rng.nextInt(448),
+    z: gridZ * 512 + 32 + rng.nextInt(448),
+    y: 12 + rng.nextInt(22),
+  };
 }
 
 export function dungeonCandidateForCell(seed, gridX, gridZ) {
