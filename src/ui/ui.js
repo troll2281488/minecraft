@@ -11,6 +11,7 @@
  */
 
 import { SLOT } from '../game/inventory.js';
+import { VILLAGER_CAREERS } from '../entity/villager_trades.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -28,6 +29,7 @@ export class UI {
       pause: $('pause-screen'),
       inventory: $('inventory-screen'),
       creative: $('creative-screen'),
+      villagerTrade: $('villager-trade-screen'),
       error: $('error-screen'),
     };
 
@@ -425,6 +427,63 @@ export class UI {
       entry.onclick = () => onSelect(world.id);
       list.appendChild(entry);
     }
+  }
+
+  // -- Villager trading ----------------------------------------------------
+
+  openVillagerTrade(villager, offers, inventory, handlers) {
+    const career = VILLAGER_CAREERS[villager?.villagerCareer] ?? VILLAGER_CAREERS.nitwit;
+    const title = $('villager-trade-title');
+    const subtitle = $('villager-trade-subtitle');
+    const list = $('villager-trade-offers');
+    title.textContent = career.label;
+    subtitle.textContent = `Обменов совершено: ${villager?.villagerTradeCount ?? 0} · Открыто сделок: ${offers.length}`;
+    list.replaceChildren();
+
+    if (!offers.length) {
+      const empty = document.createElement('p');
+      empty.className = 'sub villager-trade-empty';
+      empty.textContent = 'Этот житель пока не предлагает обменов.';
+      list.appendChild(empty);
+    }
+
+    for (const entry of offers) {
+      const row = document.createElement('div');
+      row.className = 'villager-trade-row';
+      const details = document.createElement('div');
+      details.className = 'villager-trade-details';
+      const input = document.createElement('span');
+      input.textContent = `${entry.inputCount} × ${prettyName(entry.input)}`;
+      details.appendChild(input);
+      if (entry.input2) {
+        const second = document.createElement('span');
+        second.textContent = `+ ${entry.input2Count} × ${prettyName(entry.input2)}`;
+        details.appendChild(second);
+      }
+      const arrow = document.createElement('span');
+      arrow.className = 'villager-trade-arrow';
+      arrow.textContent = '→';
+      const output = document.createElement('strong');
+      output.textContent = `${entry.outputCount} × ${prettyName(entry.output)}`;
+      details.append(arrow, output);
+      const button = document.createElement('button');
+      button.type = 'button';
+      const enough = inventory.countOf(entry.input) >= entry.inputCount &&
+        (!entry.input2 || inventory.countOf(entry.input2) >= entry.input2Count);
+      button.textContent = enough ? 'Обменять' : 'Не хватает';
+      button.disabled = !enough || entry.disabled;
+      button.onclick = () => handlers.onTrade(entry.id);
+      row.append(details, button);
+      list.appendChild(row);
+    }
+    $('villager-trade-close').onclick = handlers.onClose;
+    this.showScreen('villagerTrade');
+    this.setHudVisible(false);
+  }
+
+  closeVillagerTrade() {
+    this.hideAllScreens();
+    this.setHudVisible(true);
   }
 
   // -- Debug --------------------------------------------------------------
