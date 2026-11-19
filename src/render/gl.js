@@ -293,6 +293,10 @@ void main() {
 
   float fog = clamp((vFogDistance - uFogStart) / max(uFogEnd - uFogStart, 0.001), 0.0, 1.0);
   color.rgb = mix(color.rgb, uFogColor, fog);
+  // Gentle filmic-style contrast and a restrained cool shadow tint add depth
+  // without expensive post-processing or changing the texture atlas.
+  color.rgb = pow(max(color.rgb, vec3(0.0)), vec3(0.96));
+  color.rgb *= mix(vec3(0.985, 0.99, 1.0), vec3(1.015, 1.005, 0.985), clamp(color.r * 0.35, 0.0, 1.0));
 
   fragColor = color;
 }
