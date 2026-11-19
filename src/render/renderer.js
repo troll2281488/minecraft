@@ -532,19 +532,25 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       // First-person right arm and held item, positioned relative to the
       // interpolated camera so they remain stable while the world moves.
       const yaw = this.player.yaw * Math.PI / 180;
-      const forwardX = -Math.sin(yaw), forwardZ = Math.cos(yaw);
+      const pitch = this.player.pitch * Math.PI / 180;
+      // Build the arm in camera-relative axes: looking up/down must move the
+      // hand with the view instead of leaving it floating at the crosshair.
+      const forwardX = -Math.sin(yaw) * Math.cos(pitch);
+      const forwardY = -Math.sin(pitch);
+      const forwardZ = Math.cos(yaw) * Math.cos(pitch);
       const rightX = -Math.cos(yaw), rightZ = -Math.sin(yaw);
       const attackProgress = Math.max(0, Math.min(1, (8 - (this.player.attackTime ?? 0)) / 8));
       const attackThrust = this.player.attackTime > 0 ? Math.sin(attackProgress * Math.PI) : 0;
-      const handX = this.renderPosition.x + forwardX * (0.43 + attackThrust * 0.24) + rightX * 0.31;
-      const handY = this.renderPosition.y + this.player.eyeHeight - 0.50 - attackThrust * 0.10;
-      const handZ = this.renderPosition.z + forwardZ * (0.43 + attackThrust * 0.24) + rightZ * 0.31;
+      const handDistance = 0.48 + attackThrust * 0.20;
+      const handX = this.renderPosition.x + forwardX * handDistance + rightX * 0.34;
+      const handY = this.renderPosition.y + this.player.eyeHeight + forwardY * handDistance - 0.43 - attackThrust * 0.08;
+      const handZ = this.renderPosition.z + forwardZ * handDistance + rightZ * 0.34;
       const handBob = Math.sin(this.player.walkPhase * 2) * 0.025;
       const armParts = [
         [[0, 0, 0], [0.001, 0.001, 0.001], [0, 0, 0, 0]],
         [[0, 0, 0], [0.001, 0.001, 0.001], [0, 0, 0, 0]],
         [[0, 0, 0], [0.001, 0.001, 0.001], [0, 0, 0, 0]],
-        [[0, -handBob, 0], [0.22, 0.58, 0.22], [0.12, 0.48, 0.72, 1]],
+        [[0.015, -0.10 - handBob, 0.015], [0.20, 0.54, 0.20], [0.12, 0.48, 0.72, 1]],
       ];
       draw(handX, handY, handZ, yaw, armParts, this.player.walkPhase, -1, -1, 1,
         { firstPerson: true, attack: this.player.attackTime > 0, attackTime: this.player.attackTime, sneaking: this.player.sneaking, swimming: this.player.inWater }, true);
