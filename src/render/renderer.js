@@ -503,11 +503,9 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
             // the arm past 180 degrees, exposing its back face to the camera.
             const attackProgress = Math.max(0, Math.min(1, (8 - (pose.attackTime ?? 0)) / 8));
             const attackSwing = Math.sin(attackProgress * Math.PI);
-            // Positive X rotation sends the hanging arm away from the camera.
-            // A negative rotation moves the forearm/fist forward (+Z) from the
-            // shoulder, matching the direction the player is looking.
-            // Punch arcs up and forward while preserving the resting hand position.
-            swing = pose.attack ? -1.78 * attackSwing : pose.swimming
+            // The attack lift is applied to handY above. Keep arm rotation
+            // modest so the fist rises vertically instead of lunging forward.
+            swing = pose.attack ? -0.32 * attackSwing : pose.swimming
               ? Math.sin(walkPhase * 1.7) * 0.68
               : pose.airborne ? (pose.jumping ? -0.42 : -0.10)
               : pose.sneaking ? 0.30
@@ -594,9 +592,11 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       const rightX = -Math.cos(yaw), rightZ = -Math.sin(yaw);
       const attackProgress = Math.max(0, Math.min(1, (8 - (this.player.attackTime ?? 0)) / 8));
       const attackThrust = this.player.attackTime > 0 ? Math.sin(attackProgress * Math.PI) : 0;
-      const handDistance = 0.48 + attackThrust * 0.20;
+      // Keep the resting hand lower in the bottom-right of the view.
+      // During an attack lift it vertically; do not thrust it toward the camera.
+      const handDistance = 0.48;
       const handX = this.renderPosition.x + forwardX * handDistance + rightX * 0.34;
-      const handY = this.renderPosition.y + this.player.eyeHeight + forwardY * handDistance - 0.24 - attackThrust * 0.08;
+      const handY = this.renderPosition.y + this.player.eyeHeight + forwardY * handDistance - 0.40 + attackThrust * 0.46;
       const handZ = this.renderPosition.z + forwardZ * handDistance + rightZ * 0.34;
       const handBob = Math.sin(this.player.walkPhase * 2) * 0.025;
       const armParts = [
