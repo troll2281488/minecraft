@@ -85,6 +85,24 @@ function buildAvatarCube() {
   return new Float32Array(out);
 }
 
+const MOB_TEXTURE_FILES = Object.freeze({
+  cow:'cow.png', pig:'pig.png', sheep:'sheep.png', chicken:'chicken.png',
+  zombie:'zombie.png', skeleton:'skeleton.png', stray:'stray.png',
+  creeper:'creeper.png', enderman:'enderman.png', spider:'spider.png', cave_spider:'cave_spider.png',
+});
+const MOB_UV = Object.freeze({
+  cow:[[18,4,12,18,10],[0,0,8,8,6],null,null,null,null,[0,0,8,8,6],[0,0,8,8,6]],
+  pig:[[28,8,10,16,8],[0,0,8,8,8],[16,16,4,3,1],[0,16,4,6,4],[0,16,4,6,4],[0,16,4,6,4],[0,16,4,6,4]],
+  sheep:[[28,8,8,16,6],[0,0,6,6,8],[0,16,4,12,4],[0,16,4,12,4],[0,16,4,12,4],[0,16,4,12,4]],
+  chicken:[[0,9,6,8,6],[0,0,4,6,3],[14,0,4,2,2],[14,4,2,2,2],[26,0,3,5,3],[26,0,3,5,3]],
+  zombie:[[0,0,8,8,8],[16,16,8,12,4],[40,16,4,12,4],[40,16,4,12,4],[0,16,4,12,4],[0,16,4,12,4]],
+  skeleton:[[0,0,8,8,8],[16,16,8,12,4],[40,16,4,12,4],[40,16,4,12,4],[0,16,4,12,4],[0,16,4,12,4]],
+  stray:[[0,0,8,8,8],[16,16,8,12,4],[40,16,4,12,4],[40,16,4,12,4],[0,16,4,12,4],[0,16,4,12,4]],
+  creeper:[[16,16,8,12,4],[0,0,8,8,8],[0,16,4,6,4],[0,16,4,6,4],[0,16,4,6,4],[0,16,4,6,4]],
+  enderman:[[0,0,8,8,8],[0,16,8,12,4],[32,16,4,12,4],[32,16,4,12,4],[0,16,4,12,4],[0,16,4,12,4]],
+  spider:[[0,12,10,8,12],[32,4,8,8,8],[18,0,16,2,2],[18,0,16,2,2],[18,0,16,2,2],[18,0,16,2,2]],
+  cave_spider:[[0,12,10,8,12],[32,4,8,8,8],[18,0,16,2,2],[18,0,16,2,2],[18,0,16,2,2],[18,0,16,2,2]],
+});
 const PLAYER_SKIN_DATA_URL = 'data:image/png;base64,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';
 
 export const RendererMixin = {
@@ -94,7 +112,7 @@ export const RendererMixin = {
     this.skyProgram = createProgram(gl, SKY_VERTEX_SHADER, SKY_FRAGMENT_SHADER, 'sky');
     this.lineProgram = createProgram(gl, LINE_VERTEX_SHADER, LINE_FRAGMENT_SHADER, 'line');
     this.crackProgram = createProgram(gl, CRACK_VERTEX_SHADER, CRACK_FRAGMENT_SHADER, 'crack');
-    this.avatarProgram = createProgram(gl, `#version 300 es\nprecision highp float;\nlayout(location=0) in vec3 aPos; layout(location=1) in vec3 aNormal;\nuniform mat4 uViewProjection; uniform vec3 uPlayerPos; uniform vec3 uPartOffset; uniform vec3 uPartScale; uniform float uYaw; uniform float uPartSwing; uniform float uPartPivotY; uniform float uSkinPart;\nout vec3 vLocalPos; out vec3 vNormal; out float vLight;\nvoid main(){ vec3 p=(aPos-0.5)*uPartScale; p.y+=uPartOffset.y-uPartPivotY; float ca=cos(uPartSwing),sa=sin(uPartSwing); p=vec3(p.x,p.y*ca-p.z*sa,p.y*sa+p.z*ca); p.y-=uPartOffset.y-uPartPivotY; p+=uPartOffset; float c=cos(uYaw), s=sin(uYaw); vec3 r=vec3(p.x*c-p.z*s,p.y,p.x*s+p.z*c); vec3 n=vec3(aNormal.x*c-aNormal.z*s,aNormal.y,aNormal.x*s+aNormal.z*c); vLocalPos=aPos; vNormal=aNormal; vLight=0.72+0.28*max(0.0,dot(normalize(n),normalize(vec3(-0.4,0.8,0.5)))); gl_Position=uViewProjection*vec4(uPlayerPos+r,1.0); }`, `#version 300 es\nprecision highp float;\nuniform vec4 uColor; uniform float uSkinPart; uniform float uSkinLayer; uniform sampler2D uSkinTexture; in vec3 vLocalPos; in vec3 vNormal; in float vLight; out vec4 fragColor;
+    this.avatarProgram = createProgram(gl, `#version 300 es\nprecision highp float;\nlayout(location=0) in vec3 aPos; layout(location=1) in vec3 aNormal;\nuniform mat4 uViewProjection; uniform vec3 uPlayerPos; uniform vec3 uPartOffset; uniform vec3 uPartScale; uniform float uYaw; uniform float uPartSwing; uniform float uPartPivotY; uniform float uSkinPart; uniform vec2 uMobUV; uniform vec3 uMobBox; uniform float uMobEnabled;\nout vec3 vLocalPos; out vec3 vNormal; out float vLight;\nvoid main(){ vec3 p=(aPos-0.5)*uPartScale; p.y+=uPartOffset.y-uPartPivotY; float ca=cos(uPartSwing),sa=sin(uPartSwing); p=vec3(p.x,p.y*ca-p.z*sa,p.y*sa+p.z*ca); p.y-=uPartOffset.y-uPartPivotY; p+=uPartOffset; float c=cos(uYaw), s=sin(uYaw); vec3 r=vec3(p.x*c-p.z*s,p.y,p.x*s+p.z*c); vec3 n=vec3(aNormal.x*c-aNormal.z*s,aNormal.y,aNormal.x*s+aNormal.z*c); vLocalPos=aPos; vNormal=aNormal; vLight=0.72+0.28*max(0.0,dot(normalize(n),normalize(vec3(-0.4,0.8,0.5)))); gl_Position=uViewProjection*vec4(uPlayerPos+r,1.0); }`, `#version 300 es\nprecision highp float;\nuniform vec4 uColor; uniform float uSkinPart; uniform float uSkinLayer; uniform sampler2D uSkinTexture; uniform sampler2D uMobTexture; uniform vec2 uMobUV; uniform vec3 uMobBox; uniform vec2 uMobTextureSize; uniform float uMobEnabled; in vec3 vLocalPos; in vec3 vNormal; in float vLight; out vec4 fragColor;
 vec4 skinSample(){
   float x=0.0,y=0.0,w=0.0,h=0.0; vec2 p=vec2(0.0);
   bool front=vNormal.z>0.5, back=vNormal.z< -0.5, right=vNormal.x>0.5, left=vNormal.x< -0.5, top=vNormal.y>0.5;
@@ -134,8 +152,22 @@ vec4 skinSample(){
   vec2 uv=(vec2(x,y)+p*vec2(w,h))/64.0;
   return texture(uSkinTexture,uv);
 }
+vec4 mobSample(){
+  float u=uMobUV.x,v=uMobUV.y,dx=uMobBox.x,dy=uMobBox.y,dz=uMobBox.z;
+  float x=0.0,y=0.0,w=0.0,h=0.0; vec2 p=vec2(0.0);
+  bool front=vNormal.z>0.5, back=vNormal.z< -0.5, right=vNormal.x>0.5, left=vNormal.x< -0.5, top=vNormal.y>0.5;
+  if(front){x=u+dz;y=v+dz;w=dx;h=dy;p=vec2(vLocalPos.x,1.0-vLocalPos.y);}
+  else if(back){x=u+dz+dx+dz;y=v+dz;w=dx;h=dy;p=vec2(1.0-vLocalPos.x,1.0-vLocalPos.y);}
+  else if(right){x=u;y=v+dz;w=dz;h=dy;p=vec2(1.0-vLocalPos.z,1.0-vLocalPos.y);}
+  else if(left){x=u+dz+dx;y=v+dz;w=dz;h=dy;p=vec2(vLocalPos.z,1.0-vLocalPos.y);}
+  else if(top){x=u+dz;y=v;w=dx;h=dz;p=vec2(vLocalPos.x,vLocalPos.z);}
+  else{x=u+dz+dx;y=v;w=dx;h=dz;p=vec2(vLocalPos.x,1.0-vLocalPos.z);}
+  vec2 pixel=vec2(x,y)+p*vec2(w,h);
+  return texture(uMobTexture,vec2(pixel.x/uMobTextureSize.x,1.0-pixel.y/uMobTextureSize.y));
+}
 void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
   if(uSkinPart>=0.0){ vec4 texel=skinSample(); color=texel.rgb; if(texel.a<0.1) discard; }
+  else if(uMobEnabled>0.5){ vec4 texel=mobSample(); color=texel.rgb; if(texel.a<0.1) discard; }
   else { float patchValue=mod(cell.x*3.0+cell.y*5.0+cell.z*7.0,11.0); color*=mix(0.80,1.08,step(3.0,patchValue)); }
   float pixel=0.94+mod(cell.x+cell.y+cell.z,2.0)*0.06; fragColor=vec4(color*vLight*pixel,uColor.a);
 }`, 'player avatar');
@@ -156,6 +188,29 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, skinImage);
     };
     skinImage.src = PLAYER_SKIN_DATA_URL;
+    this.mobTextures = new Map();
+    this.mobFallbackTexture = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, this.mobFallbackTexture);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([255,255,255,255]));
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+    for (const [type,file] of Object.entries(MOB_TEXTURE_FILES)) {
+      const texture=gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D,texture);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([255,255,255,255]));
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+      this.mobTextures.set(type,{texture,width:64,height:32,ready:false});
+      const image=new Image();
+      image.onload=()=>{
+        gl.bindTexture(gl.TEXTURE_2D,texture);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+        gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);
+        this.mobTextures.set(type,{texture,width:image.naturalWidth,height:image.naturalHeight,ready:true});
+      };
+      image.src=new URL('../../assets/mob-textures/'+file,import.meta.url).href;
+    }
   },
 
   _setupBuffers() {
@@ -468,6 +523,11 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     const draw = (x, y, z, yaw, parts, walkPhase = 0, legStart = -1, legEnd = -1, pulse = 1, pose = {}, skin = false) => {
       gl.uniform3f(uniforms.uPlayerPos, x, y, z);
       gl.uniform1f(uniforms.uYaw, yaw);
+      const mobTexture=!skin&&pose.mobType?this.mobTextures?.get(pose.mobType):null;
+      gl.activeTexture(gl.TEXTURE2);
+      gl.bindTexture(gl.TEXTURE_2D,mobTexture?.texture??this.mobFallbackTexture);
+      gl.uniform1i(uniforms.uMobTexture,2);
+      gl.uniform2f(uniforms.uMobTextureSize,mobTexture?.width??64,mobTexture?.height??32);
       for (let partIndex = 0; partIndex < parts.length; partIndex++) {
         const [offset, scale, color] = parts[partIndex];
         const isArm = skin && (partIndex === 2 || partIndex === 3);
@@ -539,6 +599,10 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         gl.uniform1f(uniforms.uPartPivotY, pivotY);
         gl.uniform1f(uniforms.uSkinPart, skin ? partIndex : -1);
         gl.uniform1f(uniforms.uSkinLayer, pose.skinLayer ? 1 : 0);
+        const mobUv=!skin?MOB_UV[pose.mobType]?.[partIndex]:null;
+        gl.uniform1f(uniforms.uMobEnabled,mobUv&&mobTexture?.ready?1:0);
+        gl.uniform2f(uniforms.uMobUV,mobUv?.[0]??0,mobUv?.[1]??0);
+        gl.uniform3f(uniforms.uMobBox,mobUv?.[2]??1,mobUv?.[3]??1,mobUv?.[4]??1);
         if (pose.hurt) {
           const flash = 0.42;
           gl.uniform4f(uniforms.uColor,
@@ -593,6 +657,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         hurt: (mob.hurtTicks || 0) > 0,
         animal,
         humanoid,
+        mobType: mob.type,
         idle: mob.anim?.idle ?? 0,
       });
     }
