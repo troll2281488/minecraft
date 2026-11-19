@@ -42,6 +42,7 @@ const UI_TEXTURES = Object.freeze({
   craftingTable: 'gui/container/crafting_table.png',
   titleLogo: 'gui/title/minecraft.png',
   optionsBackground: 'gui/options_background.png',
+  creativeInventory: 'gui/container/creative_inventory/tab_items.png',
 });
 
 async function fetchImage(path) {
@@ -335,6 +336,7 @@ export function setMinecraftUiTextures(textures) {
     craftingTable: '--mc-gui-crafting-table',
     titleLogo: '--mc-gui-title-logo',
     optionsBackground: '--mc-gui-options-background',
+    creativeInventory: '--mc-gui-creative-inventory',
   };
   for (const [key, variable] of Object.entries(variables)) {
     if (textures[key]) root.style.setProperty(variable, 'url("' + textures[key] + '")');
