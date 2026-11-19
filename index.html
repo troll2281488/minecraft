@@ -426,6 +426,107 @@
     background-position: left center;
     background-size: contain;
   }
+
+  /* Java-style title screen and survival HUD polish. */
+  #title-screen {
+    align-items:center !important;
+    justify-content:center !important;
+    background:rgba(0,0,0,.10) !important;
+  }
+  #title-screen::after {
+    background:linear-gradient(180deg,rgba(0,0,0,.10),transparent 42%,rgba(0,0,0,.42)) !important;
+  }
+  #title-screen .panel {
+    align-self:center !important;
+    margin:0 auto !important;
+    width:min(360px,calc(100vw - 32px)) !important;
+    max-width:360px !important;
+    min-width:0 !important;
+    padding:14px 18px 16px !important;
+    text-align:center !important;
+    background:transparent !important;
+    border:0 !important;
+    box-shadow:none !important;
+    backdrop-filter:none !important;
+  }
+  #title-screen .brand {
+    width:min(100%,340px) !important;
+    height:92px !important;
+    margin:0 auto 12px !important;
+    background-position:center !important;
+    filter:drop-shadow(3px 4px 0 #161616) !important;
+  }
+  #title-screen .tagline {
+    margin:0 auto 22px !important;
+    color:#fff !important;
+    font-size:.76rem !important;
+    letter-spacing:.04em !important;
+    text-transform:none !important;
+    text-shadow:1px 2px #222 !important;
+  }
+  #title-screen button {
+    width:100% !important;
+    min-height:38px !important;
+    margin:0 0 6px !important;
+    padding:8px 12px !important;
+    text-align:center !important;
+    font-size:.86rem !important;
+    background-color:#777 !important;
+    background-position:center -92px !important;
+  }
+  #title-screen button:hover:not(:disabled) {
+    background-position:center -132px !important;
+    filter:brightness(1.12) !important;
+  }
+  #title-screen .sub {
+    margin-top:10px !important;
+    font-size:.66rem !important;
+    text-align:center !important;
+    color:rgba(255,255,255,.82) !important;
+    text-shadow:1px 1px #222 !important;
+  }
+  #title-screen .version {
+    left:8px !important;
+    right:auto !important;
+    bottom:7px !important;
+    font-size:.68rem !important;
+  }
+  #title-screen .copyright {
+    position:absolute;
+    right:8px;
+    bottom:7px;
+    z-index:3;
+    color:rgba(255,255,255,.8);
+    font-size:.66rem;
+    text-shadow:1px 1px #222;
+  }
+  #health, #food, #air {
+    display:flex !important;
+    align-items:center !important;
+    gap:1px !important;
+    height:18px !important;
+    line-height:18px !important;
+    font-size:0 !important;
+    letter-spacing:0 !important;
+    filter:drop-shadow(1px 1px 1px #222) !important;
+  }
+  #health img, #food img, #air img {
+    width:18px !important;
+    height:18px !important;
+    image-rendering:pixelated !important;
+  }
+  #health { left:calc(50% - 205px) !important; bottom:66px !important; }
+  #food { left:calc(50% + 65px) !important; bottom:66px !important; }
+  #air { left:calc(50% + 205px) !important; bottom:66px !important; }
+  #hotbar { image-rendering:pixelated !important; }
+  #hotbar .slot img, .slot img { image-rendering:pixelated !important; }
+  @media(max-width:520px) {
+    #title-screen .panel { width:min(340px,calc(100vw - 24px)) !important; }
+    #title-screen .brand { height:76px !important; }
+    #health { left:calc(50% - 184px) !important; }
+    #food { left:calc(50% + 48px) !important; }
+  }
+
 </style>
 </head>
 <body>
