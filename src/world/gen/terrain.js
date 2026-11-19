@@ -444,9 +444,8 @@ export class TerrainGenerator {
 
         let top = -1;
         for (let y = Math.min(MAX_Y - 2, heights[i] + 4); y >= SEA_LEVEL; y--) {
-          if (chunk.getBlock(x, y, z).block.id === 'mc:grass_block' ||
-              chunk.getBlock(x, y, z).block.id === 'mc:sand' ||
-              chunk.getBlock(x, y, z).block.id === 'mc:red_sand') {
+          const state = chunk.getBlock(x, y, z);
+          if (state.block.solid && state.block.id !== 'mc:water') {
             top = y;
             break;
           }
@@ -454,7 +453,7 @@ export class TerrainGenerator {
         if (top < 0) continue;
         const groundId = chunk.getBlock(x, top, z).block.id;
 
-        if (surface.trees > 0 && groundId === 'mc:grass_block' && rng.nextDouble() < surface.trees) {
+        if (surface.trees > 0 && ['mc:grass_block', 'mc:podzol', 'mc:coarse_dirt', 'mc:snow_block'].includes(groundId) && rng.nextDouble() < surface.trees) {
           // Keep trunks away from the chunk edge: this generator writes only
           // into its own chunk, so a canopy crossing the border would be
           // clipped. Cross-chunk feature placement arrives in Phase 2.
@@ -465,7 +464,8 @@ export class TerrainGenerator {
         }
 
         if (surface.grass > 0 && groundId === 'mc:grass_block' && rng.nextDouble() < surface.grass) {
-          const plant = rng.nextDouble() < 0.12
+          const flowerChance = surface.flowers ?? 0.12;
+          const plant = rng.nextDouble() < flowerChance
             ? (rng.nextBoolean() ? S.byId['mc:poppy'] : S.byId['mc:dandelion'])
             : S.byId['mc:short_grass'];
           if (plant) chunk.setBlock(x, top + 1, z, plant);
