@@ -678,6 +678,19 @@
 
   #creative-screen .creative-trash{display:block;width:42px;height:38px;margin:10px auto 0;padding:0;font-size:30px;line-height:30px;font-weight:700;background:#343b46;border:2px solid #8b96a6;color:#fff;cursor:pointer}
   #creative-screen .creative-trash:hover{background:#9b3434;border-color:#f0b0b0}
+
+#villager-trade-screen .villager-trade-panel{width:min(42rem,94vw);max-height:86vh;overflow:auto;background:#c6c6c6!important;color:#252525}
+#villager-trade-screen .villager-trade-panel h1{color:#292929;text-shadow:1px 1px #eee;font-size:1.45rem;margin-bottom:.2rem}
+#villager-trade-screen .villager-trade-panel .sub{color:#454545;margin:.25rem 0 .8rem}
+.villager-trade-offers{display:grid;gap:.4rem;margin:.8rem 0}
+.villager-trade-row{display:flex;align-items:center;justify-content:space-between;gap:.7rem;padding:.55rem;background:#8b8b8b;border:2px solid #eee;border-right-color:#555;border-bottom-color:#555;box-shadow:inset 1px 1px #555}
+.villager-trade-details{display:flex;align-items:center;flex-wrap:wrap;gap:.35rem;font-size:.88rem;color:#171717}
+.villager-trade-arrow{font-size:1.2rem;font-weight:800;margin:0 .25rem}
+.villager-trade-row button{min-width:6.2rem;width:auto;margin:0;padding:.45rem .6rem;white-space:nowrap}
+.villager-trade-row button:disabled{opacity:.55;filter:grayscale(1)}
+.villager-trade-empty{text-align:center;padding:1rem}
+@media(max-width:520px){.villager-trade-row{align-items:flex-start;flex-direction:column}.villager-trade-row button{align-self:stretch;width:100%}}
+
 </style>
 </head>
 <body>
@@ -844,6 +857,16 @@
       <h3>Hotbar</h3>
       <div id="inv-hotbar" class="inv-grid"></div>
     </div>
+  </div>
+</div>
+
+<!-- Villager trading -->
+<div id="villager-trade-screen" class="overlay hidden">
+  <div class="panel villager-trade-panel">
+    <h1 id="villager-trade-title">Житель</h1>
+    <p id="villager-trade-subtitle" class="sub"></p>
+    <div id="villager-trade-offers" class="villager-trade-offers"></div>
+    <button id="villager-trade-close" class="secondary">Закрыть</button>
   </div>
 </div>
 
