@@ -8,6 +8,29 @@ import { ItemStack } from '../world/item.js';
  * Per-species combat and awareness tuning. These are game-only creature rules:
  * each hostile has a readable counterplay window instead of sharing one generic AI.
  */
+/** Pick a walkable local detour that still trends toward the target. */
+export function chooseMobDetourYaw(currentYaw, desiredYaw, options) {
+  let bestYaw = null;
+  let bestScore = Infinity;
+  for (const option of options ?? []) {
+    if (!option?.walkable || !Number.isFinite(option.yaw) || !Number.isFinite(option.distance)) continue;
+    const turn = Math.abs(Math.atan2(
+      Math.sin(option.yaw - currentYaw),
+      Math.cos(option.yaw - currentYaw),
+    ));
+    const alignment = Math.abs(Math.atan2(
+      Math.sin(option.yaw - desiredYaw),
+      Math.cos(option.yaw - desiredYaw),
+    ));
+    const score = option.distance + turn * 0.18 + alignment * 0.12;
+    if (score < bestScore) {
+      bestScore = score;
+      bestYaw = option.yaw;
+    }
+  }
+  return bestYaw;
+}
+
 export const MOB_AI_PROFILES = Object.freeze({
   zombie: Object.freeze({ detectionRange: 14, speedMultiplier: 1, meleeRange: 1.35, attackCooldown: 40, damage: 1, role: 'pursuer' }),
   skeleton: Object.freeze({ detectionRange: 20, speedMultiplier: 0.82, rangedRange: 14, preferredRange: 8, attackCooldown: 55, damage: 2, role: 'ranged' }),
@@ -619,6 +642,33 @@ export class MobSystem {
           if (zFree) mob.z = nz;
           if (!xFree) mob.knockbackX *= -0.12;
           if (!zFree) mob.knockbackZ *= -0.12;
+
+          // If both axes are blocked, look for a nearby safe step around the
+          // obstacle. This prevents hostile mobs from endlessly pushing into
+          // the same wall while pursuing the player.
+          if (!xFree && !zFree && hostile) {
+            mob.blockedTicks = (mob.blockedTicks || 0) + 1;
+            if (mob.blockedTicks >= 3) {
+              const options = [];
+              for (const offset of [-Math.PI / 2, Math.PI / 2, -Math.PI / 3, Math.PI / 3, Math.PI]) {
+                const yaw = mob.yaw + offset;
+                const stepX = mob.x + Math.sin(yaw) * Math.max(speed, 0.045);
+                const stepZ = mob.z + Math.cos(yaw) * Math.max(speed, 0.045);
+                if (canMove(stepX, stepZ)) {
+                  options.push({
+                    yaw,
+                    distance: Math.hypot(player.x - stepX, player.z - stepZ),
+                    walkable: true,
+                  });
+                }
+              }
+              const detour = chooseMobDetourYaw(mob.yaw, mob.targetYaw, options);
+              mob.targetYaw = detour ?? (mob.targetYaw + (mob.id % 2 ? 1 : -1) * Math.PI / 2);
+              mob.blockedTicks = 0;
+            }
+          } else {
+            mob.blockedTicks = 0;
+          }
         }
         mob.knockbackX = (mob.knockbackX || 0) * 0.72;
         mob.knockbackZ = (mob.knockbackZ || 0) * 0.72;
