@@ -88,7 +88,8 @@ export async function loadItsBrianTextures(blocks, items) {
 
   const itemEntries = await mapWithLimit([...items.items.values()].filter((item) => !item.block), 24, async (item) => {
     const name = item.id.slice(item.id.indexOf(':') + 1);
-    const sourceName = ITEM_TEXTURE_ALIASES[name] ?? name;\n    const bitmap = await fetchImage('item/' + encodeURIComponent(sourceName) + '.png');
+    const sourceName = ITEM_TEXTURE_ALIASES[name] ?? name;
+    const bitmap = await fetchImage('item/' + encodeURIComponent(sourceName) + '.png');
     if (!bitmap) return null;
     const { canvas } = canvasFor(bitmap);
     bitmap.close();
