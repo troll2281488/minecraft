@@ -209,7 +209,7 @@ vec4 mobSample(){
 vec4 itemSample(){ vec2 uv; bool front=vNormal.z>0.5, back=vNormal.z< -0.5, right=vNormal.x>0.5, left=vNormal.x< -0.5, top=vNormal.y>0.5; if(front) uv=vec2(vLocalPos.x,1.0-vLocalPos.y); else if(back) uv=vec2(1.0-vLocalPos.x,1.0-vLocalPos.y); else if(right) uv=vec2(1.0-vLocalPos.z,1.0-vLocalPos.y); else if(left) uv=vec2(vLocalPos.z,1.0-vLocalPos.y); else if(top) uv=vec2(vLocalPos.x,vLocalPos.z); else uv=vec2(vLocalPos.x,1.0-vLocalPos.z); return texture(uMobTexture,uv);}
 void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
   if(uSkinPart>=0.0){ vec4 texel=skinSample(); color=texel.rgb; if(texel.a<0.1) discard; }
-  else if(uItemSprite>0.5){ vec4 texel=itemSample(); color=texel.rgb; if(texel.a<0.1) discard; }
+  else if(uItemSprite>0.5){ if(vNormal.z<0.5) discard; vec4 texel=itemSample(); color=texel.rgb; if(texel.a<0.1) discard; }
   else if(uMobEnabled>0.5){ vec4 texel=mobSample(); color=texel.rgb; if(texel.a<0.1) discard; }
   else { float patchValue=mod(cell.x*3.0+cell.y*5.0+cell.z*7.0,11.0); color*=mix(0.80,1.08,step(3.0,patchValue)); }
   float pixel=0.94+mod(cell.x+cell.y+cell.z,2.0)*0.06; fragColor=vec4(color*vLight*pixel,uColor.a);
@@ -720,14 +720,14 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       const babyScale = mob.ageTicks < 0 ? 0.55 : 1;
       const animal = ['sheep', 'pig', 'cow', 'chicken'].includes(mob.type);
       const humanoid = ['zombie', 'skeleton', 'stray'].includes(mob.type);
-      draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
+      draw(mob.x, mob.y, mob.z, mob.yaw + Math.PI, parts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
         hurt: (mob.hurtTicks || 0) > 0, animal, humanoid, vanillaModel: !!vanillaParts,
         mobType: mob.type, mobTextureKey: mob.type,
         idle: mob.anim?.idle ?? 0, walking: !!mob.anim?.walking,
       });
       if (mob.type === 'sheep' && vanillaModel?.layers?.fur) {
         const furParts = vanillaLayerParts(vanillaModel, 'fur');
-        if (furParts) draw(mob.x, mob.y, mob.z, mob.yaw, furParts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
+        if (furParts) draw(mob.x, mob.y, mob.z, mob.yaw + Math.PI, furParts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
           hurt: (mob.hurtTicks || 0) > 0, animal: true, vanillaModel: true,
           mobType: mob.type, mobTextureKey: 'sheep_fur', idle: mob.anim?.idle ?? 0,
           walking: !!mob.anim?.walking,
@@ -749,11 +749,11 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       const attackThrust = this.player.attackTime > 0 ? Math.sin(attackProgress * Math.PI) : 0;
       // Keep the resting hand lower in the bottom-right of the view.
       // During an attack lift it vertically; do not thrust it toward the camera.
-      const handDistance = 0.48 + attackThrust * 0.14;
+      const handDistance = 0.48;
       const handX = this.renderPosition.x + forwardX * handDistance + rightX * 0.34;
       const handY = this.renderPosition.y + this.player.eyeHeight + forwardY * handDistance - 0.40;
       const handZ = this.renderPosition.z + forwardZ * handDistance + rightZ * 0.34;
-      const handBob = Math.sin(this.player.walkPhase * 2) * 0.025;
+      const handBob = Math.sin(this.player.walkPhase * 2) * 0.006;
       const armParts = [
         [[0, 0, 0], [0.001, 0.001, 0.001], [0, 0, 0, 0]],
         [[0, 0, 0], [0.001, 0.001, 0.001], [0, 0, 0, 0]],
@@ -794,7 +794,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           const size = isBlock ? [0.135, 0.135, 0.135] : [0.16, 0.27, 0.025];
           const itemParts = [[[0, 0, 0], size, [1, 1, 1, 1], null, null, [0.22, 0, -0.42]]];
           const itemX = handX + forwardX * 0.035 + rightX * 0.025;
-          const itemY = handY - 0.235;
+          const itemY = handY - 0.12;
           const itemZ = handZ + forwardZ * 0.035 + rightZ * 0.025;
           const itemSwing = this.player.attackTime > 0
             ? -0.55 * Math.sin((8 - this.player.attackTime) / 8 * Math.PI) : -0.12;
