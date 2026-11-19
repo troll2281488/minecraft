@@ -10,6 +10,8 @@
  */
 import { Chest, Furnace, SMELTING, SMELT_TICKS, serializeContainer, deserializeContainer } from './containers.js';
 import { ItemStack } from '../world/item.js';
+import { positionalRandom } from '../core/rng.js';
+import { TerrainGenerator, dungeonCandidateForCell, villageCandidateForCell } from '../world/gen/terrain.js';
 
 const OVERLAY_ID = 'container-overlay';
 
@@ -48,6 +50,52 @@ function label(stack) {
   return `${name}${stack.count > 1 ? ` <span class="n">${stack.count}</span>` : ''}`;
 }
 
+function generatedChestKind(seed, x, y, z) {
+  if (seed === undefined || seed === null) return null;
+
+  // Dungeon chests are at room origin + (1, 1, 1).
+  for (let gx = Math.floor((x - 64) / 80); gx <= Math.floor(x / 80); gx++) {
+    for (let gz = Math.floor((z - 64) / 80); gz <= Math.floor(z / 80); gz++) {
+      const room = dungeonCandidateForCell(seed, gx, gz);
+      if (room && x === room.x + 1 && y === room.y + 1 && z === room.z + 1) return 'dungeon';
+    }
+  }
+
+  // The third village home contains a pantry chest. Validate the same site
+  // rules as terrain generation so player-placed chests never receive loot.
+  const generator = new TerrainGenerator(seed);
+  for (let gx = Math.floor((x - 140) / 128); gx <= Math.floor(x / 128); gx++) {
+    for (let gz = Math.floor((z - 140) / 128); gz <= Math.floor(z / 128); gz++) {
+      const village = villageCandidateForCell(seed, gx, gz);
+      if (!village) continue;
+      const site = generator.validateVillageSite(village.x, village.z);
+      if (site && x === village.x + 4 && y === site.y + 2 && z === village.z + 13) return 'village';
+    }
+  }
+  return null;
+}
+
+function fillGeneratedChest(seed, x, y, z, chest, kind) {
+  const rng = positionalRandom(seed, x, y, z, kind === 'dungeon' ? 3301 : 3302);
+  const villageLoot = [
+    ['mc:bread', 2, 5], ['mc:apple', 1, 3], ['mc:wheat_seeds', 2, 6],
+    ['mc:stick', 2, 6], ['mc:iron_ingot', 1, 2], ['mc:gold_nugget', 2, 5],
+    ['mc:leather', 1, 3], ['mc:coal', 2, 5],
+  ];
+  const dungeonLoot = [
+    ['mc:bread', 1, 4], ['mc:iron_ingot', 1, 4], ['mc:gold_ingot', 1, 3],
+    ['mc:coal', 2, 7], ['mc:string', 2, 6], ['mc:bone', 1, 5],
+    ['mc:diamond', 1, 2], ['mc:emerald', 1, 2], ['mc:apple', 1, 3],
+    ['mc:iron_pickaxe', 1, 1], ['mc:gold_nugget', 2, 7],
+  ];
+  const pool = kind === 'village' ? villageLoot : dungeonLoot;
+  const rolls = kind === 'village' ? 5 + rng.nextInt(3) : 6 + rng.nextInt(4);
+  for (let i = 0; i < rolls; i++) {
+    const [id, min, max] = pool[rng.nextInt(pool.length)];
+    chest.insert(ItemStack.of(id, min + rng.nextInt(max - min + 1)));
+  }
+}
+
 export const ContainerScreensMixin = {
   /** Export all placed chest/furnace inventories as save-file block entities. */
   _serializeContainers() {
@@ -75,7 +123,12 @@ export const ContainerScreensMixin = {
   _chestAt(x, y, z) {
     this._containers ??= new Map();
     const key = this._containerKey(x, y, z);
-    if (!this._containers.has(key)) this._containers.set(key, { type: 'chest', data: new Chest() });
+    if (!this._containers.has(key)) {
+      const chest = new Chest();
+      const kind = generatedChestKind(this.world?.seed, x, y, z);
+      if (kind) fillGeneratedChest(this.world.seed, x, y, z, chest, kind);
+      this._containers.set(key, { type: 'chest', data: chest });
+    }
     return this._containers.get(key).data;
   },
 
