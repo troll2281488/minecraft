@@ -340,7 +340,7 @@
     opacity:.48; pointer-events:none;
   }
   #creative-screen .panel::before {
-    background-image:var(--mc-gui-options-background, url('https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/gui/options_background.png'));
+    background-image:var(--mc-gui-creative-inventory, url('https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/gui/container/creative_inventory/tab_items.png'));
     opacity:.42;
   }
   #inventory-screen .panel h1,
@@ -415,6 +415,16 @@
     background-image: var(--mc-gui-widgets);
     background-position: center -132px;
     transform: none;
+  }
+
+  #title-screen .brand {
+    font-size: 0;
+    width: min(100%, 340px);
+    height: 88px;
+    background-image: var(--mc-gui-title-logo, url('https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/gui/title/minecraft.png'));
+    background-repeat: no-repeat;
+    background-position: left center;
+    background-size: contain;
   }
 </style>
 </head>
