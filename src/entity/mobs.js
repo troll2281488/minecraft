@@ -118,6 +118,7 @@ export class MobSystem {
     this.fishing = null;
     this.villageCheckTicks = 0;
     this.villageGenerator = null;
+    this.populatedVillages = new Set();
   }
 
   reset() {
@@ -128,6 +129,7 @@ export class MobSystem {
     this.fishing = null;
     this.villageCheckTicks = 0;
     this.villageGenerator = null;
+    this.populatedVillages.clear();
   }
 
   /** Toss a stack into the world with a small forward/upward impulse. */
@@ -195,7 +197,7 @@ export class MobSystem {
 
   /** Return a compact, JSON-safe snapshot for the local world save. */
   toJSON() {
-    return this.mobs.map((mob) => ({
+    const entries = this.mobs.map((mob) => ({
       id: mob.id,
       type: mob.type,
       x: mob.x, y: mob.y, z: mob.z,
@@ -219,20 +221,28 @@ export class MobSystem {
       villagerUsedOffers: mob.villagerUsedOffers ?? [],
       villagerOfferUses: mob.villagerOfferUses ?? {},
     }));
+    for (const villageKey of this.populatedVillages) entries.push({ type: 'village_marker', villageKey });
+    return entries;
   }
 
   /** Restore only known, finite mob state; malformed save entries are ignored. */
   loadFrom(entries) {
     this.mobs.length = 0;
+    this.populatedVillages = new Set();
     if (!Array.isArray(entries)) {
       this.nextId = 1;
       return;
     }
-    const valid = entries.slice(0, 128).filter((mob) =>
+    for (const entry of entries) {
+      if (entry?.type === 'village_marker' && typeof entry.villageKey === 'string' && entry.villageKey.length <= 48) {
+        this.populatedVillages.add(entry.villageKey);
+      }
+    }
+    const valid = entries.filter((mob) =>
       mob && MOB_TYPES_112.includes(mob.type) &&
       ['x', 'y', 'z', 'yaw', 'health'].every((key) => Number.isFinite(mob[key])) &&
       mob.y >= -64 && mob.y <= 320 && mob.health > 0 && mob.health <= 2048
-    );
+    ).slice(0, 128);
     for (const mob of valid) {
       this.mobs.push({
         id: Number.isSafeInteger(mob.id) && mob.id > 0 ? mob.id : this.mobs.length + 1,
@@ -296,7 +306,7 @@ export class MobSystem {
   /** Populate nearby generated villages with four persistent residents. */
   _spawnNearbyVillageResidents() {
     const world = this.game.world, player = this.game.player;
-    if (!world || !player || !world.seed) return;
+    if (!world || !player || world.seed === undefined || world.seed === null) return;
     if (!this.villageGenerator || this.villageSeed !== String(world.seed)) {
       this.villageGenerator = new TerrainGenerator(world.seed);
       this.villageSeed = String(world.seed);
@@ -310,8 +320,9 @@ export class MobSystem {
         const site = this.villageGenerator.validateVillageSite(candidate.x, candidate.z);
         if (!site) continue;
         const villageKey = `${gx},${gz}`;
+        if (this.populatedVillages.has(villageKey)) continue;
         const residents = this.mobs.filter((mob) => mob.type === 'villager' && mob.villageKey === villageKey);
-        if (residents.length >= 4) continue;
+        if (residents.length >= 4) { this.populatedVillages.add(villageKey); continue; }
         const occupied = new Set(residents.map((mob) => mob.villageSlot));
         for (let slot = 0; slot < positions.length; slot++) {
           if (occupied.has(slot)) continue;
@@ -325,6 +336,9 @@ export class MobSystem {
             ...profile, y, villageKey, villageSlot: slot,
             speed: 0.018,
           });
+        }
+        if (this.mobs.filter((mob) => mob.type === 'villager' && mob.villageKey === villageKey).length >= 4) {
+          this.populatedVillages.add(villageKey);
         }
       }
     }
