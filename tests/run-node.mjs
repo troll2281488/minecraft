@@ -1,6 +1,6 @@
 import { run } from './framework.js';
 
-for (const name of ['phase1_containers', 'version_112', 'keybinds', 'mob_systems', 'fishing', 'shearing', 'shears_loot', 'overworld_biomes', 'overworld_villages', 'fishing_visual', 'overworld_underground', 'entity_models', 'resource_pack', 'villager_trades']) {
+for (const name of ['phase1_containers', 'version_112', 'keybinds', 'mob_systems', 'fishing', 'shearing', 'shears_loot', 'overworld_biomes', 'overworld_villages', 'overworld_structures', 'fishing_visual', 'overworld_underground', 'entity_models', 'resource_pack', 'villager_trades']) {
   await import(`./${name}.test.js`);
 }
 
