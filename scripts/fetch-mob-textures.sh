@@ -17,6 +17,7 @@ download() {
 download "cow/cow.png" "cow.png"
 download "pig/pig.png" "pig.png"
 download "sheep/sheep.png" "sheep.png"
+download "sheep/sheep_fur.png" "sheep_fur.png"
 download "chicken.png" "chicken.png"
 download "zombie/zombie.png" "zombie.png"
 download "skeleton/skeleton.png" "skeleton.png"
