@@ -260,6 +260,7 @@ export class TerrainGenerator {
     this.applySurface(chunk, baseX, baseZ, heights, biomes);
     this.placeFeatures(chunk, baseX, baseZ, heights, biomes);
     this.placeCaveLakes(chunk, baseX, baseZ);
+    this.placeFossils(chunk, baseX, baseZ);
     this.placeVillages(chunk, baseX, baseZ);
     this.placeUndergroundStructures(chunk, baseX, baseZ);
 
@@ -498,6 +499,53 @@ export class TerrainGenerator {
         if (chunk.getBlock(x, lake.y - 1, z).block.id === 'mc:air') put(wx, lake.y - 1, wz, stone);
       }
     }
+  }
+
+  /** Rare fossil chambers, anchored to a world grid and clipped per chunk. */
+  placeFossils(chunk, baseX, baseZ) {
+    const minX = Math.floor((baseX - 12) / 144);
+    const maxX = Math.floor((baseX + CHUNK_SIZE + 12) / 144);
+    const minZ = Math.floor((baseZ - 12) / 144);
+    const maxZ = Math.floor((baseZ + CHUNK_SIZE + 12) / 144);
+    for (let gz = minZ; gz <= maxZ; gz++) {
+      for (let gx = minX; gx <= maxX; gx++) {
+        const fossil = fossilCandidateForCell(this.seed, gx, gz);
+        if (fossil) this.placeFossil(chunk, baseX, baseZ, fossil);
+      }
+    }
+  }
+
+  placeFossil(chunk, baseX, baseZ, fossil) {
+    const S = this.states.byId;
+    const air = S['mc:air'], bone = S['mc:bone_block'], stone = S['mc:stone'];
+    if (!air || !bone || !stone) return;
+    const put = (wx, y, wz, state) => {
+      const x = wx - baseX, z = wz - baseZ;
+      if (x < 0 || x >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE || y < MIN_Y || y >= MAX_Y) return;
+      chunk.setBlock(x, y, z, state);
+    };
+    // Open a compact chamber first, then leave a fossilized spine and curved ribs.
+    for (let dx = -5; dx <= 5; dx++) for (let dz = -4; dz <= 4; dz++) {
+      for (let dy = 1; dy <= 4; dy++) {
+        const wx = fossil.x + dx, wz = fossil.z + dz;
+        const x = wx - baseX, z = wz - baseZ;
+        if (x < 0 || x >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE) continue;
+        const id = chunk.getBlock(x, fossil.y + dy, z).block.id;
+        if (STONE_REPLACEABLE.has(id)) put(wx, fossil.y + dy, wz, air);
+      }
+    }
+    // Vertebrae, paired ribs, and a compact skull-like end cluster.
+    for (let dx = -3; dx <= 3; dx++) put(fossil.x + dx, fossil.y + 1, fossil.z, bone);
+    for (const dx of [-2, 0, 2]) {
+      for (let dz = -3; dz <= 3; dz++) {
+        const archY = fossil.y + 2 + Math.round((1 - Math.abs(dz) / 3) * 2);
+        put(fossil.x + dx, archY, fossil.z + dz, bone);
+      }
+    }
+    put(fossil.x + 4, fossil.y + 1, fossil.z, bone);
+    put(fossil.x + 5, fossil.y + 1, fossil.z, bone);
+    put(fossil.x + 4, fossil.y + 2, fossil.z - 1, bone);
+    put(fossil.x + 4, fossil.y + 2, fossil.z + 1, bone);
   }
 
   placeUndergroundStructures(chunk, baseX, baseZ) {
@@ -750,6 +798,16 @@ export function caveLakeCandidateForCell(seed, gridX, gridZ) {
     z: gridZ * 112 + 24 + rng.nextInt(64),
     y: 12 + rng.nextInt(28),
     radius: 4 + rng.nextInt(3),
+  };
+}
+
+export function fossilCandidateForCell(seed, gridX, gridZ) {
+  const rng = positionalRandom(seed, gridX, 1901, gridZ, 1901);
+  if (rng.nextInt(10) !== 0) return null;
+  return {
+    x: gridX * 144 + 20 + rng.nextInt(104),
+    z: gridZ * 144 + 20 + rng.nextInt(104),
+    y: 8 + rng.nextInt(25),
   };
 }
 
