@@ -17,9 +17,9 @@ export const VILLAGER_CAREERS = Object.freeze({
     offer('potato',1,'mc:potato',15,19,'mc:emerald'),
     offer('carrot',1,'mc:carrot',15,19,'mc:emerald'),
     offer('bread',1,'mc:emerald',1,1,'mc:bread',2,4),
-    offer('pumpkin',2,'mc:pumpkin',8,13,'mc:emerald'),
+    offer('seeds',2,'mc:wheat_seeds',24,32,'mc:emerald'),
     offer('apple',2,'mc:emerald',1,1,'mc:apple',5,7),
-    offer('melon',3,'mc:melon',7,12,'mc:emerald'),
+    offer('apples',3,'mc:apple',6,10,'mc:emerald'),
     offer('baked_potato',3,'mc:emerald',1,1,'mc:baked_potato',3,5),
   ]}),
   fisherman: Object.freeze({ label: 'Рыбак', profession: 'farmer', texture: 'fisherman', offers: [
