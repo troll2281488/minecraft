@@ -147,6 +147,8 @@ class Game {
     if (this.running || this._titlePreviewActive) return;
     this._titlePreviewActive = true;
     this.titlePreviewWorld = new World({ seed: 'title-panorama-112', textureTable: this.textureTable });
+    // Hold the title panorama at vanilla sunset (12,000 ticks) for a warm golden-hour scene.
+    this.titlePreviewWorld.time = 12000;
     this.world = this.titlePreviewWorld;
     this.player = new Player();
     this.player.teleport(0, 90, 0);
