@@ -66,11 +66,6 @@ export const VILLAGER_CAREERS = Object.freeze({
     offer('diamond',3,'mc:diamond',3,4,'mc:emerald'),
     offer('diamond_pickaxe',3,'mc:emerald',12,15,'mc:diamond_pickaxe'),
   ]}),
-  weaponsmith: Object.freeze({ label: 'Кузнец', profession: 'blacksmith', texture: 'weaponsmith', offers: [
-    offer('coal',1,'mc:coal',16,24,'mc:emerald'),
-    offer('iron',2,'mc:iron_ingot',7,9,'mc:emerald'),
-    offer('gold',3,'mc:gold_ingot',4,6,'mc:emerald'),
-  ]}),
   butcher: Object.freeze({ label: 'Мясник', profession: 'butcher', texture: 'butcher', offers: [
     offer('pork',1,'mc:raw_porkchop',14,18,'mc:emerald'),
     offer('chicken',1,'mc:raw_chicken',14,18,'mc:emerald'),
@@ -122,9 +117,14 @@ export function getVillagerOffers(villager) {
         id: entry.id, tier: entry.tier, input: entry.input, inputCount,
         input2: entry.input2, input2Count: entry.input2Count,
         output: entry.output, outputCount, uses,
-        disabled: uses >= 12,
+        disabled: false,
       };
     });
+}
+
+function careerTiers(careerKey) {
+  const career = VILLAGER_CAREERS[careerKey] ?? VILLAGER_CAREERS.nitwit;
+  return career.offers.map((entry) => entry.tier);
 }
 
 function canFitOutput(inventory, itemId, count) {
@@ -171,7 +171,8 @@ export function executeVillagerTrade(villager, offerId, inventory) {
   villager.villagerTradeCount = (villager.villagerTradeCount ?? 0) + 1;
   if (!wasUsed) {
     villager.villagerUsedOffers.push(selected.id);
-    villager.villagerTier = Math.min(5, Math.max(1, villager.villagerTier ?? 1) + 1);
+    const maxTier = Math.max(1, ...careerTiers(villager.villagerCareer));
+    villager.villagerTier = Math.min(maxTier, Math.max(1, villager.villagerTier ?? 1) + 1);
   }
   return {
     ok: true,
