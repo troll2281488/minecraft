@@ -461,6 +461,16 @@ for (const [id, nutrition, saturation] of FOODS) {
 ITEMS.define('mc:shears', { stackSize: 1, maxDamage: 238, tool: 'shears', attackDamage: 1 });
 ITEMS.define('mc:fishing_rod', { stackSize: 1, maxDamage: 64, tool: 'fishing_rod' });
 
+// Creative-only spawn eggs for the mobs currently supported by the renderer.
+for (const mobType of [
+  'cow','pig','sheep','chicken','zombie','skeleton','stray',
+  'creeper','enderman','spider','cave_spider',
+]) {
+  ITEMS.define(`mc:${mobType}_spawn_egg`, {
+    stackSize: 64, spawnEggMob: mobType, notInSurvival: true,
+  });
+}
+
 // Armour (Java 1.12.2). Slot values follow the inventory's vanilla order.
 const ARMOR_SLOTS = [
   ['boots'],
