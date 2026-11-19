@@ -35,10 +35,10 @@ export const VILLAGER_CAREERS = Object.freeze({
     offer('wool_extra',2,'mc:white_wool',16,22,'mc:emerald'),
   ]}),
   librarian: Object.freeze({ label: 'Библиотекарь', profession: 'librarian', texture: 'librarian', offers: [
-    offer('bookshelf',1,'mc:bookshelf',3,4,'mc:emerald'),
-    offer('glass',1,'mc:emerald',1,1,'mc:glass',3,5),
-    offer('bookshelf2',2,'mc:emerald',1,1,'mc:bookshelf'),
-    offer('glass2',3,'mc:glass',8,12,'mc:emerald'),
+    offer('paper',1,'mc:paper',24,32,'mc:emerald'),
+    offer('books',1,'mc:book',8,10,'mc:emerald'),
+    offer('glass',2,'mc:emerald',1,1,'mc:glass',3,5),
+    offer('book_sale',3,'mc:emerald',1,1,'mc:book'),
   ]}),
   cleric: Object.freeze({ label: 'Священник', profession: 'priest', texture: 'cleric', offers: [
     offer('rotten_flesh',1,'mc:rotten_flesh',36,40,'mc:emerald'),
