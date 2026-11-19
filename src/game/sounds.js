@@ -25,6 +25,10 @@ export class GameSounds {
       pickup: { f: 620, d: .12, type: 'sine' },
       step: { f: material === 'wood' ? 105 : material === 'grass' ? 145 : 120, d: .045, type: 'triangle' },
       equip: { f: 440, d: .10, type: 'sine' },
+      cast: { f: 520, d: .12, type: 'triangle' },
+      reel: { f: 360, d: .10, type: 'triangle' },
+      bite: { f: 880, d: .08, type: 'sine' },
+      catch: { f: 740, d: .16, type: 'sine' },
     };
     const p = presets[kind] || presets.hit;
     const osc = c.createOscillator();
