@@ -231,6 +231,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, skinImage);
     };
     skinImage.src = PLAYER_SKIN_DATA_URL;
+    this.droppedItemTextures = new Map();
     this.heldItemTexture = gl.createTexture();
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, this.heldItemTexture);
@@ -592,7 +593,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     const draw = (x, y, z, yaw, parts, walkPhase = 0, legStart = -1, legEnd = -1, pulse = 1, pose = {}, skin = false) => {
       gl.uniform3f(uniforms.uPlayerPos, x, y, z);
       gl.uniform1f(uniforms.uYaw, yaw);
-      const mobTexture = pose.itemSprite ? { texture: this.heldItemTexture, width: 16, height: 16, ready: this.heldItemTextureReady } : !skin && pose.mobTextureKey ? this.mobTextures?.get(pose.mobTextureKey) : !skin && pose.mobType ? this.mobTextures?.get(pose.mobType) : null;
+      const mobTexture = pose.itemSprite ? { texture: pose.itemTexture ?? this.heldItemTexture, width: 16, height: 16, ready: pose.itemReady ?? this.heldItemTextureReady } : !skin && pose.mobTextureKey ? this.mobTextures?.get(pose.mobTextureKey) : !skin && pose.mobType ? this.mobTextures?.get(pose.mobType) : null;
       gl.activeTexture(gl.TEXTURE2);
       gl.bindTexture(gl.TEXTURE_2D, mobTexture?.texture ?? this.mobFallbackTexture);
       gl.uniform1i(uniforms.uMobTexture, 2);
@@ -707,16 +708,36 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       size.map((value) => value + (index === 0 ? 0.035 : 0.025)),
       color,
     ]);
-    // Dropped stacks bob and spin on the ground; pickup is handled by MobSystem.
+    // Dropped stacks use the exact inventory icon for their item, not a generic cube.
     for (const drop of this.entities?.droppedItems ?? []) {
-      const phase = (drop.age || 0) * 0.08;
-      const color = drop.stack?.item?.block ? [0.62,0.62,0.62,1]
-        : /sword|pickaxe|axe|shovel|hoe/.test(drop.stack?.item?.id || '') ? [0.72,0.68,0.58,1]
-        : [0.78,0.70,0.48,1];
-      const size = drop.stack?.item?.block ? [0.22,0.22,0.22] : [0.16,0.10,0.08];
-      draw(drop.x, drop.y + 0.10 + Math.sin(phase)*0.035, drop.z, phase, [
-        [[0,0,0],size,color],
-      ], 0, -1, -1, 1, { itemModel: true, itemSwing: 0 });
+      const id = drop.stack?.item?.id;
+      const icon = id ? this.ui.icons.get(id) : null;
+      if (!icon) continue;
+      let entry = this.droppedItemTextures.get(id);
+      if (!entry) {
+        const texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255,255,255,255]));
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        entry = { texture, ready: false };
+        this.droppedItemTextures.set(id, entry);
+        const image = new Image();
+        image.onload = () => {
+          gl.bindTexture(gl.TEXTURE_2D, texture);
+          gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+          entry.ready = true;
+        };
+        image.src = icon;
+      }
+      if (!entry.ready) continue;
+      const isBlock = !!drop.stack.item.block;
+      const size = isBlock ? [0.19,0.19,0.19] : /sword|pickaxe|axe|shovel|hoe/.test(id) ? [0.065,0.30,0.045] : [0.18,0.14,0.045];
+      const phase = drop.spin ?? (drop.age || 0) * 0.08;
+      draw(drop.x, drop.y + 0.08, drop.z, phase, [
+        [[0,0,0],size,[1,1,1,1]],
+      ], 0, -1, -1, 1, { itemModel: true, itemSprite: true, itemTexture: entry.texture, itemReady: true, itemSwing: 0 });
     }
     if (this.thirdPerson) {
       document.getElementById('held-item-view')?.classList.add('hidden');
