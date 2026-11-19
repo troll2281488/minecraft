@@ -259,6 +259,7 @@ export class TerrainGenerator {
     this.placeOres(chunk, baseX, baseZ);
     this.applySurface(chunk, baseX, baseZ, heights, biomes);
     this.placeFeatures(chunk, baseX, baseZ, heights, biomes);
+    this.placeVillages(chunk, baseX, baseZ);
 
     chunk.rebuildHeightmap();
     chunk.generatedStage = GEN_STAGE.FEATURES;
@@ -406,6 +407,123 @@ export class TerrainGenerator {
     }
   }
 
+  /**
+   * Village candidates are anchored to a coarse world grid, not to chunks.
+   * Every chunk independently evaluates nearby candidates and writes only its
+   * own 16x16 slice. This makes houses/farms continuous across chunk borders
+   * regardless of worker completion order.
+   */
+  placeVillages(chunk, baseX, baseZ) {
+    const minGridX = Math.floor((baseX - 30) / 128);
+    const maxGridX = Math.floor((baseX + CHUNK_SIZE + 30) / 128);
+    const minGridZ = Math.floor((baseZ - 30) / 128);
+    const maxGridZ = Math.floor((baseZ + CHUNK_SIZE + 30) / 128);
+
+    for (let gz = minGridZ; gz <= maxGridZ; gz++) {
+      for (let gx = minGridX; gx <= maxGridX; gx++) {
+        const candidate = villageCandidateForCell(this.seed, gx, gz);
+        if (!candidate) continue;
+
+        const site = this.validateVillageSite(candidate.x, candidate.z);
+        if (!site) continue;
+        this.placeVillageHouse(chunk, baseX, baseZ, candidate.x, candidate.z, site.y);
+        this.placeVillageHouse(chunk, baseX, baseZ, candidate.x + 9, candidate.z + 1, site.y);
+        this.placeVillageFarm(chunk, baseX, baseZ, candidate.x + 18, candidate.z + 2, site.y);
+        // A compact path visually connects the houses to the farm.
+        for (let dx = 6; dx <= 19; dx++) {
+          this.setVillageBlock(chunk, baseX, baseZ, candidate.x + dx, site.y, candidate.z + 8, this.states.byId['mc:coarse_dirt']);
+        }
+      }
+    }
+  }
+
+  validateVillageSite(x, z) {
+    const allowed = new Set([
+      BIOME.PLAINS, BIOME.FOREST, BIOME.BIRCH_FOREST,
+      BIOME.SAVANNA, BIOME.TAIGA,
+    ]);
+    const offsetsX = [0, 6, 12, 18, 24];
+    const offsetsZ = [0, 5, 10];
+    let min = Infinity, max = -Infinity;
+    for (const dz of offsetsZ) {
+      for (const dx of offsetsX) {
+        const wx = x + dx, wz = z + dz;
+        const height = this.heightAt(wx, wz);
+        const biome = this.biomeAt(wx, wz, height);
+        if (!allowed.has(biome)) return null;
+        min = Math.min(min, height);
+        max = Math.max(max, height);
+      }
+    }
+    if (min < SEA_LEVEL + 2 || max - min > 2.25) return null;
+    return { y: Math.floor((min + max) / 2) };
+  }
+
+  setVillageBlock(chunk, baseX, baseZ, wx, y, wz, state) {
+    if (!state || y < MIN_Y || y >= MAX_Y) return;
+    const x = wx - baseX, z = wz - baseZ;
+    if (x < 0 || x >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE) return;
+    chunk.setBlock(x, y, z, state);
+  }
+
+  placeVillageHouse(chunk, baseX, baseZ, x, z, groundY) {
+    const S = this.states.byId;
+    const planks = S['mc:oak_planks'];
+    const log = S['mc:oak_log'];
+    const glass = S['mc:glass'];
+    if (!planks || !log) return;
+
+    const put = (wx, y, wz, state) => this.setVillageBlock(chunk, baseX, baseZ, wx, y, wz, state);
+    // Raised plank floor and a simple timber frame.
+    for (let dz = 0; dz < 7; dz++) {
+      for (let dx = 0; dx < 7; dx++) {
+        put(x + dx, groundY + 1, z + dz, planks);
+        const edge = dx === 0 || dx === 6 || dz === 0 || dz === 6;
+        if (!edge) continue;
+        for (let dy = 2; dy <= 4; dy++) {
+          const corner = (dx === 0 || dx === 6) && (dz === 0 || dz === 6);
+          put(x + dx, groundY + dy, z + dz, corner ? log : planks);
+        }
+      }
+    }
+
+    // Doorway and windows are cut after the wall frame is built.
+    for (const dy of [2, 3]) put(x + 3, groundY + dy, z, S['mc:air']);
+    if (glass) {
+      for (const [wx, wz] of [[x + 1, z], [x + 5, z], [x, z + 3], [x + 6, z + 3]]) {
+        put(wx, groundY + 3, wz, glass);
+      }
+    }
+    // Low pitched-looking overhang roof; the flat profile is deliberate so it
+    // remains composed of existing full-cube blocks and has no unsupported mesh.
+    for (let dz = -1; dz <= 7; dz++) {
+      for (let dx = -1; dx <= 7; dx++) put(x + dx, groundY + 5, z + dz, planks);
+    }
+
+    put(x + 2, groundY + 2, z + 3, S['mc:furnace']);
+    put(x + 4, groundY + 2, z + 3, S['mc:crafting_table']);
+    put(x + 3, groundY + 4, z + 2, S['mc:torch']);
+  }
+
+  placeVillageFarm(chunk, baseX, baseZ, x, z, groundY) {
+    const S = this.states.byId;
+    const farmland = S['mc:farmland'];
+    const water = S['mc:water'];
+    const wheat = S['mc:wheat'];
+    if (!farmland || !water || !wheat) return;
+    for (let dz = 0; dz < 7; dz++) {
+      for (let dx = 0; dx < 7; dx++) {
+        const wx = x + dx, wz = z + dz;
+        if (dx === 3 || dz === 3) {
+          this.setVillageBlock(chunk, baseX, baseZ, wx, groundY + 1, wz, water);
+        } else {
+          this.setVillageBlock(chunk, baseX, baseZ, wx, groundY + 1, wz, farmland);
+          this.setVillageBlock(chunk, baseX, baseZ, wx, groundY + 2, wz, wheat);
+        }
+      }
+    }
+  }
+
   placeTree(chunk, x, y, z, species, rng) {
     const S = this.states;
     const log = S.byId[`mc:${species}_log`];
@@ -457,6 +575,17 @@ export class TerrainGenerator {
     if (chunk.getBlock(x, y, z).block.id !== 'mc:air') return;
     chunk.setBlock(x, y, z, leaves);
   }
+}
+
+
+/** Stable candidate placement for a 128x128 world-generation cell. */
+export function villageCandidateForCell(seed, gridX, gridZ) {
+  const rng = positionalRandom(seed, gridX, 991, gridZ, 991);
+  if (rng.nextInt(4) !== 0) return null;
+  return {
+    x: gridX * 128 + 16 + rng.nextInt(96),
+    z: gridZ * 128 + 16 + rng.nextInt(96),
+  };
 }
 
 /**
