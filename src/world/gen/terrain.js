@@ -151,9 +151,9 @@ export class TerrainGenerator {
     if (height <= SEA_LEVEL + 1) return BIOME.BEACH;
     if (height > SEA_LEVEL + 52) return BIOME.MOUNTAINS;
 
-    const temp = this.temperature.sample2(wx, wz, 0.0012);
-    const humid = this.humidity.sample2(wx, wz, 0.0014);
-    const detail = this.biomeDetail.sample2(wx, wz, 0.0021);
+    const temp = this.temperature.sample2(wx, wz, 0.00058);
+    const humid = this.humidity.sample2(wx, wz, 0.00062);
+    const detail = this.biomeDetail.sample2(wx, wz, 0.00082);
 
     // Temperature and rainfall establish the broad climate; a slower detail
     // field separates neighbouring forest variants without noisy biome speckle.
@@ -725,44 +725,79 @@ export class TerrainGenerator {
     const leaves = S.byId[`mc:${species}_leaves`];
     if (!log || !leaves) return;
 
-    const isConifer = species === 'spruce';
-    const height = isConifer ? 6 + rng.nextInt(3) : 4 + rng.nextInt(3);
+    // Species-specific silhouettes: spruce is conical, birch/oak are rounded,
+    // jungle is tall and broad, acacia has an angled crown, and dark oak has a
+    // heavy trunk with a dense canopy. All writes stay inside this chunk.
+    const isSpruce = species === 'spruce';
+    const isJungle = species === 'jungle';
+    const isAcacia = species === 'acacia';
+    const isDarkOak = species === 'dark_oak';
+    const height = isSpruce ? 7 + rng.nextInt(3)
+      : isJungle ? 9 + rng.nextInt(5)
+      : isAcacia ? 5 + rng.nextInt(2)
+      : isDarkOak ? 7 + rng.nextInt(2)
+      : 5 + rng.nextInt(3);
 
-    for (let i = 0; i < height; i++) {
-      if (y + i < MAX_Y) chunk.setBlock(x, y + i, z, log);
+    if (isDarkOak) {
+      for (let dy = 0; dy < height; dy++) {
+        for (const [ox, oz] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+          if (y + dy < MAX_Y) chunk.setBlock(x + ox, y + dy, z + oz, log);
+        }
+      }
+    } else {
+      for (let dy = 0; dy < height; dy++) {
+        const ox = isAcacia && dy >= Math.floor(height * 0.55) ? Math.sign(dy - height * 0.55) : 0;
+        if (y + dy < MAX_Y) chunk.setBlock(x + ox, y + dy, z, log);
+      }
     }
 
-    if (isConifer) {
-      // Tapered layers, widest at the bottom.
+    if (isSpruce) {
       let radius = 2;
-      for (let layer = 0; layer < 4; layer++) {
+      for (let layer = 0; layer < 5; layer++) {
         const ly = y + height - 1 - layer * 2;
-        for (let dx = -radius; dx <= radius; dx++) {
-          for (let dz = -radius; dz <= radius; dz++) {
-            if (Math.abs(dx) + Math.abs(dz) > radius + 1) continue;
-            if (dx === 0 && dz === 0 && ly < y + height) continue;
-            this.setLeaf(chunk, x + dx, ly, z + dz, leaves);
-          }
+        for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) {
+          if (Math.abs(dx) + Math.abs(dz) > radius + 1) continue;
+          this.setLeaf(chunk, x + dx, ly, z + dz, leaves);
         }
         radius = radius === 2 ? 1 : 2;
       }
       this.setLeaf(chunk, x, y + height, z, leaves);
-    } else {
-      // Two wide layers below the top, then a small cap.
-      for (let dy = -2; dy <= 0; dy++) {
-        const ly = y + height - 1 + dy;
-        const radius = dy === 0 ? 1 : 2;
-        for (let dx = -radius; dx <= radius; dx++) {
-          for (let dz = -radius; dz <= radius; dz++) {
-            if (dx === 0 && dz === 0 && dy < 0) continue;
-            // Trim the corners so the canopy is rounded, not a cube.
-            if (radius === 2 && Math.abs(dx) === 2 && Math.abs(dz) === 2 && rng.nextBoolean()) continue;
-            this.setLeaf(chunk, x + dx, ly, z + dz, leaves);
-          }
+      return;
+    }
+
+    if (isJungle) {
+      for (let dy = -2; dy <= 1; dy++) {
+        const radius = dy === -2 ? 2 : 3;
+        for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) {
+          if (Math.abs(dx) === radius && Math.abs(dz) === radius && rng.nextBoolean()) continue;
+          this.setLeaf(chunk, x + dx, y + height + dy, z + dz, leaves);
         }
       }
-      this.setLeaf(chunk, x, y + height, z, leaves);
+      return;
     }
+
+    if (isAcacia) {
+      const crownX = x + Math.sign(height);
+      for (let dy = -1; dy <= 1; dy++) {
+        const radius = dy === 1 ? 1 : 2;
+        for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) {
+          if (Math.abs(dx) + Math.abs(dz) > radius + 1) continue;
+          this.setLeaf(chunk, crownX + dx, y + height + dy, z + dz, leaves);
+        }
+      }
+      return;
+    }
+
+    const radius = isDarkOak ? 3 : 2;
+    for (let dy = -2; dy <= 0; dy++) {
+      const ly = y + height - 1 + dy;
+      const layerRadius = dy === 0 ? radius - 1 : radius;
+      for (let dx = -layerRadius; dx <= layerRadius; dx++) for (let dz = -layerRadius; dz <= layerRadius; dz++) {
+        if (Math.abs(dx) === layerRadius && Math.abs(dz) === layerRadius && rng.nextBoolean()) continue;
+        this.setLeaf(chunk, x + dx, ly, z + dz, leaves);
+      }
+    }
+    this.setLeaf(chunk, x, y + height, z, leaves);
   }
 
   setLeaf(chunk, x, y, z, leaves) {
