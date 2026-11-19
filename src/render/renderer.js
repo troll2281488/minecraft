@@ -268,9 +268,15 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           obstruction.y + 0.5 - (this.renderPosition.y + player.eyeHeight + 0.8), obstruction.z + 0.5 - this.renderPosition.z);
         distance = Math.max(0.35, Math.min(distance, hitDistance - 0.8));
       }
-      cameraX += Math.sin(yaw) * Math.cos(pitch) * distance;
-      cameraY += Math.sin(pitch) * distance + 0.8;
-      cameraZ -= Math.cos(yaw) * Math.cos(pitch) * distance;
+      const frontView = !!this.frontThirdPerson;
+      const cameraSide = frontView ? -1 : 1;
+      cameraX += cameraSide * Math.sin(yaw) * Math.cos(pitch) * distance;
+      cameraY += (frontView ? -Math.sin(pitch) : Math.sin(pitch)) * distance + 0.8;
+      cameraZ -= cameraSide * Math.cos(yaw) * Math.cos(pitch) * distance;
+      if (frontView) {
+        cameraYaw = (player.yaw + 180) % 360;
+        cameraPitch = -player.pitch;
+      }
     }
     mat4.fromCamera(this.view, cameraX, cameraY, cameraZ, cameraYaw, cameraPitch);
     mat4.multiply(this.viewProjection, this.projection, this.view);
@@ -500,7 +506,12 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
             // Positive X rotation sends the hanging arm away from the camera.
             // A negative rotation moves the forearm/fist forward (+Z) from the
             // shoulder, matching the direction the player is looking.
-            swing = pose.attack ? -0.92 * attackSwing : pose.sneaking ? 0.30 : 0.18 + Math.sin(walkPhase * 2) * 0.035;
+            // Punch arcs up and forward while preserving the resting hand position.
+            swing = pose.attack ? -1.28 * attackSwing : pose.swimming
+              ? Math.sin(walkPhase * 1.7) * 0.68
+              : pose.airborne ? -0.12
+              : pose.sneaking ? 0.30
+              : 0.18 + Math.sin(walkPhase * 2) * 0.035;
           }
           else if (pose.swimming) swing = isArm ? Math.sin(walkPhase * 1.7 + phase) * 0.72 : Math.sin(walkPhase * 1.7 + phase) * 0.42;
           else if (pose.airborne) swing = isArm ? -0.22 : 0.25;
@@ -591,11 +602,11 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         [[0.015, -0.10 - handBob, 0.015], [0.20, 0.54, 0.20], [0.12, 0.48, 0.72, 1]],
       ];
       draw(handX, handY, handZ, yaw, armParts, this.player.walkPhase, -1, -1, 1,
-        { firstPerson: true, attack: this.player.attackTime > 0, attackTime: this.player.attackTime, sneaking: this.player.sneaking, swimming: this.player.inWater }, true);
+        { firstPerson: true, attack: this.player.attackTime > 0, attackTime: this.player.attackTime, sneaking: this.player.sneaking, swimming: this.player.inWater, airborne: !this.player.onGround, walking: this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035 }, true);
       // Draw the matching transparent sleeve over the first-person arm too.
       const outerArmParts = armParts.map(([offset, size, color]) => [offset, size.map((value) => value * 1.045), color]);
       draw(handX, handY, handZ, yaw, outerArmParts, this.player.walkPhase, -1, -1, 1,
-        { firstPerson: true, skinLayer: true, attack: this.player.attackTime > 0, attackTime: this.player.attackTime, sneaking: this.player.sneaking, swimming: this.player.inWater }, true);
+        { firstPerson: true, skinLayer: true, attack: this.player.attackTime > 0, attackTime: this.player.attackTime, sneaking: this.player.sneaking, swimming: this.player.inWater, airborne: !this.player.onGround, walking: this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035 }, true);
 
       // Use the same pixel-art icon as the selected hotbar slot instead of a placeholder coloured cube.
       const held = this.inventory?.held;
