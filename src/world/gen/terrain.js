@@ -957,4 +957,3 @@ export function generateChunk(generator, cx, cz) {
   return generator.generate(new Chunk(cx, cz));
 }
 
-export { BIOME_SURFACE };
