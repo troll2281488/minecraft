@@ -360,6 +360,7 @@ export class MobSystem {
     }
     if (worn && inventory) inventory.version++;
     const finalDamage = calculateArmorDamage(amount, armorPoints, toughness);
+    if (finalDamage > 0) this.game.sounds?.play('hurt');
     player.health = Math.max(0, player.health - finalDamage);
     return finalDamage;
   }
