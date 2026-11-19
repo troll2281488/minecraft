@@ -529,12 +529,12 @@ export class TerrainGenerator {
       for (let gx = min256X; gx <= max256X; gx++) {
         const desert = desertTempleCandidateForCell(this.seed, gx, gz);
         if (desert) {
-          const site = this.validateStructureSite(desert.x, desert.z, 10, [BIOME.DESERT], 4.5);
+          const site = this.validateStructureSite(desert.x, desert.z, 10, [BIOME.DESERT, BIOME.DESERT_HILLS], 4.5);
           if (site) this.placeDesertTemple(chunk, baseX, baseZ, desert, site.y);
         }
         const jungle = jungleTempleCandidateForCell(this.seed, gx, gz);
         if (jungle) {
-          const site = this.validateStructureSite(jungle.x, jungle.z, 7, [BIOME.JUNGLE, BIOME.BAMBOO_JUNGLE], 4.5);
+          const site = this.validateStructureSite(jungle.x, jungle.z, 7, [BIOME.JUNGLE, BIOME.JUNGLE_HILLS, BIOME.JUNGLE_EDGE, BIOME.BAMBOO_JUNGLE], 4.5);
           if (site) this.placeJungleTemple(chunk, baseX, baseZ, jungle, site.y);
         }
         const swamp = swampHutCandidateForCell(this.seed, gx, gz);
@@ -544,7 +544,7 @@ export class TerrainGenerator {
         }
         const igloo = iglooCandidateForCell(this.seed, gx, gz);
         if (igloo) {
-          const site = this.validateStructureSite(igloo.x, igloo.z, 4, [BIOME.SNOWY_PLAINS, BIOME.SNOWY_TAIGA, BIOME.ICE_SPIKES], 3.5);
+          const site = this.validateStructureSite(igloo.x, igloo.z, 4, [BIOME.SNOWY_PLAINS, BIOME.SNOWY_TAIGA, BIOME.COLD_TAIGA, BIOME.COLD_TAIGA_HILLS, BIOME.ICE_SPIKES], 3.5);
           if (site) this.placeIgloo(chunk, baseX, baseZ, igloo, site.y);
         }
       }
@@ -655,7 +655,7 @@ export class TerrainGenerator {
     }
     for (let dz = -1; dz <= 9; dz++) for (let dx = -1; dx <= 7; dx++) {
       const radius = Math.min(dx + 1, 7 - dx);
-      const roofY = groundY + 7 + Math.max(0, 3 - Math.min(3, radius));
+      const roofY = groundY + 7 + Math.min(3, Math.max(0, radius));
       put(site.x + dx, roofY, site.z + dz, plank);
     }
     if (S['mc:cauldron']) put(site.x + 2, groundY + 4, site.z + 2, S['mc:cauldron']);
@@ -722,8 +722,9 @@ export class TerrainGenerator {
     const dark = S['mc:dark_prismarine'] || prismarine;
     if (!prismarine) return;
     const put = (x, y, z, state) => this.setVillageBlock(chunk, baseX, baseZ, x, y, z, state);
-    const floorY = SEA_LEVEL - 9;
-    const roofY = SEA_LEVEL + 2;
+    const floorY = Math.max(MIN_Y + 5, Math.floor(this.heightAt(site.x, site.z)) + 1);
+    const roofY = floorY + 11;
+    if (roofY > SEA_LEVEL + 4) return;
     for (let dy = floorY; dy <= roofY; dy++) {
       const radius = dy === floorY || dy === roofY ? 12 : 10;
       for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) {
@@ -739,7 +740,7 @@ export class TerrainGenerator {
         }
       }
     }
-    if (S['mc:sea_lantern']) put(site.x, SEA_LEVEL - 1, site.z, S['mc:sea_lantern']);
+    if (S['mc:sea_lantern']) put(site.x, floorY + 8, site.z, S['mc:sea_lantern']);
   }
 
   /**
@@ -913,10 +914,10 @@ export class TerrainGenerator {
       }
     }
 
-    const strongholdMinX = Math.floor((baseX - 24) / 512);
-    const strongholdMaxX = Math.floor((baseX + CHUNK_SIZE + 24) / 512);
-    const strongholdMinZ = Math.floor((baseZ - 24) / 512);
-    const strongholdMaxZ = Math.floor((baseZ + CHUNK_SIZE + 24) / 512);
+    const strongholdMinX = Math.floor((baseX - 32) / 512);
+    const strongholdMaxX = Math.floor((baseX + CHUNK_SIZE + 32) / 512);
+    const strongholdMinZ = Math.floor((baseZ - 32) / 512);
+    const strongholdMaxZ = Math.floor((baseZ + CHUNK_SIZE + 32) / 512);
     for (let gz = strongholdMinZ; gz <= strongholdMaxZ; gz++) {
       for (let gx = strongholdMinX; gx <= strongholdMaxX; gx++) {
         const stronghold = strongholdCandidateForCell(this.seed, gx, gz);
@@ -1038,9 +1039,9 @@ export class TerrainGenerator {
     // Classic villages belong in plains, deserts, savannas, taigas and
     // snowy plains; forests are not treated as generic village terrain.
     const allowed = new Set([
-      BIOME.PLAINS, BIOME.SUNFLOWER_PLAINS, BIOME.DESERT,
-      BIOME.SAVANNA, BIOME.SAVANNA_PLATEAU, BIOME.TAIGA,
-      BIOME.SNOWY_PLAINS,
+      BIOME.PLAINS, BIOME.SUNFLOWER_PLAINS, BIOME.DESERT, BIOME.DESERT_HILLS,
+      BIOME.SAVANNA, BIOME.SAVANNA_PLATEAU, BIOME.TAIGA, BIOME.TAIGA_HILLS,
+      BIOME.COLD_TAIGA, BIOME.COLD_TAIGA_HILLS, BIOME.SNOWY_PLAINS,
     ]);
     const offsetsX = [0, 7, 14, 21, 27];
     const offsetsZ = [0, 7, 14, 21, 27];
@@ -1068,7 +1069,7 @@ export class TerrainGenerator {
 
   placeVillageHouse(chunk, baseX, baseZ, x, z, groundY, biome = BIOME.PLAINS, variant = 0) {
     const S = this.states.byId;
-    const desert = biome === BIOME.DESERT;
+    const desert = biome === BIOME.DESERT || biome === BIOME.DESERT_HILLS;
     const wood = desert ? 'oak'
       : biome === BIOME.SAVANNA || biome === BIOME.SAVANNA_PLATEAU ? 'acacia'
       : biome === BIOME.TAIGA || biome === BIOME.SNOWY_PLAINS ? 'spruce' : 'oak';
