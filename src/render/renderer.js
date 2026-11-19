@@ -520,8 +520,17 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           else if (pose.sneaking) swing = isArm ? 0.18 + Math.sin(walkPhase + phase) * 0.09 : 0.48 + Math.sin(walkPhase + phase) * 0.10;
           else swing = Math.sin(walkPhase + phase) * (isArm ? 0.58 : 0.62);
           // First-person attack swing is already applied above; do not add a second rotation.
+        } else if (!skin && pose.animal && partIndex === 0) {
+          // Small body bounce and breathing motion keep livestock from looking
+          // like rigid blocks while their legs are cycling.
+          partOffset[1] += Math.abs(Math.sin(walkPhase * 2)) * 0.025;
+        } else if (!skin && pose.animal && partIndex === 1) {
+          swing = Math.sin(pose.idle ?? 0) * 0.075;
+          partOffset[2] += Math.sin((pose.idle ?? 0) * 0.7) * 0.012;
+        } else if (!skin && pose.humanoid && (partIndex === 2 || partIndex === 3)) {
+          swing = Math.sin(walkPhase + phase) * 0.34;
         } else if (!skin && partIndex >= legStart && partIndex <= legEnd) {
-          swing = Math.sin(walkPhase + phase) * 0.16;
+          swing = Math.sin(walkPhase + phase) * (pose.animal ? 0.28 : 0.20);
         }
         gl.uniform3f(uniforms.uPartOffset, partOffset[0], partOffset[1], partOffset[2]);
         gl.uniform3f(uniforms.uPartScale, scale[0] * pulse, scale[1] * pulse, scale[2] * pulse);
@@ -577,7 +586,14 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         : mob.type === 'pig' ? [3, 6] : mob.type === 'cow' ? [2, 5]
         : mob.type === 'chicken' ? [4, 5] : mob.type === 'enderman' ? [4, 5] : [2, 9];
       const babyScale = mob.ageTicks < 0 ? 0.55 : 1;
-      draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, { hurt: (mob.hurtTicks || 0) > 0 });
+      const animal = ['sheep', 'pig', 'cow', 'chicken'].includes(mob.type);
+      const humanoid = ['zombie', 'skeleton', 'stray'].includes(mob.type);
+      draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
+        hurt: (mob.hurtTicks || 0) > 0,
+        animal,
+        humanoid,
+        idle: mob.anim?.idle ?? 0,
+      });
     }
     if (!this.thirdPerson) {
       // First-person right arm and held item, positioned relative to the
