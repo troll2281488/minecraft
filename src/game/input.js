@@ -189,7 +189,16 @@ export const InputMixin = {
     }
 
     if (isAction(e.code, 'drop')) {
-      this.ui.toast('Выбрасывание предметов ещё не подключено', { error: true, duration: 1800 });
+      const held = this.inventory.held;
+      if (!held.isEmpty) {
+        const dropped = e.ctrlKey ? held.clone() : held.split(1);
+        if (held.isEmpty) this.inventory.set(this.inventory.selectedSlot, ItemStack.EMPTY.clone());
+        else this.inventory.version++;
+        this.entities?.dropStack(dropped);
+        this.sounds?.play('drop');
+        this.ui.updateHotbar(this.inventory);
+      }
+      e.preventDefault();
       return;
     }
 
