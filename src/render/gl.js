@@ -351,7 +351,7 @@ void main() {
   vUv = aUv;
   // The cube is inflated very slightly so the overlay sits in front of the
   // block face instead of z-fighting with it.
-  vec3 world = uBlockOrigin + (aPos - 0.5) * 1.004 + 0.5;
+  vec3 world = uBlockOrigin + (aPos - 0.5) * 1.02 + 0.5;
   gl_Position = uViewProjection * vec4(world, 1.0);
 }
 `;
