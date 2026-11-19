@@ -18,6 +18,7 @@ import {
 } from './interaction.js';
 import { USABLE_BLOCKS } from './usable_blocks.js';
 import { drainContainer } from './containers.js';
+import { getVillagerOffers, executeVillagerTrade } from '../entity/villager_trades.js';
 
 export const BlockActionsMixin = {
   _breakBlock() {
@@ -52,6 +53,11 @@ export const BlockActionsMixin = {
   },
 
   _useOrPlace() {
+    const villager = this.entities?.targetedMob();
+    if (villager?.type === 'villager') {
+      this._openVillagerTrade(villager);
+      return;
+    }
     const heldItem = this.inventory?.held?.item;
     // Right-click equips armour directly from the selected hotbar stack.
     if (heldItem?.armorSlot && this.player?.gamemode === GAMEMODE.SURVIVAL) {
@@ -91,6 +97,42 @@ export const BlockActionsMixin = {
     // survival. A full food bar prevents ordinary food from being consumed.
     if (!sneaking && this._eatHeldFood()) return;
     this._placeBlock();
+  },
+
+  _openVillagerTrade(villager) {
+    if (!villager || villager.type !== 'villager' || this.tradeOpen) return;
+    this.tradeOpen = true;
+    this.keys.clear();
+    this.mouseButtons.clear();
+    this.mining.reset();
+    document.exitPointerLock?.();
+
+    const refresh = () => this.ui.openVillagerTrade(
+      villager,
+      getVillagerOffers(villager),
+      this.inventory,
+      {
+        onTrade: (offerId) => {
+          const result = executeVillagerTrade(villager, offerId, this.inventory);
+          if (!result.ok) {
+            this.ui.toast(result.reason, { error: true });
+          } else {
+            this.ui.updateHotbar(this.inventory);
+            this.ui.toast(result.unlocked ? 'Новая сделка открыта!' : 'Обмен выполнен');
+            refresh();
+          }
+        },
+        onClose: () => this._closeVillagerTrade(),
+      },
+    );
+    refresh();
+  },
+
+  _closeVillagerTrade() {
+    if (!this.tradeOpen) return;
+    this.tradeOpen = false;
+    this.ui.closeVillagerTrade();
+    this._requestPointerLock();
   },
 
   _farmInteraction() {
