@@ -838,7 +838,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         : mob.type === 'creeper' ? creeper
         : mob.type === 'enderman' ? enderman
         : mob.type === 'spider' || mob.type === 'cave_spider' ? spider
-        : mob.type === 'pig' ? pig : mob.type === 'cow' ? cow
+        : mob.type === 'pig' || mob.type === 'rabbit' ? pig : mob.type === 'cow' || mob.type === 'mooshroom' || mob.type === 'polar_bear' ? cow
         : mob.type === 'chicken' ? chicken : sheep);
       const pulse = mob.type === 'creeper' && mob.anim?.fuse > 0
         ? 1 + Math.sin(mob.anim.fuse * Math.PI * 12) * 0.10 * mob.anim.fuse : 1;
@@ -846,7 +846,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         : mob.type === 'pig' ? [3, 6] : mob.type === 'cow' ? [2, 5]
         : mob.type === 'chicken' ? [4, 5] : mob.type === 'enderman' ? [4, 5] : [2, 5];
       const babyScale = mob.ageTicks < 0 ? 0.55 : 1;
-      const animal = ['sheep', 'pig', 'cow', 'chicken'].includes(mob.type);
+      const animal = ['sheep', 'pig', 'cow', 'chicken', 'mooshroom', 'rabbit', 'wolf', 'polar_bear'].includes(mob.type);
       const humanoid = ['zombie', 'skeleton', 'stray'].includes(mob.type);
       draw(mob.x, mob.y, mob.z, mob.yaw + Math.PI, parts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
         hurt: (mob.hurtTicks || 0) > 0, animal, humanoid, vanillaModel: !!vanillaParts,
