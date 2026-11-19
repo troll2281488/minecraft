@@ -194,9 +194,16 @@ export class UI {
       e.stopPropagation();
       handlers.onDropCursor?.(e.button);
     };
-    screen.onmousedown = dropOnEmpty;
-    const inventoryPanel = screen.querySelector('.inventory-panel');
-    if (inventoryPanel) inventoryPanel.onmousedown = dropOnEmpty;
+    // Capture pointerdown on the whole inventory overlay. Empty panel space
+    // is not a slot, so it drops the cursor stack before any child handler.
+    // Keep one listener across inventory rebuilds.
+    if (!screen._dropEmptyPointerHandler) {
+      screen._dropEmptyPointerHandler = dropOnEmpty;
+      screen.addEventListener('pointerdown', dropOnEmpty, true);
+    } else {
+      screen._dropEmptyPointerHandler = dropOnEmpty;
+    }
+    screen.onmousedown = null;
     this.invMainSlots = build($('inv-main'), 27, (i) => SLOT.MAIN_START + i, 'inventory');
     this.invHotbarSlots = build($('inv-hotbar'), 9, (i) => SLOT.HOTBAR_START + i, 'inventory');
     this.invArmorSlots = build($('inv-armor'), 4, (i) => SLOT.ARMOR_START + i, 'inventory');
