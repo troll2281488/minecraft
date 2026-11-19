@@ -85,6 +85,8 @@ function buildAvatarCube() {
   return new Float32Array(out);
 }
 
+const PLAYER_SKIN_DATA_URL = 'data:image/png;base64,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';
+
 export const RendererMixin = {
   _setupPrograms() {
     const gl = this.gl;
@@ -92,7 +94,55 @@ export const RendererMixin = {
     this.skyProgram = createProgram(gl, SKY_VERTEX_SHADER, SKY_FRAGMENT_SHADER, 'sky');
     this.lineProgram = createProgram(gl, LINE_VERTEX_SHADER, LINE_FRAGMENT_SHADER, 'line');
     this.crackProgram = createProgram(gl, CRACK_VERTEX_SHADER, CRACK_FRAGMENT_SHADER, 'crack');
-    this.avatarProgram = createProgram(gl, `#version 300 es\nprecision highp float;\nlayout(location=0) in vec3 aPos; layout(location=1) in vec3 aNormal;\nuniform mat4 uViewProjection; uniform vec3 uPlayerPos; uniform vec3 uPartOffset; uniform vec3 uPartScale; uniform float uYaw; uniform float uPartSwing; uniform float uPartPivotY; uniform float uSkinPart;\nout vec3 vLocalPos; out vec3 vNormal; out float vLight;\nvoid main(){ vec3 p=(aPos-0.5)*uPartScale; p.y+=uPartOffset.y-uPartPivotY; float ca=cos(uPartSwing),sa=sin(uPartSwing); p=vec3(p.x,p.y*ca-p.z*sa,p.y*sa+p.z*ca); p.y-=uPartOffset.y-uPartPivotY; p+=uPartOffset; float c=cos(uYaw), s=sin(uYaw); vec3 r=vec3(p.x*c-p.z*s,p.y,p.x*s+p.z*c); vec3 n=vec3(aNormal.x*c-aNormal.z*s,aNormal.y,aNormal.x*s+aNormal.z*c); vLocalPos=aPos; vNormal=aNormal; vLight=0.72+0.28*max(0.0,dot(normalize(n),normalize(vec3(-0.4,0.8,0.5)))); gl_Position=uViewProjection*vec4(uPlayerPos+r,1.0); }`, `#version 300 es\nprecision highp float;\nuniform vec4 uColor; uniform float uSkinPart; in vec3 vLocalPos; in vec3 vNormal; in float vLight; out vec4 fragColor; void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0); if(uSkinPart>=0.0){ if(uSkinPart==0.0){ color=vec3(0.72,0.48,0.32); bool hair=(vNormal.y>0.5)||(abs(vNormal.x)>0.5&&vLocalPos.y>0.70)||(vNormal.z< -0.5&&vLocalPos.y>0.55); if(hair) color=vec3(0.24,0.14,0.08); if(vNormal.z>0.5&&vLocalPos.y>0.28&&vLocalPos.y<0.58&&(cell.x==2.0||cell.x==5.0)&&cell.y>=2.0&&cell.y<=3.0) color=vec3(0.20,0.43,0.78); if(vNormal.z>0.5&&cell.y==1.0&&cell.x>=3.0&&cell.x<=4.0) color=vec3(0.38,0.18,0.13); } else if(uSkinPart==1.0){ color=vec3(0.12,0.48,0.72); if(mod(cell.x+cell.y,5.0)==0.0) color*=0.88; } else if(uSkinPart==2.0||uSkinPart==3.0){ color=vLocalPos.y<0.22?vec3(0.72,0.48,0.32):vec3(0.12,0.48,0.72); if(mod(cell.y,4.0)==0.0&&vLocalPos.y>=0.22) color*=0.9; } else { color=vec3(0.16,0.24,0.48); if(vLocalPos.y<0.16) color=vec3(0.24,0.16,0.10); if(mod(cell.x+cell.y,6.0)==0.0) color*=0.9; } } if(uSkinPart<0.0){ float patchValue=mod(cell.x*3.0+cell.y*5.0+cell.z*7.0,11.0); color*=mix(0.80,1.08,step(3.0,patchValue)); } float pixel=0.94+mod(cell.x+cell.y+cell.z,2.0)*0.06; fragColor=vec4(color*vLight*pixel,uColor.a); }`, 'player avatar');
+    this.avatarProgram = createProgram(gl, `#version 300 es\nprecision highp float;\nlayout(location=0) in vec3 aPos; layout(location=1) in vec3 aNormal;\nuniform mat4 uViewProjection; uniform vec3 uPlayerPos; uniform vec3 uPartOffset; uniform vec3 uPartScale; uniform float uYaw; uniform float uPartSwing; uniform float uPartPivotY; uniform float uSkinPart;\nout vec3 vLocalPos; out vec3 vNormal; out float vLight;\nvoid main(){ vec3 p=(aPos-0.5)*uPartScale; p.y+=uPartOffset.y-uPartPivotY; float ca=cos(uPartSwing),sa=sin(uPartSwing); p=vec3(p.x,p.y*ca-p.z*sa,p.y*sa+p.z*ca); p.y-=uPartOffset.y-uPartPivotY; p+=uPartOffset; float c=cos(uYaw), s=sin(uYaw); vec3 r=vec3(p.x*c-p.z*s,p.y,p.x*s+p.z*c); vec3 n=vec3(aNormal.x*c-aNormal.z*s,aNormal.y,aNormal.x*s+aNormal.z*c); vLocalPos=aPos; vNormal=aNormal; vLight=0.72+0.28*max(0.0,dot(normalize(n),normalize(vec3(-0.4,0.8,0.5)))); gl_Position=uViewProjection*vec4(uPlayerPos+r,1.0); }`, `#version 300 es\nprecision highp float;\nuniform vec4 uColor; uniform float uSkinPart; uniform sampler2D uSkinTexture; in vec3 vLocalPos; in vec3 vNormal; in float vLight; out vec4 fragColor;
+    this.avatarSkinTexture = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this.avatarSkinTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255,255,255,255]));
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    const skinImage = new Image();
+    skinImage.onload = () => {
+      gl.bindTexture(gl.TEXTURE_2D, this.avatarSkinTexture);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, skinImage);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    };
+    skinImage.src = PLAYER_SKIN_DATA_URL;
+vec4 skinSample(){
+  float x=0.0,y=0.0,w=0.0,h=0.0; vec2 p=vec2(0.0);
+  bool front=vNormal.z>0.5, back=vNormal.z< -0.5, right=vNormal.x>0.5, left=vNormal.x< -0.5, top=vNormal.y>0.5;
+  if(uSkinPart==0.0){
+    if(front){x=8.0;y=8.0;w=8.0;h=8.0;p=vec2(vLocalPos.x,1.0-vLocalPos.y);}
+    else if(back){x=24.0;y=8.0;w=8.0;h=8.0;p=vec2(1.0-vLocalPos.x,1.0-vLocalPos.y);}
+    else if(right){x=0.0;y=8.0;w=8.0;h=8.0;p=vec2(1.0-vLocalPos.z,1.0-vLocalPos.y);}
+    else if(left){x=16.0;y=8.0;w=8.0;h=8.0;p=vec2(vLocalPos.z,1.0-vLocalPos.y);}
+    else if(top){x=8.0;y=0.0;w=8.0;h=8.0;p=vec2(vLocalPos.x,vLocalPos.z);}
+    else{x=16.0;y=0.0;w=8.0;h=8.0;p=vec2(vLocalPos.x,1.0-vLocalPos.z);}
+  } else {
+    float bx=0.0,by=20.0,bw=8.0,bh=12.0;
+    if(uSkinPart==1.0){bx=20.0;by=20.0;}
+    else if(uSkinPart==2.0){bx=32.0;by=48.0;bw=4.0;}
+    else if(uSkinPart==3.0){bx=40.0;by=16.0;bw=4.0;}
+    else if(uSkinPart==4.0){bx=16.0;by=48.0;bw=4.0;}
+    else {bx=0.0;by=16.0;bw=4.0;}
+    if(front){x=bx;y=by;w=bw;h=12.0;p=vec2(vLocalPos.x,1.0-vLocalPos.y);}
+    else if(back){x=bx+bw+8.0;y=by;w=bw;h=12.0;p=vec2(1.0-vLocalPos.x,1.0-vLocalPos.y);}
+    else if(right){x=bx-4.0;y=by;w=4.0;h=12.0;p=vec2(1.0-vLocalPos.z,1.0-vLocalPos.y);}
+    else if(left){x=bx+bw;y=by;w=4.0;h=12.0;p=vec2(vLocalPos.z,1.0-vLocalPos.y);}
+    else if(top){x=bx;y=by-4.0;w=bw;h=4.0;p=vec2(vLocalPos.x,vLocalPos.z);}
+    else{x=bx+bw;y=by-4.0;w=bw;h=4.0;p=vec2(vLocalPos.x,1.0-vLocalPos.z);}
+  }
+  vec2 uv=(vec2(x,y)+p*vec2(w,h))/64.0;
+  return texture(uSkinTexture,uv);
+}
+void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
+  if(uSkinPart>=0.0){ vec4 texel=skinSample(); color=texel.rgb; if(texel.a<0.1) discard; }
+  else { float patchValue=mod(cell.x*3.0+cell.y*5.0+cell.z*7.0,11.0); color*=mix(0.80,1.08,step(3.0,patchValue)); }
+  float pixel=0.94+mod(cell.x+cell.y+cell.z,2.0)*0.06; fragColor=vec4(color*vLight*pixel,uColor.a);
+}`, 'player avatar');
   },
 
   _setupBuffers() {
@@ -414,7 +464,9 @@ export const RendererMixin = {
             // the arm past 180 degrees, exposing its back face to the camera.
             const attackProgress = Math.max(0, Math.min(1, (8 - (pose.attackTime ?? 0)) / 8));
             const attackSwing = Math.sin(attackProgress * Math.PI);
-            swing = pose.attack ? 0.78 - 1.55 * attackSwing : pose.sneaking ? 1.05 : 0.78 + Math.sin(walkPhase * 2) * 0.07;
+            // Keep the wrist facing the camera: attack is a short forward jab,
+            // not a half-turn that exposes the back of the arm.
+            swing = pose.attack ? 0.58 - 0.42 * attackSwing : pose.sneaking ? 0.88 : 0.58 + Math.sin(walkPhase * 2) * 0.06;
           }
           else if (pose.swimming) swing = isArm ? Math.sin(walkPhase * 1.7 + phase) * 0.72 : Math.sin(walkPhase * 1.7 + phase) * 0.42;
           else if (pose.airborne) swing = isArm ? -0.22 : 0.25;
@@ -443,6 +495,9 @@ export const RendererMixin = {
 
     gl.useProgram(program);
     gl.uniformMatrix4fv(uniforms.uViewProjection, false, this.viewProjection);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this.avatarSkinTexture);
+    gl.uniform1i(uniforms.uSkinTexture, 1);
     gl.bindVertexArray(this.avatarVao);
     if (this.thirdPerson) {
       document.getElementById('held-item-view')?.classList.add('hidden');
@@ -473,9 +528,11 @@ export const RendererMixin = {
       const yaw = this.player.yaw * Math.PI / 180;
       const forwardX = -Math.sin(yaw), forwardZ = Math.cos(yaw);
       const rightX = -Math.cos(yaw), rightZ = -Math.sin(yaw);
-      const handX = this.renderPosition.x + forwardX * 0.43 + rightX * 0.31;
-      const handY = this.renderPosition.y + this.player.eyeHeight - 0.50;
-      const handZ = this.renderPosition.z + forwardZ * 0.43 + rightZ * 0.31;
+      const attackProgress = Math.max(0, Math.min(1, (8 - (this.player.attackTime ?? 0)) / 8));
+      const attackThrust = this.player.attackTime > 0 ? Math.sin(attackProgress * Math.PI) : 0;
+      const handX = this.renderPosition.x + forwardX * (0.43 + attackThrust * 0.24) + rightX * 0.31;
+      const handY = this.renderPosition.y + this.player.eyeHeight - 0.50 - attackThrust * 0.10;
+      const handZ = this.renderPosition.z + forwardZ * (0.43 + attackThrust * 0.24) + rightZ * 0.31;
       const handBob = Math.sin(this.player.walkPhase * 2) * 0.025;
       const armParts = [
         [[0, 0, 0], [0.001, 0.001, 0.001], [0, 0, 0, 0]],
