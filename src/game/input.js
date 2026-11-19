@@ -8,7 +8,7 @@
  */
 
 import { GAMEMODE } from '../entity/player.js';
-import { ITEMS } from '../world/item.js';
+import { ITEMS, ItemStack } from '../world/item.js';
 import { BLOCKS, parseStateString } from '../world/block.js';
 import { isAction, bindKey } from './keybinds.js';
 
