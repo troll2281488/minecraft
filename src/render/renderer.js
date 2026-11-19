@@ -401,8 +401,8 @@ export const RendererMixin = {
       gl.uniform1f(uniforms.uYaw, yaw);
       for (let partIndex = 0; partIndex < parts.length; partIndex++) {
         const [offset, scale, color] = parts[partIndex];
-        const isArm = skin && (partIndex === 2 || partIndex === 3);
-        const isLeg = skin && (partIndex === 4 || partIndex === 5);
+        const isArm = (skin && (partIndex === 2 || partIndex === 3)) || pose.armIndices?.has(partIndex);
+        const isLeg = (skin && (partIndex === 4 || partIndex === 5)) || pose.legIndices?.has(partIndex);
         const phase = partIndex === 2 || partIndex === 4 ? 0 : Math.PI;
         let swing = 0;
         let pivotY = offset[1];
@@ -438,12 +438,20 @@ export const RendererMixin = {
     gl.useProgram(program);
     gl.uniformMatrix4fv(uniforms.uViewProjection, false, this.viewProjection);
     gl.bindVertexArray(this.avatarVao);
+    const playerModel = this.entityModels?.toLegacyParts?.('player', [0.12, 0.48, 0.72, 1]);
     if (this.thirdPerson) {
       document.getElementById('held-item-view')?.classList.add('hidden');
-      draw(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, attack: this.player.attackTime > 0 }, true);
+      draw(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z,
+        this.player.yaw * Math.PI / 180, playerModel?.parts ?? human, this.player.walkPhase,
+        playerModel ? -1 : 4, playerModel ? -1 : 5, 1,
+        { swimming: this.player.inWater, airborne: !this.player.onGround, attack: this.player.attackTime > 0,
+          legIndices: playerModel?.legIndices, armIndices: playerModel?.armIndices }, !playerModel);
     }
     for (const remote of this.multiplayer?.remotePlayers?.values?.() ?? []) {
-      draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, human, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne }, true);
+      draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180,
+        playerModel?.parts ?? human, remote.walkPhase || 0, playerModel ? -1 : 4, playerModel ? -1 : 5, 1,
+        { swimming: !!remote.inWater, airborne: !!remote.airborne,
+          legIndices: playerModel?.legIndices, armIndices: playerModel?.armIndices }, !playerModel);
     }
     for (const mob of this.entities?.mobs ?? []) {
       const fallbackParts = mob.type === 'zombie' ? zombie
