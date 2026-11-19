@@ -581,17 +581,18 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           else swing = Math.sin(walkPhase + phase) * (isArm ? 0.58 : 0.62);
           // First-person attack swing is already applied above; do not add a second rotation.
         } else if (!skin && pose.animal && partIndex === 0) {
-          // Soft body bounce on each stride plus a slower idle breathing sway.
-          partOffset[1] += Math.abs(Math.sin(walkPhase * 2)) * 0.035;
-          swing = Math.sin(walkPhase * 2) * 0.035;
+          // Body bob only follows actual movement; breathing remains subtle at rest.
+          const stride = pose.walking ? Math.abs(Math.sin(walkPhase * 2)) : 0;
+          partOffset[1] += stride * 0.025 + Math.sin(pose.idle ?? 0) * 0.003;
+          swing = pose.walking ? Math.sin(walkPhase * 2) * 0.025 : 0;
         } else if (!skin && pose.animal && partIndex === 1) {
-          // Animals look around and gently nod instead of keeping a fixed head.
-          swing = Math.sin(pose.idle ?? 0) * 0.13 + Math.sin(walkPhase * 0.5) * 0.045;
-          partOffset[2] += Math.sin((pose.idle ?? 0) * 0.7) * 0.018;
+          // Gentle head look while idle; slight counter-motion while walking.
+          swing = Math.sin(pose.idle ?? 0) * 0.075 + (pose.walking ? Math.sin(walkPhase * 0.5) * 0.035 : 0);
+          partOffset[2] += Math.sin((pose.idle ?? 0) * 0.7) * 0.012;
         } else if (!skin && pose.humanoid && (partIndex === 2 || partIndex === 3)) {
           swing = Math.sin(walkPhase + phase) * 0.34;
         } else if (!skin && partIndex >= legStart && partIndex <= legEnd) {
-          swing = Math.sin(walkPhase + phase) * (pose.animal ? 0.42 : 0.24);
+          swing = pose.walking ? Math.sin(walkPhase + phase) * (pose.animal ? 0.34 : 0.24) : 0;
         }
         gl.uniform3f(uniforms.uPartOffset, partOffset[0], partOffset[1], partOffset[2]);
         gl.uniform3f(uniforms.uPartScale, scale[0] * pulse, scale[1] * pulse, scale[2] * pulse);
@@ -659,6 +660,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         humanoid,
         mobType: mob.type,
         idle: mob.anim?.idle ?? 0,
+        walking: !!mob.anim?.walking,
       });
     }
     if (!this.thirdPerson) {
