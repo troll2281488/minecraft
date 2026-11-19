@@ -624,7 +624,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
               ? Math.sin(walkPhase * 1.7) * 0.68
               : pose.airborne ? (pose.jumping ? -0.42 : -0.10)
               : pose.sneaking ? 0.30
-              : 0.18 + Math.sin(walkPhase * 2) * 0.035;
+              : 0.28;
           }
           else if (pose.attack && isArm && partIndex === 3) {
             const attackProgress = Math.max(0, Math.min(1, (8 - (pose.attackTime ?? 0)) / 8));
