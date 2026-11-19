@@ -77,6 +77,14 @@ export const InputMixin = {
       this.mining.reset();
     });
 
+    // Ask for confirmation only when the browser is actually leaving/reloading
+    // the active world. Modifier shortcuts by themselves never trigger this.
+    window.addEventListener('beforeunload', (event) => {
+      if (!this.running) return;
+      event.preventDefault();
+      event.returnValue = '';
+    });
+
     window.addEventListener('resize', () => this._resize());
     this._resize();
   },
