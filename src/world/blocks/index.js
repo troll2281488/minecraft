@@ -135,6 +135,11 @@ define('mc:sand', {
   gravity: true, texture: 'sand',
 });
 
+define('mc:red_sand', {
+  hardness: 0.5, resistance: 0.5, tool: 'shovel', soundGroup: 'sand',
+  gravity: true, texture: 'red_sand',
+});
+
 define('mc:gravel', {
   hardness: 0.6, resistance: 0.6, tool: 'shovel', soundGroup: 'gravel',
   gravity: true, texture: 'gravel',
