@@ -306,6 +306,7 @@ export class Multiplayer {
         current.health = Number.isFinite(p.health) ? p.health : 20;
         current.food = Number.isFinite(p.food) ? p.food : 20;
         current.inWater = !!p.inWater;
+        current.sneaking = !!p.sneaking;
         current.airborne = p.onGround === false;
         current.targetX = p.x; current.targetY = p.y; current.targetZ = p.z; current.targetYaw = p.yaw || 0;
         this.remotePlayers.set(uid, current);
@@ -411,6 +412,7 @@ export class Multiplayer {
       food: p.vitals?.food ?? 20,
       inWater: !!p.inWater,
       onGround: !!p.onGround,
+      sneaking: !!p.sneaking,
       ts: Date.now(),
     };
   }
