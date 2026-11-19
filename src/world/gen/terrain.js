@@ -366,7 +366,8 @@ export class TerrainGenerator {
         let top = -1;
         for (let y = Math.min(MAX_Y - 2, heights[i] + 4); y >= SEA_LEVEL; y--) {
           if (chunk.getBlock(x, y, z).block.id === 'mc:grass_block' ||
-              chunk.getBlock(x, y, z).block.id === 'mc:sand') {
+              chunk.getBlock(x, y, z).block.id === 'mc:sand' ||
+              chunk.getBlock(x, y, z).block.id === 'mc:red_sand') {
             top = y;
             break;
           }
