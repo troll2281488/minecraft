@@ -432,8 +432,10 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
   _drawPlayers() {
     // The title panorama is a world preview, not a gameplay camera. Never
     // render the saved first/third-person avatar or multiplayer avatars here.
-    if (this.titlePreviewActive) {
-      document.getElementById('held-item-view')?.classList.add('hidden');
+    if (this._titlePreviewActive || this.titlePreviewActive) {
+      const heldView = document.getElementById('held-item-view');
+      heldView?.classList.add('hidden');
+      if (heldView) heldView.removeAttribute('src');
       return;
     }
     const gl = this.gl;
@@ -529,14 +531,11 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     const draw = (x, y, z, yaw, parts, walkPhase = 0, legStart = -1, legEnd = -1, pulse = 1, pose = {}, skin = false) => {
       gl.uniform3f(uniforms.uPlayerPos, x, y, z);
       gl.uniform1f(uniforms.uYaw, yaw);
-      // The legacy mob cuboids do not match vanilla model UV dimensions.
-      // Keep their original, correctly placed colours until matching geometry
-      // and per-model UV layouts are implemented together.
-      const mobTexture=null;
+      const mobTexture = !skin && pose.mobType ? this.mobTextures?.get(pose.mobType) : null;
       gl.activeTexture(gl.TEXTURE2);
-      gl.bindTexture(gl.TEXTURE_2D,mobTexture?.texture??this.mobFallbackTexture);
-      gl.uniform1i(uniforms.uMobTexture,2);
-      gl.uniform2f(uniforms.uMobTextureSize,mobTexture?.width??64,mobTexture?.height??32);
+      gl.bindTexture(gl.TEXTURE_2D, mobTexture?.texture ?? this.mobFallbackTexture);
+      gl.uniform1i(uniforms.uMobTexture, 2);
+      gl.uniform2f(uniforms.uMobTextureSize, mobTexture?.width ?? 64, mobTexture?.height ?? 32);
       for (let partIndex = 0; partIndex < parts.length; partIndex++) {
         const [offset, scale, color] = parts[partIndex];
         const isArm = skin && (partIndex === 2 || partIndex === 3);
@@ -544,7 +543,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         // Steve's opposite arm/leg pairs swing against each other, as in
         // the classic Minecraft walk cycle.
         const phase = (partIndex === 2 || partIndex === 5) ? Math.PI : 0;
-        let swing = 0;
+        let swing = pose.itemModel ? (pose.itemSwing ?? 0) : 0;
         const partOffset = offset.slice();
         if (skin && !pose.firstPerson) {
           const moving = pose.walking ? 1 : 0;
@@ -609,9 +608,17 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         gl.uniform1f(uniforms.uPartPivotY, pivotY);
         gl.uniform1f(uniforms.uSkinPart, skin ? partIndex : -1);
         gl.uniform1f(uniforms.uSkinLayer, pose.skinLayer ? 1 : 0);
-        gl.uniform1f(uniforms.uMobEnabled,0.0);
-        gl.uniform2f(uniforms.uMobUV,0,0);
-        gl.uniform3f(uniforms.uMobBox,1,1,1);
+        // The old cuboid rig is not a vanilla geometry match. Apply the
+        // real mob skin only to its corresponding torso/head (and pig snout)
+        // UV islands; never project a face onto the legs.
+        const mobUv = mobTexture?.ready && (
+          partIndex === 0 || partIndex === 1 ||
+          (pose.mobType === 'pig' && partIndex === 2) ||
+          (pose.mobType === 'chicken' && (partIndex === 2 || partIndex === 3))
+        ) ? MOB_UV[pose.mobType]?.[partIndex] : null;
+        gl.uniform1f(uniforms.uMobEnabled, mobUv ? 1.0 : 0.0);
+        gl.uniform2f(uniforms.uMobUV, mobUv?.[0] ?? 0, mobUv?.[1] ?? 0);
+        gl.uniform3f(uniforms.uMobBox, mobUv ? mobUv.slice(2, 5) : [1, 1, 1]);
         if (pose.hurt) {
           const flash = 0.42;
           gl.uniform4f(uniforms.uColor,
@@ -704,21 +711,73 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       draw(handX, handY, handZ, yaw, outerArmParts, this.player.walkPhase, -1, -1, 1,
         { firstPerson: true, skinLayer: true, attack: this.player.attackTime > 0, attackTime: this.player.attackTime, sneaking: this.player.sneaking, swimming: this.player.inWater, airborne: !this.player.onGround, walking: this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035 }, true);
 
-      // Use the same pixel-art icon as the selected hotbar slot instead of a placeholder coloured cube.
+      // Render the selected item as actual cuboids in the player's hand.
+      // The old CSS icon overlay was a flat 2D sprite detached from the arm.
       const held = this.inventory?.held;
       const itemView = document.getElementById('held-item-view');
-      if (itemView) {
-        const icon = held && !held.isEmpty ? this.ui.icons.get(held.item.id) : null;
-        if (icon) {
-          if (itemView.src !== icon) itemView.src = icon;
-          itemView.classList.remove('hidden');
-          const swing = this.player.attackTime > 0 ? Math.sin((8 - this.player.attackTime) / 8 * Math.PI) : 0;
-          const bob = Math.sin(this.player.walkPhase * 2) * 3;
-          itemView.style.transform = 'rotate(' + (-28 - swing * 12) + 'deg) translate(' + (swing * 7) + 'px,' + (bob - swing * 17) + 'px)';
+      itemView?.classList.add('hidden');
+      if (itemView) itemView.removeAttribute('src');
+      if (held && !held.isEmpty && held.item) {
+        const id = String(held.item.id ?? '').replace(/^mc:/, '');
+        const tier = id.split('_')[0];
+        const material = ({
+          wooden: [0.48, 0.29, 0.13, 1], stone: [0.48, 0.49, 0.50, 1],
+          iron: [0.78, 0.80, 0.82, 1], golden: [0.95, 0.76, 0.20, 1],
+          diamond: [0.20, 0.82, 0.78, 1], netherite: [0.30, 0.27, 0.29, 1],
+        })[tier] ?? [0.62, 0.62, 0.62, 1];
+        const wood = [0.38, 0.24, 0.12, 1];
+        let itemParts;
+        if (held.item.block || id.endsWith('_block') || id === 'dirt' || id === 'stone' || id === 'cobblestone' || id === 'oak_planks') {
+          const blockColor = id.includes('grass') ? [0.30, 0.55, 0.20, 1]
+            : id.includes('dirt') ? [0.40, 0.27, 0.16, 1]
+            : id.includes('sand') ? [0.78, 0.72, 0.53, 1]
+            : id.includes('wood') || id.includes('plank') || id.includes('log') ? [0.48, 0.32, 0.18, 1]
+            : id.includes('cobble') || id.includes('stone') ? [0.48, 0.49, 0.50, 1]
+            : [0.55, 0.55, 0.55, 1];
+          itemParts = [[[0, 0, 0], [0.25, 0.25, 0.25], blockColor]];
+        } else if (id.includes('pickaxe')) {
+          itemParts = [
+            [[0, -0.04, 0], [0.045, 0.42, 0.045], wood],
+            [[0, 0.18, 0], [0.34, 0.075, 0.075], material],
+            [[-0.13, 0.13, 0], [0.075, 0.12, 0.075], material],
+            [[0.13, 0.13, 0], [0.075, 0.12, 0.075], material],
+          ];
+        } else if (id.includes('axe')) {
+          itemParts = [
+            [[0, -0.04, 0], [0.045, 0.42, 0.045], wood],
+            [[-0.085, 0.14, 0], [0.16, 0.20, 0.085], material],
+          ];
+        } else if (id.includes('shovel') || id.includes('hoe')) {
+          itemParts = [
+            [[0, -0.04, 0], [0.045, 0.42, 0.045], wood],
+            [[0, 0.18, 0], [id.includes('shovel') ? 0.13 : 0.20, 0.12, 0.07], material],
+          ];
+        } else if (id.includes('sword')) {
+          itemParts = [
+            [[0, -0.16, 0], [0.055, 0.15, 0.055], wood],
+            [[0, -0.065, 0], [0.19, 0.045, 0.07], wood],
+            [[0, 0.13, 0], [0.085, 0.36, 0.035], material],
+            [[0, 0.31, 0], [0.055, 0.08, 0.045], material],
+          ];
+        } else if (id.includes('rod')) {
+          itemParts = [
+            [[0, -0.04, 0], [0.04, 0.48, 0.04], wood],
+            [[0.10, 0.20, 0], [0.025, 0.025, 0.025], [0.75, 0.65, 0.42, 1]],
+          ];
         } else {
-          itemView.classList.add('hidden');
-          itemView.removeAttribute('src');
+          const itemColor = id.includes('apple') ? [0.78, 0.12, 0.10, 1]
+            : id.includes('ingot') ? material
+            : id.includes('diamond') ? [0.20, 0.82, 0.78, 1]
+            : [0.72, 0.68, 0.55, 1];
+          itemParts = [[[0, 0, 0], [0.16, 0.16, 0.10], itemColor]];
         }
+        const itemX = handX + forwardX * 0.10 + rightX * 0.025;
+        const itemY = handY + 0.035;
+        const itemZ = handZ + forwardZ * 0.10 + rightZ * 0.025;
+        const itemSwing = this.player.attackTime > 0
+          ? -0.24 * Math.sin((8 - this.player.attackTime) / 8 * Math.PI) : -0.20;
+        draw(itemX, itemY, itemZ, yaw, itemParts, 0, -1, -1, 1,
+          { itemModel: true, itemSwing });
       }
     }
     gl.bindVertexArray(null);
