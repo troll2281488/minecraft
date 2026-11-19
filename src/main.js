@@ -24,7 +24,7 @@ import { ITEMS } from './world/item.js';
 
 import { buildTextures, buildBlockTextureTable, TILE_SIZE } from './render/atlas.js';
 import { buildItemIconCache } from './render/item_icons.js';
-import { loadItsBrianTextures } from './render/resource_pack.js';
+import { loadItsBrianTextures, setMinecraftUiTextures } from './render/resource_pack.js';
 import { setHudSprites } from './ui/hud_bars.js';
 import { createContext, createTextureArray } from './render/gl.js';
 
@@ -69,6 +69,7 @@ export async function boot() {
   // Load available ItsBrian textures; missing files fall back to the built-in art.
   const remoteTextures = await loadItsBrianTextures(BLOCKS, ITEMS);
   setHudSprites(remoteTextures.hud);
+  setMinecraftUiTextures(remoteTextures.ui);
   const textures = buildTextures(remoteTextures.blocks);
   const textureArray = createTextureArray(gl, textures, TILE_SIZE);
   const textureTable = buildBlockTextureTable(BLOCKS, textures.index);
