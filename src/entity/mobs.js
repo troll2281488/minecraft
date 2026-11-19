@@ -1,5 +1,4 @@
 import { ItemStack } from '../world/item.js';
-import { positionalRandom } from '../core/rng.js';
 import { TerrainGenerator, villageCandidateForCell } from '../world/gen/terrain.js';
 import { createVillagerProfile } from './villager_trades.js';
 
@@ -334,6 +333,14 @@ export class MobSystem {
   /** Spawn a supported creature from a creative egg on the clicked block. */
   spawnFromEgg(type, x, z) {
     if (!['cow','pig','sheep','chicken','mooshroom','rabbit','wolf','polar_bear','zombie','skeleton','stray','creeper','enderman','spider','cave_spider','villager'].includes(type)) return false;
+    if (type === 'villager') {
+      const world = this.game.world;
+      const y = world.getHeight(x, z);
+      const chunk = world.getChunk(Math.floor(x / 16), Math.floor(z / 16));
+      const localX = ((x % 16) + 16) % 16, localZ = ((z % 16) + 16) % 16;
+      const biome = chunk?.getBiome(localX, y, localZ) ?? 'mc:plains';
+      return this._spawn(type, x, z, createVillagerProfile(world.seed, x, z, biome, 0));
+    }
     return this._spawn(type, x, z);
   }
 
