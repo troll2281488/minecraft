@@ -26,6 +26,7 @@ import { buildTextures, buildBlockTextureTable, TILE_SIZE } from './render/atlas
 import { buildItemIconCache } from './render/item_icons.js';
 import { loadItsBrianTextures, setMinecraftUiTextures } from './render/resource_pack.js';
 import { setHudSprites } from './ui/hud_bars.js';
+import { loadEntityModelPack } from './render/entity_models.js';
 import { createContext, createTextureArray } from './render/gl.js';
 
 import { GAMEMODE, Player } from './entity/player.js';
@@ -67,7 +68,10 @@ export async function boot() {
   const gl = createContext(canvas);
 
   // Load available ItsBrian textures; missing files fall back to the built-in art.
-  const remoteTextures = await loadItsBrianTextures(BLOCKS, ITEMS);
+  const [remoteTextures, entityModels] = await Promise.all([
+    loadItsBrianTextures(BLOCKS, ITEMS),
+    loadEntityModelPack(),
+  ]);
   setHudSprites(remoteTextures.hud);
   setMinecraftUiTextures(remoteTextures.ui);
   const textures = buildTextures(remoteTextures.blocks);
@@ -75,7 +79,7 @@ export async function boot() {
   const textureTable = buildBlockTextureTable(BLOCKS, textures.index);
   const icons = buildItemIconCache(ITEMS, BLOCKS, textures.data, textures.index, remoteTextures.items);
 
-  const game = new Game({ canvas, gl, textureArray, textureTable, icons, textures });
+  const game = new Game({ canvas, gl, textureArray, textureTable, icons, textures, entityModels });
 
   // Development handle. Cheap, and the alternative when something looks wrong
   // in a running world is adding one temporarily and reloading, which loses the
@@ -91,12 +95,13 @@ export async function boot() {
 // ---------------------------------------------------------------------------
 
 class Game {
-  constructor({ canvas, gl, textureArray, textureTable, icons, textures }) {
+  constructor({ canvas, gl, textureArray, textureTable, icons, textures, entityModels }) {
     this.canvas = canvas;
     this.gl = gl;
     this.textureArray = textureArray;
     this.textureTable = textureTable;
     this.textures = textures;
+    this.entityModels = entityModels; // Full upstream geometry + animation data, loaded locally.
 
     this.ui = new UI(icons);
     this.multiplayer = new Multiplayer(this);
