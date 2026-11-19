@@ -260,6 +260,7 @@ export class TerrainGenerator {
     this.applySurface(chunk, baseX, baseZ, heights, biomes);
     this.placeFeatures(chunk, baseX, baseZ, heights, biomes);
     this.placeVillages(chunk, baseX, baseZ);
+    this.placeUndergroundStructures(chunk, baseX, baseZ);
 
     chunk.rebuildHeightmap();
     chunk.generatedStage = GEN_STAGE.FEATURES;
@@ -434,6 +435,95 @@ export class TerrainGenerator {
           this.setVillageBlock(chunk, baseX, baseZ, candidate.x + dx, site.y, candidate.z + 8, this.states.byId['mc:coarse_dirt']);
         }
       }
+    }
+  }
+
+  /**
+   * Underground features use world-grid anchors and write only their own
+   * chunk slice. Adjacent workers therefore produce identical structures
+   * regardless of generation order.
+   */
+  placeUndergroundStructures(chunk, baseX, baseZ) {
+    const minX = Math.floor((baseX - 36) / 96);
+    const maxX = Math.floor((baseX + CHUNK_SIZE + 36) / 96);
+    const minZ = Math.floor((baseZ - 36) / 96);
+    const maxZ = Math.floor((baseZ + CHUNK_SIZE + 36) / 96);
+    for (let gz = minZ; gz <= maxZ; gz++) {
+      for (let gx = minX; gx <= maxX; gx++) {
+        const shaft = mineshaftCandidateForCell(this.seed, gx, gz);
+        if (shaft) this.placeMineshaft(chunk, baseX, baseZ, shaft);
+      }
+    }
+
+    const dungeonMinX = Math.floor((baseX - 20) / 80);
+    const dungeonMaxX = Math.floor((baseX + CHUNK_SIZE + 20) / 80);
+    const dungeonMinZ = Math.floor((baseZ - 20) / 80);
+    const dungeonMaxZ = Math.floor((baseZ + CHUNK_SIZE + 20) / 80);
+    for (let gz = dungeonMinZ; gz <= dungeonMaxZ; gz++) {
+      for (let gx = dungeonMinX; gx <= dungeonMaxX; gx++) {
+        const room = dungeonCandidateForCell(this.seed, gx, gz);
+        if (room) this.placeDungeon(chunk, baseX, baseZ, room);
+      }
+    }
+  }
+
+  placeMineshaft(chunk, baseX, baseZ, site) {
+    const S = this.states.byId;
+    const air = S['mc:air'], plank = S['mc:oak_planks'], log = S['mc:oak_log'];
+    if (!air || !plank || !log) return;
+    const put = (wx, y, wz, state) => {
+      const x = wx - baseX, z = wz - baseZ;
+      if (!state || x < 0 || x >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE || y < MIN_Y || y >= MAX_Y) return;
+      chunk.setBlock(x, y, z, state);
+    };
+    // A gently winding, supported corridor with occasional side alcoves.
+    for (let step = 0; step < 30; step++) {
+      const drift = Math.round(Math.sin(step * 0.31 + site.phase) * 2);
+      const wx = site.x + (site.axis === 0 ? step : drift);
+      const wz = site.z + (site.axis === 0 ? drift : step);
+      const floor = site.y + Math.round(Math.sin(step * 0.19) * 1.5);
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dz = -1; dz <= 1; dz++) {
+          put(wx + dx, floor, wz + dz, plank);
+          for (let dy = 1; dy <= 3; dy++) put(wx + dx, floor + dy, wz + dz, air);
+        }
+      }
+      if (step % 4 === 0) {
+        for (let dy = 1; dy <= 3; dy++) {
+          put(wx - 1, floor + dy, wz - 1, log);
+          put(wx + 1, floor + dy, wz + 1, log);
+        }
+        for (let dx = -1; dx <= 1; dx++) put(wx + dx, floor + 4, wz, plank);
+      }
+      if (step % 7 === 3 && S['mc:torch']) put(wx, floor + 2, wz, S['mc:torch']);
+    }
+  }
+
+  placeDungeon(chunk, baseX, baseZ, room) {
+    const S = this.states.byId;
+    const air = S['mc:air'], cobble = S['mc:cobblestone'];
+    const mossy = S['mc:mossy_cobblestone'] || cobble;
+    if (!air || !cobble) return;
+    const put = (wx, y, wz, state) => {
+      const x = wx - baseX, z = wz - baseZ;
+      if (!state || x < 0 || x >= CHUNK_SIZE || z < 0 || z >= CHUNK_SIZE || y < MIN_Y || y >= MAX_Y) return;
+      chunk.setBlock(x, y, z, state);
+    };
+    for (let dx = 0; dx < 7; dx++) for (let dz = 0; dz < 7; dz++) {
+      for (let dy = 0; dy < 5; dy++) {
+        const edge = dx === 0 || dx === 6 || dz === 0 || dz === 6 || dy === 0 || dy === 4;
+        if (!edge) continue;
+        const weathered = ((dx * 13 + dz * 7 + dy * 3 + room.variant) % 5) < 2;
+        put(room.x + dx, room.y + dy, room.z + dz, weathered ? mossy : cobble);
+      }
+    }
+    // Clear the interior after constructing the shell.
+    for (let dx = 1; dx < 6; dx++) for (let dz = 1; dz < 6; dz++)
+      for (let dy = 1; dy < 4; dy++) put(room.x + dx, room.y + dy, room.z + dz, air);
+    if (S['mc:chest']) put(room.x + 1, room.y + 1, room.z + 1, S['mc:chest']);
+    if (S['mc:torch']) {
+      put(room.x + 3, room.y + 3, room.z + 1, S['mc:torch']);
+      put(room.x + 3, room.y + 3, room.z + 5, S['mc:torch']);
     }
   }
 
