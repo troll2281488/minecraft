@@ -413,9 +413,9 @@ export const RendererMixin = {
           else if (pose.airborne) swing = isArm ? -0.22 : 0.25;
           else swing = Math.sin(walkPhase + phase) * 0.58;
           if (isArm && pose.attack && partIndex === 3) swing -= 1.15;
-        } else if (!skin && partIndex >= legStart && partIndex <= legEnd) {
-          // Keep mob rigs' own leg ranges; do not animate arbitrary body parts.
-          swing = Math.sin(walkPhase) * 0.16;
+        } else if (!skin && (pose.legIndices?.has(partIndex) || (partIndex >= legStart && partIndex <= legEnd))) {
+          // Animate only named limb bones from imported models, or the legacy rig range.
+          swing = Math.sin(walkPhase + phase) * 0.42;
         }
         gl.uniform3f(uniforms.uPartOffset, offset[0], offset[1], offset[2]);
         gl.uniform3f(uniforms.uPartScale, scale[0] * pulse, scale[1] * pulse, scale[2] * pulse);
@@ -446,20 +446,33 @@ export const RendererMixin = {
       draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, human, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne }, true);
     }
     for (const mob of this.entities?.mobs ?? []) {
-      const parts = mob.type === 'zombie' ? zombie
+      const fallbackParts = mob.type === 'zombie' ? zombie
         : mob.type === 'skeleton' || mob.type === 'stray' ? skeleton
         : mob.type === 'creeper' ? creeper
         : mob.type === 'enderman' ? enderman
         : mob.type === 'spider' || mob.type === 'cave_spider' ? spider
         : mob.type === 'pig' ? pig : mob.type === 'cow' ? cow
         : mob.type === 'chicken' ? chicken : sheep;
+      const palette = mob.type === 'cow' ? [0.38, 0.25, 0.17, 1]
+        : mob.type === 'pig' ? [0.88, 0.49, 0.56, 1]
+        : mob.type === 'sheep' ? [0.82, 0.78, 0.72, 1]
+        : mob.type === 'chicken' ? [0.90, 0.86, 0.72, 1]
+        : mob.type === 'creeper' ? [0.20, 0.58, 0.18, 1]
+        : mob.type === 'skeleton' || mob.type === 'stray' ? [0.78, 0.76, 0.69, 1]
+        : mob.type === 'spider' || mob.type === 'cave_spider' ? [0.16, 0.10, 0.09, 1]
+        : mob.type === 'enderman' ? [0.08, 0.06, 0.11, 1]
+        : [0.28, 0.48, 0.28, 1];
+      const imported = this.entityModels?.toLegacyParts?.(mob.type, palette);
+      const parts = imported?.parts ?? fallbackParts;
       const pulse = mob.type === 'creeper' && mob.anim?.fuse > 0
         ? 1 + Math.sin(mob.anim.fuse * Math.PI * 12) * 0.10 * mob.anim.fuse : 1;
       const legs = mob.type === 'creeper' ? [2, 5] : mob.type === 'zombie' || mob.type === 'skeleton' || mob.type === 'stray' ? [4, 5]
         : mob.type === 'pig' ? [3, 6] : mob.type === 'cow' ? [2, 5]
         : mob.type === 'chicken' ? [4, 5] : mob.type === 'enderman' ? [4, 5] : [2, 9];
       const babyScale = mob.ageTicks < 0 ? 0.55 : 1;
-      draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, { hurt: (mob.hurtTicks || 0) > 0 });
+      draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase,
+        imported ? -1 : legs[0], imported ? -1 : legs[1], pulse * babyScale,
+        { hurt: (mob.hurtTicks || 0) > 0, legIndices: imported?.legIndices });
     }
     if (!this.thirdPerson) {
       // First-person right arm and held item, positioned relative to the
