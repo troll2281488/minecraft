@@ -89,6 +89,8 @@ export function rollMobDrops(type, random = Math.random) {
     { id: 'mc:feather', count: amount(0, 2) },
   ];
   if (type === 'sheep') return [{ id: 'mc:raw_mutton', count: amount(1, 2) }];
+  if (type === 'rabbit') return [{ id: 'mc:raw_rabbit', count: amount(1, 1) }, ...(random() < 0.5 ? [{ id: 'mc:rabbit_hide', count: 1 }] : [])];
+  if (type === 'mooshroom') return [{ id: 'mc:raw_beef', count: amount(1, 3) }, { id: 'mc:leather', count: amount(0, 2) }];
   if (type === 'skeleton' || type === 'stray') return [{ id: 'mc:bone', count: amount(0, 2) }];
   if (type === 'creeper') return [{ id: 'mc:gunpowder', count: amount(0, 2) }];
   if (type === 'spider' || type === 'cave_spider') return [{ id: 'mc:string', count: amount(0, 2) }];
@@ -255,7 +257,7 @@ export class MobSystem {
       speed: ['zombie','skeleton','stray','spider','creeper'].includes(type) ? 0.035 : type === 'enderman' ? 0.045 : 0.018,
       thinkTicks: 0, attackTicks: 0, walkPhase: Math.random() * 6,
       moveTicks: 0, pauseTicks: 45 + Math.floor(Math.random() * 100),
-      health: ({ zombie:20, skeleton:20, stray:20, creeper:20, enderman:40, spider:16, cow:10, pig:10, chicken:4, sheep:8 })[type] ?? 10,
+      health: ({ zombie:20, skeleton:20, stray:20, creeper:20, enderman:40, spider:16, cow:10, pig:10, chicken:4, sheep:8, mooshroom:10, rabbit:3, wolf:8, polar_bear:30 })[type] ?? 10,
       sheared: false, hurtTicks: 0, fuseTicks: 0,
       ageTicks: 0, loveTicks: 0, breedCooldown: 0,
       anim: { walk: 0, idle: Math.random() * Math.PI * 2, attack: 0, hurt: 0, fuse: 0 },
@@ -266,7 +268,7 @@ export class MobSystem {
 
   /** Spawn a supported creature from a creative egg on the clicked block. */
   spawnFromEgg(type, x, z) {
-    if (!['cow','pig','sheep','chicken','zombie','skeleton','stray','creeper','enderman','spider','cave_spider'].includes(type)) return false;
+    if (!['cow','pig','sheep','chicken','mooshroom','rabbit','wolf','polar_bear','zombie','skeleton','stray','creeper','enderman','spider','cave_spider'].includes(type)) return false;
     return this._spawn(type, x, z);
   }
 
@@ -591,13 +593,20 @@ export class MobSystem {
           const jungle = ['mc:jungle','mc:sparse_jungle','mc:bamboo_jungle'].includes(biome);
           const cold = ['mc:snowy_plains','mc:snowy_taiga','mc:ice_spikes','mc:taiga','mc:mega_taiga','mc:giant_spruce_taiga'].includes(biome);
           if (biome === 'mc:mushroom_island') {
-            type = roll < 0.78 ? 'cow' : roll < 0.9 ? 'sheep' : 'chicken';
+            // Mooshrooms are the signature inhabitant of the very rare mushroom biome.
+            type = roll < 0.78 ? 'mooshroom' : roll < 0.9 ? 'cow' : 'sheep';
+          } else if (jungle && roll < 0.22) {
+            type = 'rabbit';
+          } else if (cold && roll < 0.18) {
+            type = 'polar_bear';
           } else if (dry) {
             type = roll < 0.48 ? 'sheep' : roll < 0.78 ? 'chicken' : 'pig';
           } else if (jungle) {
             type = roll < 0.42 ? 'chicken' : roll < 0.76 ? 'pig' : 'sheep';
           } else if (cold) {
             type = roll < 0.48 ? 'sheep' : roll < 0.76 ? 'pig' : 'chicken';
+          } else if (roll < 0.07) {
+            type = 'wolf';
           } else {
             type = roll < 0.28 ? 'sheep' : roll < 0.52 ? 'pig' : roll < 0.82 ? 'cow' : 'chicken';
           }
