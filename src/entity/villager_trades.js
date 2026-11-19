@@ -37,6 +37,7 @@ export const VILLAGER_CAREERS = Object.freeze({
   librarian: Object.freeze({ label: 'Библиотекарь', profession: 'librarian', texture: 'librarian', offers: [
     offer('paper',1,'mc:paper',24,32,'mc:emerald'),
     offer('books',1,'mc:book',8,10,'mc:emerald'),
+    offer('paper_sale',2,'mc:emerald',1,1,'mc:paper',4,8),
     offer('glass',2,'mc:emerald',1,1,'mc:glass',3,5),
     offer('book_sale',3,'mc:emerald',1,1,'mc:book'),
   ]}),
