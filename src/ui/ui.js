@@ -195,6 +195,7 @@ export class UI {
     };
     this.invMainSlots = build($('inv-main'), 27, (i) => SLOT.MAIN_START + i, 'inventory');
     this.invHotbarSlots = build($('inv-hotbar'), 9, (i) => SLOT.HOTBAR_START + i, 'inventory');
+    this.invArmorSlots = build($('inv-armor'), 4, (i) => SLOT.ARMOR_START + i, 'inventory');
     this.craftSlots = build($('craft-grid'), grid.size * grid.size, (i) => i, 'craft');
     this.resultSlots = build($('craft-result'), 1, () => 0, 'result');
 
@@ -208,6 +209,7 @@ export class UI {
 
     this.invMainSlots.forEach((el, i) => this._paintSlot(el, inventory.get(SLOT.MAIN_START + i)));
     this.invHotbarSlots.forEach((el, i) => this._paintSlot(el, inventory.get(SLOT.HOTBAR_START + i)));
+    this.invArmorSlots?.forEach((el, i) => this._paintSlot(el, inventory.get(SLOT.ARMOR_START + i)));
     this.craftSlots.forEach((el, i) => this._paintSlot(el, grid.get(i)));
     this._paintSlot(this.resultSlots[0], grid.result);
 
