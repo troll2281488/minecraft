@@ -129,19 +129,28 @@ export const SessionMixin = {
   },
 
   async _waitForSpawnChunks(isNew) {
-    const target = 25;
-    const deadline = performance.now() + 15000;
+    // Prepare a complete playable area around spawn before hiding the loading
+    // screen. The world is infinite, so preload the initial 9x9-diameter
+    // neighbourhood (49 chunks in a radius-4 circle), not the whole world.
+    const target = 49;
+    const deadline = performance.now() + 30000;
 
     while (performance.now() < deadline) {
-      this.world.requestAround(this.player.x, this.player.z, 3, 12);
+      this.world.requestAround(this.player.x, this.player.z, 4, 32);
       const ready = this.world.chunkCount;
+      // Mesh while the loading overlay is still visible; otherwise generated
+      // chunks exist but render as empty sky for the first several frames.
+      this.chunkRenderer.update(this.world, this.player.x, this.player.z, 8, null);
+      const meshesReady = this.world.dirtyMeshes.size === 0;
+      const progress = Math.min(0.96, (ready / target) * 0.82 + (meshesReady ? 0.14 : 0));
       this.ui.setLoadingProgress(
-        Math.min(1, ready / target),
-        `Generated ${ready} of ~${target} chunks`,
+        progress,
+        `Preparing terrain: ${Math.min(ready, target)}/${target} chunks · ${meshesReady ? 'meshes ready' : 'building meshes'}`,
       );
-      if (ready >= target) break;
+      if (ready >= target && meshesReady) break;
       await new Promise((resolve) => setTimeout(resolve, 40));
     }
+    this.ui.setLoadingProgress(1, 'Terrain ready');
     void isNew;
   },
 
