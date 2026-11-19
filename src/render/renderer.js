@@ -743,6 +743,32 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       document.getElementById('held-item-view')?.classList.add('hidden');
       draw(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, jumping: !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking, walking: this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035, attack: this.player.attackTime > 0, attackTime: this.player.attackTime }, true);
       draw(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z, this.player.yaw * Math.PI / 180, outerHuman, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, sneaking: this.player.sneaking, skinLayer: true }, true);
+      const armorColors = ['#b8b8b8','#8f8f9b','#b17a45','#6c778a'];
+      const armorParts = [];
+      for (let slot = 36; slot <= 39; slot++) {
+        const stack = this.inventory?.get(slot);
+        if (!stack || stack.isEmpty) continue;
+        const color = stack.item.id.includes('diamond') ? [0.20,0.82,0.78,1]
+          : stack.item.id.includes('iron') ? [0.72,0.76,0.80,1]
+          : stack.item.id.includes('gold') ? [0.95,0.72,0.18,1]
+          : stack.item.id.includes('leather') ? [0.48,0.28,0.14,1]
+          : stack.item.id.includes('chainmail') ? [0.52,0.58,0.62,1] : [0.48,0.52,0.58,1];
+        if (stack.item.armorSlot === 'helmet') armorParts.push([[0,1.55,0],[0.55,0.55,0.55],color]);
+        if (stack.item.armorSlot === 'chestplate') {
+          armorParts.push([[0,1.00,0],[0.56,0.78,0.30],color]);
+          armorParts.push([[-0.375,1.00,0],[0.29,0.78,0.29],color]);
+          armorParts.push([[0.375,1.00,0],[0.29,0.78,0.29],color]);
+        }
+        if (stack.item.armorSlot === 'leggings') {
+          armorParts.push([[-0.125,0.39,0],[0.28,0.78,0.28],color]);
+          armorParts.push([[0.125,0.39,0],[0.28,0.78,0.28],color]);
+        }
+        if (stack.item.armorSlot === 'boots') {
+          armorParts.push([[-0.125,0.08,0.035],[0.27,0.18,0.30],color]);
+          armorParts.push([[0.125,0.08,0.035],[0.27,0.18,0.30],color]);
+        }
+      }
+      if (armorParts.length) draw(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z, this.player.yaw * Math.PI / 180, armorParts, 0, -1, -1, 1, {});
     }
     for (const remote of this.multiplayer?.remotePlayers?.values?.() ?? []) {
       draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, human, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, jumping: !!remote.jumping, sneaking: !!remote.sneaking, walking: !!remote.walking, attack: !!remote.attacking, attackTime: remote.attackTime ?? 0 }, true);
