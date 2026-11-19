@@ -104,12 +104,12 @@ function fillGeneratedChest(seed, x, y, z, chest, kind) {
   const villageLoot = [
     ['mc:bread', 2, 5], ['mc:apple', 1, 3], ['mc:wheat_seeds', 2, 6],
     ['mc:stick', 2, 6], ['mc:iron_ingot', 1, 2], ['mc:gold_nugget', 2, 5],
-    ['mc:leather', 1, 3], ['mc:coal', 2, 5],
+    ['mc:leather', 1, 3], ['mc:coal', 2, 5], ['mc:paper', 1, 4],
   ];
   const dungeonLoot = [
     ['mc:bread', 1, 4], ['mc:iron_ingot', 1, 4], ['mc:gold_ingot', 1, 3],
     ['mc:coal', 2, 7], ['mc:string', 2, 6], ['mc:bone', 1, 5],
-    ['mc:diamond', 1, 2], ['mc:emerald', 1, 2], ['mc:apple', 1, 3],
+    ['mc:diamond', 1, 2], ['mc:emerald', 1, 2], ['mc:apple', 1, 3], ['mc:paper', 1, 4],
     ['mc:iron_pickaxe', 1, 1], ['mc:gold_nugget', 2, 7],
   ];
   const templeLoot = [
