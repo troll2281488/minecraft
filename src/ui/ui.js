@@ -223,6 +223,31 @@ export class UI {
     this.creativeItems = items;
     this.creativeHandlers = handlers;
 
+    const panel = document.querySelector('#creative-screen .creative-panel');
+    let tabs = $('creative-tabs');
+    if (!tabs) {
+      tabs = document.createElement('div');
+      tabs.id = 'creative-tabs';
+      tabs.className = 'creative-tabs';
+      panel.insertBefore(tabs, $('creative-grid'));
+    }
+    const categories = [
+      ['all','Все'], ['blocks','Блоки'], ['building','Строительство'],
+      ['nature','Природа'], ['materials','Материалы'], ['tools','Инструменты'],
+      ['combat','Боевые'], ['food','Еда'], ['misc','Разное'],
+    ];
+    tabs.innerHTML = '';
+    for (const [id, label] of categories) {
+      const button = document.createElement('button');
+      button.type = 'button'; button.textContent = label;
+      button.className = id === 'all' ? 'active' : '';
+      button.onclick = () => {
+        tabs.querySelectorAll('button').forEach((el) => el.classList.toggle('active', el === button));
+        this.filterCreativeCategory(id);
+      };
+      tabs.appendChild(button);
+    }
+    this.creativeCategory = 'all';
     const grid = $('creative-grid');
     grid.innerHTML = '';
     this.creativeSlots = [];
@@ -237,9 +262,14 @@ export class UI {
       }
       // Search matches both the pretty name and the raw id.
       el.dataset.name = `${prettyName(item.id)} ${item.id}`.toLowerCase();
+      const id = item.id;
+      el.dataset.category = item.armorSlot || item.tool ? (item.armorSlot || item.tool === 'sword' ? 'combat' : 'tools')
+        : item.food ? 'food'
+        : item.block ? (/(log|planks|stairs|slab|door|fence|wall|torch)/.test(id) ? 'building' : /(leaves|sapling|flower|grass|fern|mushroom)/.test(id) ? 'nature' : 'blocks')
+        : /spawn_egg|bucket|boat|minecart/.test(id) ? 'misc' : 'materials';
       el.title = prettyName(item.id);
       el.oncontextmenu = (e) => e.preventDefault();
-      el.onmousedown = (e) => { e.preventDefault(); handlers.onPick(item, e.button); };
+      el.onmousedown = (e) => { e.preventDefault(); handlers.onPick(item, e.button, e.shiftKey); };
       grid.appendChild(el);
       this.creativeSlots.push(el);
     }
@@ -264,8 +294,14 @@ export class UI {
 
   filterCreative(query) {
     for (const el of this.creativeSlots) {
-      el.style.display = !query || el.dataset.name.includes(query) ? '' : 'none';
+      const categoryMatch = this.creativeCategory === 'all' || el.dataset.category === this.creativeCategory;
+      el.style.display = categoryMatch && (!query || el.dataset.name.includes(query)) ? '' : 'none';
     }
+  }
+
+  filterCreativeCategory(category) {
+    this.creativeCategory = category;
+    this.filterCreative($('creative-search').value.trim().toLowerCase());
   }
 
   focusCreativeSearch() {
