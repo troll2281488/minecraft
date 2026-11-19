@@ -325,6 +325,8 @@ class Game {
       player.input.forward = 0;
       player.input.strafe = 0;
       player.input.jump = false;
+      player.input.sneak = false;
+      player.input.sprint = false;
     }
 
     // Preserve the previous simulation position so rendering can interpolate
