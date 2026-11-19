@@ -124,12 +124,12 @@ vec4 skinSample(){
   } else {
     float bx=0.0,by=20.0,bw=8.0,bh=12.0;
     if(uSkinPart==1.0){bx=20.0;by=20.0;}
-    else if(uSkinPart==2.0){bx=32.0;by=48.0;bw=4.0;}
-    else if(uSkinPart==3.0){bx=40.0;by=16.0;bw=4.0;}
-    else if(uSkinPart==4.0){bx=16.0;by=48.0;bw=4.0;}
-    else {bx=0.0;by=16.0;bw=4.0;}
+    else if(uSkinPart==2.0){bx=36.0;by=52.0;bw=4.0;}
+    else if(uSkinPart==3.0){bx=44.0;by=20.0;bw=4.0;}
+    else if(uSkinPart==4.0){bx=20.0;by=52.0;bw=4.0;}
+    else {bx=4.0;by=20.0;bw=4.0;}
     if(front){x=bx;y=by;w=bw;h=12.0;p=vec2(vLocalPos.x,1.0-vLocalPos.y);}
-    else if(back){x=bx+bw+8.0;y=by;w=bw;h=12.0;p=vec2(1.0-vLocalPos.x,1.0-vLocalPos.y);}
+    else if(back){x=bx+bw+4.0;y=by;w=bw;h=12.0;p=vec2(1.0-vLocalPos.x,1.0-vLocalPos.y);}
     else if(right){x=bx-4.0;y=by;w=4.0;h=12.0;p=vec2(1.0-vLocalPos.z,1.0-vLocalPos.y);}
     else if(left){x=bx+bw;y=by;w=4.0;h=12.0;p=vec2(vLocalPos.z,1.0-vLocalPos.y);}
     else if(top){x=bx;y=by-4.0;w=bw;h=4.0;p=vec2(vLocalPos.x,vLocalPos.z);}
