@@ -63,9 +63,9 @@ export const InventoryControllerMixin = {
 
   _buildCreativeUI() {
     this.ui.buildCreativeInventory(creativeItemList(), {
-      onPick: (item, button) => {
-        // Left grabs a full stack, right grabs one.
-        const count = button === 2 ? 1 : item.stackSize;
+      onPick: (item, button, shift) => {
+        // A full creative stack is picked only with Shift; ordinary click takes one.
+        const count = shift ? item.stackSize : 1;
         this.inventory.cursor = new ItemStack(item, count);
         this.ui.updateCreativeInventory(this.inventory);
       },
