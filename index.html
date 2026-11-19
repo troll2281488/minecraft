@@ -380,13 +380,10 @@
   #inventory-screen .panel::before,
   #creative-screen .panel::before {
     content:""; position:absolute; inset:0; z-index:-1;
-    background-image:var(--mc-gui-inventory, url('https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/gui/container/inventory.png'));
-    background-size:100% 100%; background-position:center; background-repeat:no-repeat;
-    opacity:.48; pointer-events:none;
+    background-image:none !important; opacity:0; pointer-events:none;
   }
   #creative-screen .panel::before {
-    background-image:var(--mc-gui-creative-inventory, url('https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/gui/container/creative_inventory/tab_items.png'));
-    opacity:.42;
+    background-image:none !important; opacity:0;
   }
   #inventory-screen .panel h1,
   #creative-screen .panel h1 { color:#292929; text-shadow:1px 1px rgba(255,255,255,.55); }
@@ -824,6 +821,7 @@
         <div class="preview-arm preview-arm-left"></div><div class="preview-arm preview-arm-right"></div>
         <div class="preview-leg preview-leg-left"></div><div class="preview-leg preview-leg-right"></div>
       </div>
+      <div class="armor-slots"><div id="inv-armor" class="armor-grid"></div></div>
       <div class="craft-row">
         <div>
           <h3>Crafting</h3>
@@ -926,3 +924,16 @@
 </script>
 </body>
 </html>
+
+<style>
+#inventory-screen .inventory-panel,#creative-screen .creative-panel{background-image:none!important}
+#inventory-screen .inventory-panel::before,#creative-screen .creative-panel::before{content:none!important;display:none!important}
+#inventory-screen .armor-grid{display:grid;grid-template-columns:repeat(2,44px);gap:4px}
+#inventory-screen .armor-grid .slot{width:44px;height:44px;position:relative}
+#inventory-screen .armor-grid .slot:nth-child(1)::before{content:'Шлем'}
+#inventory-screen .armor-grid .slot:nth-child(2)::before{content:'Нагр.'}
+#inventory-screen .armor-grid .slot:nth-child(3)::before{content:'Пон.'}
+#inventory-screen .armor-grid .slot:nth-child(4)::before{content:'Бот.'}
+#inventory-screen .armor-grid .slot:empty::before{position:absolute;inset:0;display:grid;place-items:center;color:#bbb;font-size:9px;pointer-events:none}
+#inventory-screen .inventory-panel{background:#b9b9b9!important}
+</style>
