@@ -430,6 +430,12 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
   },
 
   _drawPlayers() {
+    // The title panorama is a world preview, not a gameplay camera. Never
+    // render the saved first/third-person avatar or multiplayer avatars here.
+    if (this.titlePreviewActive) {
+      document.getElementById('held-item-view')?.classList.add('hidden');
+      return;
+    }
     const gl = this.gl;
     const { program, uniforms } = this.avatarProgram;
     const human = [
@@ -523,7 +529,10 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     const draw = (x, y, z, yaw, parts, walkPhase = 0, legStart = -1, legEnd = -1, pulse = 1, pose = {}, skin = false) => {
       gl.uniform3f(uniforms.uPlayerPos, x, y, z);
       gl.uniform1f(uniforms.uYaw, yaw);
-      const mobTexture=!skin&&pose.mobType?this.mobTextures?.get(pose.mobType):null;
+      // The legacy mob cuboids do not match vanilla model UV dimensions.
+      // Keep their original, correctly placed colours until matching geometry
+      // and per-model UV layouts are implemented together.
+      const mobTexture=null;
       gl.activeTexture(gl.TEXTURE2);
       gl.bindTexture(gl.TEXTURE_2D,mobTexture?.texture??this.mobFallbackTexture);
       gl.uniform1i(uniforms.uMobTexture,2);
@@ -600,10 +609,9 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         gl.uniform1f(uniforms.uPartPivotY, pivotY);
         gl.uniform1f(uniforms.uSkinPart, skin ? partIndex : -1);
         gl.uniform1f(uniforms.uSkinLayer, pose.skinLayer ? 1 : 0);
-        const mobUv=!skin?MOB_UV[pose.mobType]?.[partIndex]:null;
-        gl.uniform1f(uniforms.uMobEnabled,mobUv&&mobTexture?.ready?1:0);
-        gl.uniform2f(uniforms.uMobUV,mobUv?.[0]??0,mobUv?.[1]??0);
-        gl.uniform3f(uniforms.uMobBox,mobUv?.[2]??1,mobUv?.[3]??1,mobUv?.[4]??1);
+        gl.uniform1f(uniforms.uMobEnabled,0.0);
+        gl.uniform2f(uniforms.uMobUV,0,0);
+        gl.uniform3f(uniforms.uMobBox,1,1,1);
         if (pose.hurt) {
           const flash = 0.42;
           gl.uniform4f(uniforms.uColor,
