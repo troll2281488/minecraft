@@ -22,9 +22,17 @@ export const InventoryControllerMixin = {
   _rebuildInventoryUI() {
     this.ui.buildInventory(this.inventory, this.craftingGrid, {
       onClick: (kind, index, button, shift) => this._onInventoryClick(kind, index, button, shift),
-      onDropCursor: () => {
-        const stack = this.inventory.takeCursor();
-        if (!stack.isEmpty) this.entities?.dropStack(stack);
+      onDropCursor: (button = 0) => {
+        const cursor = this.inventory.cursor;
+        if (cursor.isEmpty) return;
+        if (button === 2) {
+          const one = cursor.split(1);
+          if (!one.isEmpty) this.entities?.dropStack(one);
+          this.inventory.version++;
+        } else {
+          const stack = this.inventory.takeCursor();
+          if (!stack.isEmpty) this.entities?.dropStack(stack);
+        }
         this.ui.updateInventory(this.inventory, this.craftingGrid, true);
       },
     });
