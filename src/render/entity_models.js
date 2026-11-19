@@ -7,10 +7,28 @@
  */
 const ROOT = new URL('../../assets/vanilla-models/', import.meta.url);
 
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 async function readJson(url) {
-  const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
-  if (!response.ok) throw new Error(`Entity model asset failed: ${url} (${response.status})`);
-  return response.json();
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (!response.ok) {
+        const error = new Error(`Entity model asset failed: ${url} (${response.status})`);
+        // Missing files are permanent; 429/5xx responses are often transient on Pages.
+        if (response.status < 500 && response.status !== 429) throw error;
+        lastError = error;
+      } else {
+        return await response.json();
+      }
+    } catch (error) {
+      lastError = error;
+      if (error?.message?.includes('(404)') || error?.message?.includes('(400)')) throw error;
+    }
+    if (attempt < 2) await wait(350 * (attempt + 1));
+  }
+  throw lastError ?? new Error('Entity model asset request failed');
 }
 
 function safePath(path) {
@@ -31,7 +49,7 @@ function emptyEntityModelPack() {
   });
 }
 
-export async function loadEntityModelPack() {
+async function loadEntityModelPackUnsafe() {
   let manifest;
   try {
     manifest = await readJson(new URL('manifest.json', ROOT));
@@ -48,7 +66,7 @@ export async function loadEntityModelPack() {
   const animations = new Map();
   let failedAssets = 0;
   const loadAll = async (paths, target) => {
-    const concurrency = 12;
+    const concurrency = 4;
     let cursor = 0;
     const workers = Array.from({ length: Math.min(concurrency, paths.length) }, async () => {
       while (cursor < paths.length) {
@@ -129,4 +147,15 @@ export async function loadEntityModelPack() {
     toLegacyParts,
     getAnimations(id) { return animations.get(id.startsWith('minecraft:') ? id : `minecraft:${id}`) ?? null; },
   });
+}
+
+
+/** Optional entity assets must never be able to stop the game from booting. */
+export async function loadEntityModelPack() {
+  try {
+    return await loadEntityModelPackUnsafe();
+  } catch (error) {
+    console.warn('[models] Model pack could not be loaded; using built-in mob rendering.', error);
+    return emptyEntityModelPack();
+  }
 }

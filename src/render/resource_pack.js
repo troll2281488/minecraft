@@ -47,6 +47,11 @@ const UI_TEXTURES = Object.freeze({
   europeanFont: 'font/nonlatin_european.png',
 });
 
+// Spawn eggs are generated from their mob's two vanilla colors by item_icons.js.
+export function shouldFetchExternalItemTexture(item) {
+  return Boolean(item && !item.block && !item.spawnEggMob);
+}
+
 async function fetchImage(path) {
   const response = await fetch(ITSBRIAN_RAW + path, { signal: AbortSignal.timeout(4000) });
   if (!response.ok) return null;
@@ -117,7 +122,7 @@ export async function loadItsBrianTextures(blocks, items) {
     return [name, pixels];
   });
 
-  const itemEntries = await mapWithLimit([...items.items.values()].filter((item) => !item.block), 24, async (item) => {
+  const itemEntries = await mapWithLimit([...items.items.values()].filter(shouldFetchExternalItemTexture), 12, async (item) => {
     const name = item.id.slice(item.id.indexOf(':') + 1);
     const sourceName = ITEM_TEXTURE_ALIASES[name] ?? name;
     const bitmap = await fetchImage('item/' + encodeURIComponent(sourceName) + '.png');
