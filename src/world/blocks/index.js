@@ -93,6 +93,7 @@ function plant(id, texture, tint = null) {
 
 stoneLike('mc:stone', 'stone', 1.5, 6);
 stoneLike('mc:cobblestone', 'cobblestone', 2, 6);
+stoneLike('mc:mossy_cobblestone', 'mossy_cobblestone', 2, 6);
 stoneLike('mc:granite', 'granite', 1.5, 6);
 stoneLike('mc:polished_granite', 'polished_granite', 1.5, 6);
 stoneLike('mc:diorite', 'diorite', 1.5, 6);
