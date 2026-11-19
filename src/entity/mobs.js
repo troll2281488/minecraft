@@ -162,6 +162,25 @@ export class MobSystem {
   }
 
 
+  /** Spawn a supported creature from a creative egg on the clicked block. */
+  spawnFromEgg(type, x, z) {
+    if (!['cow','pig','sheep','chicken','zombie','skeleton','stray','creeper','enderman','spider','cave_spider'].includes(type)) return false;
+    return this._spawn(type, x, z);
+  }
+
+  /** Ensure the mob's feet and head fit at all four corners. */
+  _canOccupy(x, y, z) {
+    const radius = 0.27;
+    const feetY = Math.floor(y + 0.05);
+    const headY = Math.floor(y + 1.35);
+    for (const ox of [-radius, radius]) for (const oz of [-radius, radius]) {
+      const bx = Math.floor(x + ox), bz = Math.floor(z + oz);
+      if (this.game.world.getBlock(bx, feetY, bz).block.solid ||
+          this.game.world.getBlock(bx, headY, bz).block.solid) return false;
+    }
+    return true;
+  }
+
   targetedMob(maxDistance = 4.5) {
     const player = this.game.player;
     if (!player) return null;
@@ -360,8 +379,14 @@ export class MobSystem {
     const length = Math.max(0.01, Math.hypot(dx, dz));
     // A visible hit impulse: mobs slide away for several ticks instead of
     // receiving a single tiny position nudge that their AI immediately cancels.
-    mob.knockbackX = (dx / length) * 0.34;
-    mob.knockbackZ = (dz / length) * 0.34;
+    mob.knockbackX = (dx / length) * 0.62;
+    mob.knockbackZ = (dz / length) * 0.62;
+    if (!['zombie','skeleton','stray','creeper','spider','cave_spider','enderman'].includes(mob.type)) {
+      mob.fleeTicks = 100;
+      mob.moveTicks = 100;
+      mob.pauseTicks = 0;
+      mob.targetYaw = Math.atan2(mob.x - player.x, mob.z - player.z);
+    }
     if (mob.health <= 0) {
       for (const drop of rollMobDrops(mob.type)) {
         const leftover = this.game.inventory?.addItem(drop.id, drop.count) ?? drop.count;
@@ -381,11 +406,11 @@ export class MobSystem {
     if (this.fishing && this.fishing.ticks > 0) this.fishing.ticks--;
     if (this.attackCooldown > 0) this.attackCooldown--;
     // Populate nearby loaded chunks quickly so a new world does not feel empty.
-    if (this.spawnTicks >= 40 && this.mobs.length < 12) {
+    if (this.spawnTicks >= 180 && this.mobs.length < 7) {
       this.spawnTicks = 0;
-      for (let attempt = 0; attempt < 3 && this.mobs.length < 12; attempt++) {
+      for (let attempt = 0; attempt < 2 && this.mobs.length < 7; attempt++) {
         const angle = Math.random() * Math.PI * 2;
-        const distance = 5 + Math.random() * 7;
+        const distance = 9 + Math.random() * 9;
         const x = Math.floor(player.x + Math.cos(angle) * distance);
         const z = Math.floor(player.z + Math.sin(angle) * distance);
         if (!world.hasChunk(Math.floor(x / 16), Math.floor(z / 16))) continue;
@@ -461,7 +486,8 @@ export class MobSystem {
         mob.targetYaw = Math.atan2(dx, dz);
       }
 
-      const fleeing = !hostileType && distance < 4;
+      if (mob.fleeTicks > 0) mob.fleeTicks--;
+      const fleeing = !hostileType && (distance < 4 || mob.fleeTicks > 0);
       if (fleeing) mob.targetYaw = Math.atan2(mob.x - player.x, mob.z - player.z);
 
       // Passive mobs now pause between short wandering bursts instead of
@@ -490,9 +516,15 @@ export class MobSystem {
         const nx = mob.x + Math.sin(mob.yaw) * speed + (mob.knockbackX || 0);
         const nz = mob.z + Math.cos(mob.yaw) * speed + (mob.knockbackZ || 0);
         const ground = world.getHeight(Math.floor(nx), Math.floor(nz));
-        if (ground > -60 && world.getBlock(Math.floor(nx), ground, Math.floor(nz)).block.solid) {
+        const nextY = ground + 1;
+        // Stop at walls and overhangs instead of moving through solid voxels.
+        if (ground > -60 && world.getBlock(Math.floor(nx), ground, Math.floor(nz)).block.solid &&
+            Math.abs(nextY - mob.y) <= 1.05 && this._canOccupy(nx, nextY, nz)) {
           mob.x = nx; mob.z = nz;
-          mob.y += (ground + 1 - mob.y) * 0.35;
+          mob.y += (nextY - mob.y) * 0.35;
+        } else if (Math.abs(mob.knockbackX || 0) + Math.abs(mob.knockbackZ || 0) > 0.01) {
+          mob.knockbackX *= -0.12;
+          mob.knockbackZ *= -0.12;
         }
         mob.knockbackX = (mob.knockbackX || 0) * 0.72;
         mob.knockbackZ = (mob.knockbackZ || 0) * 0.72;
