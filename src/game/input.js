@@ -78,15 +78,6 @@ export const InputMixin = {
     });
 
     window.addEventListener('resize', () => this._resize());
-    window.addEventListener('beforeunload', (event) => {
-      if (!this.running) return;
-      // Ask for confirmation where the browser permits it, and queue a
-      // best-effort save. Browsers still reserve Ctrl+W and may ignore this.
-      this._save(false);
-      event.preventDefault();
-      event.returnValue = '';
-    });
-
     this._resize();
   },
 
@@ -110,8 +101,8 @@ export const InputMixin = {
     // Keep browser-level shortcuts and zoom gestures from hijacking gameplay.
     // Do this before the repeat guard so holding Ctrl cannot re-enable defaults.
     if (this.running && !this.chatOpen &&
-        (e.ctrlKey || e.metaKey || e.code === 'F3' || e.code === 'F5' ||
-         e.code === 'F11' || e.code === 'F12')) {
+        (((e.ctrlKey || e.metaKey) && e.code !== 'KeyW') ||
+         e.code === 'F3' || e.code === 'F5' || e.code === 'F11' || e.code === 'F12')) {
       e.preventDefault();
       e.stopPropagation();
     }
