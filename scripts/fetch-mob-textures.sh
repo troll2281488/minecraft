@@ -29,7 +29,7 @@ download "spider/cave_spider.png" "cave_spider.png"
 
 # Vanilla villager base + career overlays (composited at runtime by the renderer).
 download "villager/villager.png" "villager.png"
-for career in farmer fisherman shepherd fletcher librarian cleric armorer toolsmith butcher leatherworker nitwit; do
+for career in farmer fisherman shepherd librarian cleric armorer toolsmith butcher leatherworker nitwit; do
   download "villager/profession/$career.png" "villager_$career.png"
 done
 
