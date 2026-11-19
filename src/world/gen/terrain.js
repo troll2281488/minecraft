@@ -818,10 +818,13 @@ export class TerrainGenerator {
     const isSpruce = species === 'spruce';
     const isJungle = species === 'jungle';
     const isAcacia = species === 'acacia';
+    const isBirch = species === 'birch';
     const isDarkOak = species === 'dark_oak';
+    const acaciaLean = isAcacia && rng.nextBoolean() ? 1 : -1;
     const height = isSpruce ? 7 + rng.nextInt(3)
       : isJungle ? 9 + rng.nextInt(5)
-      : isAcacia ? 5 + rng.nextInt(2)
+      : isAcacia ? 6 + rng.nextInt(3)
+      : isBirch ? 7 + rng.nextInt(3)
       : isDarkOak ? 7 + rng.nextInt(2)
       : 5 + rng.nextInt(3);
 
@@ -833,7 +836,7 @@ export class TerrainGenerator {
       }
     } else {
       for (let dy = 0; dy < height; dy++) {
-        const ox = isAcacia && dy >= Math.floor(height * 0.55) ? Math.sign(dy - height * 0.55) : 0;
+        const ox = isAcacia && dy >= Math.floor(height * 0.55) ? acaciaLean : 0;
         if (y + dy < MAX_Y) chunk.setBlock(x + ox, y + dy, z, log);
       }
     }
@@ -864,14 +867,37 @@ export class TerrainGenerator {
     }
 
     if (isAcacia) {
-      const crownX = x + Math.sign(height);
+      // Acacia: a visibly leaning upper trunk and a broad, flat umbrella crown.
+      const lean = acaciaLean;
+      const crownX = x + lean * 2;
+      for (let step = 1; step <= 2; step++) {
+        const branchY = y + height - 2 + step;
+        const branchX = x + lean * step;
+        if (branchY < MAX_Y) chunk.setBlock(branchX, branchY, z, log);
+      }
       for (let dy = -1; dy <= 1; dy++) {
-        const radius = dy === 1 ? 1 : 2;
-        for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) {
-          if (Math.abs(dx) + Math.abs(dz) > radius + 1) continue;
+        const radiusX = dy === 1 ? 2 : 3;
+        const radiusZ = dy === 1 ? 2 : 3;
+        for (let dx = -radiusX; dx <= radiusX; dx++) for (let dz = -radiusZ; dz <= radiusZ; dz++) {
+          if ((dx * dx) / (radiusX * radiusX + 0.01) + (dz * dz) / (radiusZ * radiusZ + 0.01) > 1.15) continue;
+          if (Math.abs(dx) === radiusX && Math.abs(dz) === radiusZ && rng.nextBoolean()) continue;
           this.setLeaf(chunk, crownX + dx, y + height + dy, z + dz, leaves);
         }
       }
+      return;
+    }
+
+    if (isBirch) {
+      // Birch crowns are taller and narrower than oak, with a loose oval profile.
+      for (let dy = -3; dy <= 1; dy++) {
+        const radius = dy === 1 || dy === -3 ? 1 : 2;
+        const ly = y + height - 1 + dy;
+        for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) {
+          if (Math.abs(dx) === radius && Math.abs(dz) === radius && rng.nextBoolean()) continue;
+          this.setLeaf(chunk, x + dx, ly, z + dz, leaves);
+        }
+      }
+      this.setLeaf(chunk, x, y + height + 1, z, leaves);
       return;
     }
 
