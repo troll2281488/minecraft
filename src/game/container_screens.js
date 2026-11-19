@@ -17,8 +17,8 @@ const STYLE = `
 #${OVERLAY_ID} { position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex;
   align-items:center; justify-content:center; z-index:50; font-family:system-ui,sans-serif; }
 #${OVERLAY_ID} .panel { position:relative; isolation:isolate; background:#c6c6c6; border:3px solid #000; padding:12px; color:#222; width:max-content; max-width:calc(100vw - 24px); box-sizing:border-box; box-shadow:0 12px 36px rgba(0,0,0,.5); }
-#${OVERLAY_ID} .panel::before { content:""; position:absolute; inset:0; z-index:-1; background-image:url("https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/gui/container/generic_54.png"); background-size:100% 100%; opacity:.42; pointer-events:none; }
-#${OVERLAY_ID}[data-kind="furnace"] .panel::before { background-image:url("https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/gui/container/furnace.png"); opacity:.48; }
+#${OVERLAY_ID} .panel::before { content:""; position:absolute; inset:0; z-index:-1; background-image:var(--mc-gui-generic-container, url("https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/gui/container/generic_54.png")); background-size:100% 100%; opacity:.42; pointer-events:none; }
+#${OVERLAY_ID}[data-kind="furnace"] .panel::before { background-image:var(--mc-gui-furnace, url("https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/gui/container/furnace.png")); opacity:.48; }
 #${OVERLAY_ID} h3 { margin:0 0 8px; font-size:16px; color:#222; text-shadow:1px 1px rgba(255,255,255,.45); }
 #${OVERLAY_ID} .row { display:flex; gap:4px; margin-bottom:8px; flex-wrap:wrap; }
 #${OVERLAY_ID} .row.slots-9 { display:grid; grid-template-columns:repeat(9,40px); gap:4px; }
