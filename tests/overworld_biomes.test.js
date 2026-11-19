@@ -22,7 +22,7 @@ describe('Overworld biome expansion', () => {
       assert(BIOME_SURFACE[id], `missing surface rules for ${key}`);
     }
     assertEqual(Object.keys(BIOME_SURFACE).length, expected.length, 'a biome is missing surface rules');
-    assert(GENERATOR_VERSION >= 6, 'generator version was not advanced for biome distribution changes');
+    assert(GENERATOR_VERSION >= 7, 'generator version was not advanced for biome distribution changes');
   });
 
   it('keeps climate selection deterministic for a given seed and coordinate', () => {
@@ -49,8 +49,16 @@ describe('Overworld biome expansion', () => {
       }
     }
     assert(counts.size >= 9, `biome map is too uniform: only ${counts.size} biomes in sample`);
-    assert((counts.get(BIOME.FOREST) || 0) / total < 0.45, 'oak forest dominates the sampled world');
+    assert((counts.get(BIOME.FOREST) || 0) / total < 0.3, 'oak forest dominates the sampled world');
     assert((counts.get(BIOME.DESERT) || 0) > 0, 'hot and dry climates never generate deserts');
+    for (const [biome, name] of [
+      [BIOME.SAVANNA, 'savanna'],
+      [BIOME.BIRCH_FOREST, 'birch forest'],
+      [BIOME.PLAINS, 'treeless plains'],
+      [BIOME.FLOWER_FOREST, 'flower forest'],
+    ]) {
+      assert((counts.get(biome) || 0) / total > 0.015, `common biome ${name} is too rare`);
+    }
   });
 
   it('generates a chunk with registered blocks and a populated biome palette', () => {
