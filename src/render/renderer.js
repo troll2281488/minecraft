@@ -718,15 +718,24 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     const moonX = -sunX, moonY = 48 - Math.sin(skyAngle) * 76, moonZ = -sunZ;
     const skyCenterX = Math.floor(this.renderPosition.x / 64) * 64;
     const skyCenterZ = Math.floor(this.renderPosition.z / 64) * 64;
-    const cloudColor = [0.94, 0.96, 1, 1];
+    // Volumetric voxel clouds: several overlapping layers give each cloud a
+    // readable underside, rounded silhouette and real height instead of one
+    // translucent-looking white slab. They sit well above mountain peaks.
+    const cloudColor = [0.96, 0.98, 1, 1];
+    const cloudShade = [0.78, 0.84, 0.94, 1];
     const cloudParts = [
-      [[-8, 0, -3], [16, 1.1, 6], cloudColor],
-      [[-5, 0.55, -5], [9, 0.7, 4], cloudColor],
-      [[2, 0.35, -2], [7, 0.8, 5], cloudColor],
+      [[-11, 0, -4], [18, 3.2, 9], cloudShade],
+      [[-8, 2.2, -5], [13, 4.2, 8], cloudColor],
+      [[1, 1.3, -3], [12, 3.5, 8], cloudColor],
+      [[-4, 4.1, -2], [9, 3.0, 6], cloudColor],
+      [[-13, 1.0, 0], [7, 2.4, 6], cloudColor],
+      [[4, 0.6, 1], [7, 2.6, 5], cloudShade],
+      [[-7, -0.8, -3], [12, 1.0, 7], [0.88, 0.91, 0.97, 1]],
     ];
     const cloudDrift = (skyTime / 24000) * 12;
     for (let cx = -1; cx <= 1; cx++) for (let cz = -1; cz <= 1; cz++) {
-      draw(skyCenterX + cx * 54 + cloudDrift, 112, skyCenterZ + cz * 54, 0,
+      const variation = Math.sin((cx + 2) * 7.1 + (cz + 2) * 3.7) * 2.5;
+      draw(skyCenterX + cx * 72 + cloudDrift, 148 + variation, skyCenterZ + cz * 72, 0,
         cloudParts, 0, -1, -1, 1, {});
     }
     if (sunY > 0) {
