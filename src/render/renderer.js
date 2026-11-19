@@ -150,9 +150,10 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     const skinImage = new Image();
     skinImage.onload = () => {
       gl.bindTexture(gl.TEXTURE_2D, this.avatarSkinTexture);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      // Skin UV coordinates are authored from the PNG's top-left origin.
+      // Keep the browser image rows unflipped so those 64x64 atlas regions
+      // sample the intended head/body/limb pixels.
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, skinImage);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     };
     skinImage.src = PLAYER_SKIN_DATA_URL;
   },
@@ -474,16 +475,19 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         }
         let pivotY = partOffset[1];
         if (isArm || isLeg) {
-          pivotY = pose.firstPerson ? offset[1] : isArm ? (pose.sneaking ? 1.30 : 1.375) : (pose.sneaking ? 0.70 : 0.75);
+          // First-person arm rotates around the shoulder (top of the cuboid),
+          // not its centre/wrist; this sends the fist forward instead of down.
+          pivotY = pose.firstPerson ? offset[1] + scale[1] * 0.5 : isArm ? (pose.sneaking ? 1.30 : 1.375) : (pose.sneaking ? 0.70 : 0.75);
           if (pose.firstPerson) {
             // Blend from the resting pose into a forward punch and back. attackTime
             // counts down from 8 ticks; the previous fixed -2.5 rad pose flipped
             // the arm past 180 degrees, exposing its back face to the camera.
             const attackProgress = Math.max(0, Math.min(1, (8 - (pose.attackTime ?? 0)) / 8));
             const attackSwing = Math.sin(attackProgress * Math.PI);
-            // Keep the wrist facing the camera: attack is a short forward jab,
-            // not a half-turn that exposes the back of the arm.
-            swing = pose.attack ? 0.58 - 0.42 * attackSwing : pose.sneaking ? 0.88 : 0.58 + Math.sin(walkPhase * 2) * 0.06;
+            // Positive X rotation sends the hanging arm away from the camera.
+            // A negative rotation moves the forearm/fist forward (+Z) from the
+            // shoulder, matching the direction the player is looking.
+            swing = pose.attack ? -0.92 * attackSwing : pose.sneaking ? 0.30 : 0.18 + Math.sin(walkPhase * 2) * 0.035;
           }
           else if (pose.swimming) swing = isArm ? Math.sin(walkPhase * 1.7 + phase) * 0.72 : Math.sin(walkPhase * 1.7 + phase) * 0.42;
           else if (pose.airborne) swing = isArm ? -0.22 : 0.25;
@@ -590,7 +594,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           itemView.classList.remove('hidden');
           const swing = this.player.attackTime > 0 ? Math.sin((8 - this.player.attackTime) / 8 * Math.PI) : 0;
           const bob = Math.sin(this.player.walkPhase * 2) * 3;
-          itemView.style.transform = 'rotate(' + (-28 + swing * 38) + 'deg) translateY(' + (bob - swing * 10) + 'px)';
+          itemView.style.transform = 'rotate(' + (-28 - swing * 12) + 'deg) translate(' + (swing * 7) + 'px,' + (bob - swing * 17) + 'px)';
         } else {
           itemView.classList.add('hidden');
           itemView.removeAttribute('src');
