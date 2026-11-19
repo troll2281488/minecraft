@@ -1,6 +1,6 @@
 import { describe, it, assert, assertEqual } from './framework.js';
 import {
-  MOB_TYPES_112, MOB_AI_PROFILES, shearSheep, rollFishingCatch, calculateArmorDamage, rollMobDrops,
+  MOB_TYPES_112, MOB_AI_PROFILES, chooseMobDetourYaw, shearSheep, rollFishingCatch, calculateArmorDamage, rollMobDrops,
 } from '../src/entity/mobs.js';
 
 describe('Mob data and loot', () => {
@@ -21,6 +21,18 @@ describe('Mob data and loot', () => {
     assert(MOB_AI_PROFILES.enderman.damage > MOB_AI_PROFILES.zombie.damage);
     assert(MOB_AI_PROFILES.skeleton.rangedRange > MOB_AI_PROFILES.skeleton.preferredRange);
     assert(Object.isFrozen(MOB_AI_PROFILES));
+  });
+
+  it('chooses a safe detour and ignores blocked or malformed path options', () => {
+    const current = 0;
+    const chosen = chooseMobDetourYaw(current, 0, [
+      { yaw: Math.PI / 2, distance: 4, walkable: true },
+      { yaw: -Math.PI / 2, distance: 2, walkable: true },
+      { yaw: 0, distance: 0, walkable: false },
+      { yaw: NaN, distance: 0, walkable: true },
+    ]);
+    assertEqual(chosen, -Math.PI / 2);
+    assertEqual(chooseMobDetourYaw(0, 0, [{ yaw: 1, distance: 1, walkable: false }]), null);
   });
 
   it('allows a sheep to be sheared only once', () => {
