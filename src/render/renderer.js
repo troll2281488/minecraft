@@ -408,11 +408,18 @@ export const RendererMixin = {
         let pivotY = offset[1];
         if (isArm || isLeg) {
           pivotY = pose.firstPerson ? offset[1] : isArm ? 1.375 : 0.75;
-          if (pose.firstPerson) swing = pose.attack ? -1.35 : pose.sneaking ? 1.05 : 0.78 + Math.sin(walkPhase * 2) * 0.07;
+          if (pose.firstPerson) {
+            // Blend from the resting pose into a forward punch and back. attackTime
+            // counts down from 8 ticks; the previous fixed -2.5 rad pose flipped
+            // the arm past 180 degrees, exposing its back face to the camera.
+            const attackProgress = Math.max(0, Math.min(1, (8 - (pose.attackTime ?? 0)) / 8));
+            const attackSwing = Math.sin(attackProgress * Math.PI);
+            swing = pose.attack ? 0.78 - 1.55 * attackSwing : pose.sneaking ? 1.05 : 0.78 + Math.sin(walkPhase * 2) * 0.07;
+          }
           else if (pose.swimming) swing = isArm ? Math.sin(walkPhase * 1.7 + phase) * 0.72 : Math.sin(walkPhase * 1.7 + phase) * 0.42;
           else if (pose.airborne) swing = isArm ? -0.22 : 0.25;
           else swing = Math.sin(walkPhase + phase) * 0.58;
-          if (isArm && pose.attack && partIndex === 3) swing -= 1.15;
+          // First-person attack swing is already applied above; do not add a second rotation.
         } else if (!skin && partIndex >= legStart && partIndex <= legEnd) {
           swing = Math.sin(walkPhase + phase) * 0.16;
         }
@@ -477,7 +484,7 @@ export const RendererMixin = {
         [[0, -handBob, 0], [0.22, 0.58, 0.22], [0.12, 0.48, 0.72, 1]],
       ];
       draw(handX, handY, handZ, yaw, armParts, this.player.walkPhase, -1, -1, 1,
-        { firstPerson: true, attack: this.player.attackTime > 0, sneaking: this.player.sneaking, swimming: this.player.inWater }, true);
+        { firstPerson: true, attack: this.player.attackTime > 0, attackTime: this.player.attackTime, sneaking: this.player.sneaking, swimming: this.player.inWater }, true);
 
       // Use the same pixel-art icon as the selected hotbar slot instead of a placeholder coloured cube.
       const held = this.inventory?.held;
