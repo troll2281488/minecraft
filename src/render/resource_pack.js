@@ -65,7 +65,11 @@ export async function loadItsBrianTextures(blocks, items) {
   }
 
   const blockEntries = await mapWithLimit([...blockNames], 24, async (name) => {
-    const sourceName = BLOCK_TEXTURE_ALIASES[name] ?? name;\n    // Chest textures live under entity/chest in the source pack, not block/.\n    // Keep the procedural chest fallback until the renderer has a chest model/UVs.\n    if (name === 'chest_side' || name === 'chest_top') return null;\n    const bitmap = await fetchImage('block/' + encodeURIComponent(sourceName) + '.png');
+    const sourceName = BLOCK_TEXTURE_ALIASES[name] ?? name;
+    // Chest textures live under entity/chest in the source pack, not block/.
+    // Keep the procedural chest fallback until the renderer has a chest model/UVs.
+    if (name === 'chest_side' || name === 'chest_top') return null;
+    const bitmap = await fetchImage('block/' + encodeURIComponent(sourceName) + '.png');
     if (!bitmap) return null;
     const { ctx } = canvasFor(bitmap);
     const pixels = new Uint8Array(ctx.getImageData(0, 0, TILE_SIZE, TILE_SIZE).data);
@@ -73,7 +77,7 @@ export async function loadItsBrianTextures(blocks, items) {
     return [name, pixels];
   });
 
-  const itemEntries = await mapWithLimit([...items.items.values()], 10, async (item) => {
+  const itemEntries = await mapWithLimit([...items.items.values()].filter((item) => !item.block), 24, async (item) => {
     const name = item.id.slice(item.id.indexOf(':') + 1);
     const bitmap = await fetchImage('item/' + encodeURIComponent(name) + '.png');
     if (!bitmap) return null;
