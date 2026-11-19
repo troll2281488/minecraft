@@ -4,6 +4,7 @@ import { Inventory } from '../src/game/inventory.js';
 import {
   VILLAGER_CAREERS, createVillagerProfile, getVillagerOffers, executeVillagerTrade,
 } from '../src/entity/villager_trades.js';
+import { MobSystem } from '../src/entity/mobs.js';
 
 describe('Pre-1.14 villager careers', () => {
   it('provides fixed careers and deterministic spawn profiles', () => {
@@ -64,6 +65,24 @@ describe('Pre-1.14 villager careers', () => {
     const result = executeVillagerTrade(villager, 'wheat', inventory);
     assertEqual(result.ok, false);
     assertEqual(inventory.countOf('mc:wheat'), before);
+  });
+
+  it('persists villager career progress and populated village markers', () => {
+    const system = new MobSystem({});
+    system.mobs.push({
+      id: 7, type: 'villager', x: 4, y: 65, z: 9, yaw: 0, targetYaw: 0, health: 20,
+      villagerCareer: 'farmer', villagerProfession: 'farmer', villagerType: 'plains',
+      villagerSeed: 1234, villagerTier: 3, villagerTradeCount: 8,
+      villagerUsedOffers: ['wheat'], villagerOfferUses: { wheat: 8 },
+      villageKey: '1,-2', villageSlot: 0,
+    });
+    system.populatedVillages.add('1,-2');
+    const restored = new MobSystem({});
+    restored.loadFrom(system.toJSON());
+    assertEqual(restored.mobs[0].villagerCareer, 'farmer');
+    assertEqual(restored.mobs[0].villagerTier, 3);
+    assertEqual(restored.mobs[0].villagerTradeCount, 8);
+    assert(restored.populatedVillages.has('1,-2'));
   });
 
   it('nitwits do not offer trades', () => {
