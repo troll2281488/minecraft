@@ -63,7 +63,7 @@ describe('Classic overworld structure generation', () => {
   it('builds a prismarine monument and underground stronghold rooms', () => {
     const generator = new TerrainGenerator('deep-structure-test');
     const monument = new Chunk(0, 0);
-    generator.placeOceanMonument(monument, 0, 0, { x: 8, z: 8 });
+    generator.placeOceanMonument(monument, 0, 0, { x: 8, z: 8, y: 54 });
     assertEqual(monument.getBlock(8, 54, 8).block.id, 'mc:prismarine_bricks');
 
     const stronghold = new Chunk(0, 0);
