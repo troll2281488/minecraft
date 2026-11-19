@@ -94,24 +94,36 @@ export const RendererMixin = {
     this.skyProgram = createProgram(gl, SKY_VERTEX_SHADER, SKY_FRAGMENT_SHADER, 'sky');
     this.lineProgram = createProgram(gl, LINE_VERTEX_SHADER, LINE_FRAGMENT_SHADER, 'line');
     this.crackProgram = createProgram(gl, CRACK_VERTEX_SHADER, CRACK_FRAGMENT_SHADER, 'crack');
-    this.avatarProgram = createProgram(gl, `#version 300 es\nprecision highp float;\nlayout(location=0) in vec3 aPos; layout(location=1) in vec3 aNormal;\nuniform mat4 uViewProjection; uniform vec3 uPlayerPos; uniform vec3 uPartOffset; uniform vec3 uPartScale; uniform float uYaw; uniform float uPartSwing; uniform float uPartPivotY; uniform float uSkinPart;\nout vec3 vLocalPos; out vec3 vNormal; out float vLight;\nvoid main(){ vec3 p=(aPos-0.5)*uPartScale; p.y+=uPartOffset.y-uPartPivotY; float ca=cos(uPartSwing),sa=sin(uPartSwing); p=vec3(p.x,p.y*ca-p.z*sa,p.y*sa+p.z*ca); p.y-=uPartOffset.y-uPartPivotY; p+=uPartOffset; float c=cos(uYaw), s=sin(uYaw); vec3 r=vec3(p.x*c-p.z*s,p.y,p.x*s+p.z*c); vec3 n=vec3(aNormal.x*c-aNormal.z*s,aNormal.y,aNormal.x*s+aNormal.z*c); vLocalPos=aPos; vNormal=aNormal; vLight=0.72+0.28*max(0.0,dot(normalize(n),normalize(vec3(-0.4,0.8,0.5)))); gl_Position=uViewProjection*vec4(uPlayerPos+r,1.0); }`, `#version 300 es\nprecision highp float;\nuniform vec4 uColor; uniform float uSkinPart; uniform sampler2D uSkinTexture; in vec3 vLocalPos; in vec3 vNormal; in float vLight; out vec4 fragColor;
+    this.avatarProgram = createProgram(gl, `#version 300 es\nprecision highp float;\nlayout(location=0) in vec3 aPos; layout(location=1) in vec3 aNormal;\nuniform mat4 uViewProjection; uniform vec3 uPlayerPos; uniform vec3 uPartOffset; uniform vec3 uPartScale; uniform float uYaw; uniform float uPartSwing; uniform float uPartPivotY; uniform float uSkinPart;\nout vec3 vLocalPos; out vec3 vNormal; out float vLight;\nvoid main(){ vec3 p=(aPos-0.5)*uPartScale; p.y+=uPartOffset.y-uPartPivotY; float ca=cos(uPartSwing),sa=sin(uPartSwing); p=vec3(p.x,p.y*ca-p.z*sa,p.y*sa+p.z*ca); p.y-=uPartOffset.y-uPartPivotY; p+=uPartOffset; float c=cos(uYaw), s=sin(uYaw); vec3 r=vec3(p.x*c-p.z*s,p.y,p.x*s+p.z*c); vec3 n=vec3(aNormal.x*c-aNormal.z*s,aNormal.y,aNormal.x*s+aNormal.z*c); vLocalPos=aPos; vNormal=aNormal; vLight=0.72+0.28*max(0.0,dot(normalize(n),normalize(vec3(-0.4,0.8,0.5)))); gl_Position=uViewProjection*vec4(uPlayerPos+r,1.0); }`, `#version 300 es\nprecision highp float;\nuniform vec4 uColor; uniform float uSkinPart; uniform float uSkinLayer; uniform sampler2D uSkinTexture; in vec3 vLocalPos; in vec3 vNormal; in float vLight; out vec4 fragColor;
 vec4 skinSample(){
   float x=0.0,y=0.0,w=0.0,h=0.0; vec2 p=vec2(0.0);
   bool front=vNormal.z>0.5, back=vNormal.z< -0.5, right=vNormal.x>0.5, left=vNormal.x< -0.5, top=vNormal.y>0.5;
+  // Base skin UVs and the transparent outer clothing layer use the official
+  // 64x64 Java skin layout. Part ids: head, body, left arm, right arm,
+  // left leg, right leg.
   if(uSkinPart==0.0){
-    if(front){x=8.0;y=8.0;w=8.0;h=8.0;p=vec2(vLocalPos.x,1.0-vLocalPos.y);}
-    else if(back){x=24.0;y=8.0;w=8.0;h=8.0;p=vec2(1.0-vLocalPos.x,1.0-vLocalPos.y);}
-    else if(right){x=0.0;y=8.0;w=8.0;h=8.0;p=vec2(1.0-vLocalPos.z,1.0-vLocalPos.y);}
-    else if(left){x=16.0;y=8.0;w=8.0;h=8.0;p=vec2(vLocalPos.z,1.0-vLocalPos.y);}
-    else if(top){x=8.0;y=0.0;w=8.0;h=8.0;p=vec2(vLocalPos.x,vLocalPos.z);}
-    else{x=16.0;y=0.0;w=8.0;h=8.0;p=vec2(vLocalPos.x,1.0-vLocalPos.z);}
+    if(uSkinLayer<0.5){
+      if(front){x=8.0;y=8.0;w=8.0;h=8.0;p=vec2(vLocalPos.x,1.0-vLocalPos.y);}
+      else if(back){x=24.0;y=8.0;w=8.0;h=8.0;p=vec2(1.0-vLocalPos.x,1.0-vLocalPos.y);}
+      else if(right){x=0.0;y=8.0;w=8.0;h=8.0;p=vec2(1.0-vLocalPos.z,1.0-vLocalPos.y);}
+      else if(left){x=16.0;y=8.0;w=8.0;h=8.0;p=vec2(vLocalPos.z,1.0-vLocalPos.y);}
+      else if(top){x=8.0;y=0.0;w=8.0;h=8.0;p=vec2(vLocalPos.x,vLocalPos.z);}
+      else{x=16.0;y=0.0;w=8.0;h=8.0;p=vec2(vLocalPos.x,1.0-vLocalPos.z);}
+    } else {
+      if(front){x=40.0;y=8.0;w=8.0;h=8.0;p=vec2(vLocalPos.x,1.0-vLocalPos.y);}
+      else if(back){x=56.0;y=8.0;w=8.0;h=8.0;p=vec2(1.0-vLocalPos.x,1.0-vLocalPos.y);}
+      else if(right){x=32.0;y=8.0;w=8.0;h=8.0;p=vec2(1.0-vLocalPos.z,1.0-vLocalPos.y);}
+      else if(left){x=48.0;y=8.0;w=8.0;h=8.0;p=vec2(vLocalPos.z,1.0-vLocalPos.y);}
+      else if(top){x=40.0;y=0.0;w=8.0;h=8.0;p=vec2(vLocalPos.x,vLocalPos.z);}
+      else{x=48.0;y=0.0;w=8.0;h=8.0;p=vec2(vLocalPos.x,1.0-vLocalPos.z);}
+    }
   } else {
-    float bx=0.0,by=20.0,bw=8.0,bh=12.0;
-    if(uSkinPart==1.0){bx=20.0;by=20.0;}
-    else if(uSkinPart==2.0){bx=36.0;by=52.0;bw=4.0;}
-    else if(uSkinPart==3.0){bx=44.0;by=20.0;bw=4.0;}
-    else if(uSkinPart==4.0){bx=20.0;by=52.0;bw=4.0;}
-    else {bx=4.0;by=20.0;bw=4.0;}
+    float bx=20.0,by=20.0,bw=8.0;
+    if(uSkinPart==1.0){bx=20.0;by=uSkinLayer<0.5?20.0:36.0;bw=8.0;}
+    else if(uSkinPart==2.0){bx=uSkinLayer<0.5?36.0:52.0;by=52.0;bw=4.0;}
+    else if(uSkinPart==3.0){bx=44.0;by=uSkinLayer<0.5?20.0:36.0;bw=4.0;}
+    else if(uSkinPart==4.0){bx=uSkinLayer<0.5?20.0:4.0;by=52.0;bw=4.0;}
+    else {bx=4.0;by=uSkinLayer<0.5?20.0:36.0;bw=4.0;}
     if(front){x=bx;y=by;w=bw;h=12.0;p=vec2(vLocalPos.x,1.0-vLocalPos.y);}
     else if(back){x=bx+bw+4.0;y=by;w=bw;h=12.0;p=vec2(1.0-vLocalPos.x,1.0-vLocalPos.y);}
     else if(right){x=bx-4.0;y=by;w=4.0;h=12.0;p=vec2(1.0-vLocalPos.z,1.0-vLocalPos.y);}
@@ -486,6 +498,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         gl.uniform1f(uniforms.uPartSwing, swing);
         gl.uniform1f(uniforms.uPartPivotY, pivotY);
         gl.uniform1f(uniforms.uSkinPart, skin ? partIndex : -1);
+        gl.uniform1f(uniforms.uSkinLayer, pose.skinLayer ? 1 : 0);
         if (pose.hurt) {
           const flash = 0.42;
           gl.uniform4f(uniforms.uColor,
@@ -508,9 +521,17 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     if (this.thirdPerson) {
       document.getElementById('held-item-view')?.classList.add('hidden');
       draw(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, sneaking: this.player.sneaking, attack: this.player.attackTime > 0 }, true);
+      // Second transparent skin layer (hat, jacket, sleeves and trousers).
+      const outerHuman = human.map(([offset, size, color], index) => [
+        offset,
+        size.map((value) => value + (index === 0 ? 0.035 : 0.025)),
+        color,
+      ]);
+      draw(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z, this.player.yaw * Math.PI / 180, outerHuman, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, sneaking: this.player.sneaking, skinLayer: true }, true);
     }
     for (const remote of this.multiplayer?.remotePlayers?.values?.() ?? []) {
       draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, human, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, sneaking: !!remote.sneaking }, true);
+      draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, outerHuman, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, sneaking: !!remote.sneaking, skinLayer: true }, true);
     }
     for (const mob of this.entities?.mobs ?? []) {
       const parts = mob.type === 'zombie' ? zombie
@@ -554,6 +575,10 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       ];
       draw(handX, handY, handZ, yaw, armParts, this.player.walkPhase, -1, -1, 1,
         { firstPerson: true, attack: this.player.attackTime > 0, attackTime: this.player.attackTime, sneaking: this.player.sneaking, swimming: this.player.inWater }, true);
+      // Draw the matching transparent sleeve over the first-person arm too.
+      const outerArmParts = armParts.map(([offset, size, color]) => [offset, size.map((value) => value * 1.045), color]);
+      draw(handX, handY, handZ, yaw, outerArmParts, this.player.walkPhase, -1, -1, 1,
+        { firstPerson: true, skinLayer: true, attack: this.player.attackTime > 0, attackTime: this.player.attackTime, sneaking: this.player.sneaking, swimming: this.player.inWater }, true);
 
       // Use the same pixel-art icon as the selected hotbar slot instead of a placeholder coloured cube.
       const held = this.inventory?.held;
