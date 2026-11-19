@@ -24,6 +24,15 @@ const BLOCK_TEXTURE_ALIASES = Object.freeze({
   water: 'water_still',
 });
 
+const ITEM_TEXTURE_ALIASES = Object.freeze({
+  raw_beef: 'beef',
+  raw_porkchop: 'porkchop',
+  raw_chicken: 'chicken',
+  raw_mutton: 'mutton',
+  raw_cod: 'cod',
+  raw_salmon: 'salmon',
+});
+
 async function fetchImage(path) {
   const response = await fetch(ITSBRIAN_RAW + path, { signal: AbortSignal.timeout(8000) });
   if (!response.ok) return null;
@@ -79,7 +88,7 @@ export async function loadItsBrianTextures(blocks, items) {
 
   const itemEntries = await mapWithLimit([...items.items.values()].filter((item) => !item.block), 24, async (item) => {
     const name = item.id.slice(item.id.indexOf(':') + 1);
-    const bitmap = await fetchImage('item/' + encodeURIComponent(name) + '.png');
+    const sourceName = ITEM_TEXTURE_ALIASES[name] ?? name;\n    const bitmap = await fetchImage('item/' + encodeURIComponent(sourceName) + '.png');
     if (!bitmap) return null;
     const { canvas } = canvasFor(bitmap);
     bitmap.close();
