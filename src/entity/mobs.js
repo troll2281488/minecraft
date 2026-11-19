@@ -128,13 +128,15 @@ export class MobSystem {
     const p = this.game.player;
     const yaw = p.yaw * Math.PI / 180;
     const pitch = p.pitch * Math.PI / 180;
-    this.droppedItems.push({
+    const drop = {
       id: this.nextId++, stack: stack.clone(),
       x: p.x - Math.sin(yaw) * 0.65, y: p.y + p.eyeHeight - 0.25,
       z: p.z + Math.cos(yaw) * 0.65,
       vx: -Math.sin(yaw) * 0.12, vy: 0.12 - Math.sin(pitch) * 0.04,
       vz: Math.cos(yaw) * 0.12, age: 0, pickupDelay: 12,
-    });
+    };
+    this.droppedItems.push(drop);
+    this.game.multiplayer?.publishDroppedItem(drop);
     return true;
   }
 
@@ -157,10 +159,27 @@ export class MobSystem {
         drop.y = floor + 0.035 + Math.sin(drop.age * 0.09) * 0.018;
         drop.spin = (drop.spin || 0) + 0.055;
       }
-      if (drop.pickupDelay <= 0 && Math.hypot(drop.x-p.x, drop.y-p.y-0.5, drop.z-p.z) < 1.35) {
-        const leftover = this.game.inventory.add(drop.stack);
-        if (leftover <= 0) this.droppedItems.splice(i, 1);
-        else if (leftover < drop.stack.count) drop.stack.count = leftover;
+      if (drop.pickupDelay <= 0 && !drop.claiming && Math.hypot(drop.x-p.x, drop.y-p.y-0.5, drop.z-p.z) < 1.35) {
+        const multiplayer = this.game.multiplayer;
+        if (drop.networkKey && multiplayer?.roomId) {
+          drop.claiming = true;
+          multiplayer.claimDroppedItem(drop).then((claimed) => {
+            const index = this.droppedItems.indexOf(drop);
+            if (index < 0) return;
+            if (claimed) {
+              this.game.inventory.add(drop.stack);
+              this.game.ui.updateHotbar(this.game.inventory);
+              this.droppedItems.splice(index, 1);
+            } else {
+              // A different player may have won the atomic pickup race.
+              this.droppedItems.splice(index, 1);
+            }
+          }).catch(() => { drop.claiming = false; });
+        } else {
+          const leftover = this.game.inventory.add(drop.stack);
+          if (leftover <= 0) this.droppedItems.splice(i, 1);
+          else if (leftover < drop.stack.count) drop.stack.count = leftover;
+        }
       }
       if (drop.age > 6000) this.droppedItems.splice(i, 1);
     }
