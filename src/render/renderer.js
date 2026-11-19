@@ -19,6 +19,7 @@ import {
 } from './gl.js';
 import { ChunkRenderer } from './chunk_renderer.js';
 import { raycast } from '../game/interaction.js';
+import { renderBar } from '../ui/hud_bars.js';
 
 /**
  * A unit cube as 36 vertices of (x, y, z, u, v), two triangles per face.
@@ -85,8 +86,48 @@ function buildAvatarCube() {
   return new Float32Array(out);
 }
 
+
+function rotateModelPoint(point, rotation) {
+  let [x, y, z] = point;
+  let c = Math.cos(rotation[0]), sn = Math.sin(rotation[0]);
+  [y, z] = [y * c - z * sn, y * sn + z * c];
+  c = Math.cos(rotation[1]); sn = Math.sin(rotation[1]);
+  [x, z] = [x * c + z * sn, -x * sn + z * c];
+  c = Math.cos(rotation[2]); sn = Math.sin(rotation[2]);
+  [x, y] = [x * c - y * sn, x * sn + y * c];
+  return [x, y, z];
+}
+function add3(a, b) { return [a[0] + b[0], a[1] + b[1], a[2] + b[2]]; }
+function vanillaLayerParts(model, layerName = 'main') {
+  const layer = model?.layers?.[layerName];
+  if (!layer?.root) return null;
+  const result = [];
+  const visit = (bone, parentOffset = [0, 0, 0], parentRotation = [0, 0, 0], name = 'root') => {
+    const pose = bone.pose ?? {};
+    const pivot = add3(parentOffset, rotateModelPoint(pose.offset ?? [0, 0, 0], parentRotation));
+    const local = pose.rotation ?? [0, 0, 0];
+    const rotation = [parentRotation[0] + local[0], parentRotation[1] + local[1], parentRotation[2] + local[2]];
+    for (const cube of bone.cubes ?? []) {
+      if (!Array.isArray(cube.uv) || !Array.isArray(cube.origin) || !Array.isArray(cube.size)) continue;
+      const size = cube.size;
+      const center = [cube.origin[0] + size[0] / 2, cube.origin[1] + size[1] / 2, cube.origin[2] + size[2] / 2];
+      const modelCenter = add3(pivot, rotateModelPoint(center, rotation));
+      const grow = cube.grow ?? [0, 0, 0];
+      const expanded = size.map((v, i) => v + 2 * (grow[i] ?? 0));
+      result.push([
+        [modelCenter[0] / 16, (24 - modelCenter[1]) / 16, -modelCenter[2] / 16],
+        expanded.map(v => v / 16), [1, 1, 1, 1], cube.uv, size,
+        [-rotation[0], rotation[1], rotation[2]], name, (24 - pivot[1]) / 16,
+      ]);
+    }
+    for (const [childName, child] of Object.entries(bone.children ?? {})) visit(child, pivot, rotation, childName);
+  };
+  visit(layer.root);
+  return result.length ? result : null;
+}
+
 const MOB_TEXTURE_FILES = Object.freeze({
-  cow:'cow.png', pig:'pig.png', sheep:'sheep.png', chicken:'chicken.png',
+  cow:'cow.png', pig:'pig.png', sheep:'sheep.png', sheep_fur:'sheep_fur.png', chicken:'chicken.png',
   zombie:'zombie.png', skeleton:'skeleton.png', stray:'stray.png',
   creeper:'creeper.png', enderman:'enderman.png', spider:'spider.png', cave_spider:'cave_spider.png',
 });
@@ -112,7 +153,7 @@ export const RendererMixin = {
     this.skyProgram = createProgram(gl, SKY_VERTEX_SHADER, SKY_FRAGMENT_SHADER, 'sky');
     this.lineProgram = createProgram(gl, LINE_VERTEX_SHADER, LINE_FRAGMENT_SHADER, 'line');
     this.crackProgram = createProgram(gl, CRACK_VERTEX_SHADER, CRACK_FRAGMENT_SHADER, 'crack');
-    this.avatarProgram = createProgram(gl, `#version 300 es\nprecision highp float;\nlayout(location=0) in vec3 aPos; layout(location=1) in vec3 aNormal;\nuniform mat4 uViewProjection; uniform vec3 uPlayerPos; uniform vec3 uPartOffset; uniform vec3 uPartScale; uniform float uYaw; uniform float uPartSwing; uniform float uPartPivotY; uniform float uSkinPart; uniform vec2 uMobUV; uniform vec3 uMobBox; uniform float uMobEnabled;\nout vec3 vLocalPos; out vec3 vNormal; out float vLight;\nvoid main(){ vec3 p=(aPos-0.5)*uPartScale; p.y+=uPartOffset.y-uPartPivotY; float ca=cos(uPartSwing),sa=sin(uPartSwing); p=vec3(p.x,p.y*ca-p.z*sa,p.y*sa+p.z*ca); p.y-=uPartOffset.y-uPartPivotY; p+=uPartOffset; float c=cos(uYaw), s=sin(uYaw); vec3 r=vec3(p.x*c-p.z*s,p.y,p.x*s+p.z*c); vec3 n=vec3(aNormal.x*c-aNormal.z*s,aNormal.y,aNormal.x*s+aNormal.z*c); vLocalPos=aPos; vNormal=aNormal; vLight=0.72+0.28*max(0.0,dot(normalize(n),normalize(vec3(-0.4,0.8,0.5)))); gl_Position=uViewProjection*vec4(uPlayerPos+r,1.0); }`, `#version 300 es\nprecision highp float;\nuniform vec4 uColor; uniform float uSkinPart; uniform float uSkinLayer; uniform sampler2D uSkinTexture; uniform sampler2D uMobTexture; uniform vec2 uMobUV; uniform vec3 uMobBox; uniform vec2 uMobTextureSize; uniform float uMobEnabled; in vec3 vLocalPos; in vec3 vNormal; in float vLight; out vec4 fragColor;
+    this.avatarProgram = createProgram(gl, `#version 300 es\nprecision highp float;\nlayout(location=0) in vec3 aPos; layout(location=1) in vec3 aNormal;\nuniform mat4 uViewProjection; uniform vec3 uPlayerPos; uniform vec3 uPartOffset; uniform vec3 uPartScale; uniform float uYaw; uniform float uPartSwing; uniform float uPartPivotY; uniform float uSkinPart; uniform vec2 uMobUV; uniform vec3 uMobBox; uniform float uMobEnabled; uniform vec3 uPartRotation;\nout vec3 vLocalPos; out vec3 vNormal; out float vLight;\nvoid main(){ vec3 p=(aPos-0.5)*uPartScale; float cx=cos(uPartRotation.x),sx=sin(uPartRotation.x),cy=cos(uPartRotation.y),sy=sin(uPartRotation.y),cz=cos(uPartRotation.z),sz=sin(uPartRotation.z); p=vec3(p.x,p.y*cx-p.z*sx,p.y*sx+p.z*cx); p=vec3(p.x*cy+p.z*sy,p.y,-p.x*sy+p.z*cy); p=vec3(p.x*cz-p.y*sz,p.x*sz+p.y*cz,p.z); p.y+=uPartOffset.y-uPartPivotY; float ca=cos(uPartSwing),sa=sin(uPartSwing); p=vec3(p.x,p.y*ca-p.z*sa,p.y*sa+p.z*ca); p.y-=uPartOffset.y-uPartPivotY; p+=uPartOffset; float c=cos(uYaw), s=sin(uYaw); vec3 r=vec3(p.x*c-p.z*s,p.y,p.x*s+p.z*c); vec3 n=vec3(aNormal.x*c-aNormal.z*s,aNormal.y,aNormal.x*s+aNormal.z*c); vLocalPos=aPos; vNormal=aNormal; vLight=0.72+0.28*max(0.0,dot(normalize(n),normalize(vec3(-0.4,0.8,0.5)))); gl_Position=uViewProjection*vec4(uPlayerPos+r,1.0); }`, `#version 300 es\nprecision highp float;\nuniform vec4 uColor; uniform float uSkinPart; uniform float uSkinLayer; uniform sampler2D uSkinTexture; uniform sampler2D uMobTexture; uniform vec2 uMobUV; uniform vec3 uMobBox; uniform vec2 uMobTextureSize; uniform float uMobEnabled; uniform float uItemSprite; uniform vec3 uPartRotation; in vec3 vLocalPos; in vec3 vNormal; in float vLight; out vec4 fragColor;
 vec4 skinSample(){
   float x=0.0,y=0.0,w=0.0,h=0.0; vec2 p=vec2(0.0);
   bool front=vNormal.z>0.5, back=vNormal.z< -0.5, right=vNormal.x>0.5, left=vNormal.x< -0.5, top=vNormal.y>0.5;
@@ -165,8 +206,10 @@ vec4 mobSample(){
   vec2 pixel=vec2(x,y)+p*vec2(w,h);
   return texture(uMobTexture,vec2(pixel.x/uMobTextureSize.x,1.0-pixel.y/uMobTextureSize.y));
 }
+vec4 itemSample(){ vec2 uv; bool front=vNormal.z>0.5, back=vNormal.z< -0.5, right=vNormal.x>0.5, left=vNormal.x< -0.5, top=vNormal.y>0.5; if(front) uv=vec2(vLocalPos.x,1.0-vLocalPos.y); else if(back) uv=vec2(1.0-vLocalPos.x,1.0-vLocalPos.y); else if(right) uv=vec2(1.0-vLocalPos.z,1.0-vLocalPos.y); else if(left) uv=vec2(vLocalPos.z,1.0-vLocalPos.y); else if(top) uv=vec2(vLocalPos.x,vLocalPos.z); else uv=vec2(vLocalPos.x,1.0-vLocalPos.z); return texture(uMobTexture,uv);}
 void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
   if(uSkinPart>=0.0){ vec4 texel=skinSample(); color=texel.rgb; if(texel.a<0.1) discard; }
+  else if(uItemSprite>0.5){ vec4 texel=itemSample(); color=texel.rgb; if(texel.a<0.1) discard; }
   else if(uMobEnabled>0.5){ vec4 texel=mobSample(); color=texel.rgb; if(texel.a<0.1) discard; }
   else { float patchValue=mod(cell.x*3.0+cell.y*5.0+cell.z*7.0,11.0); color*=mix(0.80,1.08,step(3.0,patchValue)); }
   float pixel=0.94+mod(cell.x+cell.y+cell.z,2.0)*0.06; fragColor=vec4(color*vLight*pixel,uColor.a);
@@ -188,6 +231,14 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, skinImage);
     };
     skinImage.src = PLAYER_SKIN_DATA_URL;
+    this.heldItemTexture = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, this.heldItemTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255,255,255,255]));
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    this.heldItemTextureId = null;
+    this.heldItemTextureReady = false;
     this.mobTextures = new Map();
     this.mobFallbackTexture = gl.createTexture();
     gl.activeTexture(gl.TEXTURE2);
@@ -346,15 +397,11 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     this._drawSelection();
 
     const health = document.getElementById('health');
-    if (health) {
-      const hp = Math.max(0, Math.min(20, this.player.health));
-      health.textContent = Array.from({ length: 10 }, (_, i) => hp >= i * 2 + 2 ? '♥' : hp > i * 2 ? '♡' : '·').join('');
-    }
+    if (health) renderBar(health, this.player.health, 'heart');
     const food = document.getElementById('food');
     if (food) {
-      const points = Math.max(0, Math.min(20, this.player.vitals.food));
-      food.textContent = Array.from({ length: 10 }, (_, i) => points >= i * 2 + 2 ? '●' : points > i * 2 ? '◐' : '·').join('');
-      food.title = `Food ${points}/20 · saturation ${this.player.vitals.saturation.toFixed(1)}`;
+      renderBar(food, this.player.vitals.food, 'food');
+      food.title = `Food ${this.player.vitals.food}/20 · saturation ${this.player.vitals.saturation.toFixed(1)}`;
     }
     const air = document.getElementById('air');
     if (air) {
@@ -531,18 +578,18 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     const draw = (x, y, z, yaw, parts, walkPhase = 0, legStart = -1, legEnd = -1, pulse = 1, pose = {}, skin = false) => {
       gl.uniform3f(uniforms.uPlayerPos, x, y, z);
       gl.uniform1f(uniforms.uYaw, yaw);
-      const mobTexture = !skin && pose.mobType ? this.mobTextures?.get(pose.mobType) : null;
+      const mobTexture = pose.itemSprite ? { texture: this.heldItemTexture, width: 16, height: 16, ready: this.heldItemTextureReady } : !skin && pose.mobTextureKey ? this.mobTextures?.get(pose.mobTextureKey) : !skin && pose.mobType ? this.mobTextures?.get(pose.mobType) : null;
       gl.activeTexture(gl.TEXTURE2);
       gl.bindTexture(gl.TEXTURE_2D, mobTexture?.texture ?? this.mobFallbackTexture);
       gl.uniform1i(uniforms.uMobTexture, 2);
       gl.uniform2f(uniforms.uMobTextureSize, mobTexture?.width ?? 64, mobTexture?.height ?? 32);
       for (let partIndex = 0; partIndex < parts.length; partIndex++) {
-        const [offset, scale, color] = parts[partIndex];
+        const [offset, scale, color, partUv, partBox, partRotation, partName, partPivotY] = parts[partIndex];
         const isArm = skin && (partIndex === 2 || partIndex === 3);
         const isLeg = skin && (partIndex === 4 || partIndex === 5);
         // Steve's opposite arm/leg pairs swing against each other, as in
         // the classic Minecraft walk cycle.
-        const phase = (partIndex === 2 || partIndex === 5) ? Math.PI : 0;
+        const phase = /left/i.test(partName ?? '') ? 0 : /right/i.test(partName ?? '') ? Math.PI : (partIndex === 2 || partIndex === 5) ? Math.PI : 0;
         let swing = pose.itemModel ? (pose.itemSwing ?? 0) : 0;
         const partOffset = offset.slice();
         if (skin && !pose.firstPerson) {
@@ -560,7 +607,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           if (partIndex === 0 || partIndex === 1) partOffset[1] -= 0.09;
           else if (isArm) partOffset[1] -= 0.06;
         }
-        let pivotY = partOffset[1];
+        let pivotY = Number.isFinite(partPivotY) ? partPivotY : partOffset[1];
         if (isArm || isLeg) {
           // First-person arm rotates around the shoulder (top of the cuboid),
           // not its centre/wrist; this sends the fist forward instead of down.
@@ -588,6 +635,10 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           else if (pose.sneaking) swing = isArm ? 0.18 + Math.sin(walkPhase + phase) * 0.09 : 0.48 + Math.sin(walkPhase + phase) * 0.10;
           else swing = Math.sin(walkPhase + phase) * (isArm ? 0.58 : 0.62);
           // First-person attack swing is already applied above; do not add a second rotation.
+        } else if (!skin && pose.vanillaModel && /head/i.test(partName ?? '')) {
+          swing = Math.sin(pose.idle ?? 0) * 0.045 + (pose.walking ? Math.sin(walkPhase * 0.5) * 0.025 : 0);
+        } else if (!skin && pose.vanillaModel && /leg|wing/i.test(partName ?? '')) {
+          swing = /wing/i.test(partName ?? '') ? Math.sin(pose.idle ?? 0) * 0.10 : pose.walking ? Math.sin(walkPhase + phase) * 0.38 : 0;
         } else if (!skin && pose.animal && partIndex === 0) {
           // Body bob only follows actual movement; breathing remains subtle at rest.
           const stride = pose.walking ? Math.abs(Math.sin(walkPhase * 2)) : 0;
@@ -605,18 +656,16 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         gl.uniform3f(uniforms.uPartOffset, partOffset[0], partOffset[1], partOffset[2]);
         gl.uniform3f(uniforms.uPartScale, scale[0] * pulse, scale[1] * pulse, scale[2] * pulse);
         gl.uniform1f(uniforms.uPartSwing, swing);
+        gl.uniform3f(uniforms.uPartRotation, partRotation?.[0] ?? 0, partRotation?.[1] ?? 0, partRotation?.[2] ?? 0);
         gl.uniform1f(uniforms.uPartPivotY, pivotY);
         gl.uniform1f(uniforms.uSkinPart, skin ? partIndex : -1);
         gl.uniform1f(uniforms.uSkinLayer, pose.skinLayer ? 1 : 0);
         // The old cuboid rig is not a vanilla geometry match. Apply the
         // real mob skin only to its corresponding torso/head (and pig snout)
         // UV islands; never project a face onto the legs.
-        const mobUv = mobTexture?.ready && (
-          partIndex === 0 || partIndex === 1 ||
-          (pose.mobType === 'pig' && partIndex === 2) ||
-          (pose.mobType === 'chicken' && (partIndex === 2 || partIndex === 3))
-        ) ? MOB_UV[pose.mobType]?.[partIndex] : null;
-        gl.uniform1f(uniforms.uMobEnabled, mobUv ? 1.0 : 0.0);
+        const mobUv = mobTexture?.ready && partUv ? [partUv[0], partUv[1], ...(partBox ?? [1, 1, 1])] : mobTexture?.ready && !pose.vanillaModel ? MOB_UV[pose.mobType]?.[partIndex] : null;
+        gl.uniform1f(uniforms.uMobEnabled, mobUv && !pose.itemSprite ? 1.0 : 0.0);
+        gl.uniform1f(uniforms.uItemSprite, pose.itemSprite && mobTexture?.ready ? 1.0 : 0.0);
         gl.uniform2f(uniforms.uMobUV, mobUv?.[0] ?? 0, mobUv?.[1] ?? 0);
         gl.uniform3f(uniforms.uMobBox, mobUv?.[2] ?? 1, mobUv?.[3] ?? 1, mobUv?.[4] ?? 1);
         if (pose.hurt) {
@@ -654,13 +703,15 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, outerHuman, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, sneaking: !!remote.sneaking, skinLayer: true }, true);
     }
     for (const mob of this.entities?.mobs ?? []) {
-      const parts = mob.type === 'zombie' ? zombie
+      const vanillaModel = this.entityModels?.getModel?.('minecraft:' + mob.type);
+      const vanillaParts = vanillaLayerParts(vanillaModel, 'main');
+      const parts = vanillaParts ?? (mob.type === 'zombie' ? zombie
         : mob.type === 'skeleton' || mob.type === 'stray' ? skeleton
         : mob.type === 'creeper' ? creeper
         : mob.type === 'enderman' ? enderman
         : mob.type === 'spider' || mob.type === 'cave_spider' ? spider
         : mob.type === 'pig' ? pig : mob.type === 'cow' ? cow
-        : mob.type === 'chicken' ? chicken : sheep;
+        : mob.type === 'chicken' ? chicken : sheep);
       const pulse = mob.type === 'creeper' && mob.anim?.fuse > 0
         ? 1 + Math.sin(mob.anim.fuse * Math.PI * 12) * 0.10 * mob.anim.fuse : 1;
       const legs = mob.type === 'creeper' ? [2, 5] : mob.type === 'zombie' || mob.type === 'skeleton' || mob.type === 'stray' ? [4, 5]
@@ -670,13 +721,18 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       const animal = ['sheep', 'pig', 'cow', 'chicken'].includes(mob.type);
       const humanoid = ['zombie', 'skeleton', 'stray'].includes(mob.type);
       draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
-        hurt: (mob.hurtTicks || 0) > 0,
-        animal,
-        humanoid,
-        mobType: mob.type,
-        idle: mob.anim?.idle ?? 0,
-        walking: !!mob.anim?.walking,
+        hurt: (mob.hurtTicks || 0) > 0, animal, humanoid, vanillaModel: !!vanillaParts,
+        mobType: mob.type, mobTextureKey: mob.type,
+        idle: mob.anim?.idle ?? 0, walking: !!mob.anim?.walking,
       });
+      if (mob.type === 'sheep' && vanillaModel?.layers?.fur) {
+        const furParts = vanillaLayerParts(vanillaModel, 'fur');
+        if (furParts) draw(mob.x, mob.y, mob.z, mob.yaw, furParts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
+          hurt: (mob.hurtTicks || 0) > 0, animal: true, vanillaModel: true,
+          mobType: mob.type, mobTextureKey: 'sheep_fur', idle: mob.anim?.idle ?? 0,
+          walking: !!mob.anim?.walking,
+        });
+      }
     }
     if (!this.thirdPerson) {
       // First-person right arm and held item, positioned relative to the
@@ -711,76 +767,42 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       draw(handX, handY, handZ, yaw, outerArmParts, this.player.walkPhase, -1, -1, 1,
         { firstPerson: true, skinLayer: true, attack: this.player.attackTime > 0, attackTime: this.player.attackTime, sneaking: this.player.sneaking, swimming: this.player.inWater, airborne: !this.player.onGround, walking: this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035 }, true);
 
-      // Render the selected item as actual cuboids in the player's hand.
-      // The old CSS icon overlay was a flat 2D sprite detached from the arm.
+      // Actual vanilla item PNGs are displayed on a thin 3D-oriented sprite;
+      // block items are rendered as volumetric cubes using that same source art.
       const held = this.inventory?.held;
       const itemView = document.getElementById('held-item-view');
       itemView?.classList.add('hidden');
       if (itemView) itemView.removeAttribute('src');
       if (held && !held.isEmpty && held.item) {
-        const id = String(held.item.id ?? '').replace(/^mc:/, '');
-        const tier = id.split('_')[0];
-        const material = ({
-          wooden: [0.48, 0.29, 0.13, 1], stone: [0.48, 0.49, 0.50, 1],
-          iron: [0.78, 0.80, 0.82, 1], golden: [0.95, 0.76, 0.20, 1],
-          diamond: [0.20, 0.82, 0.78, 1], netherite: [0.30, 0.27, 0.29, 1],
-        })[tier] ?? [0.62, 0.62, 0.62, 1];
-        const wood = [0.38, 0.24, 0.12, 1];
-        let itemParts;
-        if (held.item.block || id.endsWith('_block') || id === 'dirt' || id === 'stone' || id === 'cobblestone' || id === 'oak_planks') {
-          const blockColor = id.includes('grass') ? [0.30, 0.55, 0.20, 1]
-            : id.includes('dirt') ? [0.40, 0.27, 0.16, 1]
-            : id.includes('sand') ? [0.78, 0.72, 0.53, 1]
-            : id.includes('wood') || id.includes('plank') || id.includes('log') ? [0.48, 0.32, 0.18, 1]
-            : id.includes('cobble') || id.includes('stone') ? [0.48, 0.49, 0.50, 1]
-            : [0.55, 0.55, 0.55, 1];
-          itemParts = [[[0, 0, 0], [0.25, 0.25, 0.25], blockColor]];
-        } else if (id.includes('pickaxe')) {
-          itemParts = [
-            [[0, -0.04, 0], [0.045, 0.42, 0.045], wood],
-            [[0, 0.18, 0], [0.34, 0.075, 0.075], material],
-            [[-0.13, 0.13, 0], [0.075, 0.12, 0.075], material],
-            [[0.13, 0.13, 0], [0.075, 0.12, 0.075], material],
-          ];
-        } else if (id.includes('axe')) {
-          itemParts = [
-            [[0, -0.04, 0], [0.045, 0.42, 0.045], wood],
-            [[-0.085, 0.14, 0], [0.16, 0.20, 0.085], material],
-          ];
-        } else if (id.includes('shovel') || id.includes('hoe')) {
-          itemParts = [
-            [[0, -0.04, 0], [0.045, 0.42, 0.045], wood],
-            [[0, 0.18, 0], [id.includes('shovel') ? 0.13 : 0.20, 0.12, 0.07], material],
-          ];
-        } else if (id.includes('sword')) {
-          itemParts = [
-            [[0, -0.16, 0], [0.055, 0.15, 0.055], wood],
-            [[0, -0.065, 0], [0.19, 0.045, 0.07], wood],
-            [[0, 0.13, 0], [0.085, 0.36, 0.035], material],
-            [[0, 0.31, 0], [0.055, 0.08, 0.045], material],
-          ];
-        } else if (id.includes('rod')) {
-          itemParts = [
-            [[0, -0.04, 0], [0.04, 0.48, 0.04], wood],
-            [[0.10, 0.20, 0], [0.025, 0.025, 0.025], [0.75, 0.65, 0.42, 1]],
-          ];
-        } else {
-          const itemColor = id.includes('apple') ? [0.78, 0.12, 0.10, 1]
-            : id.includes('ingot') ? material
-            : id.includes('diamond') ? [0.20, 0.82, 0.78, 1]
-            : [0.72, 0.68, 0.55, 1];
-          itemParts = [[[0, 0, 0], [0.16, 0.16, 0.10], itemColor]];
+        const id = held.item.id;
+        const icon = this.ui.icons.get(id);
+        if (icon && this.heldItemTextureId !== id) {
+          this.heldItemTextureId = id;
+          this.heldItemTextureReady = false;
+          const image = new Image();
+          image.onload = () => {
+            if (this.heldItemTextureId !== id) return;
+            gl.bindTexture(gl.TEXTURE_2D, this.heldItemTexture);
+            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+            this.heldItemTextureReady = true;
+          };
+          image.src = icon;
         }
-        const itemX = handX + forwardX * 0.10 + rightX * 0.025;
-        const itemY = handY + 0.035;
-        const itemZ = handZ + forwardZ * 0.10 + rightZ * 0.025;
-        const itemSwing = this.player.attackTime > 0
-          ? -0.24 * Math.sin((8 - this.player.attackTime) / 8 * Math.PI) : -0.20;
-        draw(itemX, itemY, itemZ, yaw, itemParts, 0, -1, -1, 1,
-          { itemModel: true, itemSwing });
+        if (this.heldItemTextureReady) {
+          const isBlock = !!held.item.block;
+          const size = isBlock ? [0.22, 0.22, 0.22] : [0.30, 0.40, 0.035];
+          const itemParts = [[[0, 0, 0], size, [1, 1, 1, 1], null, null, [0.22, 0, -0.42]]];
+          const itemX = handX + forwardX * 0.10 + rightX * 0.025;
+          const itemY = handY + 0.045;
+          const itemZ = handZ + forwardZ * 0.10 + rightZ * 0.025;
+          const itemSwing = this.player.attackTime > 0
+            ? -0.24 * Math.sin((8 - this.player.attackTime) / 8 * Math.PI) : -0.20;
+          draw(itemX, itemY, itemZ, yaw, itemParts, 0, -1, -1, 1,
+            { itemModel: true, itemSprite: true, itemSwing });
+        }
       }
     }
-    gl.bindVertexArray(null);
   },
 
 
