@@ -34,11 +34,6 @@ export const VILLAGER_CAREERS = Object.freeze({
     offer('shears',1,'mc:emerald',3,4,'mc:shears'),
     offer('wool_extra',2,'mc:white_wool',16,22,'mc:emerald'),
   ]}),
-  fletcher: Object.freeze({ label: 'Лучник', profession: 'farmer', texture: 'fletcher', offers: [
-    offer('string',1,'mc:string',15,20,'mc:emerald'),
-    offer('flint',1,'mc:flint',10,16,'mc:emerald'),
-    offer('sticks',2,'mc:stick',24,32,'mc:emerald'),
-  ]}),
   librarian: Object.freeze({ label: 'Библиотекарь', profession: 'librarian', texture: 'librarian', offers: [
     offer('bookshelf',1,'mc:bookshelf',3,4,'mc:emerald'),
     offer('glass',1,'mc:emerald',1,1,'mc:glass',3,5),
