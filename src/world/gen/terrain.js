@@ -689,10 +689,11 @@ export class TerrainGenerator {
     if (!air || !plank || !log || !stone) return;
     const put = (x, y, z, state) => this.setVillageBlock(chunk, baseX, baseZ, x, y, z, state);
     const size = 27;
+    for (let dx = 0; dx < size; dx++) for (let dz = 0; dz < size; dz++) put(site.x + dx, groundY, site.z + dz, stone);
     for (let floor = 0; floor < 3; floor++) {
       const baseY = groundY + 1 + floor * 5;
       for (let dz = 0; dz < size; dz++) for (let dx = 0; dx < size; dx++) {
-        put(site.x + dx, baseY, site.z + dz, floor === 0 ? stone : plank);
+        put(site.x + dx, baseY, site.z + dz, plank);
         const edge = dx === 0 || dx === size - 1 || dz === 0 || dz === size - 1;
         if (edge) {
           for (let dy = 1; dy <= 4; dy++) {
@@ -723,7 +724,7 @@ export class TerrainGenerator {
     const dark = S['mc:dark_prismarine'] || prismarine;
     if (!prismarine) return;
     const put = (x, y, z, state) => this.setVillageBlock(chunk, baseX, baseZ, x, y, z, state);
-    const floorY = Math.max(MIN_Y + 5, Math.floor(this.heightAt(site.x, site.z)) + 1);
+    const floorY = Number.isFinite(site.y) ? site.y : Math.max(MIN_Y + 5, Math.floor(this.heightAt(site.x, site.z)) + 1);
     const roofY = floorY + 11;
     if (roofY > SEA_LEVEL + 4) return;
     for (let dy = floorY; dy <= roofY; dy++) {
