@@ -439,8 +439,16 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     gl.useProgram(program);
     gl.depthMask(false);
     gl.disable(gl.DEPTH_TEST);
-    gl.uniform3f(uniforms.uTopColor, 0.25 * daylight, 0.45 * daylight, 0.95 * daylight);
-    gl.uniform3f(uniforms.uHorizonColor, 0.62 * daylight, 0.76 * daylight, 0.95 * daylight);
+    // Keep a readable deep-blue night and warm dawn/dusk rather than
+    // multiplying the entire sky to black whenever daylight approaches zero.
+    const nightTop = [0.012, 0.022, 0.060], dayTop = [0.24, 0.46, 0.88];
+    const nightHorizon = [0.035, 0.045, 0.085], dayHorizon = [0.68, 0.79, 0.94];
+    const blend = (a, b) => a.map((value, i) => value + (b[i] - value) * daylight);
+    const top = blend(nightTop, dayTop), horizon = blend(nightHorizon, dayHorizon);
+    const dusk = Math.max(0, 1 - Math.abs(daylight - 0.22) / 0.22);
+    horizon[0] += dusk * 0.12; horizon[1] += dusk * 0.035;
+    gl.uniform3f(uniforms.uTopColor, ...top);
+    gl.uniform3f(uniforms.uHorizonColor, ...horizon);
     gl.bindVertexArray(this.skyVao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.bindVertexArray(null);
