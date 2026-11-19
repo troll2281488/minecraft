@@ -2,6 +2,8 @@ import { describe, it, assert, assertEqual } from './framework.js';
 import '../src/world/blocks/index.js';
 import { TerrainGenerator, mineshaftCandidateForCell, dungeonCandidateForCell } from '../src/world/gen/terrain.js';
 import { Chunk } from '../src/world/chunk.js';
+import { BLOCKS } from '../src/world/block.js';
+import { buildTextures, buildBlockTextureTable } from '../src/render/atlas.js';
 
 describe('Overworld underground structures and deterministic placement', () => {
   it('places stable mineshaft and dungeon candidates from the world seed', () => {
@@ -17,6 +19,22 @@ describe('Overworld underground structures and deterministic placement', () => {
       if (dungeonCandidateForCell('deep-world', x, z)) rooms++;
     }
     assert(shafts > 0 && rooms > 0, 'structure spacing produced no candidates');
+  });
+
+  it('has real texture layers for dungeon masonry and desert sand', () => {
+    const atlas = buildTextures();
+    const table = buildBlockTextureTable(BLOCKS, atlas.index);
+    const missing = atlas.index.get('__missing');
+    for (const id of ['mc:mossy_cobblestone', 'mc:red_sand', 'mc:red_sandstone']) {
+      const state = BLOCKS.get(id)?.defaultState;
+      assert(state, 'missing block registration: ' + id);
+      const base = state.id * 6;
+      for (let face = 0; face < 6; face++) {
+        assert(table[base + face] !== missing, id + ' face ' + face + ' uses missing texture');
+      }
+    }
+    assert(atlas.index.has('mossy_cobblestone'));
+    assert(atlas.index.has('red_sand'));
   });
 
   it('builds a supported timber corridor and a sealed dungeon room', () => {
