@@ -26,7 +26,7 @@ import { CHUNK_SIZE, MIN_Y, MAX_Y, SEA_LEVEL } from '../../core/constants.js';
 import { clamp } from '../../core/math.js';
 
 /** Bumped whenever generation output changes. Stored per world. */
-export const GENERATOR_VERSION = 2;
+export const GENERATOR_VERSION = 3;
 
 
 // ---------------------------------------------------------------------------
