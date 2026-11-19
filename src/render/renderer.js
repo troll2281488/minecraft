@@ -290,7 +290,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     gl.bindVertexArray(this.lineVao);
     this.lineBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, this.lineBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(24 * 3), gl.DYNAMIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(256 * 3), gl.DYNAMIC_DRAW);
     gl.enableVertexAttribArray(0);
     gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
 
@@ -396,6 +396,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     this._drawPlayers();
     this._updateRemotePlayerTags();
     this._drawSelection();
+    this._drawFishing();
 
     const creativeHud = this.player?.gamemode !== 'survival';
     document.getElementById('health')?.classList.toggle('hidden', creativeHud);
@@ -924,6 +925,119 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
   },
 
 
+
+  _drawFishing() {
+    const fishing = this.entities?.fishing;
+    if (!fishing || !this.player || !this.world) return;
+    const gl = this.gl;
+    const { program, uniforms } = this.lineProgram;
+    const player = this.player;
+    const yaw = player.yaw * Math.PI / 180;
+    const pitch = player.pitch * Math.PI / 180;
+    const forwardX = -Math.sin(yaw) * Math.cos(pitch);
+    const forwardY = -Math.sin(pitch);
+    const forwardZ = Math.cos(yaw) * Math.cos(pitch);
+    const rightX = -Math.cos(yaw), rightZ = -Math.sin(yaw);
+    const hand = {
+      x: this.renderPosition.x + forwardX * 0.48 + rightX * 0.34,
+      y: this.renderPosition.y + player.eyeHeight + forwardY * 0.48 - 0.39,
+      z: this.renderPosition.z + forwardZ * 0.48 + rightZ * 0.34,
+    };
+    const time = fishing.elapsed ?? 0;
+    const bob = Math.sin(time * 0.19) * 0.035 + Math.sin(time * 0.071) * 0.018;
+    const dip = fishing.bite ? Math.sin(Math.min(1, fishing.biteAnim ?? 0) * Math.PI * 0.5) * 0.48 : 0;
+    const castProgress = Math.max(0, Math.min(1, fishing.castProgress ?? 1));
+    const flightArc = Math.sin(castProgress * Math.PI) * 0.72;
+    const bobber = {
+      x: hand.x + (fishing.x - hand.x) * castProgress,
+      y: hand.y + (fishing.y - hand.y) * castProgress + flightArc + bob * castProgress - dip,
+      z: hand.z + (fishing.z - hand.z) * castProgress,
+    };
+
+    gl.useProgram(program);
+    gl.uniformMatrix4fv(uniforms.uViewProjection, false, this.viewProjection);
+    gl.bindVertexArray(this.lineVao);
+    gl.bindBuffer(gl.ARRAY_BUFFER, this.lineBuffer);
+    gl.enable(gl.DEPTH_TEST);
+    gl.disable(gl.BLEND);
+
+    const drawSegments = (points, color) => {
+      if (!points.length) return;
+      const vertices = new Float32Array(points);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, vertices);
+      gl.uniform4f(uniforms.uColor, color[0], color[1], color[2], color[3] ?? 1);
+      gl.drawArrays(gl.LINES, 0, vertices.length / 3);
+    };
+    const line = [];
+    const steps = 18;
+    for (let i = 0; i < steps; i++) {
+      const t0 = i / steps, t1 = (i + 1) / steps;
+      const sag0 = Math.sin(t0 * Math.PI) * 0.11;
+      const sag1 = Math.sin(t1 * Math.PI) * 0.11;
+      line.push(
+        hand.x + (bobber.x - hand.x) * t0, hand.y + (bobber.y - hand.y) * t0 - sag0, hand.z + (bobber.z - hand.z) * t0,
+        hand.x + (bobber.x - hand.x) * t1, hand.y + (bobber.y - hand.y) * t1 - sag1, hand.z + (bobber.z - hand.z) * t1,
+      );
+    }
+    drawSegments(line, [0.10, 0.09, 0.07, 1]);
+
+    // Tiny red-and-white float, deliberately above the water plane and with a
+    // slight rocking motion so it reads clearly even at normal view distance.
+    const floatTop = bobber.y + 0.095;
+    drawSegments([
+      bobber.x, bobber.y - 0.055, bobber.z, bobber.x, floatTop, bobber.z,
+      bobber.x - 0.045, bobber.y + 0.005, bobber.z, bobber.x + 0.045, bobber.y + 0.005, bobber.z,
+      bobber.x, bobber.y + 0.005, bobber.z - 0.045, bobber.x, bobber.y + 0.005, bobber.z + 0.045,
+    ], [0.94, 0.92, 0.82, 1]);
+    drawSegments([
+      bobber.x, bobber.y + 0.035, bobber.z, bobber.x, floatTop, bobber.z,
+    ], [0.92, 0.12, 0.08, 1]);
+
+    const drawRing = (cx, cy, cz, radius, phase = 0) => {
+      const points = [];
+      const segments = 18;
+      for (let i = 0; i < segments; i++) {
+        const a0 = (i / segments) * Math.PI * 2 + phase;
+        const a1 = ((i + 1) / segments) * Math.PI * 2 + phase;
+        points.push(cx + Math.cos(a0) * radius, cy, cz + Math.sin(a0) * radius,
+          cx + Math.cos(a1) * radius, cy, cz + Math.sin(a1) * radius);
+      }
+      return points;
+    };
+    const ripplePhase = time * 0.085;
+    const rippleRadius = 0.12 + (Math.sin(time * 0.12) + 1) * 0.045;
+    drawSegments(drawRing(bobber.x, fishing.y - 0.012, bobber.z, rippleRadius, ripplePhase), [0.58, 0.82, 0.96, 0.72]);
+
+    // A small fish silhouette swims in from the side during the final seconds
+    // before the bite. Its approach is visible before the bobber plunges.
+    if (!fishing.bite && (fishing.approach ?? 0) > 0.02) {
+      const amount = Math.min(1, fishing.approach);
+      const fishX = fishing.fishX + (fishing.x - fishing.fishX) * amount;
+      const fishZ = fishing.fishZ + (fishing.z - fishing.fishZ) * amount;
+      const fishY = fishing.y - 0.22 + Math.sin(time * 0.24 + (fishing.fishSeed ?? 0)) * 0.035;
+      const dx = fishing.x - fishX, dz = fishing.z - fishZ;
+      const length = Math.max(0.001, Math.hypot(dx, dz));
+      const sideX = -dz / length * 0.13, sideZ = dx / length * 0.13;
+      const tailX = -dx / length * 0.18, tailZ = -dz / length * 0.18;
+      const nose = [fishX + dx / length * 0.22, fishY, fishZ + dz / length * 0.22];
+      const left = [fishX + sideX, fishY, fishZ + sideZ];
+      const right = [fishX - sideX, fishY, fishZ - sideZ];
+      const tail = [fishX + tailX, fishY, fishZ + tailZ];
+      const fin = [fishX + tailX * 0.7, fishY + 0.08, fishZ + tailZ * 0.7];
+      drawSegments([
+        ...nose, ...left, ...left, ...tail, ...tail, ...right, ...right, ...nose,
+        ...tail, ...fin, ...fin, ...nose,
+      ], [0.28, 0.82, 0.96, 0.95]);
+      const fishRipple = drawRing(fishX, fishing.y - 0.018, fishZ, 0.16 + Math.sin(time * 0.18) * 0.025, time * 0.11);
+      drawSegments(fishRipple, [0.45, 0.78, 0.94, 0.65]);
+    }
+
+    if (fishing.bite) {
+      const splash = drawRing(bobber.x, fishing.y + 0.015, bobber.z, 0.24 + (fishing.biteAnim ?? 0) * 0.18, time * 0.2);
+      drawSegments(splash, [0.82, 0.94, 1, 0.95]);
+    }
+    gl.bindVertexArray(null);
+  },
 
   _updateRemotePlayerTags() {
     const container = document.getElementById('remote-player-tags');

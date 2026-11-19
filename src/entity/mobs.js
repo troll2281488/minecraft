@@ -297,23 +297,29 @@ export class MobSystem {
     return best;
   }
 
-  _waterInSight(maxDistance = 6) {
+  _findFishingWater(maxDistance = 7) {
     const player = this.game.player;
-    if (!player || !this.game.world) return false;
+    const world = this.game.world;
+    if (!player || !world) return null;
     const yaw = player.yaw * Math.PI / 180;
     const pitch = player.pitch * Math.PI / 180;
     const dx = -Math.sin(yaw) * Math.cos(pitch);
     const dy = -Math.sin(pitch);
     const dz = Math.cos(yaw) * Math.cos(pitch);
-    for (let distance = 0.2; distance <= maxDistance; distance += 0.15) {
-      const x = Math.floor(player.x + dx * distance);
-      const y = Math.floor(player.eyeY + dy * distance);
-      const z = Math.floor(player.z + dz * distance);
-      const block = this.game.world.getBlock(x, y, z).block;
-      if (block.id === 'mc:water') return true;
-      if (block.solid) return false;
+    for (let distance = 0.35; distance <= maxDistance; distance += 0.08) {
+      const x = player.x + dx * distance;
+      const y = player.eyeY + dy * distance;
+      const z = player.z + dz * distance;
+      const bx = Math.floor(x), by = Math.floor(y), bz = Math.floor(z);
+      const block = world.getBlock(bx, by, bz).block;
+      if (block.id === 'mc:water') {
+        // Keep the bobber in the actual water block and let the renderer place
+        // it just above the animated surface, rather than at the player's aim point.
+        return { x: bx + 0.5, y: by + 0.88, z: bz + 0.5 };
+      }
+      if (block.solid) return null;
     }
-    return false;
+    return null;
   }
 
   useFishingRod() {
@@ -321,13 +327,30 @@ export class MobSystem {
     const player = this.game.player;
     if (stack?.item?.id !== 'mc:fishing_rod' || !player) return false;
     if (!this.fishing) {
-      if (!this._waterInSight()) {
-        this.game.ui?.toast('Смотри на воду и нажми ПКМ, чтобы забросить удочку');
+      const target = this._findFishingWater();
+      if (!target) {
+        this.game.ui?.toast('Наведи удочку на воду и нажми ПКМ');
         return true;
       }
-      this.fishing = { ticks: 80 + Math.floor(Math.random() * 121), bite: false, window: 0 };
+      const yaw = player.yaw * Math.PI / 180;
+      const side = { x: Math.cos(yaw), z: Math.sin(yaw) };
+      const approachDistance = 1.35 + Math.random() * 0.75;
+      this.fishing = {
+        ...target,
+        ticks: 110 + Math.floor(Math.random() * 100),
+        bite: false,
+        window: 0,
+        elapsed: 0,
+        castProgress: 0,
+        approachAt: 48,
+        fishX: target.x + side.x * approachDistance,
+        fishZ: target.z + side.z * approachDistance,
+        fishSeed: Math.random() * Math.PI * 2,
+        biteAnim: 0,
+      };
+      player.attackTime = 8;
       this.game.sounds?.play('cast');
-      this.game.ui?.toast('Поплавок заброшен. Жди поклёвку…');
+      this.game.ui?.toast('Поплавок на воде. Рыба может подплыть…');
       return true;
     }
     if (!this.fishing.bite) {
@@ -342,6 +365,8 @@ export class MobSystem {
       if (leftover > 0) this.game.ui?.toast('Инвентарь заполнен: улов потерян', { error: true });
       this.game.inventory.damageHeld(1);
     }
+    player.attackTime = 8;
+    this.game.sounds?.play('reel');
     this.game.sounds?.play('catch');
     this.fishing = null;
     this.game.ui?.toast('Поймано: ' + caught.id.replace('mc:', ''));
@@ -498,14 +523,22 @@ export class MobSystem {
     this._tickDroppedItems();
     this.spawnTicks++;
     if (this.fishing && !this.fishing.bite) {
-      this.fishing.ticks--;
-      if (this.fishing.ticks <= 0) {
-        this.fishing.bite = true;
-        this.fishing.window = 40;
+      const fishing = this.fishing;
+      fishing.elapsed++;
+      fishing.castProgress = Math.min(1, (fishing.castProgress ?? 0) + 1 / 12);
+      fishing.ticks--;
+      if (fishing.ticks <= fishing.approachAt) {
+        fishing.approach = Math.min(1, (fishing.approach || 0) + 1 / 38);
+      }
+      if (fishing.ticks <= 0) {
+        fishing.bite = true;
+        fishing.biteAnim = 0;
+        fishing.window = 40;
         this.game.sounds?.play('bite');
         this.game.ui?.toast('ПОКЛЁВКА! Быстро нажми ПКМ!', { duration: 1800 });
       }
     } else if (this.fishing?.bite) {
+      this.fishing.biteAnim = Math.min(1, (this.fishing.biteAnim || 0) + 0.12);
       this.fishing.window--;
       if (this.fishing.window <= 0) {
         this.fishing = null;
