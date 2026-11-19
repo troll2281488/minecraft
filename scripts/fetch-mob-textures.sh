@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# The project owner has permission to redistribute ItsBrian's self-created textures.
+# Pin to a known repository commit so production builds are reproducible.
+SOURCE_COMMIT="86fbb8183419f3bdddf1d8cf6ef25fb1fafe3ede"
+BASE="https://raw.githubusercontent.com/ItsBrian/minecraft-textures/${SOURCE_COMMIT}/entity"
+OUT="assets/mob-textures"
+mkdir -p "$OUT"
+
+download() {
+  local source="$1" target="$2"
+  curl --fail --location --retry 3 "$BASE/$source" --output "$OUT/$target"
+  test -s "$OUT/$target"
+}
+
+download "cow/cow.png" "cow.png"
+download "pig/pig.png" "pig.png"
+download "sheep/sheep.png" "sheep.png"
+download "chicken.png" "chicken.png"
+download "zombie/zombie.png" "zombie.png"
+download "skeleton/skeleton.png" "skeleton.png"
+download "skeleton/stray.png" "stray.png"
+download "creeper/creeper.png" "creeper.png"
+download "enderman/enderman.png" "enderman.png"
+download "spider/spider.png" "spider.png"
+download "spider/cave_spider.png" "cave_spider.png"
+
+echo "Downloaded $(find "$OUT" -maxdepth 1 -name '*.png' | wc -l) mob skins."
