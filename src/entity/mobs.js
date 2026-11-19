@@ -109,11 +109,17 @@ export class MobSystem {
       if (drop.pickupDelay > 0) drop.pickupDelay--;
       drop.vy = Math.max(-0.35, drop.vy - 0.018);
       const nx = drop.x + drop.vx, ny = drop.y + drop.vy, nz = drop.z + drop.vz;
-      const floor = world.getHeight(Math.floor(nx), Math.floor(nz)) + 0.08;
-      if (ny <= floor) { drop.y = floor; drop.vy = 0; drop.vx *= 0.72; drop.vz *= 0.72; }
-      else drop.y = ny;
+      const floor = world.getHeight(Math.floor(nx), Math.floor(nz)) + 1.08;
+      if (ny <= floor) {
+        drop.y = floor; drop.vy = 0; drop.vx *= 0.55; drop.vz *= 0.55;
+        drop.resting = true;
+      } else { drop.y = ny; drop.resting = false; }
       drop.x = nx; drop.z = nz;
       drop.vx *= 0.96; drop.vz *= 0.96;
+      if (drop.resting) {
+        drop.y = floor + 0.035 + Math.sin(drop.age * 0.09) * 0.018;
+        drop.spin = (drop.spin || 0) + 0.055;
+      }
       if (drop.pickupDelay <= 0 && Math.hypot(drop.x-p.x, drop.y-p.y-0.5, drop.z-p.z) < 1.35) {
         const leftover = this.game.inventory.add(drop.stack);
         if (leftover <= 0) this.droppedItems.splice(i, 1);
@@ -583,13 +589,21 @@ export class MobSystem {
         const ground = world.getHeight(Math.floor(nx), Math.floor(nz));
         const nextY = ground + 1;
         // Stop at walls and overhangs instead of moving through solid voxels.
-        if (ground > -60 && world.getBlock(Math.floor(nx), ground, Math.floor(nz)).block.solid &&
-            Math.abs(nextY - mob.y) <= 1.05 && this._canOccupy(nx, nextY, nz)) {
+        const canMove = (x, z) => {
+          const h = world.getHeight(Math.floor(x), Math.floor(z));
+          const y = h + 1;
+          return h > -60 && world.getBlock(Math.floor(x), h, Math.floor(z)).block.solid &&
+            Math.abs(y - mob.y) <= 1.05 && this._canOccupy(x, y, z);
+        };
+        if (canMove(nx, nz)) {
           mob.x = nx; mob.z = nz;
           mob.y += (nextY - mob.y) * 0.35;
-        } else if (Math.abs(mob.knockbackX || 0) + Math.abs(mob.knockbackZ || 0) > 0.01) {
-          mob.knockbackX *= -0.12;
-          mob.knockbackZ *= -0.12;
+        } else {
+          const xFree = canMove(nx, mob.z), zFree = canMove(mob.x, nz);
+          if (xFree) mob.x = nx;
+          if (zFree) mob.z = nz;
+          if (!xFree) mob.knockbackX *= -0.12;
+          if (!zFree) mob.knockbackZ *= -0.12;
         }
         mob.knockbackX = (mob.knockbackX || 0) * 0.72;
         mob.knockbackZ = (mob.knockbackZ || 0) * 0.72;
