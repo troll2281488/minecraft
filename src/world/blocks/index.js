@@ -467,7 +467,7 @@ for (const mobType of [
   'creeper','enderman','spider','cave_spider',
 ]) {
   ITEMS.define(`mc:${mobType}_spawn_egg`, {
-    stackSize: 64, spawnEggMob: mobType, notInSurvival: true,
+    stackSize: 64, spawnEggMob: mobType,
   });
 }
 
