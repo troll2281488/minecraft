@@ -245,7 +245,7 @@ export class TerrainGenerator {
     // Hot and dry lowlands are primarily savanna. True deserts and
     // badlands are reserved for the driest climate pockets.
     if (temp > 0.12 && humid < 0.2) {
-      if (humid < -0.48 && rare > 0.78) return detail > 0.35 ? BIOME.ERODED_BADLANDS : (detail < -0.35 ? BIOME.MESA_PLATEAU : BIOME.BADLANDS);
+      if (humid < -0.48 && rare > 0.78) return detail > 0.35 ? BIOME.ERODED_BADLANDS : (detail < -0.35 ? BIOME.MESA_PLATEAU : BIOME.MESA_PLATEAU_F);
       if (humid < -0.14 && rare > 0.22) return detail > 0.55 ? BIOME.DESERT_HILLS : BIOME.DESERT;
       return detail > 0.58 && rare > 0.55 ? BIOME.SAVANNA_PLATEAU : BIOME.SAVANNA;
     }
@@ -259,6 +259,7 @@ export class TerrainGenerator {
       return detail > 0.42 ? BIOME.SPARSE_JUNGLE : BIOME.JUNGLE;
     }
     if (humid > 0.42 && temp > -0.08 && temp < 0.46) return BIOME.SWAMP;
+    if (temp < -0.28 && temp > -0.48 && humid > 0.08) return detail > 0.55 ? BIOME.TAIGA_HILLS : BIOME.TAIGA;
 
     // The four intended everyday biomes dominate temperate land:
     // birch forest, flower forest, plains and a smaller share of oak forest.
@@ -1072,7 +1073,7 @@ export class TerrainGenerator {
     const desert = biome === BIOME.DESERT || biome === BIOME.DESERT_HILLS;
     const wood = desert ? 'oak'
       : biome === BIOME.SAVANNA || biome === BIOME.SAVANNA_PLATEAU ? 'acacia'
-      : biome === BIOME.TAIGA || biome === BIOME.SNOWY_PLAINS ? 'spruce' : 'oak';
+      : [BIOME.TAIGA, BIOME.TAIGA_HILLS, BIOME.COLD_TAIGA, BIOME.COLD_TAIGA_HILLS, BIOME.SNOWY_PLAINS].includes(biome) ? 'spruce' : 'oak';
     const planks = S[desert ? 'mc:sandstone' : `mc:${wood}_planks`];
     const log = S[`mc:${wood}_log`] || S['mc:oak_log'];
     const roof = S[desert ? 'mc:sandstone' : `mc:${wood}_planks`];
