@@ -143,6 +143,7 @@ export class TerrainGenerator {
     this.humidity = new OctaveNoise(root.fork('humidity'), 3, 0.5, 2.0);
     this.biomeDetail = new OctaveNoise(root.fork('biome_detail'), 2, 0.55, 2.0);
     this.biomeRarity = new OctaveNoise(root.fork('biome_rarity'), 2, 0.5, 2.0);
+    this.river = new OctaveNoise(root.fork('river'), 2, 0.5, 2.0);
     this.density = new OctaveNoise(root.fork('density'), 3, 0.5, 2.0);
     this.caveA = new PerlinNoise(root.fork('cave_a'));
     this.caveB = new PerlinNoise(root.fork('cave_b'));
@@ -174,10 +175,23 @@ export class TerrainGenerator {
       height = SEA_LEVEL - 4 - (SEA_LEVEL - 4 - height) * 0.55;
     }
 
+    // A low-frequency river field carves connected, gently sloped channels
+    // down to the water table. The same field labels the channel biome below.
+    const riverDistance = Math.abs(this.river.sample2(wx, wz, 0.0017));
+    if (riverDistance < 0.018) height = Math.min(height, SEA_LEVEL - 1.1);
+    else if (riverDistance < 0.04) {
+      const bank = (riverDistance - 0.018) / 0.022;
+      height = Math.min(height, SEA_LEVEL - 1.1 + bank * 7);
+    }
     return height;
   }
 
   biomeAt(wx, wz, height) {
+    const riverDistance = Math.abs(this.river.sample2(wx, wz, 0.0017));
+    const riverTemp = this.temperature.sample2(wx, wz, 0.0021);
+    if (riverDistance < 0.018 && height >= SEA_LEVEL - 2) {
+      return riverTemp < -0.48 ? BIOME.FROZEN_RIVER : BIOME.RIVER;
+    }
     const temp = this.temperature.sample2(wx, wz, 0.0021);
     const humid = this.humidity.sample2(wx, wz, 0.0023);
     const detail = this.biomeDetail.sample2(wx, wz, 0.0031);
