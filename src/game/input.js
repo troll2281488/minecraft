@@ -166,9 +166,11 @@ export const InputMixin = {
 
     if (e.code === 'F5') {
       e.preventDefault();
-      // Vanilla-style F5 cycle: rear third-person -> front third-person -> first-person.
-      this.cameraMode = ((this.cameraMode ?? 2) + 1) % 3;
-      this.thirdPerson = this.cameraMode !== 2;
+      // Exact vanilla-style cycle, starting from first person:
+      // first press = rear view, second = front view, third = first person.
+      const currentMode = Number.isInteger(this.cameraMode) ? this.cameraMode : 2;
+      this.cameraMode = (currentMode + 1) % 3;
+      this.thirdPerson = this.cameraMode === 0 || this.cameraMode === 1;
       this.frontThirdPerson = this.cameraMode === 1;
       const cameraNames = ['Вид со спины', 'Вид спереди', 'От первого лица'];
       this.ui.toast(cameraNames[this.cameraMode], { duration: 1200 });
