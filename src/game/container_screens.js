@@ -11,7 +11,7 @@
 import { Chest, Furnace, SMELTING, SMELT_TICKS, serializeContainer, deserializeContainer } from './containers.js';
 import { ItemStack } from '../world/item.js';
 import { positionalRandom } from '../core/rng.js';
-import { TerrainGenerator, dungeonCandidateForCell, villageCandidateForCell } from '../world/gen/terrain.js';
+import { TerrainGenerator, BIOME, dungeonCandidateForCell, villageCandidateForCell, desertTempleCandidateForCell, jungleTempleCandidateForCell, strongholdCandidateForCell } from '../world/gen/terrain.js';
 
 const OVERLAY_ID = 'container-overlay';
 
@@ -61,8 +61,8 @@ function generatedChestKind(seed, x, y, z) {
     }
   }
 
-  // The third village home contains a pantry chest. Validate the same site
-  // rules as terrain generation so player-placed chests never receive loot.
+  // Structure loot is attached only to deterministic generated chest
+  // coordinates. Ordinary player-placed chests never receive random contents.
   const generator = new TerrainGenerator(seed);
   for (let gx = Math.floor((x - 140) / 128); gx <= Math.floor(x / 128); gx++) {
     for (let gz = Math.floor((z - 140) / 128); gz <= Math.floor(z / 128); gz++) {
@@ -72,24 +72,62 @@ function generatedChestKind(seed, x, y, z) {
       if (site && x === village.x + 4 && y === site.y + 2 && z === village.z + 13) return 'village';
     }
   }
+
+  for (let gx = Math.floor((x - 256) / 256); gx <= Math.floor(x / 256); gx++) {
+    for (let gz = Math.floor((z - 256) / 256); gz <= Math.floor(z / 256); gz++) {
+      const desert = desertTempleCandidateForCell(seed, gx, gz);
+      if (desert) {
+        const site = generator.validateStructureSite(desert.x, desert.z, 10, [BIOME.DESERT, BIOME.DESERT_HILLS], 4.5);
+        if (site && y === site.y + 2 && Math.abs(x - desert.x) === 3 && Math.abs(z - desert.z) === 3) return 'desert_temple';
+      }
+      const jungle = jungleTempleCandidateForCell(seed, gx, gz);
+      if (jungle) {
+        const site = generator.validateStructureSite(jungle.x, jungle.z, 7, [BIOME.JUNGLE, BIOME.JUNGLE_HILLS, BIOME.JUNGLE_EDGE, BIOME.BAMBOO_JUNGLE], 4.5);
+        if (site && y === site.y + 2 &&
+            ((x === jungle.x + 2 && z === jungle.z + 2) || (x === jungle.x + 10 && z === jungle.z + 10))) return 'jungle_temple';
+      }
+    }
+  }
+
+  for (let gx = Math.floor((x - 512) / 512); gx <= Math.floor(x / 512); gx++) {
+    for (let gz = Math.floor((z - 512) / 512); gz <= Math.floor(z / 512); gz++) {
+      const stronghold = strongholdCandidateForCell(seed, gx, gz);
+      if (stronghold && x === stronghold.x + 2 && y === stronghold.y + 1 && z === stronghold.z + 2) return 'stronghold';
+    }
+  }
   return null;
 }
 
 function fillGeneratedChest(seed, x, y, z, chest, kind) {
-  const rng = positionalRandom(seed, x, y, z, kind === 'dungeon' ? 3301 : 3302);
+  const salt = kind === 'dungeon' ? 3301 : kind === 'village' ? 3302 : kind === 'stronghold' ? 3304 : 3303;
+  const rng = positionalRandom(seed, x, y, z, salt);
   const villageLoot = [
     ['mc:bread', 2, 5], ['mc:apple', 1, 3], ['mc:wheat_seeds', 2, 6],
     ['mc:stick', 2, 6], ['mc:iron_ingot', 1, 2], ['mc:gold_nugget', 2, 5],
-    ['mc:leather', 1, 3], ['mc:coal', 2, 5],
+    ['mc:leather', 1, 3], ['mc:coal', 2, 5], ['mc:paper', 1, 4],
   ];
   const dungeonLoot = [
     ['mc:bread', 1, 4], ['mc:iron_ingot', 1, 4], ['mc:gold_ingot', 1, 3],
     ['mc:coal', 2, 7], ['mc:string', 2, 6], ['mc:bone', 1, 5],
-    ['mc:diamond', 1, 2], ['mc:emerald', 1, 2], ['mc:apple', 1, 3],
+    ['mc:diamond', 1, 2], ['mc:emerald', 1, 2], ['mc:apple', 1, 3], ['mc:paper', 1, 4],
     ['mc:iron_pickaxe', 1, 1], ['mc:gold_nugget', 2, 7],
   ];
-  const pool = kind === 'village' ? villageLoot : dungeonLoot;
-  const rolls = kind === 'village' ? 5 + rng.nextInt(3) : 6 + rng.nextInt(4);
+  const templeLoot = [
+    ['mc:bread', 1, 4], ['mc:apple', 1, 3], ['mc:iron_ingot', 1, 4],
+    ['mc:gold_ingot', 1, 4], ['mc:gold_nugget', 3, 9], ['mc:emerald', 1, 3],
+    ['mc:diamond', 1, 2], ['mc:coal', 2, 6], ['mc:bone', 1, 4],
+    ['mc:string', 2, 5], ['mc:wheat_seeds', 2, 6],
+  ];
+  const strongholdLoot = [
+    ['mc:bread', 1, 4], ['mc:apple', 1, 3], ['mc:iron_ingot', 1, 4],
+    ['mc:gold_ingot', 1, 3], ['mc:emerald', 1, 2], ['mc:diamond', 1, 2],
+    ['mc:coal', 2, 6], ['mc:lapis_lazuli', 1, 4], ['mc:redstone', 2, 6],
+  ];
+  const pool = kind === 'village' ? villageLoot
+    : kind === 'dungeon' ? dungeonLoot
+    : kind === 'stronghold' ? strongholdLoot : templeLoot;
+  const rolls = kind === 'village' ? 5 + rng.nextInt(3)
+    : kind === 'stronghold' ? 5 + rng.nextInt(3) : 6 + rng.nextInt(4);
   for (let i = 0; i < rolls; i++) {
     const [id, min, max] = pool[rng.nextInt(pool.length)];
     chest.insert(ItemStack.of(id, min + rng.nextInt(max - min + 1)));

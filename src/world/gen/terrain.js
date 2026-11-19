@@ -26,7 +26,7 @@ import { CHUNK_SIZE, MIN_Y, MAX_Y, SEA_LEVEL } from '../../core/constants.js';
 import { clamp } from '../../core/math.js';
 
 /** Bumped whenever generation output changes. Stored per world. */
-export const GENERATOR_VERSION = 8;
+export const GENERATOR_VERSION = 9;
 
 
 // ---------------------------------------------------------------------------
@@ -56,6 +56,11 @@ export const BIOME = {
   TAIGA:'mc:taiga', SNOWY_TAIGA:'mc:snowy_taiga',
   GIANT_TREE_TAIGA:'mc:mega_taiga', GIANT_SPRUCE_TAIGA:'mc:giant_spruce_taiga',
   SWAMP:'mc:swampland', MUSHROOM_FIELDS:'mc:mushroom_island',
+  DESERT_HILLS:'mc:desert_hills', FOREST_HILLS:'mc:forest_hills', TAIGA_HILLS:'mc:taiga_hills',
+  EXTREME_HILLS_EDGE:'mc:extreme_hills_edge', EXTREME_HILLS_PLUS:'mc:extreme_hills_plus',
+  JUNGLE_HILLS:'mc:jungle_hills', JUNGLE_EDGE:'mc:jungle_edge', BIRCH_FOREST_HILLS:'mc:birch_forest_hills',
+  COLD_TAIGA:'mc:cold_taiga', COLD_TAIGA_HILLS:'mc:cold_taiga_hills',
+  MEGA_TAIGA_HILLS:'mc:mega_taiga_hills', MESA_PLATEAU:'mc:mesa_clear_rock', MESA_PLATEAU_F:'mc:mesa_rock',
 };
 
 export const BIOME_SURFACE = {
@@ -100,6 +105,19 @@ export const BIOME_SURFACE = {
   [BIOME.GIANT_SPRUCE_TAIGA]: { top:'mc:podzol', filler:'mc:dirt', trees:0.072, grass:0.1, species:'spruce' },
   [BIOME.SWAMP]: { top:'mc:clay', filler:'mc:dirt', trees:0.035, grass:0.12, species:'oak', ferns:0.06 },
   [BIOME.MUSHROOM_FIELDS]: { top:'mc:mycelium', filler:'mc:dirt', trees:0.002, grass:0.02, mushrooms:0.13 },
+  [BIOME.DESERT_HILLS]: { top:'mc:sand', filler:'mc:sand', trees:0, grass:0, deadBush:0.025 },
+  [BIOME.FOREST_HILLS]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.06, grass:0.15, species:'oak' },
+  [BIOME.TAIGA_HILLS]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.055, grass:0.12, species:'spruce' },
+  [BIOME.EXTREME_HILLS_EDGE]: { top:'mc:stone', filler:'mc:stone', trees:0.006, grass:0.035, species:'oak' },
+  [BIOME.EXTREME_HILLS_PLUS]: { top:'mc:stone', filler:'mc:stone', trees:0.008, grass:0.02, species:'oak' },
+  [BIOME.JUNGLE_HILLS]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.078, grass:0.18, species:'jungle', ferns:0.22 },
+  [BIOME.JUNGLE_EDGE]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.028, grass:0.16, species:'jungle', ferns:0.08 },
+  [BIOME.BIRCH_FOREST_HILLS]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.07, grass:0.14, species:'birch' },
+  [BIOME.COLD_TAIGA]: { top:'mc:snow_block', filler:'mc:dirt', trees:0.046, grass:0, species:'spruce' },
+  [BIOME.COLD_TAIGA_HILLS]: { top:'mc:snow_block', filler:'mc:dirt', trees:0.052, grass:0, species:'spruce' },
+  [BIOME.MEGA_TAIGA_HILLS]: { top:'mc:podzol', filler:'mc:dirt', trees:0.068, grass:0.1, species:'spruce' },
+  [BIOME.MESA_PLATEAU]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0, grass:0, deadBush:0.01 },
+  [BIOME.MESA_PLATEAU_F]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0.006, grass:0.01, species:'oak', deadBush:0.01 },
 };
 
 // ---------------------------------------------------------------------------
@@ -209,7 +227,8 @@ export class TerrainGenerator {
       if (temp < -0.48) return BIOME.SNOWY_BEACH;
       return detail > 0.68 ? BIOME.STONE_SHORE : BIOME.BEACH;
     }
-    if (height > SEA_LEVEL + 42) return detail > 0.2 ? BIOME.WINDSWEPT_HILLS : BIOME.MOUNTAINS;
+    if (height > SEA_LEVEL + 42) return detail > 0.2 ? BIOME.EXTREME_HILLS_PLUS : BIOME.MOUNTAINS;
+    if (height > SEA_LEVEL + 30 && detail > 0.48) return BIOME.EXTREME_HILLS_EDGE;
 
     // Mushroom islands are deliberately scarce, isolated climate pockets.
     if (humid > 0.12 && rare > 0.79 && detail > -0.15) return BIOME.MUSHROOM_FIELDS;
@@ -218,16 +237,16 @@ export class TerrainGenerator {
     // uncommon variants, while giant conifer forests remain a rarer subregion.
     if (temp < -0.48) {
       if (rare > 0.72 && detail > 0.2) return BIOME.ICE_SPIKES;
-      if (humid > 0.12 && rare < -0.42) return BIOME.GIANT_SPRUCE_TAIGA;
-      if (humid > -0.05) return rare > 0.38 ? BIOME.SNOWY_TAIGA : BIOME.TAIGA;
+      if (humid > 0.12 && rare < -0.42) return detail > 0.35 ? BIOME.MEGA_TAIGA_HILLS : BIOME.GIANT_SPRUCE_TAIGA;
+      if (humid > -0.05) return rare > 0.38 ? BIOME.COLD_TAIGA_HILLS : BIOME.COLD_TAIGA;
       return BIOME.SNOWY_PLAINS;
     }
 
     // Hot and dry lowlands are primarily savanna. True deserts and
     // badlands are reserved for the driest climate pockets.
     if (temp > 0.12 && humid < 0.2) {
-      if (humid < -0.48 && rare > 0.78) return detail > 0.35 ? BIOME.ERODED_BADLANDS : BIOME.BADLANDS;
-      if (humid < -0.14 && rare > 0.22) return BIOME.DESERT;
+      if (humid < -0.48 && rare > 0.78) return detail > 0.35 ? BIOME.ERODED_BADLANDS : (detail < -0.35 ? BIOME.MESA_PLATEAU : BIOME.MESA_PLATEAU_F);
+      if (humid < -0.14 && rare > 0.22) return detail > 0.55 ? BIOME.DESERT_HILLS : BIOME.DESERT;
       return detail > 0.58 && rare > 0.55 ? BIOME.SAVANNA_PLATEAU : BIOME.SAVANNA;
     }
 
@@ -235,16 +254,19 @@ export class TerrainGenerator {
     // as a less common sub-biome.
     if (temp > 0.48 && humid > 0.2) {
       if (rare > 0.72) return BIOME.BAMBOO_JUNGLE;
+      if (detail > 0.62) return BIOME.JUNGLE_HILLS;
+      if (rare < -0.25) return BIOME.JUNGLE_EDGE;
       return detail > 0.42 ? BIOME.SPARSE_JUNGLE : BIOME.JUNGLE;
     }
     if (humid > 0.42 && temp > -0.08 && temp < 0.46) return BIOME.SWAMP;
+    if (temp < -0.28 && temp > -0.48 && humid > 0.08) return detail > 0.55 ? BIOME.TAIGA_HILLS : BIOME.TAIGA;
 
     // The four intended everyday biomes dominate temperate land:
     // birch forest, flower forest, plains and a smaller share of oak forest.
     if (temp > -0.42 && temp < 0.58) {
       if (humid > 0.08) {
-        if (rare < -0.08) return BIOME.BIRCH_FOREST;
-        if (detail > 0.7 && rare < 0.16) return BIOME.FOREST;
+        if (rare < -0.08) return detail > 0.25 ? BIOME.BIRCH_FOREST_HILLS : BIOME.BIRCH_FOREST;
+        if (detail > 0.7 && rare < 0.16) return BIOME.FOREST_HILLS;
         return BIOME.FLOWER_FOREST;
       }
       if (rare > 0.72) return BIOME.SUNFLOWER_PLAINS;
@@ -344,6 +366,7 @@ export class TerrainGenerator {
     this.placeCaveLakes(chunk, baseX, baseZ);
     this.placeFossils(chunk, baseX, baseZ);
     this.placeVillages(chunk, baseX, baseZ);
+    this.placeSurfaceStructures(chunk, baseX, baseZ);
     this.placeUndergroundStructures(chunk, baseX, baseZ);
 
     chunk.rebuildHeightmap();
@@ -495,6 +518,231 @@ export class TerrainGenerator {
         }
       }
     }
+  }
+
+  /** Surface structures are world-grid anchored and clipped to this chunk. */
+  placeSurfaceStructures(chunk, baseX, baseZ) {
+    const min256X = Math.floor((baseX - 32) / 256);
+    const max256X = Math.floor((baseX + CHUNK_SIZE + 32) / 256);
+    const min256Z = Math.floor((baseZ - 32) / 256);
+    const max256Z = Math.floor((baseZ + CHUNK_SIZE + 32) / 256);
+    for (let gz = min256Z; gz <= max256Z; gz++) {
+      for (let gx = min256X; gx <= max256X; gx++) {
+        const desert = desertTempleCandidateForCell(this.seed, gx, gz);
+        if (desert) {
+          const site = this.validateStructureSite(desert.x, desert.z, 10, [BIOME.DESERT, BIOME.DESERT_HILLS], 4.5);
+          if (site) this.placeDesertTemple(chunk, baseX, baseZ, desert, site.y);
+        }
+        const jungle = jungleTempleCandidateForCell(this.seed, gx, gz);
+        if (jungle) {
+          const site = this.validateStructureSite(jungle.x, jungle.z, 7, [BIOME.JUNGLE, BIOME.JUNGLE_HILLS, BIOME.JUNGLE_EDGE, BIOME.BAMBOO_JUNGLE], 4.5);
+          if (site) this.placeJungleTemple(chunk, baseX, baseZ, jungle, site.y);
+        }
+        const swamp = swampHutCandidateForCell(this.seed, gx, gz);
+        if (swamp) {
+          const site = this.validateStructureSite(swamp.x, swamp.z, 5, [BIOME.SWAMP], 5.5);
+          if (site) this.placeSwampHut(chunk, baseX, baseZ, swamp, site.y);
+        }
+        const igloo = iglooCandidateForCell(this.seed, gx, gz);
+        if (igloo) {
+          const site = this.validateStructureSite(igloo.x, igloo.z, 4, [BIOME.SNOWY_PLAINS, BIOME.SNOWY_TAIGA, BIOME.COLD_TAIGA, BIOME.COLD_TAIGA_HILLS, BIOME.ICE_SPIKES], 3.5);
+          if (site) this.placeIgloo(chunk, baseX, baseZ, igloo, site.y);
+        }
+      }
+    }
+
+    const min512X = Math.floor((baseX - 32) / 512);
+    const max512X = Math.floor((baseX + CHUNK_SIZE + 32) / 512);
+    const min512Z = Math.floor((baseZ - 32) / 512);
+    const max512Z = Math.floor((baseZ + CHUNK_SIZE + 32) / 512);
+    for (let gz = min512Z; gz <= max512Z; gz++) {
+      for (let gx = min512X; gx <= max512X; gx++) {
+        const mansion = mansionCandidateForCell(this.seed, gx, gz);
+        if (mansion) {
+          const site = this.validateStructureSite(mansion.x, mansion.z, 14, [BIOME.DARK_FOREST], 6);
+          if (site && site.y < 105) this.placeWoodlandMansion(chunk, baseX, baseZ, mansion, site.y);
+        }
+        const monument = oceanMonumentCandidateForCell(this.seed, gx, gz);
+        if (monument) {
+          const biome = this.biomeAt(monument.x, monument.z, this.heightAt(monument.x, monument.z));
+          if ([BIOME.DEEP_OCEAN, BIOME.DEEP_COLD_OCEAN, BIOME.DEEP_FROZEN_OCEAN, BIOME.DEEP_LUKEWARM_OCEAN].includes(biome)) {
+            this.placeOceanMonument(chunk, baseX, baseZ, monument);
+          }
+        }
+      }
+    }
+  }
+
+  validateStructureSite(x, z, radius, allowedBiomes, maxSlope) {
+    let min = Infinity, max = -Infinity;
+    for (const dz of [-radius, 0, radius]) {
+      for (const dx of [-radius, 0, radius]) {
+        const wx = x + dx, wz = z + dz;
+        const height = this.heightAt(wx, wz);
+        if (!allowedBiomes.includes(this.biomeAt(wx, wz, height))) return null;
+        min = Math.min(min, height);
+        max = Math.max(max, height);
+      }
+    }
+    if (min < SEA_LEVEL + 1 || max - min > maxSlope) return null;
+    return { y: Math.floor((min + max) / 2) };
+  }
+
+  placeDesertTemple(chunk, baseX, baseZ, site, groundY) {
+    const S = this.states.byId, sandstone = S['mc:sandstone'], air = S['mc:air'];
+    if (!sandstone || !air) return;
+    const put = (x, y, z, state) => this.setVillageBlock(chunk, baseX, baseZ, x, y, z, state);
+    // Four stepped sandstone tiers with a hollow central chamber.
+    for (let layer = 0; layer < 9; layer++) {
+      const radius = 10 - layer;
+      const y = groundY + 1 + layer;
+      for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) {
+        if (Math.abs(dx) === radius || Math.abs(dz) === radius) put(site.x + dx, y, site.z + dz, sandstone);
+      }
+    }
+    for (let y = groundY + 1; y <= groundY + 8; y++) {
+      for (let dx = -3; dx <= 3; dx++) for (let dz = -3; dz <= 3; dz++) put(site.x + dx, y, site.z + dz, air);
+    }
+    for (let dx = -4; dx <= 4; dx++) for (let dz = -4; dz <= 4; dz++) put(site.x + dx, groundY + 1, site.z + dz, sandstone);
+    const chests = S['mc:chest'];
+    if (chests) for (const [dx, dz] of [[-3,-3],[-3,3],[3,-3],[3,3]]) put(site.x + dx, groundY + 2, site.z + dz, chests);
+    for (const dx of [-2, 2]) for (const dz of [-2, 2]) put(site.x + dx, groundY + 2, site.z + dz, sandstone);
+  }
+
+  placeJungleTemple(chunk, baseX, baseZ, site, groundY) {
+    const S = this.states.byId, air = S['mc:air'];
+    const stone = S['mc:mossy_cobblestone'] || S['mc:cobblestone'];
+    const brick = S['mc:stone_bricks'] || S['mc:cobblestone'];
+    if (!air || !stone || !brick) return;
+    const put = (x, y, z, state) => this.setVillageBlock(chunk, baseX, baseZ, x, y, z, state);
+    for (let dz = 0; dz < 13; dz++) for (let dx = 0; dx < 13; dx++) {
+      put(site.x + dx, groundY + 1, site.z + dz, stone);
+      for (let dy = 2; dy <= 7; dy++) {
+        const edge = dx === 0 || dx === 12 || dz === 0 || dz === 12;
+        if (edge) put(site.x + dx, groundY + dy, site.z + dz, ((dx + dz + dy) % 3 === 0) ? stone : brick);
+      }
+    }
+    for (let dy = 2; dy <= 7; dy++) for (let dx = 1; dx < 12; dx++) for (let dz = 1; dz < 12; dz++) put(site.x + dx, groundY + dy, site.z + dz, air);
+    for (let dx = 2; dx < 11; dx++) for (let dz = 2; dz < 11; dz++) put(site.x + dx, groundY + 8, site.z + dz, stone);
+    for (let dy = 2; dy <= 5; dy++) put(site.x + 6, groundY + dy, site.z, air);
+    const chest = S['mc:chest'];
+    if (chest) {
+      put(site.x + 2, groundY + 2, site.z + 2, chest);
+      put(site.x + 10, groundY + 2, site.z + 10, chest);
+    }
+    if (S['mc:torch']) {
+      put(site.x + 3, groundY + 3, site.z + 3, S['mc:torch']);
+      put(site.x + 9, groundY + 3, site.z + 9, S['mc:torch']);
+    }
+  }
+
+  placeSwampHut(chunk, baseX, baseZ, site, groundY) {
+    const S = this.states.byId, air = S['mc:air'];
+    const plank = S['mc:oak_planks'], log = S['mc:oak_log'];
+    if (!air || !plank || !log) return;
+    const put = (x, y, z, state) => this.setVillageBlock(chunk, baseX, baseZ, x, y, z, state);
+    for (const [dx, dz] of [[0,0],[6,0],[0,8],[6,8]]) {
+      for (let y = groundY - 1; y <= groundY + 3; y++) put(site.x + dx, y, site.z + dz, log);
+    }
+    for (let dz = 0; dz <= 8; dz++) for (let dx = 0; dx <= 6; dx++) {
+      put(site.x + dx, groundY + 3, site.z + dz, plank);
+      const edge = dx === 0 || dx === 6 || dz === 0 || dz === 8;
+      if (edge) for (let dy = 4; dy <= 6; dy++) put(site.x + dx, groundY + dy, site.z + dz, plank);
+    }
+    for (let dy = 4; dy <= 5; dy++) put(site.x + 3, groundY + dy, site.z, air);
+    for (let dz = 1; dz < 8; dz++) for (let dx = 1; dx < 6; dx++) {
+      put(site.x + dx, groundY + 4, site.z + dz, air);
+      put(site.x + dx, groundY + 5, site.z + dz, air);
+    }
+    for (let dz = -1; dz <= 9; dz++) for (let dx = -1; dx <= 7; dx++) {
+      const radius = Math.min(dx + 1, 7 - dx);
+      const roofY = groundY + 7 + Math.min(3, Math.max(0, radius));
+      put(site.x + dx, roofY, site.z + dz, plank);
+    }
+    if (S['mc:cauldron']) put(site.x + 2, groundY + 4, site.z + 2, S['mc:cauldron']);
+    if (S['mc:crafting_table']) put(site.x + 4, groundY + 4, site.z + 5, S['mc:crafting_table']);
+  }
+
+  placeIgloo(chunk, baseX, baseZ, site, groundY) {
+    const S = this.states.byId, snow = S['mc:snow_block'], air = S['mc:air'];
+    if (!snow || !air) return;
+    const put = (x, y, z, state) => this.setVillageBlock(chunk, baseX, baseZ, x, y, z, state);
+    for (let layer = 0; layer < 5; layer++) {
+      const radius = 4 - Math.floor(layer * 0.75);
+      const y = groundY + 1 + layer;
+      for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) {
+        if (dx * dx + dz * dz <= radius * radius + 2) put(site.x + dx, y, site.z + dz, snow);
+      }
+    }
+    for (let dy = 2; dy <= 4; dy++) for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) put(site.x + dx, groundY + dy, site.z + dz, air);
+    for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) put(site.x + dx, groundY + 1, site.z + dz, snow);
+    for (let dy = 2; dy <= 3; dy++) put(site.x, groundY + dy, site.z - 4, air);
+    if (S['mc:torch']) put(site.x + 2, groundY + 2, site.z + 2, S['mc:torch']);
+  }
+
+  placeWoodlandMansion(chunk, baseX, baseZ, site, groundY) {
+    const S = this.states.byId, air = S['mc:air'];
+    const plank = S['mc:dark_oak_planks'] || S['mc:oak_planks'];
+    const log = S['mc:dark_oak_log'] || S['mc:oak_log'];
+    const stone = S['mc:cobblestone'];
+    const glass = S['mc:glass'];
+    if (!air || !plank || !log || !stone) return;
+    const put = (x, y, z, state) => this.setVillageBlock(chunk, baseX, baseZ, x, y, z, state);
+    const size = 27;
+    for (let dx = 0; dx < size; dx++) for (let dz = 0; dz < size; dz++) put(site.x + dx, groundY, site.z + dz, stone);
+    for (let floor = 0; floor < 3; floor++) {
+      const baseY = groundY + 1 + floor * 5;
+      for (let dz = 0; dz < size; dz++) for (let dx = 0; dx < size; dx++) {
+        put(site.x + dx, baseY, site.z + dz, plank);
+        const edge = dx === 0 || dx === size - 1 || dz === 0 || dz === size - 1;
+        if (edge) {
+          for (let dy = 1; dy <= 4; dy++) {
+            const window = glass && dy === 2 && (dx % 6 === 3 || dz % 6 === 3);
+            put(site.x + dx, baseY + dy, site.z + dz, window ? glass : plank);
+          }
+        }
+      }
+      for (let y = baseY + 1; y <= baseY + 4; y++) {
+        for (let dx = 1; dx < size - 1; dx++) for (let dz = 1; dz < size - 1; dz++) {
+          if (dx % 8 === 0 || dz % 8 === 0) put(site.x + dx, y, site.z + dz, plank);
+          else put(site.x + dx, y, site.z + dz, air);
+        }
+      }
+      for (const [dx, dz] of [[0,0],[size-1,0],[0,size-1],[size-1,size-1]]) {
+        for (let dy = 0; dy <= 5; dy++) put(site.x + dx, baseY + dy, site.z + dz, log);
+      }
+    }
+    const roofY = groundY + 16;
+    for (let dz = -1; dz <= size; dz++) for (let dx = -1; dx <= size; dx++) {
+      if (dx < 2 || dx > size - 3 || dz < 2 || dz > size - 3) put(site.x + dx, roofY, site.z + dz, plank);
+    }
+  }
+
+  placeOceanMonument(chunk, baseX, baseZ, site) {
+    const S = this.states.byId;
+    const prismarine = S['mc:prismarine'], bricks = S['mc:prismarine_bricks'] || prismarine;
+    const dark = S['mc:dark_prismarine'] || prismarine;
+    if (!prismarine) return;
+    const put = (x, y, z, state) => this.setVillageBlock(chunk, baseX, baseZ, x, y, z, state);
+    const floorY = Number.isFinite(site.y) ? site.y : Math.max(MIN_Y + 5, Math.floor(this.heightAt(site.x, site.z)) + 1);
+    const roofY = floorY + 11;
+    if (roofY > SEA_LEVEL + 4) return;
+    for (let dy = floorY; dy <= roofY; dy++) {
+      const radius = dy === floorY || dy === roofY ? 12 : 10;
+      for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) {
+        const edge = Math.abs(dx) === radius || Math.abs(dz) === radius;
+        if (edge || dy === floorY || dy === roofY) put(site.x + dx, dy, site.z + dz, dy === roofY ? dark : bricks);
+      }
+    }
+    for (const [dx, dz] of [[-8,-8],[-8,8],[8,-8],[8,8]]) {
+      for (let dy = floorY; dy <= roofY + 8; dy++) {
+        const radius = dy > roofY + 4 ? 1 : 2;
+        for (let ox = -radius; ox <= radius; ox++) for (let oz = -radius; oz <= radius; oz++) {
+          if (Math.abs(ox) === radius || Math.abs(oz) === radius) put(site.x + dx + ox, dy, site.z + dz + oz, prismarine);
+        }
+      }
+    }
+    if (S['mc:sea_lantern']) put(site.x, floorY + 8, site.z, S['mc:sea_lantern']);
   }
 
   /**
@@ -667,6 +915,66 @@ export class TerrainGenerator {
         if (room) this.placeDungeon(chunk, baseX, baseZ, room);
       }
     }
+
+    const strongholdMinX = Math.floor((baseX - 32) / 512);
+    const strongholdMaxX = Math.floor((baseX + CHUNK_SIZE + 32) / 512);
+    const strongholdMinZ = Math.floor((baseZ - 32) / 512);
+    const strongholdMaxZ = Math.floor((baseZ + CHUNK_SIZE + 32) / 512);
+    for (let gz = strongholdMinZ; gz <= strongholdMaxZ; gz++) {
+      for (let gx = strongholdMinX; gx <= strongholdMaxX; gx++) {
+        const stronghold = strongholdCandidateForCell(this.seed, gx, gz);
+        if (stronghold) this.placeStronghold(chunk, baseX, baseZ, stronghold);
+      }
+    }
+  }
+
+  placeStronghold(chunk, baseX, baseZ, site) {
+    const S = this.states.byId, air = S['mc:air'];
+    const brick = S['mc:stone_bricks'] || S['mc:cobblestone'];
+    const mossy = S['mc:mossy_stone_bricks'] || S['mc:mossy_cobblestone'] || brick;
+    if (!air || !brick) return;
+    const put = (x, y, z, state) => this.setVillageBlock(chunk, baseX, baseZ, x, y, z, state);
+    const y0 = site.y, x0 = site.x, z0 = site.z;
+    // Main entry hall and two connected rooms.
+    for (let room = 0; room < 3; room++) {
+      const ox = room === 1 ? -12 : room === 2 ? 15 : 0;
+      const oz = room === 0 ? 0 : 2;
+      const width = room === 0 ? 15 : 9, depth = room === 0 ? 13 : 11;
+      for (let dx = 0; dx < width; dx++) for (let dz = 0; dz < depth; dz++) {
+        put(x0 + ox + dx, y0, z0 + oz + dz, brick);
+        put(x0 + ox + dx, y0 + 5, z0 + oz + dz, brick);
+        for (let dy = 1; dy < 5; dy++) {
+          const edge = dx === 0 || dx === width - 1 || dz === 0 || dz === depth - 1;
+          put(x0 + ox + dx, y0 + dy, z0 + oz + dz, edge ? ((dx + dz + dy) % 4 === 0 ? mossy : brick) : air);
+        }
+      }
+    }
+    // Portal chamber with a recessed lava well and the classic 3x3 frame ring.
+    const px = x0 + 18, pz = z0 + 5;
+    const frame = S['mc:end_portal_frame'];
+    const lava = S['mc:lava'];
+    for (let dx = 0; dx < 11; dx++) for (let dz = 0; dz < 11; dz++) {
+      put(px + dx, y0, pz + dz, brick);
+      if (dx === 0 || dx === 10 || dz === 0 || dz === 10) {
+        for (let dy = 1; dy <= 5; dy++) put(px + dx, y0 + dy, pz + dz, brick);
+      }
+    }
+    if (lava) for (let dx = 3; dx <= 7; dx++) for (let dz = 3; dz <= 7; dz++) put(px + dx, y0, pz + dz, lava);
+    if (frame) {
+      for (let i = 0; i < 3; i++) {
+        put(px + 4 + i, y0 + 1, pz + 2, frame);
+        put(px + 4 + i, y0 + 1, pz + 8, frame);
+        put(px + 2, y0 + 1, pz + 4 + i, frame);
+        put(px + 8, y0 + 1, pz + 4 + i, frame);
+      }
+    }
+    if (S['mc:bookshelf']) {
+      for (let dx = 1; dx < 8; dx++) {
+        put(x0 - 11 + dx, y0 + 1, z0 + 4, S['mc:bookshelf']);
+        put(x0 - 11 + dx, y0 + 2, z0 + 4, S['mc:bookshelf']);
+      }
+    }
+    if (S['mc:chest']) put(x0 + 2, y0 + 1, z0 + 2, S['mc:chest']);
   }
 
   placeMineshaft(chunk, baseX, baseZ, site) {
@@ -733,9 +1041,9 @@ export class TerrainGenerator {
     // Classic villages belong in plains, deserts, savannas, taigas and
     // snowy plains; forests are not treated as generic village terrain.
     const allowed = new Set([
-      BIOME.PLAINS, BIOME.SUNFLOWER_PLAINS, BIOME.DESERT,
-      BIOME.SAVANNA, BIOME.SAVANNA_PLATEAU, BIOME.TAIGA,
-      BIOME.SNOWY_PLAINS,
+      BIOME.PLAINS, BIOME.SUNFLOWER_PLAINS, BIOME.DESERT, BIOME.DESERT_HILLS,
+      BIOME.SAVANNA, BIOME.SAVANNA_PLATEAU, BIOME.TAIGA, BIOME.TAIGA_HILLS,
+      BIOME.COLD_TAIGA, BIOME.COLD_TAIGA_HILLS, BIOME.SNOWY_PLAINS,
     ]);
     const offsetsX = [0, 7, 14, 21, 27];
     const offsetsZ = [0, 7, 14, 21, 27];
@@ -763,10 +1071,10 @@ export class TerrainGenerator {
 
   placeVillageHouse(chunk, baseX, baseZ, x, z, groundY, biome = BIOME.PLAINS, variant = 0) {
     const S = this.states.byId;
-    const desert = biome === BIOME.DESERT;
+    const desert = biome === BIOME.DESERT || biome === BIOME.DESERT_HILLS;
     const wood = desert ? 'oak'
       : biome === BIOME.SAVANNA || biome === BIOME.SAVANNA_PLATEAU ? 'acacia'
-      : biome === BIOME.TAIGA || biome === BIOME.SNOWY_PLAINS ? 'spruce' : 'oak';
+      : [BIOME.TAIGA, BIOME.TAIGA_HILLS, BIOME.COLD_TAIGA, BIOME.COLD_TAIGA_HILLS, BIOME.SNOWY_PLAINS].includes(biome) ? 'spruce' : 'oak';
     const planks = S[desert ? 'mc:sandstone' : `mc:${wood}_planks`];
     const log = S[`mc:${wood}_log`] || S['mc:oak_log'];
     const roof = S[desert ? 'mc:sandstone' : `mc:${wood}_planks`];
@@ -983,6 +1291,52 @@ export function mineshaftCandidateForCell(seed, gridX, gridZ) {
   if (rng.nextInt(5) !== 0) return null;
   return { x: gridX * 96 + 20 + rng.nextInt(48), z: gridZ * 96 + 20 + rng.nextInt(48),
     y: 12 + rng.nextInt(25), axis: rng.nextInt(2), phase: rng.nextDouble() * Math.PI * 2 };
+}
+
+export function desertTempleCandidateForCell(seed, gridX, gridZ) {
+  const rng = positionalRandom(seed, gridX, 2501, gridZ, 2501);
+  if (rng.nextInt(8) !== 0) return null;
+  return { x: gridX * 256 + 32 + rng.nextInt(192), z: gridZ * 256 + 32 + rng.nextInt(192) };
+}
+
+export function jungleTempleCandidateForCell(seed, gridX, gridZ) {
+  const rng = positionalRandom(seed, gridX, 2601, gridZ, 2601);
+  if (rng.nextInt(10) !== 0) return null;
+  return { x: gridX * 256 + 32 + rng.nextInt(192), z: gridZ * 256 + 32 + rng.nextInt(192) };
+}
+
+export function swampHutCandidateForCell(seed, gridX, gridZ) {
+  const rng = positionalRandom(seed, gridX, 2701, gridZ, 2701);
+  if (rng.nextInt(10) !== 0) return null;
+  return { x: gridX * 256 + 32 + rng.nextInt(192), z: gridZ * 256 + 32 + rng.nextInt(192) };
+}
+
+export function iglooCandidateForCell(seed, gridX, gridZ) {
+  const rng = positionalRandom(seed, gridX, 2801, gridZ, 2801);
+  if (rng.nextInt(12) !== 0) return null;
+  return { x: gridX * 256 + 32 + rng.nextInt(192), z: gridZ * 256 + 32 + rng.nextInt(192) };
+}
+
+export function mansionCandidateForCell(seed, gridX, gridZ) {
+  const rng = positionalRandom(seed, gridX, 2901, gridZ, 2901);
+  if (rng.nextInt(18) !== 0) return null;
+  return { x: gridX * 512 + 48 + rng.nextInt(416), z: gridZ * 512 + 48 + rng.nextInt(416) };
+}
+
+export function oceanMonumentCandidateForCell(seed, gridX, gridZ) {
+  const rng = positionalRandom(seed, gridX, 3001, gridZ, 3001);
+  if (rng.nextInt(16) !== 0) return null;
+  return { x: gridX * 512 + 48 + rng.nextInt(416), z: gridZ * 512 + 48 + rng.nextInt(416) };
+}
+
+export function strongholdCandidateForCell(seed, gridX, gridZ) {
+  const rng = positionalRandom(seed, gridX, 3101, gridZ, 3101);
+  if (rng.nextInt(24) !== 0) return null;
+  return {
+    x: gridX * 512 + 32 + rng.nextInt(448),
+    z: gridZ * 512 + 32 + rng.nextInt(448),
+    y: 12 + rng.nextInt(22),
+  };
 }
 
 export function dungeonCandidateForCell(seed, gridX, gridZ) {

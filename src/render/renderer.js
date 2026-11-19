@@ -131,6 +131,11 @@ const MOB_TEXTURE_FILES = Object.freeze({
   zombie:'zombie.png', skeleton:'skeleton.png', stray:'stray.png',
   creeper:'creeper.png', enderman:'enderman.png', spider:'spider.png', cave_spider:'cave_spider.png',
 });
+
+const VILLAGER_CAREER_TEXTURES = Object.freeze([
+  'farmer','fisherman','shepherd','librarian','cleric',
+  'armorer','toolsmith','butcher','leatherworker','nitwit',
+]);
 const MOB_UV = Object.freeze({
   cow:[[18,4,12,18,10],[0,0,8,8,6],null,null,null,null,[0,0,8,8,6],[0,0,8,8,6]],
   pig:[[28,8,10,16,8],[0,0,8,8,8],[16,16,4,3,1],[0,16,4,6,4],[0,16,4,6,4],[0,16,4,6,4],[0,16,4,6,4]],
@@ -263,6 +268,39 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       };
       image.src=new URL('../../assets/mob-textures/'+file,import.meta.url).href;
     }
+
+    // Compose the vanilla villager base skin with its profession overlay. This
+    // keeps career clothing distinct without downloading a whole duplicate skin
+    // for every career.
+    const baseVillager = new Image();
+    baseVillager.onload = () => {
+      for (const career of VILLAGER_CAREER_TEXTURES) {
+        const overlay = new Image();
+        const texture = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255,255,255,255]));
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+        this.mobTextures.set('villager_' + career, { texture, width: 64, height: 64, ready: false });
+        overlay.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = baseVillager.naturalWidth;
+          canvas.height = baseVillager.naturalHeight;
+          const context = canvas.getContext('2d');
+          if (!context) return;
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          context.drawImage(baseVillager, 0, 0);
+          context.drawImage(overlay, 0, 0, canvas.width, canvas.height);
+          gl.bindTexture(gl.TEXTURE_2D, texture);
+          gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+          this.mobTextures.set('villager_' + career, { texture, width: canvas.width, height: canvas.height, ready: true });
+        };
+        overlay.onerror = () => this.mobTextures.delete('villager_' + career);
+        overlay.src = new URL('../../assets/mob-textures/villager_' + career + '.png', import.meta.url).href;
+      }
+    };
+    baseVillager.src = new URL('../../assets/mob-textures/villager.png', import.meta.url).href;
   },
 
   _setupBuffers() {
@@ -806,7 +844,16 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     for (const mob of this.entities?.mobs ?? []) {
       const vanillaModel = this.entityModels?.getModel?.('minecraft:' + mob.type);
       const vanillaParts = vanillaLayerParts(vanillaModel, 'main');
-      const parts = vanillaParts ?? (mob.type === 'zombie' ? zombie
+      const villagerFallback = [
+        [[0,0.98,0],[0.43,0.72,0.34],[0.48,0.30,0.18,1]],
+        [[0,1.62,0],[0.48,0.48,0.42],[0.67,0.50,0.36,1]],
+        [[0,1.57,0.25],[0.12,0.22,0.18],[0.42,0.25,0.17,1]],
+        [[-0.19,1.12,0.02],[0.18,0.58,0.22],[0.48,0.30,0.18,1]],
+        [[-0.13,0.39,0],[0.20,0.70,0.22],[0.34,0.25,0.18,1]],
+        [[0.13,0.39,0],[0.20,0.70,0.22],[0.34,0.25,0.18,1]],
+      ];
+      const parts = vanillaParts ?? (mob.type === 'villager' ? villagerFallback
+        : mob.type === 'zombie' ? zombie
         : mob.type === 'skeleton' || mob.type === 'stray' ? skeleton
         : mob.type === 'creeper' ? creeper
         : mob.type === 'enderman' ? enderman
@@ -815,16 +862,16 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         : mob.type === 'chicken' ? chicken : sheep);
       const pulse = mob.type === 'creeper' && mob.anim?.fuse > 0
         ? 1 + Math.sin(mob.anim.fuse * Math.PI * 12) * 0.10 * mob.anim.fuse : 1;
-      const legs = mob.type === 'creeper' ? [2, 5] : mob.type === 'zombie' || mob.type === 'skeleton' || mob.type === 'stray' ? [4, 5]
+      const legs = mob.type === 'creeper' ? [2, 5] : mob.type === 'zombie' || mob.type === 'skeleton' || mob.type === 'stray' || mob.type === 'villager' ? [4, 5]
         : mob.type === 'pig' ? [3, 6] : mob.type === 'cow' ? [2, 5]
         : mob.type === 'chicken' ? [4, 5] : mob.type === 'enderman' ? [4, 5] : [2, 5];
       const babyScale = mob.ageTicks < 0 ? 0.55 : 1;
       const animal = ['sheep', 'pig', 'cow', 'chicken', 'mooshroom', 'rabbit', 'wolf', 'polar_bear'].includes(mob.type);
-      const humanoid = ['zombie', 'skeleton', 'stray'].includes(mob.type);
+      const humanoid = ['zombie', 'skeleton', 'stray', 'villager'].includes(mob.type);
       // Mob movement advances along +sin(yaw), +cos(yaw); render the model on that same forward axis.
       draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
         hurt: (mob.hurtTicks || 0) > 0, animal, humanoid, vanillaModel: !!vanillaParts,
-        mobType: mob.type, mobTextureKey: mob.type,
+        mobType: mob.type, mobTextureKey: mob.type === 'villager' ? 'villager_' + (mob.villagerCareer || 'farmer') : mob.type,
         idle: mob.anim?.idle ?? 0, walking: !!mob.anim?.walking,
       });
       if (mob.type === 'sheep' && !mob.sheared && vanillaModel?.layers?.fur) {

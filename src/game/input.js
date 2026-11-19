@@ -25,7 +25,7 @@ export const InputMixin = {
       canvas.classList.toggle('locked', locked);
       // Losing the lock mid-game means the player pressed Escape, so pause
       // rather than leaving them unable to look around with no explanation.
-      if (!locked && this.running && !this.paused && !this.inventoryOpen && !this.chatOpen) this._pause();
+      if (!locked && this.running && !this.paused && !this.inventoryOpen && !this.tradeOpen && !this.chatOpen) this._pause();
     });
 
     document.addEventListener('mousemove', (e) => {
@@ -118,6 +118,7 @@ export const InputMixin = {
     this.keys.add(e.code);
 
     if (e.code === 'Escape') {
+      if (this.tradeOpen) { this._closeVillagerTrade(); return; }
       if (this._activeContainer) this._closeContainer();
       else if (this.inventoryOpen) this._closeInventory();
       else if (this.running && !this.paused) this._pause();

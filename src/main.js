@@ -313,7 +313,7 @@ class Game {
     world.time = (world.time + 1) % (TICKS_PER_DAY * 8);
     this._tickFurnaces?.();
 
-    if (!this.inventoryOpen) {
+    if (!this.inventoryOpen && !this.tradeOpen) {
       player.input.forward =
         (isDown(this.keys, 'forward') ? 1 : 0) - (isDown(this.keys, 'back') ? 1 : 0);
       player.input.strafe =
@@ -325,6 +325,8 @@ class Game {
       player.input.forward = 0;
       player.input.strafe = 0;
       player.input.jump = false;
+      player.input.sneak = false;
+      player.input.sprint = false;
     }
 
     // Preserve the previous simulation position so rendering can interpolate
@@ -334,7 +336,7 @@ class Game {
     player.prevZ = player.z;
     // Keep the attack animation looping while left mouse is held. Restart only
     // at the end of a swing so the arm visibly returns and punches again.
-    if (this.mouseButtons.has(0) && !this.inventoryOpen && player.attackTime <= 1) {
+    if (this.mouseButtons.has(0) && !this.inventoryOpen && !this.tradeOpen && player.attackTime <= 1) {
       player.attackTime = 8;
     }
     player.tick(world);
@@ -361,7 +363,7 @@ class Game {
       world, player.x, player.eyeY, player.z, player.yaw, player.pitch, player.reach,
     );
 
-    if (this.mouseButtons.has(0) && !this.inventoryOpen) {
+    if (this.mouseButtons.has(0) && !this.inventoryOpen && !this.tradeOpen) {
       // Entity hits take priority over mining blocks behind the creature.
       const hitMob = this.entities?.attackFromPlayer();
       if (!hitMob && this.hit) {

@@ -1,4 +1,6 @@
 import { ItemStack } from '../world/item.js';
+import { TerrainGenerator, villageCandidateForCell } from '../world/gen/terrain.js';
+import { createVillagerProfile } from './villager_trades.js';
 
 /**
  * Lightweight voxel creature simulation. Mobs use deterministic game ticks,
@@ -114,6 +116,9 @@ export class MobSystem {
     this.nextId = 1;
     this.attackCooldown = 0;
     this.fishing = null;
+    this.villageCheckTicks = 0;
+    this.villageGenerator = null;
+    this.populatedVillages = new Set();
   }
 
   reset() {
@@ -122,6 +127,9 @@ export class MobSystem {
     this.spawnTicks = 0;
     this.nextId = 1;
     this.fishing = null;
+    this.villageCheckTicks = 0;
+    this.villageGenerator = null;
+    this.populatedVillages.clear();
   }
 
   /** Toss a stack into the world with a small forward/upward impulse. */
@@ -189,7 +197,7 @@ export class MobSystem {
 
   /** Return a compact, JSON-safe snapshot for the local world save. */
   toJSON() {
-    return this.mobs.map((mob) => ({
+    const entries = this.mobs.map((mob) => ({
       id: mob.id,
       type: mob.type,
       x: mob.x, y: mob.y, z: mob.z,
@@ -202,21 +210,39 @@ export class MobSystem {
       ageTicks: Number.isFinite(mob.ageTicks) ? mob.ageTicks : 0,
       loveTicks: mob.loveTicks || 0,
       breedCooldown: mob.breedCooldown || 0,
+      villageKey: mob.villageKey ?? null,
+      villageSlot: Number.isInteger(mob.villageSlot) ? mob.villageSlot : null,
+      villagerCareer: mob.villagerCareer ?? null,
+      villagerProfession: mob.villagerProfession ?? null,
+      villagerType: mob.villagerType ?? null,
+      villagerSeed: Number.isSafeInteger(mob.villagerSeed) ? mob.villagerSeed : 1,
+      villagerTier: mob.villagerTier ?? 1,
+      villagerTradeCount: mob.villagerTradeCount ?? 0,
+      villagerUsedOffers: mob.villagerUsedOffers ?? [],
+      villagerOfferUses: mob.villagerOfferUses ?? {},
     }));
+    for (const villageKey of this.populatedVillages) entries.push({ type: 'village_marker', villageKey });
+    return entries;
   }
 
   /** Restore only known, finite mob state; malformed save entries are ignored. */
   loadFrom(entries) {
     this.mobs.length = 0;
+    this.populatedVillages = new Set();
     if (!Array.isArray(entries)) {
       this.nextId = 1;
       return;
     }
-    const valid = entries.slice(0, 128).filter((mob) =>
+    for (const entry of entries) {
+      if (entry?.type === 'village_marker' && typeof entry.villageKey === 'string' && entry.villageKey.length <= 48) {
+        this.populatedVillages.add(entry.villageKey);
+      }
+    }
+    const valid = entries.filter((mob) =>
       mob && MOB_TYPES_112.includes(mob.type) &&
       ['x', 'y', 'z', 'yaw', 'health'].every((key) => Number.isFinite(mob[key])) &&
       mob.y >= -64 && mob.y <= 320 && mob.health > 0 && mob.health <= 2048
-    );
+    ).slice(0, 128);
     for (const mob of valid) {
       this.mobs.push({
         id: Number.isSafeInteger(mob.id) && mob.id > 0 ? mob.id : this.mobs.length + 1,
@@ -232,6 +258,16 @@ export class MobSystem {
         ageTicks: Number.isFinite(mob.ageTicks) ? Math.max(-24000, Math.min(0, mob.ageTicks)) : 0,
         loveTicks: Number.isFinite(mob.loveTicks) ? Math.max(0, Math.min(600, mob.loveTicks)) : 0,
         breedCooldown: Number.isFinite(mob.breedCooldown) ? Math.max(0, Math.min(6000, mob.breedCooldown)) : 0,
+        villageKey: typeof mob.villageKey === 'string' ? mob.villageKey : null,
+        villageSlot: Number.isInteger(mob.villageSlot) && mob.villageSlot >= 0 && mob.villageSlot < 4 ? mob.villageSlot : null,
+        villagerCareer: typeof mob.villagerCareer === 'string' ? mob.villagerCareer : null,
+        villagerProfession: typeof mob.villagerProfession === 'string' ? mob.villagerProfession : null,
+        villagerType: typeof mob.villagerType === 'string' ? mob.villagerType : 'plains',
+        villagerSeed: Number.isSafeInteger(mob.villagerSeed) ? mob.villagerSeed : 1,
+        villagerTier: Number.isFinite(mob.villagerTier) ? Math.max(1, Math.min(5, mob.villagerTier)) : 1,
+        villagerTradeCount: Number.isFinite(mob.villagerTradeCount) ? Math.max(0, mob.villagerTradeCount) : 0,
+        villagerUsedOffers: Array.isArray(mob.villagerUsedOffers) ? mob.villagerUsedOffers.filter((id) => typeof id === 'string').slice(0, 64) : [],
+        villagerOfferUses: mob.villagerOfferUses && typeof mob.villagerOfferUses === 'object' ? mob.villagerOfferUses : {},
         health: mob.health,
         sheared: !!mob.sheared,
         hurtTicks: 0,
@@ -243,9 +279,9 @@ export class MobSystem {
     this.nextId = this.mobs.reduce((next, mob) => Math.max(next, mob.id + 1), 1);
   }
 
-  _spawn(type, x, z) {
+  _spawn(type, x, z, extra = {}) {
     const world = this.game.world;
-    const y = world.getHeight(x, z) + 1;
+    const y = Number.isFinite(extra.y) ? extra.y : world.getHeight(x, z) + 1;
     if (y < -60 || !world.getBlock(x, y - 1, z).block.solid) return false;
     const feet = world.getBlock(x, y, z).block;
     const head = world.getBlock(x, y + 1, z).block;
@@ -257,18 +293,68 @@ export class MobSystem {
       speed: ['zombie','skeleton','stray','spider','creeper'].includes(type) ? 0.035 : type === 'enderman' ? 0.045 : 0.018,
       thinkTicks: 0, attackTicks: 0, walkPhase: Math.random() * 6,
       moveTicks: 0, pauseTicks: 45 + Math.floor(Math.random() * 100),
-      health: ({ zombie:20, skeleton:20, stray:20, creeper:20, enderman:40, spider:16, cow:10, pig:10, chicken:4, sheep:8, mooshroom:10, rabbit:3, wolf:8, polar_bear:30 })[type] ?? 10,
+      health: ({ zombie:20, skeleton:20, stray:20, creeper:20, enderman:40, spider:16, cow:10, pig:10, chicken:4, sheep:8, mooshroom:10, rabbit:3, wolf:8, polar_bear:30, villager:20 })[type] ?? 10,
       sheared: false, hurtTicks: 0, fuseTicks: 0,
       ageTicks: 0, loveTicks: 0, breedCooldown: 0,
       anim: { walk: 0, idle: Math.random() * Math.PI * 2, attack: 0, hurt: 0, fuse: 0 },
+      ...extra,
     });
     return true;
   }
 
 
+  /** Populate nearby generated villages with four persistent residents. */
+  _spawnNearbyVillageResidents() {
+    const world = this.game.world, player = this.game.player;
+    if (!world || !player || world.seed === undefined || world.seed === null) return;
+    if (!this.villageGenerator || this.villageSeed !== String(world.seed)) {
+      this.villageGenerator = new TerrainGenerator(world.seed);
+      this.villageSeed = String(world.seed);
+    }
+    const centerX = Math.floor(player.x / 128), centerZ = Math.floor(player.z / 128);
+    const positions = [[8, 8], [18, 8], [8, 18], [18, 18]];
+    for (let gz = centerZ - 1; gz <= centerZ + 1; gz++) {
+      for (let gx = centerX - 1; gx <= centerX + 1; gx++) {
+        const candidate = villageCandidateForCell(world.seed, gx, gz);
+        if (!candidate) continue;
+        const site = this.villageGenerator.validateVillageSite(candidate.x, candidate.z);
+        if (!site) continue;
+        const villageKey = `${gx},${gz}`;
+        if (this.populatedVillages.has(villageKey)) continue;
+        const residents = this.mobs.filter((mob) => mob.type === 'villager' && mob.villageKey === villageKey);
+        if (residents.length >= 4) { this.populatedVillages.add(villageKey); continue; }
+        const occupied = new Set(residents.map((mob) => mob.villageSlot));
+        for (let slot = 0; slot < positions.length; slot++) {
+          if (occupied.has(slot)) continue;
+          const [ox, oz] = positions[slot];
+          const x = candidate.x + ox, z = candidate.z + oz;
+          if (!world.hasChunk(Math.floor(x / 16), Math.floor(z / 16))) continue;
+          const y = world.getHeight(x, z) + 1;
+          if (Math.abs(y - (site.y + 1)) > 1.1) continue;
+          const profile = createVillagerProfile(world.seed, candidate.x, candidate.z, site.biome, slot);
+          this._spawn('villager', x, z, {
+            ...profile, y, villageKey, villageSlot: slot,
+            speed: 0.018,
+          });
+        }
+        if (this.mobs.filter((mob) => mob.type === 'villager' && mob.villageKey === villageKey).length >= 4) {
+          this.populatedVillages.add(villageKey);
+        }
+      }
+    }
+  }
+
   /** Spawn a supported creature from a creative egg on the clicked block. */
   spawnFromEgg(type, x, z) {
-    if (!['cow','pig','sheep','chicken','mooshroom','rabbit','wolf','polar_bear','zombie','skeleton','stray','creeper','enderman','spider','cave_spider'].includes(type)) return false;
+    if (!['cow','pig','sheep','chicken','mooshroom','rabbit','wolf','polar_bear','zombie','skeleton','stray','creeper','enderman','spider','cave_spider','villager'].includes(type)) return false;
+    if (type === 'villager') {
+      const world = this.game.world;
+      const y = world.getHeight(x, z);
+      const chunk = world.getChunk(Math.floor(x / 16), Math.floor(z / 16));
+      const localX = ((x % 16) + 16) % 16, localZ = ((z % 16) + 16) % 16;
+      const biome = chunk?.getBiome(localX, y, localZ) ?? 'mc:plains';
+      return this._spawn(type, x, z, createVillagerProfile(world.seed, x, z, biome, 0));
+    }
     return this._spawn(type, x, z);
   }
 
@@ -543,6 +629,11 @@ export class MobSystem {
     if (!world || !player) return;
     this._tickDroppedItems();
     this.spawnTicks++;
+    this.villageCheckTicks++;
+    if (this.villageCheckTicks >= 200) {
+      this.villageCheckTicks = 0;
+      this._spawnNearbyVillageResidents();
+    }
     if (this.fishing && !this.fishing.bite) {
       const fishing = this.fishing;
       fishing.elapsed++;
@@ -680,7 +771,7 @@ export class MobSystem {
       }
 
       if (mob.fleeTicks > 0) mob.fleeTicks--;
-      const fleeing = !hostileType && (distance < 4 || mob.fleeTicks > 0);
+      const fleeing = mob.type !== 'villager' && !hostileType && (distance < 4 || mob.fleeTicks > 0);
       if (fleeing) mob.targetYaw = Math.atan2(mob.x - player.x, mob.z - player.z);
 
       // Passive mobs now pause between short wandering bursts instead of
