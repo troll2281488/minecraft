@@ -43,10 +43,12 @@ const UI_TEXTURES = Object.freeze({
   titleLogo: 'gui/title/minecraft.png',
   optionsBackground: 'gui/options_background.png',
   creativeInventory: 'gui/container/creative_inventory/tab_items.png',
+  asciiFont: 'font/ascii.png',
+  europeanFont: 'font/nonlatin_european.png',
 });
 
 async function fetchImage(path) {
-  const response = await fetch(ITSBRIAN_RAW + path, { signal: AbortSignal.timeout(8000) });
+  const response = await fetch(ITSBRIAN_RAW + path, { signal: AbortSignal.timeout(4000) });
   if (!response.ok) return null;
   return createImageBitmap(await response.blob());
 }
@@ -337,6 +339,8 @@ export function setMinecraftUiTextures(textures) {
     titleLogo: '--mc-gui-title-logo',
     optionsBackground: '--mc-gui-options-background',
     creativeInventory: '--mc-gui-creative-inventory',
+    asciiFont: '--mc-font-ascii-atlas',
+    europeanFont: '--mc-font-european-atlas',
   };
   for (const [key, variable] of Object.entries(variables)) {
     if (textures[key]) root.style.setProperty(variable, 'url("' + textures[key] + '")');
