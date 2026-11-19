@@ -36,6 +36,6 @@ const manifest = {
   models: collect(path.join(root, 'minecraft')),
   animations: collect(path.join(root, 'animations')),
 };
-fs.writeFileSync(path.join(root, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\\n');
+fs.writeFileSync(path.join(root, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 console.log(`Prepared ${manifest.models.length} model JSON files and ${manifest.animations.length} animation JSON files.`);
 NODE
