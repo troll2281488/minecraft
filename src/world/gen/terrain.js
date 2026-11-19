@@ -26,7 +26,7 @@ import { CHUNK_SIZE, MIN_Y, MAX_Y, SEA_LEVEL } from '../../core/constants.js';
 import { clamp } from '../../core/math.js';
 
 /** Bumped whenever generation output changes. Stored per world. */
-export const GENERATOR_VERSION = 1;
+export const GENERATOR_VERSION = 2;
 
 
 // ---------------------------------------------------------------------------
@@ -45,6 +45,13 @@ export const BIOME = {
   MOUNTAINS: 'mc:mountains',
   SNOWY_PLAINS: 'mc:snowy_plains',
   TAIGA: 'mc:taiga',
+  BIRCH_FOREST: 'mc:birch_forest',
+  JUNGLE: 'mc:jungle',
+  SAVANNA: 'mc:savanna',
+  SWAMP: 'mc:swampland',
+  DARK_FOREST: 'mc:roofed_forest',
+  GIANT_TREE_TAIGA: 'mc:mega_taiga',
+  BADLANDS: 'mc:mesa',
 };
 
 const BIOME_SURFACE = {
@@ -97,6 +104,7 @@ export class TerrainGenerator {
     this.ridge = new OctaveNoise(root.fork('ridge'), 4, 0.5, 2.0);
     this.temperature = new OctaveNoise(root.fork('temperature'), 3, 0.5, 2.0);
     this.humidity = new OctaveNoise(root.fork('humidity'), 3, 0.5, 2.0);
+    this.biomeDetail = new OctaveNoise(root.fork('biome_detail'), 2, 0.55, 2.0);
     this.density = new OctaveNoise(root.fork('density'), 3, 0.5, 2.0);
     this.caveA = new PerlinNoise(root.fork('cave_a'));
     this.caveB = new PerlinNoise(root.fork('cave_b'));
@@ -138,9 +146,22 @@ export class TerrainGenerator {
 
     const temp = this.temperature.sample2(wx, wz, 0.0012);
     const humid = this.humidity.sample2(wx, wz, 0.0014);
+    const detail = this.biomeDetail.sample2(wx, wz, 0.0021);
 
-    if (temp < -0.35) return humid > 0 ? BIOME.TAIGA : BIOME.SNOWY_PLAINS;
-    if (temp > 0.42 && humid < -0.1) return BIOME.DESERT;
+    // Temperature and rainfall establish the broad climate; a slower detail
+    // field separates neighbouring forest variants without noisy biome speckle.
+    if (temp < -0.48) {
+      if (humid > 0.18 && detail > 0.05) return BIOME.GIANT_TREE_TAIGA;
+      return humid > 0 ? BIOME.TAIGA : BIOME.SNOWY_PLAINS;
+    }
+    if (temp > 0.52 && humid < -0.18) {
+      return detail > 0.25 ? BIOME.BADLANDS : BIOME.DESERT;
+    }
+    if (temp > 0.38 && humid > 0.12) return BIOME.JUNGLE;
+    if (temp > 0.25 && humid < 0.08) return BIOME.SAVANNA;
+    if (humid > 0.32 && temp > -0.05 && temp < 0.45) return BIOME.SWAMP;
+    if (humid > 0.12 && detail > 0.38) return BIOME.DARK_FOREST;
+    if (humid > 0.12 && detail < -0.25) return BIOME.BIRCH_FOREST;
     if (humid > 0.12) return BIOME.FOREST;
     return BIOME.PLAINS;
   }
@@ -368,8 +389,10 @@ export class TerrainGenerator {
             ? (rng.nextBoolean() ? S.byId['mc:poppy'] : S.byId['mc:dandelion'])
             : S.byId['mc:short_grass'];
           if (plant) chunk.setBlock(x, top + 1, z, plant);
-        } else if (surface.deadBush && groundId === 'mc:sand' && rng.nextDouble() < surface.deadBush) {
-          chunk.setBlock(x, top + 1, z, S.byId['mc:dead_bush']);
+        } else if (surface.ferns && groundId === 'mc:grass_block' && rng.nextDouble() < surface.ferns) {
+          if (S.byId['mc:fern']) chunk.setBlock(x, top + 1, z, S.byId['mc:fern']);
+        } else if (surface.deadBush && (groundId === 'mc:sand' || groundId === 'mc:red_sand') && rng.nextDouble() < surface.deadBush) {
+          if (S.byId['mc:dead_bush']) chunk.setBlock(x, top + 1, z, S.byId['mc:dead_bush']);
         }
       }
     }
@@ -446,7 +469,7 @@ function triangularY(rng, minY, maxY, peak) {
 const STONE_REPLACEABLE = new Set([
   'mc:stone', 'mc:granite', 'mc:diorite', 'mc:andesite',
   'mc:dirt', 'mc:grass_block', 'mc:sand', 'mc:gravel', 'mc:coarse_dirt',
-  'mc:snow_block', 'mc:podzol',
+  'mc:snow_block', 'mc:podzol', 'mc:red_sand',
 ]);
 
 /** Resolve block ids to states once, so generation never does a map lookup by string in a loop. */
