@@ -186,6 +186,13 @@ export class UI {
       return slots;
     };
 
+    const screen = $('inventory-screen');
+    screen.onmousedown = (e) => {
+      if (e.target === screen || e.target.classList?.contains('inventory-panel')) {
+        e.preventDefault();
+        handlers.onDropCursor?.();
+      }
+    };
     this.invMainSlots = build($('inv-main'), 27, (i) => SLOT.MAIN_START + i, 'inventory');
     this.invHotbarSlots = build($('inv-hotbar'), 9, (i) => SLOT.HOTBAR_START + i, 'inventory');
     this.craftSlots = build($('craft-grid'), grid.size * grid.size, (i) => i, 'craft');
