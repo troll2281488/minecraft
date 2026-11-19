@@ -26,7 +26,7 @@ import { CHUNK_SIZE, MIN_Y, MAX_Y, SEA_LEVEL } from '../../core/constants.js';
 import { clamp } from '../../core/math.js';
 
 /** Bumped whenever generation output changes. Stored per world. */
-export const GENERATOR_VERSION = 8;
+export const GENERATOR_VERSION = 9;
 
 
 // ---------------------------------------------------------------------------
@@ -56,6 +56,11 @@ export const BIOME = {
   TAIGA:'mc:taiga', SNOWY_TAIGA:'mc:snowy_taiga',
   GIANT_TREE_TAIGA:'mc:mega_taiga', GIANT_SPRUCE_TAIGA:'mc:giant_spruce_taiga',
   SWAMP:'mc:swampland', MUSHROOM_FIELDS:'mc:mushroom_island',
+  DESERT_HILLS:'mc:desert_hills', FOREST_HILLS:'mc:forest_hills', TAIGA_HILLS:'mc:taiga_hills',
+  EXTREME_HILLS_EDGE:'mc:extreme_hills_edge', EXTREME_HILLS_PLUS:'mc:extreme_hills_plus',
+  JUNGLE_HILLS:'mc:jungle_hills', JUNGLE_EDGE:'mc:jungle_edge', BIRCH_FOREST_HILLS:'mc:birch_forest_hills',
+  COLD_TAIGA:'mc:cold_taiga', COLD_TAIGA_HILLS:'mc:cold_taiga_hills',
+  MEGA_TAIGA_HILLS:'mc:mega_taiga_hills', MESA_PLATEAU:'mc:mesa_clear_rock', MESA_PLATEAU_F:'mc:mesa_rock',
 };
 
 export const BIOME_SURFACE = {
@@ -100,6 +105,19 @@ export const BIOME_SURFACE = {
   [BIOME.GIANT_SPRUCE_TAIGA]: { top:'mc:podzol', filler:'mc:dirt', trees:0.072, grass:0.1, species:'spruce' },
   [BIOME.SWAMP]: { top:'mc:clay', filler:'mc:dirt', trees:0.035, grass:0.12, species:'oak', ferns:0.06 },
   [BIOME.MUSHROOM_FIELDS]: { top:'mc:mycelium', filler:'mc:dirt', trees:0.002, grass:0.02, mushrooms:0.13 },
+  [BIOME.DESERT_HILLS]: { top:'mc:sand', filler:'mc:sand', trees:0, grass:0, deadBush:0.025 },
+  [BIOME.FOREST_HILLS]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.06, grass:0.15, species:'oak' },
+  [BIOME.TAIGA_HILLS]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.055, grass:0.12, species:'spruce' },
+  [BIOME.EXTREME_HILLS_EDGE]: { top:'mc:stone', filler:'mc:stone', trees:0.006, grass:0.035, species:'oak' },
+  [BIOME.EXTREME_HILLS_PLUS]: { top:'mc:stone', filler:'mc:stone', trees:0.008, grass:0.02, species:'oak' },
+  [BIOME.JUNGLE_HILLS]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.078, grass:0.18, species:'jungle', ferns:0.22 },
+  [BIOME.JUNGLE_EDGE]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.028, grass:0.16, species:'jungle', ferns:0.08 },
+  [BIOME.BIRCH_FOREST_HILLS]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.07, grass:0.14, species:'birch' },
+  [BIOME.COLD_TAIGA]: { top:'mc:snow_block', filler:'mc:dirt', trees:0.046, grass:0, species:'spruce' },
+  [BIOME.COLD_TAIGA_HILLS]: { top:'mc:snow_block', filler:'mc:dirt', trees:0.052, grass:0, species:'spruce' },
+  [BIOME.MEGA_TAIGA_HILLS]: { top:'mc:podzol', filler:'mc:dirt', trees:0.068, grass:0.1, species:'spruce' },
+  [BIOME.MESA_PLATEAU]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0, grass:0, deadBush:0.01 },
+  [BIOME.MESA_PLATEAU_F]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0.006, grass:0.01, species:'oak', deadBush:0.01 },
 };
 
 // ---------------------------------------------------------------------------
@@ -209,7 +227,8 @@ export class TerrainGenerator {
       if (temp < -0.48) return BIOME.SNOWY_BEACH;
       return detail > 0.68 ? BIOME.STONE_SHORE : BIOME.BEACH;
     }
-    if (height > SEA_LEVEL + 42) return detail > 0.2 ? BIOME.WINDSWEPT_HILLS : BIOME.MOUNTAINS;
+    if (height > SEA_LEVEL + 42) return detail > 0.2 ? BIOME.EXTREME_HILLS_PLUS : BIOME.MOUNTAINS;
+    if (height > SEA_LEVEL + 30 && detail > 0.48) return BIOME.EXTREME_HILLS_EDGE;
 
     // Mushroom islands are deliberately scarce, isolated climate pockets.
     if (humid > 0.12 && rare > 0.79 && detail > -0.15) return BIOME.MUSHROOM_FIELDS;
@@ -218,16 +237,16 @@ export class TerrainGenerator {
     // uncommon variants, while giant conifer forests remain a rarer subregion.
     if (temp < -0.48) {
       if (rare > 0.72 && detail > 0.2) return BIOME.ICE_SPIKES;
-      if (humid > 0.12 && rare < -0.42) return BIOME.GIANT_SPRUCE_TAIGA;
-      if (humid > -0.05) return rare > 0.38 ? BIOME.SNOWY_TAIGA : BIOME.TAIGA;
+      if (humid > 0.12 && rare < -0.42) return detail > 0.35 ? BIOME.MEGA_TAIGA_HILLS : BIOME.GIANT_SPRUCE_TAIGA;
+      if (humid > -0.05) return rare > 0.38 ? BIOME.COLD_TAIGA_HILLS : BIOME.COLD_TAIGA;
       return BIOME.SNOWY_PLAINS;
     }
 
     // Hot and dry lowlands are primarily savanna. True deserts and
     // badlands are reserved for the driest climate pockets.
     if (temp > 0.12 && humid < 0.2) {
-      if (humid < -0.48 && rare > 0.78) return detail > 0.35 ? BIOME.ERODED_BADLANDS : BIOME.BADLANDS;
-      if (humid < -0.14 && rare > 0.22) return BIOME.DESERT;
+      if (humid < -0.48 && rare > 0.78) return detail > 0.35 ? BIOME.ERODED_BADLANDS : (detail < -0.35 ? BIOME.MESA_PLATEAU : BIOME.BADLANDS);
+      if (humid < -0.14 && rare > 0.22) return detail > 0.55 ? BIOME.DESERT_HILLS : BIOME.DESERT;
       return detail > 0.58 && rare > 0.55 ? BIOME.SAVANNA_PLATEAU : BIOME.SAVANNA;
     }
 
@@ -235,6 +254,8 @@ export class TerrainGenerator {
     // as a less common sub-biome.
     if (temp > 0.48 && humid > 0.2) {
       if (rare > 0.72) return BIOME.BAMBOO_JUNGLE;
+      if (detail > 0.62) return BIOME.JUNGLE_HILLS;
+      if (rare < -0.25) return BIOME.JUNGLE_EDGE;
       return detail > 0.42 ? BIOME.SPARSE_JUNGLE : BIOME.JUNGLE;
     }
     if (humid > 0.42 && temp > -0.08 && temp < 0.46) return BIOME.SWAMP;
@@ -243,8 +264,8 @@ export class TerrainGenerator {
     // birch forest, flower forest, plains and a smaller share of oak forest.
     if (temp > -0.42 && temp < 0.58) {
       if (humid > 0.08) {
-        if (rare < -0.08) return BIOME.BIRCH_FOREST;
-        if (detail > 0.7 && rare < 0.16) return BIOME.FOREST;
+        if (rare < -0.08) return detail > 0.25 ? BIOME.BIRCH_FOREST_HILLS : BIOME.BIRCH_FOREST;
+        if (detail > 0.7 && rare < 0.16) return BIOME.FOREST_HILLS;
         return BIOME.FLOWER_FOREST;
       }
       if (rare > 0.72) return BIOME.SUNFLOWER_PLAINS;
