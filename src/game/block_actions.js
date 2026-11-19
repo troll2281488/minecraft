@@ -45,6 +45,7 @@ export const BlockActionsMixin = {
       if (this.inventory.held.item?.tool) this.inventory.damageHeld(1);
     }
 
+    this.sounds?.play('break', state.block.soundGroup || 'stone');
     this.world.setBlock(x, y, z, AIR.defaultState);
     this.multiplayer?.pushBlockChange(x, y, z, AIR.defaultState);
     this.mining.reset();
@@ -52,6 +53,19 @@ export const BlockActionsMixin = {
 
   _useOrPlace() {
     const heldItem = this.inventory?.held?.item;
+    // Right-click equips armour directly from the selected hotbar stack.
+    if (heldItem?.armorSlot && this.player?.gamemode === GAMEMODE.SURVIVAL) {
+      const slots = { boots: 36, leggings: 37, chestplate: 38, helmet: 39 };
+      const slot = slots[heldItem.armorSlot];
+      if (slot !== undefined && this.inventory.get(slot).isEmpty) {
+        const equipped = this.inventory.held;
+        this.inventory.set(slot, new ItemStack(equipped.item, 1, equipped.damage, equipped.data));
+        this.inventory.consumeHeld(1);
+        this.sounds?.play('equip');
+        this.ui.toast('Надето: ' + heldItem.armorSlot);
+      }
+      return;
+    }
     if (heldItem?.spawnEggMob && this.player?.gamemode === GAMEMODE.CREATIVE && this.hit) {
       const spawned = this.entities?.spawnFromEgg(heldItem.spawnEggMob, this.hit.x, this.hit.z);
       if (spawned) this.ui.toast(`Spawned ${heldItem.spawnEggMob}`);
@@ -152,6 +166,7 @@ export const BlockActionsMixin = {
 
     const state = orientPlacement(block, this.player, this.hit);
     if (!this.world.setBlock(target.x, target.y, target.z, state)) return;
+    this.sounds?.play('place', block.soundGroup || 'stone');
     this.multiplayer?.pushBlockChange(target.x, target.y, target.z, state);
 
     if (this.player.gamemode !== GAMEMODE.CREATIVE) this.inventory.consumeHeld(1);
