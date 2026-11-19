@@ -48,6 +48,41 @@ export async function loadEntityModelPack() {
     loadAll(manifest.animations, animations),
   ]);
 
+  const toLegacyParts = (id, color = [0.55, 0.48, 0.40, 1]) => {
+    const model = models.get(id.startsWith('minecraft:') ? id : `minecraft:${id}`);
+    const root = model?.layers?.main?.root;
+    if (!root) return null;
+    const parts = [];
+    const legIndices = new Set();
+    const visit = (bone, parentOffset = [0, 0, 0], boneName = 'root') => {
+      const pose = bone.pose ?? {};
+      const offset = [
+        parentOffset[0] + (pose.offset?.[0] ?? 0),
+        parentOffset[1] + (pose.offset?.[1] ?? 0),
+        parentOffset[2] + (pose.offset?.[2] ?? 0),
+      ];
+      for (const cube of bone.cubes ?? []) {
+        const origin = cube.origin ?? [0, 0, 0];
+        const size = cube.size ?? [0, 0, 0];
+        const center = [
+          offset[0] + origin[0] + size[0] / 2,
+          offset[1] + origin[1] + size[1] / 2,
+          offset[2] + origin[2] + size[2] / 2,
+        ];
+        const index = parts.length;
+        parts.push([
+          [center[0] / 16, (24 - center[1]) / 16, -center[2] / 16],
+          [size[0] / 16, size[1] / 16, size[2] / 16],
+          color,
+        ]);
+        if (/leg|foot|wing/i.test(boneName)) legIndices.add(index);
+      }
+      for (const [name, child] of Object.entries(bone.children ?? {})) visit(child, offset, name);
+    };
+    visit(root);
+    return parts.length ? { parts, legIndices } : null;
+  };
+
   return Object.freeze({
     source: manifest.source,
     commit: manifest.commit,
@@ -55,6 +90,7 @@ export async function loadEntityModelPack() {
     models,
     animations,
     getModel(id) { return models.get(id.startsWith('minecraft:') ? id : `minecraft:${id}`) ?? null; },
+    toLegacyParts,
     getAnimations(id) { return animations.get(id.startsWith('minecraft:') ? id : `minecraft:${id}`) ?? null; },
   });
 }
