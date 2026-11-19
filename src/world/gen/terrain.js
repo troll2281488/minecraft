@@ -225,9 +225,9 @@ export class TerrainGenerator {
 
     // Hot and dry lowlands are primarily savanna. True deserts and
     // badlands are reserved for the driest climate pockets.
-    if (temp > 0.16 && humid < 0.18) {
-      if (humid < -0.5 && rare > 0.82) return detail > 0.35 ? BIOME.ERODED_BADLANDS : BIOME.BADLANDS;
-      if (humid < -0.42 && rare > 0.32) return BIOME.DESERT;
+    if (temp > 0.12 && humid < 0.2) {
+      if (humid < -0.48 && rare > 0.78) return detail > 0.35 ? BIOME.ERODED_BADLANDS : BIOME.BADLANDS;
+      if (humid < -0.14 && rare > 0.22) return BIOME.DESERT;
       return detail > 0.58 && rare > 0.55 ? BIOME.SAVANNA_PLATEAU : BIOME.SAVANNA;
     }
 
