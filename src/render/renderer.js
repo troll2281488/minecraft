@@ -209,7 +209,7 @@ vec4 mobSample(){
 vec4 itemSample(){ vec2 uv; bool front=vNormal.z>0.5, back=vNormal.z< -0.5, right=vNormal.x>0.5, left=vNormal.x< -0.5, top=vNormal.y>0.5; if(front) uv=vec2(vLocalPos.x,1.0-vLocalPos.y); else if(back) uv=vec2(1.0-vLocalPos.x,1.0-vLocalPos.y); else if(right) uv=vec2(1.0-vLocalPos.z,1.0-vLocalPos.y); else if(left) uv=vec2(vLocalPos.z,1.0-vLocalPos.y); else if(top) uv=vec2(vLocalPos.x,vLocalPos.z); else uv=vec2(vLocalPos.x,1.0-vLocalPos.z); return texture(uMobTexture,uv);}
 void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
   if(uSkinPart>=0.0){ vec4 texel=skinSample(); color=texel.rgb; if(texel.a<0.1) discard; }
-  else if(uItemSprite>0.5){ if(vNormal.z< -0.5) discard; if(vNormal.z>0.5){ vec4 texel=itemSample(); color=texel.rgb; if(texel.a<0.1) discard; } else { discard; } }
+  else if(uItemSprite>0.5){ vec4 texel=itemSample(); color=texel.rgb; if(texel.a<0.1) discard; }
   else if(uMobEnabled>0.5){ vec4 texel=mobSample(); color=texel.rgb*uColor.rgb; if(texel.a<0.1) discard; }
   else { float patchValue=mod(cell.x*3.0+cell.y*5.0+cell.z*7.0,11.0); color*=mix(0.80,1.08,step(3.0,patchValue)); }
   float pixel=0.94+mod(cell.x+cell.y+cell.z,2.0)*0.06; fragColor=vec4(color*vLight*pixel,uColor.a);
@@ -440,7 +440,6 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     gl.disable(gl.DEPTH_TEST);
     gl.uniform3f(uniforms.uTopColor, 0.25 * daylight, 0.45 * daylight, 0.95 * daylight);
     gl.uniform3f(uniforms.uHorizonColor, 0.62 * daylight, 0.76 * daylight, 0.95 * daylight);
-    gl.uniform1f(uniforms.uDaylight, daylight);
     gl.bindVertexArray(this.skyVao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.bindVertexArray(null);
@@ -734,7 +733,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       }
       if (!entry.ready) continue;
       const isBlock = !!drop.stack.item.block;
-      const size = isBlock ? [0.19,0.19,0.19] : /sword|pickaxe|axe|shovel|hoe/.test(id) ? [0.065,0.30,0.045] : [0.18,0.14,0.045];
+      const size = isBlock ? [0.34,0.34,0.34] : /sword|pickaxe|axe|shovel|hoe/.test(id) ? [0.14,0.42,0.07] : [0.30,0.24,0.07];
       const phase = drop.spin ?? (drop.age || 0) * 0.08;
       draw(drop.x, drop.y + 0.08, drop.z, phase, [
         [[0,0,0],size,[1,1,1,1]],
@@ -844,8 +843,16 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       // block items are rendered as volumetric cubes using that same source art.
       const held = this.inventory?.held;
       const itemView = document.getElementById('held-item-view');
-      itemView?.classList.add('hidden');
-      if (itemView) itemView.removeAttribute('src');
+      if (itemView) {
+        const heldIcon = held && !held.isEmpty && held.item ? this.ui.icons.get(held.item.id) : null;
+        if (heldIcon) {
+          if (itemView.src !== new URL(heldIcon, document.baseURI).href) itemView.src = heldIcon;
+          itemView.classList.remove('hidden');
+        } else {
+          itemView.classList.add('hidden');
+          itemView.removeAttribute('src');
+        }
+      }
       if (held && !held.isEmpty && held.item) {
         const id = held.item.id;
         const icon = this.ui.icons.get(id);
@@ -862,7 +869,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           };
           image.src = icon;
         }
-        if (this.heldItemTextureReady) {
+        if (false && this.heldItemTextureReady) {
           const isBlock = !!held.item.block;
           const size = isBlock ? [0.135, 0.135, 0.135] : [0.16, 0.27, 0.025];
           const itemParts = [[[0, 0, 0], size, [1, 1, 1, 1], null, null, [0.22, 0, -0.42]]];
