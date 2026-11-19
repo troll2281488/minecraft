@@ -77,6 +77,14 @@ export const InputMixin = {
       this.mining.reset();
     });
 
+    // Ask for confirmation only when the browser is actually leaving/reloading
+    // the active world. Modifier shortcuts by themselves never trigger this.
+    window.addEventListener('beforeunload', (event) => {
+      if (!this.running) return;
+      event.preventDefault();
+      event.returnValue = '';
+    });
+
     window.addEventListener('resize', () => this._resize());
     this._resize();
   },
@@ -213,7 +221,7 @@ export const InputMixin = {
     };
     if (!command) return;
     if (command === 'help' || command === '?') {
-      reply('Команды: /gamemode creative|survival|spectator · /give <предмет> [кол-во] · /tp <x> <y> <z> · /setblock <x> <y> <z> <блок> · /time set day|night · /time add <тики> · /heal · /fly · /spawn · /save · /seed · /whereami');
+      reply('Команды: /gamemode creative|survival|spectator · /give <предмет> [кол-во] · /tp <игрок> или /tp <x> <y> <z> · /setblock <x> <y> <z> <блок> · /time set day|night · /time add <тики> · /heal · /fly · /spawn · /save · /seed · /whereami');
       return;
     }
     if (command === 'save') {
@@ -252,6 +260,34 @@ export const InputMixin = {
       reply(`Режим игры: ${this.player.gamemode}`);
       return;
     }
+    if (command === 'tp' || command === 'teleport') {
+      // /tp <player> resolves a connected player in the current room.
+      if (args.length === 1 && !Number.isFinite(Number(args[0]))) {
+        const query = args[0].toLowerCase();
+        const players = [...(this.multiplayer?.remotePlayers?.values() || [])];
+        const target = query === '@p'
+          ? players.sort((a, b) => Math.hypot(a.x - this.player.x, a.z - this.player.z) - Math.hypot(b.x - this.player.x, b.z - this.player.z))[0]
+          : players.find((p) => p.name.toLowerCase() === query) ||
+            players.find((p) => p.name.toLowerCase().includes(query));
+        if (!target) {
+          reply(`Игрок «${args[0]}» не найден в этой комнате. Проверь, что он подключён.`, true);
+          return;
+        }
+        this.player.teleport(target.x, target.y, target.z);
+        this.world.requestAround(this.player.x, this.player.z, this.renderDistance, 12);
+        reply(`Телепортировано к игроку ${target.name}`);
+        return;
+      }
+      const coords = args.slice(0, 3).map(Number);
+      if (coords.length !== 3 || !coords.every(Number.isFinite) || Math.abs(coords[0]) > 30000000 || Math.abs(coords[2]) > 30000000 || coords[1] < -64 || coords[1] > 320) {
+        reply('Использование: /tp <игрок> или /tp <x> <y> <z>', true); return;
+      }
+      this.player.teleport(coords[0] + 0.5, coords[1], coords[2] + 0.5);
+      this.world.requestAround(this.player.x, this.player.z, this.renderDistance, 12);
+      reply(`Телепорт: ${coords.join(' ')}`);
+      return;
+    }
+
     if (this.player.gamemode !== GAMEMODE.CREATIVE) {
       reply('Команды тестирования доступны в творческом режиме. Введи /gamemode creative.', true);
       return;
@@ -263,16 +299,6 @@ export const InputMixin = {
       if (!ITEMS.get(id)) { reply(`Неизвестный предмет: ${id}`, true); return; }
       const leftover = this.inventory.addItem(id, count);
       reply(`Выдано ${count - leftover}/${count}: ${id}${leftover ? ` (не поместилось: ${leftover})` : ''}`);
-      return;
-    }
-    if (command === 'tp' || command === 'teleport') {
-      const coords = args.slice(0, 3).map(Number);
-      if (coords.length !== 3 || !coords.every(Number.isFinite) || Math.abs(coords[0]) > 30000000 || Math.abs(coords[2]) > 30000000 || coords[1] < -64 || coords[1] > 320) {
-        reply('Использование: /tp <x> <y> <z>', true); return;
-      }
-      this.player.teleport(coords[0] + 0.5, coords[1], coords[2] + 0.5);
-      this.world.requestAround(this.player.x, this.player.z, this.renderDistance, 12);
-      reply(`Телепорт: ${coords.join(' ')}`);
       return;
     }
     if (command === 'time') {
