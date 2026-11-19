@@ -3,7 +3,7 @@ import '../src/world/blocks/index.js';
 import { TerrainGenerator, mineshaftCandidateForCell, dungeonCandidateForCell } from '../src/world/gen/terrain.js';
 import { Chunk } from '../src/world/chunk.js';
 
-describe('Overworld underground structures', () => {
+describe('Overworld underground structures and deterministic placement', () => {
   it('places stable mineshaft and dungeon candidates from the world seed', () => {
     const a = mineshaftCandidateForCell('deep-world', -3, 7);
     const b = mineshaftCandidateForCell('deep-world', -3, 7);
