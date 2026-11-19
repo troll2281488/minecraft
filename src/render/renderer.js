@@ -735,7 +735,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         mobType: mob.type, mobTextureKey: mob.type,
         idle: mob.anim?.idle ?? 0, walking: !!mob.anim?.walking,
       });
-      if (mob.type === 'sheep' && vanillaModel?.layers?.fur) {
+      if (mob.type === 'sheep' && !mob.sheared && vanillaModel?.layers?.fur) {
         const furParts = vanillaLayerParts(vanillaModel, 'fur');
         if (furParts) draw(mob.x, mob.y, mob.z, mob.yaw + Math.PI, furParts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
           hurt: (mob.hurtTicks || 0) > 0, animal: true, vanillaModel: true,
