@@ -27,4 +27,10 @@ download "enderman/enderman.png" "enderman.png"
 download "spider/spider.png" "spider.png"
 download "spider/cave_spider.png" "cave_spider.png"
 
+# Vanilla villager base + career overlays (composited at runtime by the renderer).
+download "villager/villager.png" "villager.png"
+for career in farmer fisherman shepherd fletcher librarian cleric armorer toolsmith weaponsmith butcher leatherworker nitwit; do
+  download "villager/profession/$career.png" "villager_$career.png"
+done
+
 echo "Downloaded $(find "$OUT" -maxdepth 1 -name '*.png' | wc -l) mob skins."
