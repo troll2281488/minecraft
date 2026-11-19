@@ -1,12 +1,23 @@
 import '../src/world/blocks/index.js';
 import { describe, it, assert, assertEqual } from './framework.js';
 import { Inventory } from '../src/game/inventory.js';
+import { ITEMS } from '../src/world/item.js';
 import {
   VILLAGER_CAREERS, createVillagerProfile, getVillagerOffers, executeVillagerTrade,
 } from '../src/entity/villager_trades.js';
 import { MobSystem } from '../src/entity/mobs.js';
 
 describe('Pre-1.14 villager careers', () => {
+  it('references only registered trade items', () => {
+    for (const [careerKey, career] of Object.entries(VILLAGER_CAREERS)) {
+      for (const entry of career.offers) {
+        assert(ITEMS.get(entry.input), `${careerKey} missing input ${entry.input}`);
+        assert(ITEMS.get(entry.output), `${careerKey} missing output ${entry.output}`);
+        if (entry.input2) assert(ITEMS.get(entry.input2), `${careerKey} missing second input ${entry.input2}`);
+      }
+    }
+  });
+
   it('provides fixed careers and deterministic spawn profiles', () => {
     assert(Object.keys(VILLAGER_CAREERS).includes('farmer'));
     assert(Object.keys(VILLAGER_CAREERS).includes('librarian'));
