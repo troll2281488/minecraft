@@ -209,7 +209,7 @@ vec4 mobSample(){
 vec4 itemSample(){ vec2 uv; bool front=vNormal.z>0.5, back=vNormal.z< -0.5, right=vNormal.x>0.5, left=vNormal.x< -0.5, top=vNormal.y>0.5; if(front) uv=vec2(vLocalPos.x,1.0-vLocalPos.y); else if(back) uv=vec2(1.0-vLocalPos.x,1.0-vLocalPos.y); else if(right) uv=vec2(1.0-vLocalPos.z,1.0-vLocalPos.y); else if(left) uv=vec2(vLocalPos.z,1.0-vLocalPos.y); else if(top) uv=vec2(vLocalPos.x,vLocalPos.z); else uv=vec2(vLocalPos.x,1.0-vLocalPos.z); return texture(uMobTexture,uv);}
 void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
   if(uSkinPart>=0.0){ vec4 texel=skinSample(); color=texel.rgb; if(texel.a<0.1) discard; }
-  else if(uItemSprite>0.5){ if(vNormal.z<0.5) discard; vec4 texel=itemSample(); color=texel.rgb; if(texel.a<0.1) discard; }
+  else if(uItemSprite>0.5){ if(vNormal.z< -0.5) discard; if(vNormal.z>0.5){ vec4 texel=itemSample(); color=texel.rgb; if(texel.a<0.1) discard; } else { color=uColor.rgb*0.42; } }
   else if(uMobEnabled>0.5){ vec4 texel=mobSample(); color=texel.rgb; if(texel.a<0.1) discard; }
   else { float patchValue=mod(cell.x*3.0+cell.y*5.0+cell.z*7.0,11.0); color*=mix(0.80,1.08,step(3.0,patchValue)); }
   float pixel=0.94+mod(cell.x+cell.y+cell.z,2.0)*0.06; fragColor=vec4(color*vLight*pixel,uColor.a);
