@@ -1,11 +1,46 @@
 import { describe, it, assert, assertEqual } from './framework.js';
 import '../src/world/blocks/index.js';
-import { TerrainGenerator, mineshaftCandidateForCell, dungeonCandidateForCell } from '../src/world/gen/terrain.js';
+import { TerrainGenerator, caveLakeCandidateForCell, mineshaftCandidateForCell, dungeonCandidateForCell } from '../src/world/gen/terrain.js';
 import { Chunk } from '../src/world/chunk.js';
 import { BLOCKS } from '../src/world/block.js';
 import { buildTextures, buildBlockTextureTable } from '../src/render/atlas.js';
 
 describe('Overworld underground structures and deterministic placement', () => {
+  it('places stable flooded-cave candidates from the world seed', () => {
+    const a = caveLakeCandidateForCell('cave-water-world', -2, 3);
+    const b = caveLakeCandidateForCell('cave-water-world', -2, 3);
+    assertEqual(JSON.stringify(a), JSON.stringify(b));
+    let found = 0;
+    for (let z = -12; z <= 12; z++) for (let x = -12; x <= 12; x++) {
+      if (caveLakeCandidateForCell('cave-water-world', x, z)) found++;
+    }
+    assert(found > 0, 'cave lake spacing produced no candidates');
+  });
+
+  it('carves a flooded chamber using registered block textures', () => {
+    const generator = new TerrainGenerator('cave-lake-build-test');
+    const chunk = new Chunk(0, 0);
+    const stone = BLOCKS.get('mc:stone').defaultState;
+    for (let y = 10; y <= 30; y++) {
+      for (let z = 0; z < 16; z++) for (let x = 0; x < 16; x++) {
+        chunk.setBlock(x, y, z, stone);
+      }
+    }
+    generator.placeCaveLake(chunk, 0, 0, { x: 8, z: 8, y: 18, radius: 5 });
+    assertEqual(chunk.getBlock(8, 18, 8).block.id, 'mc:water');
+    assertEqual(chunk.getBlock(8, 22, 8).block.id, 'mc:air');
+    assertEqual(chunk.getBlock(8, 17, 8).block.id, 'mc:gravel');
+    const atlas = buildTextures();
+    const table = buildBlockTextureTable(BLOCKS, atlas.index);
+    const missing = atlas.index.get('__missing');
+    for (const id of ['mc:water', 'mc:gravel']) {
+      const state = BLOCKS.get(id).defaultState;
+      for (let face = 0; face < 6; face++) {
+        assert(table[state.id * 6 + face] !== missing, id + ' face ' + face + ' uses missing texture');
+      }
+    }
+  });
+
   it('places stable mineshaft and dungeon candidates from the world seed', () => {
     const a = mineshaftCandidateForCell('deep-world', -3, 7);
     const b = mineshaftCandidateForCell('deep-world', -3, 7);
