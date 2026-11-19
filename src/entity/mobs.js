@@ -341,6 +341,7 @@ export class MobSystem {
         bite: false,
         window: 0,
         elapsed: 0,
+        castProgress: 0,
         approachAt: 48,
         fishX: target.x + side.x * approachDistance,
         fishZ: target.z + side.z * approachDistance,
@@ -524,6 +525,7 @@ export class MobSystem {
     if (this.fishing && !this.fishing.bite) {
       const fishing = this.fishing;
       fishing.elapsed++;
+      fishing.castProgress = Math.min(1, (fishing.castProgress ?? 0) + 1 / 12);
       fishing.ticks--;
       if (fishing.ticks <= fishing.approachAt) {
         fishing.approach = Math.min(1, (fishing.approach || 0) + 1 / 38);
