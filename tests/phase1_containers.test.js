@@ -3,6 +3,8 @@ import { describe, it, assert, assertEqual } from './framework.js';
 import { ItemStack } from '../src/world/item.js';
 import { Chest, Furnace, SMELT_TICKS, CHEST_SLOTS, serializeContainer, deserializeContainer, drainContainer } from '../src/game/containers.js';
 import { RECIPES } from '../src/game/recipes.js';
+import { ContainerScreensMixin } from '../src/game/container_screens.js';
+import { TerrainGenerator, dungeonCandidateForCell, villageCandidateForCell } from '../src/world/gen/terrain.js';
 
 /**
  * Chest and furnace rules from the 1.12.2 reference (docs/TARGET_1_12_2.md, sections 11 and 17).
@@ -131,6 +133,56 @@ describe('Container save data', () => {
     });
     assertEqual(restored.data.burnLeft, 100);
     assertEqual(restored.data.cookProgress, SMELT_TICKS - 1);
+  });
+});
+
+
+describe('Generated structure chest loot', () => {
+  it('fills dungeon chests deterministically and leaves ordinary chests empty', () => {
+    const seed = 'generated-dungeon-loot';
+    let room = null;
+    for (let gz = -20; gz <= 20 && !room; gz++) {
+      for (let gx = -20; gx <= 20 && !room; gx++) room = dungeonCandidateForCell(seed, gx, gz);
+    }
+    assert(room, 'test seed did not produce a dungeon');
+    const position = [room.x + 1, room.y + 1, room.z + 1];
+    const makeContext = () => ({
+      world: { seed },
+      _containers: new Map(),
+      _containerKey: (x, y, z) => `${x},${y},${z}`,
+    });
+    const first = ContainerScreensMixin._chestAt.call(makeContext(), ...position);
+    const second = ContainerScreensMixin._chestAt.call(makeContext(), ...position);
+    assert(first.slots.some((stack) => !stack.isEmpty), 'generated dungeon chest is empty');
+    assertEqual(
+      JSON.stringify(first.slots.map((stack) => stack.toJSON())),
+      JSON.stringify(second.slots.map((stack) => stack.toJSON())),
+      'same seed and chest position must produce identical loot',
+    );
+    const ordinary = ContainerScreensMixin._chestAt.call(makeContext(), 100000, 120, 100000);
+    assert(ordinary.slots.every((stack) => stack.isEmpty), 'player-placed chest should start empty');
+  });
+
+  it('fills the village pantry chest with food and supplies', () => {
+    const seed = 'generated-village-pantry';
+    const generator = new TerrainGenerator(seed);
+    let pantry = null;
+    for (let gz = -24; gz <= 24 && !pantry; gz++) {
+      for (let gx = -24; gx <= 24 && !pantry; gx++) {
+        const village = villageCandidateForCell(seed, gx, gz);
+        if (!village) continue;
+        const site = generator.validateVillageSite(village.x, village.z);
+        if (site) pantry = [village.x + 4, site.y + 2, village.z + 13];
+      }
+    }
+    assert(pantry, 'test seed did not produce a village site');
+    const context = {
+      world: { seed },
+      _containers: new Map(),
+      _containerKey: (x, y, z) => `${x},${y},${z}`,
+    };
+    const chest = ContainerScreensMixin._chestAt.call(context, ...pantry);
+    assert(chest.slots.some((stack) => !stack.isEmpty), 'village pantry chest is empty');
   });
 });
 
