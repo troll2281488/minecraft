@@ -129,6 +129,7 @@ export class MobSystem {
         health: mob.health,
         sheared: !!mob.sheared,
         hurtTicks: 0,
+        knockbackX: 0, knockbackZ: 0,
         fuseTicks: Number.isFinite(mob.fuseTicks) ? Math.max(0, Math.min(30, mob.fuseTicks)) : 0,
         anim: { walk: 0, idle: 0, attack: 0, hurt: 0, fuse: 0 },
       });
@@ -350,8 +351,10 @@ export class MobSystem {
     const dx = mob.x - player.x;
     const dz = mob.z - player.z;
     const length = Math.max(0.01, Math.hypot(dx, dz));
-    mob.x += dx / length * 0.12;
-    mob.z += dz / length * 0.12;
+    // A visible hit impulse: mobs slide away for several ticks instead of
+    // receiving a single tiny position nudge that their AI immediately cancels.
+    mob.knockbackX = (dx / length) * 0.34;
+    mob.knockbackZ = (dz / length) * 0.34;
     if (mob.health <= 0) {
       for (const drop of rollMobDrops(mob.type)) {
         const leftover = this.game.inventory?.addItem(drop.id, drop.count) ?? drop.count;
@@ -457,13 +460,17 @@ export class MobSystem {
       const speed = hostile ? (mob.type === 'spider' ? 0.052 : mob.speed) : fleeing ? 0.045 : mob.speed;
       mob.yaw += Math.atan2(Math.sin(mob.targetYaw - mob.yaw), Math.cos(mob.targetYaw - mob.yaw)) * 0.12;
       if (!creeperNear && !endermanWater) {
-        const nx = mob.x + Math.sin(mob.yaw) * speed;
-        const nz = mob.z + Math.cos(mob.yaw) * speed;
+        const nx = mob.x + Math.sin(mob.yaw) * speed + (mob.knockbackX || 0);
+        const nz = mob.z + Math.cos(mob.yaw) * speed + (mob.knockbackZ || 0);
         const ground = world.getHeight(Math.floor(nx), Math.floor(nz));
         if (ground > -60 && world.getBlock(Math.floor(nx), ground, Math.floor(nz)).block.solid) {
           mob.x = nx; mob.z = nz;
           mob.y += (ground + 1 - mob.y) * 0.35;
         }
+        mob.knockbackX = (mob.knockbackX || 0) * 0.72;
+        mob.knockbackZ = (mob.knockbackZ || 0) * 0.72;
+        if (Math.abs(mob.knockbackX) < 0.006) mob.knockbackX = 0;
+        if (Math.abs(mob.knockbackZ) < 0.006) mob.knockbackZ = 0;
       }
       mob.walkPhase += speed * (hostile ? 12 : 8);
       mob.anim.walk = mob.walkPhase;
