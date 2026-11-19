@@ -36,6 +36,22 @@ describe('Overworld biome expansion', () => {
     }
   });
 
+  it('spreads common biomes across a broad region instead of one forest blanket', () => {
+    const generator = new TerrainGenerator('biome-distribution-regression');
+    const counts = new Map();
+    let total = 0;
+    for (let x = -2048; x <= 2048; x += 256) {
+      for (let z = -2048; z <= 2048; z += 256) {
+        const height = generator.heightAt(x, z);
+        const biome = generator.biomeAt(x, z, height);
+        counts.set(biome, (counts.get(biome) || 0) + 1);
+        total++;
+      }
+    }
+    assert(counts.size >= 7, `biome map is too uniform: only ${counts.size} biomes in sample`);
+    assert((counts.get(BIOME.FOREST) || 0) / total < 0.55, 'oak forest dominates the sampled world');
+  });
+
   it('generates a chunk with registered blocks and a populated biome palette', () => {
     const generator = new TerrainGenerator(123456789);
     const chunk = generator.generate(new Chunk(0, 0));
