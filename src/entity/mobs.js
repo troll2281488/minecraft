@@ -70,6 +70,7 @@ export class MobSystem {
   constructor(game) {
     this.game = game;
     this.mobs = [];
+    this.droppedItems = [];
     this.spawnTicks = 0;
     this.nextId = 1;
     this.attackCooldown = 0;
@@ -78,9 +79,48 @@ export class MobSystem {
 
   reset() {
     this.mobs.length = 0;
+    this.droppedItems.length = 0;
     this.spawnTicks = 0;
     this.nextId = 1;
     this.fishing = null;
+  }
+
+  /** Toss a stack into the world with a small forward/upward impulse. */
+  dropStack(stack) {
+    if (!stack || stack.isEmpty || !this.game.player) return false;
+    const p = this.game.player;
+    const yaw = p.yaw * Math.PI / 180;
+    const pitch = p.pitch * Math.PI / 180;
+    this.droppedItems.push({
+      id: this.nextId++, stack: stack.clone(),
+      x: p.x - Math.sin(yaw) * 0.65, y: p.y + p.eyeHeight - 0.25,
+      z: p.z + Math.cos(yaw) * 0.65,
+      vx: -Math.sin(yaw) * 0.12, vy: 0.12 - Math.sin(pitch) * 0.04,
+      vz: Math.cos(yaw) * 0.12, age: 0, pickupDelay: 12,
+    });
+    return true;
+  }
+
+  _tickDroppedItems() {
+    const p = this.game.player, world = this.game.world;
+    for (let i = this.droppedItems.length - 1; i >= 0; i--) {
+      const drop = this.droppedItems[i];
+      drop.age++;
+      if (drop.pickupDelay > 0) drop.pickupDelay--;
+      drop.vy = Math.max(-0.35, drop.vy - 0.018);
+      const nx = drop.x + drop.vx, ny = drop.y + drop.vy, nz = drop.z + drop.vz;
+      const floor = world.getHeight(Math.floor(nx), Math.floor(nz)) + 0.08;
+      if (ny <= floor) { drop.y = floor; drop.vy = 0; drop.vx *= 0.72; drop.vz *= 0.72; }
+      else drop.y = ny;
+      drop.x = nx; drop.z = nz;
+      drop.vx *= 0.96; drop.vz *= 0.96;
+      if (drop.pickupDelay <= 0 && Math.hypot(drop.x-p.x, drop.y-p.y-0.5, drop.z-p.z) < 1.35) {
+        const leftover = this.game.inventory.add(drop.stack);
+        if (leftover <= 0) this.droppedItems.splice(i, 1);
+        else if (leftover < drop.stack.count) drop.stack.count = leftover;
+      }
+      if (drop.age > 6000) this.droppedItems.splice(i, 1);
+    }
   }
 
   /** Return a compact, JSON-safe snapshot for the local world save. */
@@ -380,15 +420,17 @@ export class MobSystem {
     const damage = Math.max(1, held?.item?.attackDamage || 1);
     mob.health = Math.max(0, mob.health - damage);
     this.game.sounds?.play('hit');
-    mob.hurtTicks = 8;
+    mob.hurtTicks = 10;
+    mob.anim.hurt = 1;
     this.attackCooldown = 10;
     const dx = mob.x - player.x;
     const dz = mob.z - player.z;
     const length = Math.max(0.01, Math.hypot(dx, dz));
     // A visible hit impulse: mobs slide away for several ticks instead of
     // receiving a single tiny position nudge that their AI immediately cancels.
-    mob.knockbackX = (dx / length) * 0.62;
-    mob.knockbackZ = (dz / length) * 0.62;
+    mob.knockbackX = (dx / length) * 0.82;
+    mob.knockbackZ = (dz / length) * 0.82;
+    mob.knockbackY = 0.10;
     if (!['zombie','skeleton','stray','creeper','spider','cave_spider','enderman'].includes(mob.type)) {
       mob.fleeTicks = 180;
       mob.moveTicks = 100;
@@ -410,6 +452,7 @@ export class MobSystem {
     const world = this.game.world;
     const player = this.game.player;
     if (!world || !player) return;
+    this._tickDroppedItems();
     this.spawnTicks++;
     if (this.fishing && !this.fishing.bite) {
       this.fishing.ticks--;
