@@ -320,11 +320,24 @@ export const BlockActionsMixin = {
     if (!target) return;
     if (block.solid && wouldTrapPlayer(this.player, target.x, target.y, target.z)) return;
 
-    const state = orientPlacement(block, this.player, this.hit);
-    if (!this.world.setBlock(target.x, target.y, target.z, state)) return;
+    let state = orientPlacement(block, this.player, this.hit);
+    if (block.renderShape === 'door') {
+      const upper = this.world.getBlock(target.x, target.y + 1, target.z);
+      if (!upper.block.replaceable && upper.block.id !== 'mc:air') return;
+      state = state.with('half', 'bottom').with('open', false);
+      const upperState = state.with('half', 'top');
+      if (!this.world.setBlock(target.x, target.y, target.z, state)) return;
+      if (!this.world.setBlock(target.x, target.y + 1, target.z, upperState)) {
+        this.world.setBlock(target.x, target.y, target.z, AIR.defaultState);
+        return;
+      }
+      this.multiplayer?.pushBlockChange(target.x, target.y, target.z, state);
+      this.multiplayer?.pushBlockChange(target.x, target.y + 1, target.z, upperState);
+    } else {
+      if (!this.world.setBlock(target.x, target.y, target.z, state)) return;
+      this.multiplayer?.pushBlockChange(target.x, target.y, target.z, state);
+    }
     this.sounds?.play('place', block.soundGroup || 'stone');
-    this.multiplayer?.pushBlockChange(target.x, target.y, target.z, state);
-
     if (this.player.gamemode !== GAMEMODE.CREATIVE) this.inventory.consumeHeld(1);
   },
 
