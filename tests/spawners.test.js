@@ -152,7 +152,11 @@ describe('generated dungeon chest loot', () => {
     assertEqual(STRONGHOLD_LOOT_POOLS.stronghold_crossing.length, 1);
     assertEqual(STRONGHOLD_LOOT_POOLS.stronghold_corridor.length, 2);
     const weightTotal = pool => pool.entries.reduce((sum, entry) => sum + entry[1], 0);
+    assertEqual(weightTotal(STRONGHOLD_LOOT_POOLS.stronghold_library[0]), 52);
     assertEqual(weightTotal(STRONGHOLD_LOOT_POOLS.stronghold_crossing[0]), 62);
+    assertEqual(weightTotal(STRONGHOLD_LOOT_POOLS.stronghold_corridor[0]), 63);
+    assert(!STRONGHOLD_LOOT_POOLS.stronghold_corridor[1].entries.some(([id]) => id === 'mc:leather'),
+      'leather was added to the altar table after Java 1.19');
     assert(STRONGHOLD_LOOT_POOLS.stronghold_library[0].entries.some(([id]) => id === 'mc:compass'));
     assert(STRONGHOLD_LOOT_POOLS.stronghold_library[0].entries.some(([id]) => id === 'mc:map'));
     assert(STRONGHOLD_LOOT_POOLS.stronghold_corridor[0].entries.some(([id]) => id === 'mc:ender_pearl'));
