@@ -17,7 +17,11 @@ describe('1.12.2 Phase 1 items', () => {
     assert(ITEMS.get('mc:bow').maxDamage === 384, 'bow durability should be 384');
     assert(ITEMS.get('mc:arrow').stackSize === 64, 'arrow stack size should be 64');
   });
-  it('recipe book loads with the new recipes', () => {
-    assert(RECIPES.size >= 78, 'expected at least 78 recipes');
+  it('recipe book loads with door recipes for all wood types and iron', () => {
+    assert(RECIPES.size >= 85, 'expected door recipes to be registered');
+    for (const wood of ['oak', 'birch', 'spruce', 'jungle', 'acacia', 'dark_oak']) {
+      assert(RECIPES.recipes.some((recipe) => recipe.result === `mc:${wood}_door`), `${wood} door recipe missing`);
+    }
+    assert(RECIPES.recipes.some((recipe) => recipe.result === 'mc:iron_door'), 'iron door recipe missing');
   });
 });
