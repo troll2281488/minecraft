@@ -1,7 +1,7 @@
 import { describe, it, assertEqual } from './framework.js';
-import { electRoomHost } from '../src/game/multiplayer.js';
+import { electRoomHost, listJoinableRooms } from '../src/game/multiplayer.js';
 
-describe('multiplayer host election', () => {
+describe('multiplayer room recovery', () => {
   it('keeps the current host while that player is still in the room', () => {
     assertEqual(
       electRoomHost({ hostUid: 'player-b' }, { 'player-a': {}, 'player-b': {} }),
@@ -18,5 +18,26 @@ describe('multiplayer host election', () => {
 
   it('returns null when a room has no connected players', () => {
     assertEqual(electRoomHost({ hostUid: 'gone' }, {}), null);
+  });
+
+  it('keeps a valid empty room discoverable after everyone disconnects', () => {
+    const rooms = listJoinableRooms({
+      ABC12: { seed: '123', createdAt: 900, players: {} },
+      DEF34: { seed: '456', createdAt: 800, players: { p1: {} } },
+    }, 1000, 500);
+    assertEqual(rooms.length, 2);
+    assertEqual(rooms[0][0], 'ABC12');
+    assertEqual(Object.keys(rooms[0][1].players).length, 0);
+  });
+
+  it('filters malformed, archived, and expired rooms', () => {
+    const rooms = listJoinableRooms({
+      'bad-code!': { seed: '1', createdAt: 1000 },
+      GHI56: { seed: '2', createdAt: 1000, archived: true },
+      JKL78: { seed: '3', createdAt: 100 },
+      MNO12: { seed: '4', createdAt: 1000 },
+    }, 1000, 500);
+    assertEqual(rooms.length, 1);
+    assertEqual(rooms[0][0], 'MNO12');
   });
 });
