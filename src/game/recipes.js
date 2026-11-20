@@ -257,7 +257,7 @@ const SHAPED_FROM = [
   ['mc:polished_diorite', 'polished_diorite'],
   ['mc:andesite', 'andesite'],
   ['mc:polished_andesite', 'polished_andesite'],
-  ['mc:stone_bricks', 'stone_brick'],
+  ['mc:stone_bricks', 'stone_bricks'],
   ['mc:oak_planks', 'oak'],
   ['mc:birch_planks', 'birch'],
   ['mc:spruce_planks', 'spruce'],
