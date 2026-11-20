@@ -115,7 +115,7 @@ export const VILLAGE_STYLES={
 };
 export function villageStyleForBiome(biome) {
   if(['mc:plains','mc:sunflower_plains'].includes(biome)) return 'plains';
-  if(['mc:taiga','mc:snowy_taiga','mc:mega_taiga','mc:giant_spruce_taiga'].includes(biome)) return 'taiga';
+  if(['mc:taiga','mc:taiga_hills','mc:snowy_taiga','mc:cold_taiga','mc:cold_taiga_hills','mc:mega_taiga','mc:mega_taiga_hills','mc:giant_spruce_taiga','mc:snowy_plains'].includes(biome)) return 'taiga';
   if(['mc:savanna','mc:savanna_plateau','mc:shattered_savanna'].includes(biome)) return 'savanna';
   if(['mc:desert','mc:desert_hills'].includes(biome)) return 'desert';
   return null;
