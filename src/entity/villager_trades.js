@@ -46,6 +46,7 @@ export const VILLAGER_CAREERS = Object.freeze({
     offer('gold',1,'mc:gold_ingot',8,10,'mc:emerald'),
     offer('redstone',2,'mc:emerald',1,1,'mc:redstone',1,4),
     offer('lapis',2,'mc:emerald',1,1,'mc:lapis_lazuli',1,2),
+    offer('experience_bottles',5,'mc:emerald',3,3,'mc:experience_bottle',3,3),
   ]}),
   armorer: Object.freeze({ label: 'Бронник', profession: 'blacksmith', texture: 'armorer', offers: [
     offer('coal',1,'mc:coal',16,24,'mc:emerald'),
