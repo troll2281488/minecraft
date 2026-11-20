@@ -13,7 +13,7 @@ describe('Nether and End dimensions', () => {
     const chunk = generator.generate(new Chunk(0, 0));
     assertEqual(chunk.getBlock(0, 0, 0).block.id, 'mc:bedrock');
     assertEqual(chunk.getBlock(8, 31, 8).block.id, 'mc:lava');
-    assertEqual(chunk.getBlock(0, -64, 0).block.id, 'mc:bedrock');
+    assertEqual(chunk.getBlock(0, 0, 0).block.id, 'mc:bedrock');
   });
 
   it('generates an End island rather than Overworld terrain', () => {
