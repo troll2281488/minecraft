@@ -57,7 +57,7 @@ describe('Java monster spawner rules', () => {
 
   it('generates a Java-style portal room with inward frames, rare prefilled eyes, lava and a silverfish spawner', () => {
     const ids = ['mc:stone_bricks','mc:mossy_stone_bricks','mc:end_portal_frame','mc:lava',
-      'mc:stone_bricks_stairs','mc:mob_spawner','mc:chest','mc:bookshelf'];
+      'mc:stone_bricks_stairs','mc:mob_spawner','mc:chest','mc:bookshelf','mc:iron_bars'];
     const states = Object.fromEntries(ids.map(id => [id, BLOCKS.get(id)?.defaultState]).filter(([, state]) => state));
     const placed = new Map();
     const key = (x,y,z) => `${x},${y},${z}`;
@@ -86,6 +86,8 @@ describe('Java monster spawner rules', () => {
     assertEqual(BLOCKS.get('mc:mob_spawner')?.defaultState.get('spawner_type'), 'dungeon',
       'ordinary dungeon spawners keep their existing default behavior');
     assert(SPAWNER_MOB_TYPES.includes('silverfish'), 'silverfish spawner state must be accepted by saved spawner data');
+    assertEqual(placed.get(key(px, site.y + 2, pz + 5))?.block.id, 'mc:iron_bars',
+      'portal-room entrance is a barred grate');
     assertEqual(placed.get(key(px + 5, site.y + 2, pz + 1))?.get('spawner_type'), 'silverfish');
     assertEqual(placed.get(key(px + 5, site.y, pz + 5))?.block.id, 'mc:lava');
     assertEqual(placed.get(key(px + 2, site.y, pz + 5))?.block.id, 'mc:lava');
@@ -94,7 +96,7 @@ describe('Java monster spawner rules', () => {
 
   it('builds a connected multi-room stronghold branch network with a stocked store room', () => {
     const ids = ['mc:air','mc:stone_bricks','mc:mossy_stone_bricks','mc:oak_planks',
-      'mc:stone_bricks_slab','mc:water','mc:torch','mc:chest'];
+      'mc:stone_bricks_slab','mc:water','mc:torch','mc:chest','mc:iron_bars'];
     const states = Object.fromEntries(ids.map(id => [id, BLOCKS.get(id)?.defaultState]).filter(([, state]) => state));
     const placed = new Map();
     const key = (x,y,z) => `${x},${y},${z}`;
@@ -106,7 +108,7 @@ describe('Java monster spawner rules', () => {
     const crossingDecoration = at(site.x + 7, site.y + 1, site.z - 12)?.block.id;
     assert(crossingDecoration === 'mc:water' || crossingDecoration === 'mc:stone_bricks',
       'crossing room gets its seeded fountain or pillar decoration');
-    assertEqual(at(site.x + 19, site.y + 2, site.z - 13)?.block.id, 'mc:stone_bricks');
+    assertEqual(at(site.x + 19, site.y + 2, site.z - 13)?.block.id, 'mc:iron_bars');
     assertEqual(at(site.x + 7, site.y + 1, site.z - 17)?.block.id, 'mc:stone_bricks');
     assertEqual(at(site.x - 2, site.y, site.z + 7)?.block.id, 'mc:stone_bricks');
     assert(at(site.x + 4, site.y + 1, site.z - 12), 'crossing room interior is carved');

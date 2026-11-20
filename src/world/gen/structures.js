@@ -237,9 +237,8 @@ export function placeStrongholdRoomNetwork(w, S, site, seed) {
   shell(x + 15, z - 16, 9, 9, { west: [3, 4, 5] });
   for (let dz = -15; dz <= -9; dz++) {
     if (dz === -12) continue;
-    put(x + 19, y + 1, z + dz, brick);
-    put(x + 19, y + 2, z + dz, brick);
-    put(x + 19, y + 3, z + dz, brick);
+    const divider = S['mc:iron_bars'] || brick;
+    for (let dy = 1; dy <= 3; dy++) put(x + 19, y + dy, z + dz, divider);
   }
   for (let dx = 20; dx <= 22; dx++) {
     put(x + dx, y + 1, z - 13, brick);
@@ -265,6 +264,10 @@ export function placeStrongholdPortalRoom(w, S, site, seed) {
         w.set(px + dx, y0 + dy, pz + dz, wall);
       }
     }
+  }
+  const bars = S['mc:iron_bars'];
+  if (bars) for (let dz = 4; dz <= 6; dz++) for (let dy = 1; dy <= 3; dy++) {
+    w.set(px, y0 + dy, pz + dz, bars);
   }
   const lava = S['mc:lava'];
   if (lava) {
