@@ -36,7 +36,14 @@ export const ScreensMixin = {
       byId('setting-distance-value').textContent = this.renderDistance + ' чанков';
       this._saveSettings();
     };
-    byId('setting-simulation-distance').oninput = (e) => {\n      this.simulationDistance = Number(e.target.value);\n      byId('setting-simulation-distance-value').textContent = this.simulationDistance + ' чанков';\n      this._saveSettings();\n    };\n    byId('setting-simulation').onchange = (e) => { this.mobSimulationEnabled = e.target.checked; this._saveSettings(); };\n    byId('setting-particles').onchange = (e) => { this.particlesMode = e.target.value; this.entities?.blockParticles?.splice(0); this._saveSettings(); };\n    byId('setting-sensitivity').oninput = (e) => {
+    byId('setting-simulation-distance').oninput = (e) => {
+      this.simulationDistance = Number(e.target.value);
+      byId('setting-simulation-distance-value').textContent = this.simulationDistance + ' чанков';
+      this._saveSettings();
+    };
+    byId('setting-simulation').onchange = (e) => { this.mobSimulationEnabled = e.target.checked; this._saveSettings(); };
+    byId('setting-particles').onchange = (e) => { this.particlesMode = e.target.value; this.entities?.blockParticles?.splice(0); this._saveSettings(); };
+    byId('setting-sensitivity').oninput = (e) => {
       this.mouseSensitivity = Number(e.target.value);
       this._saveSettings();
     };
@@ -135,7 +142,8 @@ export const ScreensMixin = {
     byId('btn-delete-world').onclick = () => this._deleteSelectedWorld();
     byId('btn-export-world').onclick = () => this._exportSelectedWorld();
 
-    byId('btn-resume').onclick = () => this._resume();\n    byId('btn-pause-settings').onclick = () => this._openSettings();
+    byId('btn-resume').onclick = () => this._resume();
+    byId('btn-pause-settings').onclick = () => this._openSettings();
     byId('btn-respawn').onclick = () => this._respawnAfterDeath();
     byId('btn-death-save').onclick = () => this._save(true);
     byId('btn-save').onclick = () => this._save(true);
@@ -159,10 +167,17 @@ export const ScreensMixin = {
     this.renderDistance = Math.max(2, Math.min(16, Number(saved.renderDistance) || 8));
     this.mouseSensitivity = Math.max(0.04, Math.min(0.5, Number(saved.mouseSensitivity) || 0.15));
     this.graphicsQuality = ['performance','balanced','high'].includes(saved.graphicsQuality) ? saved.graphicsQuality : 'balanced';
-    this.fieldOfView = Math.max(50, Math.min(110, Number(saved.fieldOfView) || 70));\n    this.simulationDistance = Math.max(2, Math.min(12, Number(saved.simulationDistance) || 6));\n    this.mobSimulationEnabled = saved.mobSimulationEnabled !== false;\n    this.particlesMode = ['all','reduced','off'].includes(saved.particlesMode) ? saved.particlesMode : 'all';
+    this.fieldOfView = Math.max(50, Math.min(110, Number(saved.fieldOfView) || 70));
+    this.simulationDistance = Math.max(2, Math.min(12, Number(saved.simulationDistance) || 6));
+    this.mobSimulationEnabled = saved.mobSimulationEnabled !== false;
+    this.particlesMode = ['all','reduced','off'].includes(saved.particlesMode) ? saved.particlesMode : 'all';
     document.getElementById('setting-distance').value = this.renderDistance;
     document.getElementById('setting-distance-value').textContent = this.renderDistance + ' чанков';
-    document.getElementById('setting-simulation-distance').value = this.simulationDistance;\n    document.getElementById('setting-simulation-distance-value').textContent = this.simulationDistance + ' чанков';\n    document.getElementById('setting-simulation').checked = this.mobSimulationEnabled;\n    document.getElementById('setting-particles').value = this.particlesMode;\n    document.getElementById('setting-sensitivity').value = this.mouseSensitivity;
+    document.getElementById('setting-simulation-distance').value = this.simulationDistance;
+    document.getElementById('setting-simulation-distance-value').textContent = this.simulationDistance + ' чанков';
+    document.getElementById('setting-simulation').checked = this.mobSimulationEnabled;
+    document.getElementById('setting-particles').value = this.particlesMode;
+    document.getElementById('setting-sensitivity').value = this.mouseSensitivity;
     document.getElementById('setting-quality').value = this.graphicsQuality;
     document.getElementById('setting-fov').value = this.fieldOfView;
     document.getElementById('setting-fov-value').textContent = this.fieldOfView + '°';
@@ -213,7 +228,10 @@ export const ScreensMixin = {
         renderDistance: this.renderDistance,
         mouseSensitivity: this.mouseSensitivity,
         graphicsQuality: this.graphicsQuality,
-        fieldOfView: this.fieldOfView,\n        simulationDistance: this.simulationDistance,\n        mobSimulationEnabled: this.mobSimulationEnabled,\n        particlesMode: this.particlesMode,
+        fieldOfView: this.fieldOfView,
+        simulationDistance: this.simulationDistance,
+        mobSimulationEnabled: this.mobSimulationEnabled,
+        particlesMode: this.particlesMode,
       }));
     } catch {}
   },
