@@ -433,6 +433,31 @@ const WOOD = {
   dark_oak: { bark: hex(0x30251b), inner: hex(0x49331f), planks: hex(0x49331f), leaves: hex(0x3e6530), sapling: hex(0x3e6530) },
 };
 
+/** Simple procedural door fallback; the community Java 1.19 tiles override it. */
+function doorPanelTile(base, seed, upper) {
+  const tile = planks(base, seed);
+  const frame = shade(base, 0.48), inset = shade(base, 0.72), handle = hex(0x6b542c);
+  for (let y = 0; y < TILE_SIZE; y++) {
+    for (const x of [1, 2, 13, 14]) setPx(tile, x, y, frame[0], frame[1], frame[2]);
+  }
+  for (let x = 3; x <= 12; x++) {
+    for (const y of [upper ? 1 : 2, upper ? 13 : 14]) setPx(tile, x, y, inset[0], inset[1], inset[2]);
+  }
+  if (!upper) for (let y = 7; y <= 9; y++) setPx(tile, 11, y, handle[0], handle[1], handle[2]);
+  return tile;
+}
+
+function ironDoorPanelTile(upper) {
+  const tile = grainy(hex(0x999999), 0.18, upper ? 'iron_door_top' : 'iron_door_bottom');
+  const dark = hex(0x555555), light = hex(0xc9c9c9);
+  for (let y = 1; y < 15; y++) for (const x of [2, 6, 9, 13]) {
+    const c = (x === 2 || x === 13) ? dark : light;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  for (let x = 2; x < 14; x++) for (const y of [1, 7, 8, 14]) setPx(tile, x, y, dark[0], dark[1], dark[2]);
+  return tile;
+}
+
 /**
  * Every texture, keyed by the name blocks refer to.
  *
@@ -573,7 +598,13 @@ for (const [species, c] of Object.entries(WOOD)) {
   TEXTURES[`${species}_leaves`] = () => leaves(c.leaves, `${species}_leaves`);
   TEXTURES[`${species}_sapling`] = () =>
     crossPlant(`${species}_sapling`, (t, r) => grassBlades(t, r, c.sapling));
+  // Offline fallback tiles; Java 1.19 resource-pack images override these.
+  TEXTURES[`${species}_door_bottom`] = () => doorPanelTile(c.planks, `${species}_door_bottom`, false);
+  TEXTURES[`${species}_door_top`] = () => doorPanelTile(c.planks, `${species}_door_top`, true);
 }
+
+TEXTURES.iron_door_bottom = () => ironDoorPanelTile(false);
+TEXTURES.iron_door_top = () => ironDoorPanelTile(true);
 
 /** Visible checkerboard fallback for a missing texture key. */
 function missingTexture() {
@@ -645,7 +676,10 @@ export function buildBlockTextureTable(blocks, textureIndex) {
     const block = states[i].block;
     const t = block.textures;
     let faces;
-    if (t) {
+    if (block.doorTextures) {
+      const texture = layerFor(block.doorTextures[states[i].values?.half] ?? block.texture);
+      faces = [texture, texture, texture, texture, texture, texture];
+    } else if (t) {
       faces = [
         layerFor(t.bottom ?? t.side ?? t.all),
         layerFor(t.top ?? t.side ?? t.all),
