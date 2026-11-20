@@ -26,7 +26,7 @@ import { CHUNK_SIZE, MIN_Y, MAX_Y, SEA_LEVEL } from '../../core/constants.js';
 import { clamp } from '../../core/math.js';
 
 /** Bumped whenever generation output changes. Stored per world. */
-export const GENERATOR_VERSION = 9;
+export const GENERATOR_VERSION = 10;
 
 
 // ---------------------------------------------------------------------------
@@ -147,8 +147,9 @@ const DIRT_PATCHES = [
 // ---------------------------------------------------------------------------
 
 export class TerrainGenerator {
-  constructor(seed) {
+  constructor(seed, dimension = 'overworld') {
     this.seed = normalizeSeed(seed);
+    this.dimension = ['overworld', 'nether', 'end'].includes(dimension) ? dimension : 'overworld';
     const root = new Random(this.seed);
 
     // Each noise field forks its own stream from a labelled sub-seed. Adding a
@@ -301,6 +302,8 @@ export class TerrainGenerator {
 
   /** Fill a chunk with terrain, ores, surface material, and features. */
   generate(chunk) {
+    if (this.dimension === 'nether') return this.generateNetherChunk(chunk);
+    if (this.dimension === 'end') return this.generateEndChunk(chunk);
     const baseX = chunk.cx * CHUNK_SIZE;
     const baseZ = chunk.cz * CHUNK_SIZE;
     const S = this.states;
@@ -375,6 +378,112 @@ export class TerrainGenerator {
     // DATA_VERSION on write, and a freshly generated chunk has no older version
     // to record. Assigning undefined here was meaningless and misleading.
     return chunk;
+  }
+
+
+  /** Classic Nether terrain, generated independently from the Overworld. */
+  generateNetherChunk(chunk) {
+    const baseX = chunk.cx * CHUNK_SIZE, baseZ = chunk.cz * CHUNK_SIZE;
+    const S = this.states.byId, netherrack = S['mc:netherrack'] || S['mc:stone'];
+    const bedrock = S['mc:bedrock'], lava = S['mc:lava'];
+    const soul = S['mc:soul_sand'] || netherrack, gravel = S['mc:gravel'] || netherrack;
+    const glowstone = S['mc:glowstone'] || netherrack;
+    for (let z=0; z<CHUNK_SIZE; z++) for (let x=0; x<CHUNK_SIZE; x++) {
+      const wx=baseX+x, wz=baseZ+z;
+      const cave=this.caveA.sample3(wx*0.035, 62*0.035, wz*0.035);
+      const ceiling=112+Math.floor(this.detail.sample2(wx,wz,0.018)*9);
+      const floor=28+Math.floor(this.detail.sample2(wx+91,wz-37,0.02)*8);
+      for(let y=MIN_Y;y<MAX_Y;y++) {
+        let state=null;
+        if(y<=MIN_Y+1 || y>=ceiling-1) state=bedrock;
+        else if(y<floor) state=netherrack;
+        else if(y<=31) state=lava;
+        else if(y<ceiling && cave>0.16) state=netherrack;
+        if(state) chunk.setBlock(x,y,z,state);
+        if(y===floor && state===netherrack && ((wx*31+wz*17)&31)===0) chunk.setBlock(x,y,z,soul);
+        if(y===ceiling-2 && state===netherrack && ((wx*13+wz*7)&63)===0) chunk.setBlock(x,y,z,glowstone);
+        if(y===floor+1 && state===netherrack && ((wx*11+wz*19)&47)===0) chunk.setBlock(x,y,z,gravel);
+      }
+      chunk.setBiome(x,64,z,'mc:nether_wastes');
+    }
+    this.placeNetherFortress(chunk,baseX,baseZ);
+    chunk.rebuildHeightmap();
+    chunk.generatedStage=GEN_STAGE.FEATURES;
+    return chunk;
+  }
+
+  placeNetherFortress(chunk, baseX, baseZ) {
+    const S=this.states.byId, brick=S['mc:nether_bricks']||S['mc:netherrack'], fence=S['mc:nether_brick_fence']||brick;
+    const minX=Math.floor((baseX-48)/384), maxX=Math.floor((baseX+CHUNK_SIZE+48)/384);
+    const minZ=Math.floor((baseZ-48)/384), maxZ=Math.floor((baseZ+CHUNK_SIZE+48)/384);
+    for(let gz=minZ;gz<=maxZ;gz++) for(let gx=minX;gx<=maxX;gx++) {
+      const rng=positionalRandom(this.seed,gx,4101,gz,4101);
+      if(rng.nextInt(3)!==0) continue;
+      const x=gx*384+64+rng.nextInt(256), z=gz*384+64+rng.nextInt(256), y=48+rng.nextInt(20);
+      const put=(wx,wy,wz,state)=>{const lx=wx-baseX,lz=wz-baseZ;if(lx>=0&&lx<16&&lz>=0&&lz<16&&wy>=MIN_Y&&wy<MAX_Y)chunk.setBlock(lx,wy,lz,state);};
+      const length=38+rng.nextInt(24);
+      for(let i=0;i<length;i++) for(let dx=-2;dx<=2;dx++) {
+        put(x+i,y,z+dx,brick); put(x+i,y+5,z+dx,brick);
+        for(let dy=1;dy<5;dy++) put(x+i,y+dy,z+dx,(dx===-2||dx===2)?brick:null);
+      }
+      for(const offset of [8,24]) {
+        for(let dx=-4;dx<=4;dx++) for(let dz=-4;dz<=4;dz++) {
+          put(x+offset+dx,y+6,z+dz,brick);
+          if(Math.abs(dx)===4||Math.abs(dz)===4) for(let dy=1;dy<=5;dy++) put(x+offset+dx,y+6+dy,z+dz,brick);
+        }
+      }
+      for(let i=0;i<length;i+=5) put(x+i,y+6,z-3,fence);
+    }
+  }
+
+  /** The End is a void dimension with a central island and outer island clusters. */
+  generateEndChunk(chunk) {
+    const baseX=chunk.cx*CHUNK_SIZE, baseZ=chunk.cz*CHUNK_SIZE;
+    const S=this.states.byId, endStone=S['mc:end_stone']||S['mc:stone'], obsidian=S['mc:obsidian'];
+    const bedrock=S['mc:bedrock'];
+    for(let z=0;z<16;z++) for(let x=0;x<16;x++) {
+      const wx=baseX+x,wz=baseZ+z,dist=Math.hypot(wx,wz);
+      let radius=dist<120?92:dist>700?34:0;
+      if(radius && dist>120) radius=34+Math.floor(this.detail.sample2(wx,wz,0.012)*18);
+      const edge=this.density.sample2(wx,wz,0.025);
+      const island=radius>0 && dist<120 ? (dist<radius+edge*18) : radius>0 && edge>0.15;
+      if(island) {
+        const top=64+Math.floor(this.detail.sample2(wx,wz,0.018)*8);
+        for(let y=MIN_Y;y<=top;y++) {
+          if(y<top-4 || edge>0.05) chunk.setBlock(x,y,z,endStone);
+        }
+        chunk.setBlock(x,top,z,endStone);
+        if(wx===0&&wz===0&&obsidian) chunk.setBlock(x,top+1,z,obsidian);
+      }
+      chunk.setBiome(x,64,z,'mc:the_end');
+    }
+    this.placeEndCity(chunk,baseX,baseZ);
+    chunk.rebuildHeightmap();
+    chunk.generatedStage=GEN_STAGE.FEATURES;
+    return chunk;
+  }
+
+  placeEndCity(chunk,baseX,baseZ) {
+    const S=this.states.byId, endStone=S['mc:end_stone']||S['mc:stone'];
+    const purpur=S['mc:purpur_block']||endStone, pillar=S['mc:purpur_pillar']||purpur;
+    const minX=Math.floor((baseX-40)/512),maxX=Math.floor((baseX+56)/512);
+    const minZ=Math.floor((baseZ-40)/512),maxZ=Math.floor((baseZ+56)/512);
+    for(let gz=minZ;gz<=maxZ;gz++) for(let gx=minX;gx<=maxX;gx++) {
+      const rng=positionalRandom(this.seed,gx,4201,gz,4201);
+      if(rng.nextInt(5)!==0) continue;
+      const x=gx*512+80+rng.nextInt(352),z=gz*512+80+rng.nextInt(352),y=68;
+      const put=(wx,wy,wz,state)=>{const lx=wx-baseX,lz=wz-baseZ;if(lx>=0&&lx<16&&lz>=0&&lz<16&&wy>=MIN_Y&&wy<MAX_Y)chunk.setBlock(lx,wy,lz,state);};
+      for(let level=0;level<4;level++) {
+        const width=Math.max(5,13-level*2), height=5+level*2, ox=level*2;
+        for(let dx=0;dx<width;dx++) for(let dz=0;dz<width;dz++) {
+          put(x+ox+dx,y+level*height,z+dz,purpur);
+          if(dx===0||dx===width-1||dz===0||dz===width-1)
+            for(let dy=1;dy<height;dy++) put(x+ox+dx,y+level*height+dy,z+dz,purpur);
+        }
+        for(let dx=2;dx<width-2;dx++) for(let dz=2;dz<width-2;dz++) put(x+ox+dx,y+level*height+height-1,z+dz,pillar);
+      }
+      for(let dy=1;dy<28;dy++) put(x+6,y+dy,z+6,pillar);
+    }
   }
 
   /** The 1.12.2 Overworld has stone throughout its underground layers. */
