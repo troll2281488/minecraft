@@ -122,6 +122,7 @@ export function rollMobDrops(type, random = Math.random) {
   if (type === 'creeper') return [{ id: 'mc:gunpowder', count: amount(0, 2) }];
   if (type === 'spider' || type === 'cave_spider') return [{ id: 'mc:string', count: amount(0, 2) }];
   if (type === 'enderman') return [{ id: 'mc:ender_pearl', count: amount(0, 1) }];
+  if (type === 'slime') return [{ id: 'mc:slime_ball', count: amount(0, 2) }];
   if (type === 'zombie') {
     const count = amount(0, 2);
     const drops = count ? [{ id: 'mc:rotten_flesh', count }] : [];

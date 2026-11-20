@@ -36,6 +36,7 @@ export function blockEmissionForState(state) {
   const id = state?.block?.id;
   if (id === 'mc:redstone_torch') return state.get('lit') === false ? 0 : 7;
   if (id === 'mc:redstone_lamp') return state.get('lit') ? 15 : 0;
+  if (id === 'mc:redstone_ore') return state.get('lit') ? 9 : 0;
   return state?.block?.lightEmission || 0;
 }
 

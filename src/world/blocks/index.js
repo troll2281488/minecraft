@@ -194,7 +194,9 @@ define('mc:white_wool', {
 ore('coal_ore', 0, 'coal_ore');
 ore('iron_ore', 1, 'iron_ore');
 ore('gold_ore', 2, 'gold_ore');
-ore('redstone_ore', 2, 'redstone_ore');
+stoneLike('mc:redstone_ore', 'redstone_ore', 3, 3, 2, {
+  properties: { lit: PROPS.lit }, defaultValues: { lit: false },
+});
 ore('lapis_ore', 1, 'lapis_ore');
 ore('diamond_ore', 2, 'diamond_ore');
 ore('emerald_ore', 2, 'emerald_ore');
@@ -323,6 +325,27 @@ define('mc:dropper', {
   hardness: 3.5, resistance: 3.5, tool: 'pickaxe', harvestLevel: 0,
   requiresTool: true, soundGroup: 'stone', texture: 'dropper',
   properties: { facing: PROPS.facingAll }, defaultValues: { facing: 'north' },
+});
+
+define('mc:piston', {
+  hardness: 1.5, resistance: 1.5, tool: 'pickaxe', soundGroup: 'wood',
+  textures: { top: 'piston_top', bottom: 'piston_bottom', side: 'piston_side' },
+  properties: { facing: PROPS.facingAll, extended: PROPS.extended },
+  defaultValues: { facing: 'north', extended: false },
+});
+define('mc:sticky_piston', {
+  hardness: 1.5, resistance: 1.5, tool: 'pickaxe', soundGroup: 'slime',
+  textures: { top: 'sticky_piston_top', bottom: 'piston_bottom', side: 'piston_side' },
+  properties: { facing: PROPS.facingAll, extended: PROPS.extended },
+  defaultValues: { facing: 'north', extended: false },
+});
+// The head is an internal moving part, not a placeable inventory block.
+define('mc:piston_head', {
+  hardness: 0, resistance: 0, soundGroup: 'wood', texture: 'piston_top',
+  renderShape: 'piston_head', solid: true, opaqueCube: false, opacity: 0,
+  properties: { facing: PROPS.facingAll, sticky: PROPS.sticky },
+  defaultValues: { facing: 'north', sticky: false },
+  notInCreative: true,
 });
 
 define('mc:observer', {
@@ -634,7 +657,7 @@ ITEM_TAGS.define('#mc:coals', ['mc:coal', 'mc:charcoal']);
 // ---------------------------------------------------------------------------
 
 /** Every block gets an item form unless it is unobtainable. */
-const NO_ITEM = new Set(['mc:air', 'mc:water', 'mc:lava', 'mc:portal', 'mc:wheat', 'mc:redstone_wire']);
+const NO_ITEM = new Set(['mc:air', 'mc:water', 'mc:lava', 'mc:portal', 'mc:wheat', 'mc:redstone_wire', 'mc:piston_head']);
 for (const block of BLOCKS.blocks.values()) {
   if (NO_ITEM.has(block.id)) continue;
   ITEMS.defineBlockItem(block.id, {
@@ -663,6 +686,7 @@ const MATERIALS = [
   ['mc:clay_ball', {}],
   ['mc:string', {}],
   ['mc:quartz', {}],
+  ['mc:slime_ball', {}],
   ['mc:glowstone_dust', {}],
   ['mc:bone', {}],
   ['mc:leather', {}],

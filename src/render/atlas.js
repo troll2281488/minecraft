@@ -772,6 +772,58 @@ TEXTURES.lever = () => {
   return tile;
 };
 
+// Piston textures are intentionally authored as pixel art fallbacks. A
+// matching Java 1.19 resource-pack tile overrides these at startup.
+function redstoneOreTile(lit = false) {
+  const tile = grainy(hex(0x777777), 0.2, lit ? 'redstone_ore_lit' : 'redstone_ore', { clumps: 8, clumpColor: hex(0x555555) });
+  const rng = new Random(lit ? 'redstone-ore-glow' : 'redstone-ore-dormant');
+  const dark = hex(lit ? 0x8f1515 : 0x651515);
+  const red = hex(lit ? 0xff4545 : 0xb52222);
+  const bright = hex(0xff8b70);
+  for (let i = 0; i < 34; i++) {
+    const x = 1 + rng.nextInt(14), y = 1 + rng.nextInt(14);
+    const c = lit && rng.nextDouble() < 0.22 ? bright : (rng.nextDouble() < 0.55 ? red : dark);
+    setPx(tile, x, y, c[0], c[1], c[2]);
+    if (lit && x < 15 && rng.nextDouble() < 0.25) setPx(tile, x + 1, y, c[0], c[1], c[2]);
+  }
+  return tile;
+}
+TEXTURES.redstone_ore = () => redstoneOreTile(false);
+TEXTURES.redstone_ore_lit = () => redstoneOreTile(true);
+
+TEXTURES.piston_side = () => {
+  const tile = grainy(hex(0x777777), 0.12, 'piston_side');
+  const stone = hex(0x777777), wood = hex(0x9b6a3b), dark = hex(0x4b3423), iron = hex(0xb8b8b8);
+  for (let y = 1; y < 15; y++) for (let x = 1; x < 15; x++) {
+    let c = stone;
+    if (x >= 4 && x <= 11 && y >= 4 && y <= 11) c = wood;
+    if ((x === 3 || x === 12 || y === 3 || y === 12)) c = dark;
+    if (x >= 6 && x <= 9 && (y === 2 || y === 13)) c = iron;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+TEXTURES.piston_top = () => {
+  const tile = planks(hex(0xa47743), 'piston_top');
+  const rim = hex(0x5b3d24), center = hex(0x9a6939);
+  for (let i = 0; i < 16; i++) {
+    for (const [x, y] of [[i, 0], [i, 15], [0, i], [15, i]]) setPx(tile, x, y, rim[0], rim[1], rim[2]);
+  }
+  for (let y = 5; y < 11; y++) for (let x = 5; x < 11; x++) setPx(tile, x, y, center[0], center[1], center[2]);
+  return tile;
+};
+TEXTURES.sticky_piston_top = () => {
+  const tile = TEXTURES.piston_top();
+  const green = hex(0x75a83b), dark = hex(0x426b24), light = hex(0x9bc95a);
+  for (let y = 4; y < 12; y++) for (let x = 4; x < 12; x++) {
+    const c = (x === 4 || x === 11 || y === 4 || y === 11) ? dark
+      : ((x + y) % 3 === 0 ? light : green);
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+TEXTURES.piston_bottom = () => grainy(hex(0x777777), 0.12, 'piston_bottom');
+
 /** Visible checkerboard fallback for a missing texture key. */
 function missingTexture() {
   const out = new Uint8Array(TILE_SIZE * TILE_SIZE * 4);
@@ -857,6 +909,11 @@ export function buildBlockTextureTable(blocks, textureIndex) {
     } else {
       const single = layerFor(block.texture);
       faces = [single, single, single, single, single, single];
+    }
+
+    if (block.id === 'mc:redstone_ore' && states[i].get('lit')) {
+      const glow = layerFor('redstone_ore_lit');
+      faces = [glow, glow, glow, glow, glow, glow];
     }
 
     // Logs rotate: an axis=x log shows its rings on the east and

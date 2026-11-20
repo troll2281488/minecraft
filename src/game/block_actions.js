@@ -20,12 +20,15 @@ import {
 import { USABLE_BLOCKS } from './usable_blocks.js';
 import { drainContainer } from './containers.js';
 import { getVillagerOffers, executeVillagerTrade } from '../entity/villager_trades.js';
+import { pistonVector } from './pistons.js';
 
 export const BlockActionsMixin = {
   _breakBlock() {
     if (!this.hit) return;
     const { x, y, z, state } = this.hit;
     const isDoor = state.block.renderShape === 'door';
+    const isPistonHead = state.block.id === 'mc:piston_head';
+    const isPistonBase = state.block.id === 'mc:piston' || state.block.id === 'mc:sticky_piston';
     const doorHalf = isDoor ? state.get('half') : null;
     const pairedDoorY = isDoor ? y + (doorHalf === 'upper' ? -1 : 1) : null;
     if (state.block.isUnbreakable && this.player.gamemode !== GAMEMODE.CREATIVE) return;
@@ -69,6 +72,31 @@ export const BlockActionsMixin = {
     this.sounds?.play('break', state.block.soundGroup || 'stone');
     this.world.setBlock(x, y, z, AIR.defaultState);
     this.multiplayer?.pushBlockChange(x, y, z, AIR.defaultState);
+    // Breaking either half of an extended piston removes its internal head
+    // and clears the paired base state. Internal heads never drop an item.
+    if (isPistonHead) {
+      const vector = pistonVector(state.get('facing'));
+      if (vector) {
+        const [dx, dy, dz] = vector;
+        const bx = x - dx, by = y - dy, bz = z - dz;
+        const base = this.world.getBlock(bx, by, bz);
+        if ((base.block.id === 'mc:piston' || base.block.id === 'mc:sticky_piston') && base.get('extended')) {
+          const retracted = base.with('extended', false);
+          this.world.setBlock(bx, by, bz, retracted);
+          this.multiplayer?.pushBlockChange(bx, by, bz, retracted);
+        }
+      }
+    } else if (isPistonBase && state.get('extended')) {
+      const vector = pistonVector(state.get('facing'));
+      if (vector) {
+        const [dx, dy, dz] = vector;
+        const hx = x + dx, hy = y + dy, hz = z + dz;
+        if (this.world.getBlock(hx, hy, hz).block.id === 'mc:piston_head') {
+          this.world.setBlock(hx, hy, hz, AIR.defaultState);
+          this.multiplayer?.pushBlockChange(hx, hy, hz, AIR.defaultState);
+        }
+      }
+    }
     this._removeAttachedRedstoneDevices?.(x, y, z);
     if (isDoor) {
       this.world.setBlock(x, pairedDoorY, z, AIR.defaultState);
@@ -95,6 +123,11 @@ export const BlockActionsMixin = {
       return;
     }
     const heldItem = this.inventory?.held?.item;
+    if (this.hit?.state?.block?.id === 'mc:redstone_ore') {
+      this._activateRedstoneOre?.(this.hit.x, this.hit.y, this.hit.z);
+      return;
+    }
+
     if (this.hit?.state?.block?.id === 'mc:bed') {
       if (this.world.dimension !== 'overworld') {
         this.ui.toast('В этом измерении нельзя спать.', { error: true });

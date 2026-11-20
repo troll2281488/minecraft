@@ -204,6 +204,19 @@ function redstoneWireBoxes() {
   return [[0, 0, 0, 1, 0.0625, 1]];
 }
 
+function pistonHeadBoxes(state) {
+  const facing = state.get('facing') || 'north';
+  // The narrow rod joins the base to the broad contact plate at the far end.
+  switch (facing) {
+    case 'south': return [[0.375,0.375,0,0.625,0.625,0.75],[0,0,0.75,1,1,1]];
+    case 'east': return [[0,0.375,0.375,0.75,0.625,0.625],[0.75,0,0,1,1,1]];
+    case 'west': return [[0.25,0.375,0.375,1,0.625,0.625],[0,0,0,0.25,1,1]];
+    case 'up': return [[0.375,0,0.375,0.625,0.75,0.625],[0,0.75,0,1,1,1]];
+    case 'down': return [[0.375,0.25,0.375,0.625,1,0.625],[0,0,0,1,0.25,1]];
+    default: return [[0.375,0.375,0.25,0.625,0.625,1],[0,0,0,1,1,0.25]];
+  }
+}
+
 function repeaterBoxes() {
   return [
     [0, 0, 0, 1, 0.125, 1],
@@ -234,6 +247,7 @@ export function shapeBoxes(state) {
     case 'weighted_pressure_plate': return weightedPressurePlateBoxes(state);
     case 'redstone_wire': return redstoneWireBoxes();
     case 'repeater': return repeaterBoxes();
+    case 'piston_head': return pistonHeadBoxes(state);
     default: return FULL_LIST;
   }
 }
@@ -250,8 +264,8 @@ export function collisionBoxes(state) {
 /** True if this block is anything other than a plain full cube. */
 export function isNonCube(state) {
   const shape = state.block.renderShape;
-  return shape === 'slab' || shape === 'stair' || shape === 'pane' || shape === 'ladder' || shape === 'door' || shape === 'trapdoor' || shape === 'button' || shape === 'lever' || shape === 'pressure_plate' || shape === 'weighted_pressure_plate' || shape === 'redstone_wire' || shape === 'repeater';
+  return shape === 'slab' || shape === 'stair' || shape === 'pane' || shape === 'ladder' || shape === 'door' || shape === 'trapdoor' || shape === 'button' || shape === 'lever' || shape === 'pressure_plate' || shape === 'weighted_pressure_plate' || shape === 'redstone_wire' || shape === 'repeater' || shape === 'piston_head';
 }
 
 /** The shapes the mesher must render with the box emitter rather than as a cube. */
-export const BOX_SHAPES = Object.freeze(new Set(['slab', 'stair', 'pane', 'ladder', 'door', 'trapdoor', 'button', 'lever', 'pressure_plate', 'weighted_pressure_plate', 'redstone_wire', 'repeater']));
+export const BOX_SHAPES = Object.freeze(new Set(['slab', 'stair', 'pane', 'ladder', 'door', 'trapdoor', 'button', 'lever', 'pressure_plate', 'weighted_pressure_plate', 'redstone_wire', 'repeater', 'piston_head']));

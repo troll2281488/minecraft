@@ -84,7 +84,7 @@
   // leaves the page reading "running…" forever, which is a worse outcome than
   // any failing test -- it looks like a hang rather than a bug, and it hides
   // which module actually broke.
-  const modules = ['rng', 'block', 'chunk', 'save', 'gameplay', 'camera', 'physics', 'crafting_table', 'shapes', 'golden', 'vitals', 'food', 'mobs', 'shearing', 'fishing', 'shears_loot', 'animal_drops', 'survival_sources', 'farming', 'phase1_items', 'phase1_containers', 'phase1_batch2', 'phase1_batch3', 'phase1_batch4', 'phase1_bow', 'phase1_armor_equip', 'multiplayer', 'version_112', 'stronghold_library', 'redstone_devices', 'daylight_detector', 'note_block', 'comparator', 'redstone_lamp_torch', 'hopper', 'observer_dropper_target'];
+  const modules = ['rng', 'block', 'chunk', 'save', 'gameplay', 'camera', 'physics', 'crafting_table', 'shapes', 'golden', 'vitals', 'food', 'mobs', 'shearing', 'fishing', 'shears_loot', 'animal_drops', 'survival_sources', 'farming', 'phase1_items', 'phase1_containers', 'phase1_batch2', 'phase1_batch3', 'phase1_batch4', 'phase1_bow', 'phase1_armor_equip', 'multiplayer', 'version_112', 'stronghold_library', 'redstone_devices', 'daylight_detector', 'note_block', 'comparator', 'redstone_lamp_torch', 'hopper', 'observer_dropper_target', 'pistons'];
   let importFailures = 0;
 
   for (const name of modules) {

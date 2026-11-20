@@ -83,6 +83,8 @@ export const PROPS = {
     'straight', 'inner_left', 'inner_right', 'outer_left', 'outer_right',
   ]),
   powered: boolProp('powered'),
+  extended: boolProp('extended'),
+  sticky: boolProp('sticky'),
   inverted: boolProp('inverted'),
   lit: boolProp('lit'),
   open: boolProp('open'),
