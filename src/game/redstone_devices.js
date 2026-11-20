@@ -45,7 +45,7 @@ function readSignal(world, x, y, z, targetX, targetY, targetZ) {
   if (state.block.id === 'mc:redstone_block') return 15;
   if (state.block.renderShape === 'redstone_wire') return state.get('power') || 0;
   if (state.block.id === 'mc:daylight_detector') return state.get('power') || 0;
-  if (state.block.id === 'mc:redstone_torch') return 15;
+  if (state.block.id === 'mc:redstone_torch' && state.get('lit') !== false) return 15;
   if ((state.block.renderShape === 'lever' || state.block.renderShape === 'button' || state.block.renderShape === 'pressure_plate') && state.get('powered')) return 15;
   if (state.block.renderShape === 'weighted_pressure_plate') return state.get('power') || 0;
   if (state.block.renderShape === 'comparator' && state.get('power') > 0) {
@@ -74,6 +74,8 @@ function applyMechanism(game, x, y, z, state, powered) {
     if (upper.get('open') !== powered) writeState(game, x, lowerY + 1, z, upper.with('open', powered));
   } else if (state.block.renderShape === 'trapdoor' && state.get('open') !== powered) {
     writeState(game, x, y, z, state.with('open', powered));
+  } else if (state.block.id === 'mc:redstone_lamp' && state.get('lit') !== powered) {
+    writeState(game, x, y, z, state.with('lit', powered));
   }
 }
 
@@ -242,7 +244,49 @@ export const RedstoneDevicesMixin = {
     this._tickRepeaters(baseX, baseY, baseZ, !!player);
     this._tickComparators(baseX, baseY, baseZ, !!player);
     this._tickRedstoneWireNetwork(baseX, baseY, baseZ, !!player);
+    this._tickRedstoneTorches(baseX, baseY, baseZ, !!player);
+    this._tickRedstoneLamps(baseX, baseY, baseZ, !!player);
     this._tickNoteBlocks(baseX, baseY, baseZ, !!player);
+  },
+
+  _tickRedstoneTorches(baseX, baseY, baseZ, hasPlayer) {
+    if (!hasPlayer) return;
+    const world = this.world;
+    // Floor-mounted redstone torches invert the power state of the solid block
+    // beneath them. Wall-mounted orientation and burnout are tracked separately.
+    for (let y = baseY - 3; y <= baseY + 4; y++) {
+      for (let x = baseX - 8; x <= baseX + 8; x++) for (let z = baseZ - 8; z <= baseZ + 8; z++) {
+        const state = world.getBlock(x, y, z);
+        if (state.block.id !== 'mc:redstone_torch') continue;
+        const sx = x, sy = y - 1, sz = z;
+        let supportPowered = false;
+        for (const [dx, dy, dz] of NEIGHBORS) {
+          const nx = sx + dx, ny = sy + dy, nz = sz + dz;
+          if (nx === x && ny === y && nz === z) continue;
+          if (readSignal(world, nx, ny, nz, sx, sy, sz) > 0) { supportPowered = true; break; }
+        }
+        const lit = !supportPowered;
+        if (state.get('lit') === lit) continue;
+        writeState(this, x, y, z, state.with('lit', lit));
+        this._applyAdjacentRedstonePower(x, y, z, lit);
+      }
+    }
+  },
+
+  _tickRedstoneLamps(baseX, baseY, baseZ, hasPlayer) {
+    if (!hasPlayer) return;
+    const world = this.world;
+    for (let y = baseY - 3; y <= baseY + 4; y++) {
+      for (let x = baseX - 8; x <= baseX + 8; x++) for (let z = baseZ - 8; z <= baseZ + 8; z++) {
+        const state = world.getBlock(x, y, z);
+        if (state.block.id !== 'mc:redstone_lamp') continue;
+        let powered = false;
+        for (const [dx, dy, dz] of NEIGHBORS) {
+          if (readSignal(world, x + dx, y + dy, z + dz, x, y, z) > 0) { powered = true; break; }
+        }
+        if (state.get('lit') !== powered) writeState(this, x, y, z, state.with('lit', powered));
+      }
+    }
   },
 
   _tickNoteBlocks(baseX, baseY, baseZ, hasPlayer) {
