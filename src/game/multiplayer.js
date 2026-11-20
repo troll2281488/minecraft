@@ -33,8 +33,12 @@ export function electRoomHost(room, players) {
 }
 
 /** Keep valid room records discoverable even when every player temporarily disconnects. */
+export function isValidContainerKey(key) {
+  return typeof key === 'string' && /^-?\\d+,-?\\d+,-?\\d+$/.test(key);
+}
+
 export function queueContainerWrite(queue, roomId, key, record, limit = 512) {
-  if (!(queue instanceof Map) || !roomId || !key || !record) return false;
+  if (!(queue instanceof Map) || !roomId || !isValidContainerKey(key) || !record) return false;
   const queueKey = `${roomId}:${key}`;
   queue.set(queueKey, { roomId, key, record });
   while (queue.size > limit) queue.delete(queue.keys().next().value);
@@ -401,6 +405,8 @@ export class Multiplayer {
       const shared = snap.val() || {};
       this.game._containers ??= new Map();
       for (const [key, record] of Object.entries(shared)) {
+        // Ignore malformed remote keys before they can pollute local block entities.
+        if (!isValidContainerKey(key)) continue;
         if (record?.deleted === true) {
           this.game._containers.delete(key);
           if (this.game._activeContainer?.key === key) this.game._closeContainer?.();
@@ -735,7 +741,7 @@ export class Multiplayer {
 
   /** Queue the newest snapshot per room/container, including while offline. */
   pushContainerState(key, type, data) {
-    if (!this.roomId || !key) return;
+    if (!this.roomId || !isValidContainerKey(key)) return;
     const record = serializeContainer(type, data);
     if (!record) return;
     queueContainerWrite(this.pendingContainerWrites, this.roomId, key, record);
@@ -744,7 +750,7 @@ export class Multiplayer {
 
   /** Queue a tombstone too, so an offline break cannot resurrect old contents. */
   removeContainerState(key) {
-    if (!this.roomId || !key) return;
+    if (!this.roomId || !isValidContainerKey(key)) return;
     queueContainerWrite(this.pendingContainerWrites, this.roomId, key, { deleted: true, ts: Date.now() });
     if (this.firebaseConnected) void this._flushPendingContainerWrites();
   }
