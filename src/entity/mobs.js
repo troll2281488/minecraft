@@ -1098,9 +1098,10 @@ export class MobSystem {
         mob.anim.attack = Math.min(1, mob.attackTicks / 18);
         if (mob.attackTicks >= profile.attackCooldown) {
           mob.attackTicks = 0; mob.anim.attack = 0;
-          this._damagePlayer(profile.damage);
+          this._damagePlayer(mob.type === 'blaze' ? 6 : profile.damage);
           if (mob.type === 'stray') { player.vx *= 0.72; player.vz *= 0.72; }
-          this.game.ui?.toast(mob.type === 'stray' ? 'Странник попал в тебя!' : 'Скелет попал в тебя!', { error: true, duration: 1000 });
+          const hitMessage = mob.type === 'blaze' ? 'Блейз попал огненным зарядом!' : mob.type === 'stray' ? 'Странник попал в тебя!' : 'Скелет попал в тебя!';
+          this.game.ui?.toast(hitMessage, { error: true, duration: 1000 });
         }
         mob.targetYaw = Math.atan2(dx, dz);
       } else if (hostile && distance < (profile?.meleeRange ?? 1.35) && mob.type !== 'creeper') {
