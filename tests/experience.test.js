@@ -1,6 +1,7 @@
 import { describe, it, assertEqual } from './framework.js';
 import { PlayerExperience, experienceToNextLevel, splitExperienceIntoOrbs, experienceForMob } from '../src/entity/experience.js';
 import { Player } from '../src/entity/player.js';
+import { InputMixin } from '../src/game/input.js';
 
 describe('Java-style player experience', () => {
   it('uses the vanilla level cost curve', () => {
@@ -69,5 +70,43 @@ describe('Java-style experience orb rules', () => {
     assertEqual(experienceForMob('cow', () => 0), 1);
     assertEqual(experienceForMob('cow', () => 0.999), 3);
     assertEqual(experienceForMob('cow', () => 0.5, { baby: true }), 0);
+  });
+});
+
+describe('experience commands', () => {
+  function makeCommandGame() {
+    const messages = [];
+    const sounds = [];
+    const player = new Player();
+    return {
+      player,
+      messages,
+      sounds,
+      worldMeta: { cheatsEnabled: true, playerName: 'Tester' },
+      multiplayer: { roomId: null, addChat: (message) => messages.push(message) },
+      ui: { toast: (message) => messages.push(message) },
+      soundsApi: null,
+      _run(raw) {
+        this.sounds = { play: (name) => sounds.push(name) };
+        InputMixin._runCommand.call(this, raw);
+      },
+    };
+  }
+
+  it('adds points and reports a level-up cue when crossing a level', () => {
+    const game = makeCommandGame();
+    game._run('/xp add 7');
+    assertEqual(game.player.experience.level, 1);
+    assertEqual(game.player.experience.total, 7);
+    assertEqual(game.sounds[0], 'levelup');
+  });
+
+  it('queries points and rejects invalid XP amounts', () => {
+    const game = makeCommandGame();
+    game._run('/xp query points');
+    assertEqual(game.messages.some((message) => message.includes('0')), true);
+    game._run('/xp add -5');
+    assertEqual(game.player.experience.total, 0);
+    assertEqual(game.messages.some((message) => message.includes('Использование')), true);
   });
 });
