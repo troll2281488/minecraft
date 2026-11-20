@@ -75,6 +75,6 @@ describe('ItsBrian terrain and jungle vine textures', () => {
   });
 
   it('tints jungle vines with the biome foliage colour instead of leaving them grey', () => {
-    assertEqual(BLOCKS.get('mc:vine').block.tint, 'foliage');
+    assertEqual(BLOCKS.get('mc:vine').tint, 'foliage');
   });
 });
