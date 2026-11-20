@@ -446,7 +446,7 @@ export const WORKER = {
 // ---------------------------------------------------------------------------
 
 export const SAVE = {
-  AUTOSAVE_INTERVAL_TICKS: 600,  // 30 seconds
+  AUTOSAVE_INTERVAL_TICKS: 100,  // 5 seconds
   MAGIC: 'MCWORLD\0',
   FILE_EXTENSION: '.mcw',
   /**

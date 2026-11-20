@@ -404,9 +404,16 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
 
     const daylight = this.daylight;
     const fogColor = this._fogColor;   // reused; was a fresh array every frame
-    fogColor[0] = 0.55 * daylight + 0.03;
-    fogColor[1] = 0.68 * daylight + 0.03;
-    fogColor[2] = 0.92 * daylight + 0.06;
+    if (this.world.dimension === 'nether') {
+      // Nether fog and the distant sky keep the characteristic warm crimson haze.
+      fogColor[0] = 0.34;
+      fogColor[1] = 0.055;
+      fogColor[2] = 0.035;
+    } else {
+      fogColor[0] = 0.55 * daylight + 0.03;
+      fogColor[1] = 0.68 * daylight + 0.03;
+      fogColor[2] = 0.92 * daylight + 0.06;
+    }
 
     gl.clearColor(fogColor[0], fogColor[1], fogColor[2], 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
