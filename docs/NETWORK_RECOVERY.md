@@ -38,11 +38,12 @@ Implementation branch: `feature/multiplayer-reconnect-stability`.
   container-state overlays. Chest and furnace snapshots now replicate through
   the room's `containers` node, and breaking a container publishes a tombstone
   so stale contents are not restored by another client. This is best-effort
-  client-side replication, not an authoritative inventory service: two players
-  editing the same container at nearly the same time can still overwrite one
-  another. Offline container edits are replayed after presence recovery or when rejoining the same room, but they
-  remain best-effort snapshots and can still conflict with edits made by another
-  player while the client was disconnected. Full authoritative
+  client-side replication, not an authoritative inventory service. Online UI
+  edits are coordinated by expiring advisory leases; host furnace simulation
+  pauses while another player holds that furnace's lease. Offline container
+  edits are replayed after presence recovery or when rejoining the same room,
+  but they remain best-effort snapshots and can still conflict with edits made
+  by another player while the client was disconnected. Full authoritative
   chunk storage, player inventory, mobs, dimensions, conflict resolution, and
   server-side anti-cheat remain future work.
 - Room records older than 30 days are hidden by the lobby helper. They are not
