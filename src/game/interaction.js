@@ -275,7 +275,7 @@ export function orientPlacement(block, player, hit) {
       : hit.face.dy > 0 ? 'up' : hit.face.dy < 0 ? 'down'
       : hit.face.dz > 0 ? 'south' : 'north';
     const facing = block.id === 'mc:hopper' ? hopperFacing
-      : ['mc:dropper', 'mc:observer'].includes(block.id) ? sixWayFacing
+      : ['mc:dropper', 'mc:observer', 'mc:piston', 'mc:sticky_piston'].includes(block.id) ? sixWayFacing
       : isStair || block.renderShape === 'door'
         ? yawToFacing(player.yaw)
         : (isMountedDevice && faceDirection ? faceDirection : yawToFacing(player.yaw + 180));
