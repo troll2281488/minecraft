@@ -54,6 +54,7 @@ export class Multiplayer {
     this.presenceElapsed = 0;
     this.worldSyncElapsed = 0;
     this.hudElapsed = 0;
+    this.serverPingMs = null;
     this.isHost = false;
     this.applyingRemoteBlock = false;
     this.connected = false;
@@ -476,7 +477,9 @@ export class Multiplayer {
     }
     if (this.syncElapsed >= 0.12) {
       this.syncElapsed = 0;
+      const pingStarted = performance.now();
       update(ref(this.db, `minecraft_game/rooms/${this.roomId}/players/${this.uid}`), this._playerPayload())
+        .then(() => { this.serverPingMs = Math.round(performance.now() - pingStarted); })
         .catch((error) => console.warn('[multiplayer] player sync:', error));
     }
     if (this.worldSyncElapsed >= 2) {
