@@ -473,6 +473,16 @@ const MATERIALS = [
   ['mc:wheat', {}],
   ['mc:paper', {}],
   ['mc:book', {}],
+  ['mc:name_tag', { stackSize: 1 }],
+  ['mc:music_disc_13', { stackSize: 1 }],
+  ['mc:music_disc_cat', { stackSize: 1 }],
+  ['mc:music_disc_otherside', { stackSize: 1 }],
+  ['mc:golden_apple', { food: { nutrition: 4, saturation: 9.6 } }],
+  ['mc:enchanted_golden_apple', { stackSize: 1, food: { nutrition: 4, saturation: 9.6 } }],
+  ['mc:bucket', { stackSize: 16 }],
+  ['mc:melon_seeds', {}],
+  ['mc:pumpkin_seeds', {}],
+  ['mc:beetroot_seeds', {}],
 ];
 for (const [id, opts] of MATERIALS) ITEMS.define(id, opts);
 

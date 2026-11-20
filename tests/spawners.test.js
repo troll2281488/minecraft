@@ -7,7 +7,8 @@ import { placeDungeonRoom, dungeonDims } from '../src/world/gen/structures.js';
 import { dungeonCandidateForCell } from '../src/world/gen/terrain.js';
 import { positionalRandom } from '../src/core/rng.js';
 import { Chest } from '../src/game/containers.js';
-import { generatedChestKind, fillGeneratedChest } from '../src/game/container_screens.js';
+import { generatedChestKind, fillGeneratedChest, DUNGEON_LOOT_POOLS, chooseWeightedLootEntry } from '../src/game/container_screens.js';
+import { ITEMS } from '../src/world/item.js';
 import '../src/world/blocks/index.js';
 import { BLOCKS } from '../src/world/block.js';
 
@@ -87,6 +88,20 @@ describe('generated dungeon chest loot', () => {
     const { ix, iz } = dungeonDims(room);
     assertEqual(generatedChestKind(seed, room.x + 1, room.y + 1, room.z + 1), 'dungeon');
     assertEqual(generatedChestKind(seed, room.x + ix, room.y + 1, room.z + iz), 'dungeon');
+  });
+
+  it('uses three weighted pools and only registered items', () => {
+    assertEqual(DUNGEON_LOOT_POOLS.length, 3);
+    for (const pool of DUNGEON_LOOT_POOLS) {
+      assert(pool.entries.length > 0);
+      for (const [id, weight, min, max] of pool.entries) {
+        assert(ITEMS.get(id), `loot item ${id} must be registered`);
+        assert(weight > 0 && min > 0 && max >= min);
+      }
+    }
+    const entries = DUNGEON_LOOT_POOLS[0].entries;
+    assertEqual(chooseWeightedLootEntry(entries, { nextInt: () => 0 })[0], 'mc:saddle');
+    assertEqual(chooseWeightedLootEntry(entries, { nextInt: () => 20 })[0], 'mc:golden_apple');
   });
 
   it('generates repeatable loot for a generated dungeon chest', () => {
