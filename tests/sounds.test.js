@@ -5,7 +5,7 @@ describe('Procedural sound event bank',()=>{
     for(const [id,preset] of Object.entries(SOUND_EVENTS))assert(SOUND_PRESETS[preset], 'Missing preset: '+id);
   });
   it('uses stable namespaced event identifiers',()=>{
-    for(const id of Object.keys(SOUND_EVENTS))assert(/^[a-z]+\\.[a-z0-9_.]+$/.test(id),'Invalid event: '+id);
+    for(const id of Object.keys(SOUND_EVENTS))assert(/^[a-z]+[.][a-z0-9_.]+$/.test(id),'Invalid event: '+id);
   });
   it('rejects unknown events without throwing',()=>{
     assertEqual(new GameSounds().playEvent('unknown.event'),false);
