@@ -319,6 +319,24 @@ define('mc:hopper', {
   defaultValues: { facing: 'down', enabled: true },
 });
 
+define('mc:dropper', {
+  hardness: 3.5, resistance: 3.5, tool: 'pickaxe', harvestLevel: 0,
+  requiresTool: true, soundGroup: 'stone', texture: 'dropper',
+  properties: { facing: PROPS.facingAll }, defaultValues: { facing: 'north' },
+});
+
+define('mc:observer', {
+  hardness: 3, resistance: 3, tool: 'pickaxe', harvestLevel: 0,
+  requiresTool: true, soundGroup: 'stone', texture: 'observer',
+  properties: { facing: PROPS.facingAll, powered: PROPS.powered },
+  defaultValues: { facing: 'south', powered: false },
+});
+
+define('mc:target', {
+  hardness: 0.5, resistance: 0.5, tool: 'hoe', soundGroup: 'wood',
+  texture: 'target', properties: { power: PROPS.power }, defaultValues: { power: 0 },
+});
+
 define('mc:mob_spawner', {
   hardness: 5, resistance: 5, tool: 'pickaxe', harvestLevel: -1,
   requiresTool: true, soundGroup: 'stone', texture: 'mob_spawner',
