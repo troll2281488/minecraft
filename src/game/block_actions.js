@@ -161,7 +161,6 @@ export const BlockActionsMixin = {
       this.inventory,
       {
         onTrade: (offerId) => {
-          const previousTier = villager.villagerTier ?? 1;
           const result = executeVillagerTrade(villager, offerId, this.inventory);
           if (!result.ok) {
             this.ui.toast(result.reason, { error: true });
@@ -169,8 +168,7 @@ export const BlockActionsMixin = {
             this.ui.updateHotbar(this.inventory);
             if (this.player?.gamemode === GAMEMODE.SURVIVAL) {
               this.entities?.spawnExperienceOrbs(
-                experienceForVillagerTrade(Math.random, result.tier > previousTier),
-                villager.x, villager.y + 0.5, villager.z,
+                experienceForVillagerTrade(), villager.x, villager.y + 0.5, villager.z,
               );
             }
             this.ui.toast(result.unlocked ? 'Новая сделка открыта!' : 'Обмен выполнен');
