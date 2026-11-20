@@ -105,7 +105,7 @@ stoneLike('mc:sandstone', 'sandstone', 0.8, 0.8);
 stoneLike('mc:obsidian', 'obsidian', 50, 1200, 3);
 stoneLike('mc:netherrack', 'netherrack', 0.4, 2);
 stoneLike('mc:nether_bricks', 'nether_bricks', 2, 6);
-stoneLike('mc:nether_brick_fence', 'nether_bricks', 2, 6);
+// Nether brick fence is registered with the connected fence models below.
 stoneLike('mc:nether_gold_ore', 'nether_gold_ore', 3, 3);
 stoneLike('mc:glowstone', 'sea_lantern', 0.3, 0.3);
 define('mc:soul_sand', { hardness: 0.5, resistance: 0.5, tool: 'shovel', soundGroup: 'sand', texture: 'soul_sand' });
