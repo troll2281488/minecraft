@@ -644,6 +644,25 @@ TEXTURES.stone_button = () => buttonTile(hex(0x858585), 'stone_button');
 TEXTURES.polished_blackstone_button = () => buttonTile(hex(0x38333a), 'polished_blackstone_button');
 TEXTURES.stone_pressure_plate = () => pressurePlateTile(hex(0x858585), 'stone_pressure_plate');
 TEXTURES.polished_blackstone_pressure_plate = () => pressurePlateTile(hex(0x38333a), 'polished_blackstone_pressure_plate');
+TEXTURES.redstone_torch = () => {
+  const tile = torchTile(0x7ed51);
+  const red = hex(0xe52a2a), bright = hex(0xff5555);
+  for (const [x,y] of [[7,4],[8,4],[6,5],[9,5],[7,6],[8,6]]) {
+    const c = (x+y)%2 ? red : bright;
+    setPx(tile,x,y,c[0],c[1],c[2]);
+  }
+  return tile;
+};
+TEXTURES.repeater = () => {
+  const tile = grainy(hex(0x777777), 0.12, 'repeater');
+  const red = hex(0xb92727), dark = hex(0x3e3030);
+  for (let x=2;x<14;x++) for(let y=6;y<10;y++) {
+    const c = (x===3 || x===12) ? red : dark;
+    setPx(tile,x,y,c[0],c[1],c[2]);
+  }
+  for (const x of [4,5,10,11]) for(let y=5;y<11;y++) setPx(tile,x,y,red[0],red[1],red[2]);
+  return tile;
+};
 TEXTURES.redstone_wire = () => {
   const tile = grainy(hex(0x8f1717), 0.1, 'redstone_wire');
   const red = hex(0xd52c2c), dark = hex(0x701010);
