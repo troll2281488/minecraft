@@ -54,6 +54,7 @@ import { MobSystem } from './entity/mobs.js';
 import { GameSounds } from './game/sounds.js';
 import { growNearbyWheat } from './game/farming.js';
 import { RedstoneDevicesMixin } from './game/redstone_devices.js';
+import { FenceMixin } from './game/fences.js';
 import { isDown } from './game/keybinds.js';
 
 const AUTOSAVE_TICKS = SAVE.AUTOSAVE_INTERVAL_TICKS;
@@ -506,6 +507,7 @@ Object.assign(
   RendererMixin,
   DebugOverlayMixin,
   RedstoneDevicesMixin,
+  FenceMixin,
 );
 
 // Exported so the class and its methods can be exercised without booting a real
