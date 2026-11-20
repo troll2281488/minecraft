@@ -1,5 +1,16 @@
 import { describe, it, assertEqual } from './framework.js';
-import { electRoomHost, listJoinableRooms, queueContainerWrite } from '../src/game/multiplayer.js';
+import { electRoomHost, isValidContainerKey, listJoinableRooms, queueContainerWrite } from '../src/game/multiplayer.js';
+
+describe('multiplayer container key validation', () => {
+  it('accepts signed integer coordinates only', () => {
+    assertEqual(isValidContainerKey('1,64,-2'), true);
+    assertEqual(isValidContainerKey('-120,0,45'), true);
+    assertEqual(isValidContainerKey('1,2'), false);
+    assertEqual(isValidContainerKey('1,2,3/extra'), false);
+    assertEqual(isValidContainerKey('../players'), false);
+    assertEqual(isValidContainerKey(null), false);
+  });
+});
 
 describe('multiplayer container write queue', () => {
   it('keeps only the newest pending snapshot for a room and container', () => {
@@ -8,6 +19,11 @@ describe('multiplayer container write queue', () => {
     queueContainerWrite(queue, 'ABCDE', '1,64,2', { slots: [2] });
     assertEqual(queue.size, 1);
     assertEqual(queue.get('ABCDE:1,64,2').record.slots[0], 2);
+  });
+  it('rejects malformed coordinate keys before queueing writes', () => {
+    const queue = new Map();
+    assertEqual(queueContainerWrite(queue, 'ABCDE', '../players', { value: 1 }), false);
+    assertEqual(queue.size, 0);
   });
   it('keeps rooms isolated and bounds pending container writes', () => {
     const queue = new Map();
