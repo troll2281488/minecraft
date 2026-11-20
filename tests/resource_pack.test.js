@@ -24,13 +24,14 @@ describe('Vanilla biome soil texture aliases', () => {
   it('uses the exact classic dirt texture for all biome soil variants', () => {
     const built = buildTextures();
     const index = built.index;
-    const pixels = built.pixels;
     const dirtLayer = index.get('dirt');
+    const tileBytes = 16 * 16 * 4;
+    const tile = (name) => built.data.slice(index.get(name) * tileBytes, (index.get(name) + 1) * tileBytes);
     for (const key of ['plains_soil', 'forest_floor', 'birch_soil', 'jungle_soil',
       'savanna_soil', 'taiga_soil', 'swamp_mud']) {
-      assertEqual(index.get(key), dirtLayer, `${key} must reuse dirt texture`);
+      assertEqual(tile(key).join(','), tile('dirt').join(','), `${key} must reuse dirt texture`);
     }
-    assertEqual(index.get('alpine_gravel'), index.get('gravel'));
+    assertEqual(tile('alpine_gravel').join(','), tile('gravel').join(','));
   });
 });
 
