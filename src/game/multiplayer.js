@@ -7,6 +7,7 @@ let initializeApp, getApps, getDatabase, ref, set, get, update, push, remove;
 let onValue, onChildAdded, onChildChanged, onDisconnect, runTransaction;
 import { BLOCKS, parseStateString } from '../world/block.js';
 import { ItemStack } from '../world/item.js';
+import { serializeContainer, deserializeContainer } from './containers.js';
 import * as storage from '../save/storage.js';
 import { GENERATOR_VERSION } from '../world/gen/terrain.js';
 import { DATA_VERSION } from '../save/migrate.js';
@@ -32,6 +33,38 @@ export function electRoomHost(room, players) {
 }
 
 /** Keep valid room records discoverable even when every player temporarily disconnects. */
+export function isValidContainerKey(key) {
+  return typeof key === 'string' && /^-?\d+,-?\d+,-?\d+$/.test(key);
+}
+
+
+export const CONTAINER_LOCK_TTL_MS = 15000;
+
+export function canAcquireContainerLease(current, uid, now = Date.now()) {
+  if (!uid) return false;
+  if (!current || typeof current !== 'object') return true;
+  if (current.owner === uid) return true;
+  const expiry = Number(current.expiresAt);
+  return !Number.isFinite(expiry) || expiry <= now;
+}
+
+export function ownsContainerLease(current, uid, token) {
+  return !!current && current.owner === uid && !!token && current.token === token;
+}
+
+export function isContainerLeaseHeldByOther(current, uid, now = Date.now()) {
+  return !!current && !!current.owner && current.owner !== uid &&
+    Number.isFinite(Number(current.expiresAt)) && Number(current.expiresAt) > now;
+}
+
+export function queueContainerWrite(queue, roomId, key, record, limit = 512) {
+  if (!(queue instanceof Map) || !roomId || !isValidContainerKey(key) || !record) return false;
+  const queueKey = `${roomId}:${key}`;
+  queue.set(queueKey, { roomId, key, record });
+  while (queue.size > limit) queue.delete(queue.keys().next().value);
+  return true;
+}
+
 export function listJoinableRooms(rooms, now = Date.now(), maxAgeMs = 30 * 24 * 60 * 60 * 1000) {
   return Object.entries(rooms || {})
     .filter(([code, room]) => {
@@ -62,6 +95,12 @@ export class Multiplayer {
     this.remotePlayers = new Map();
     this.pendingBlocks = new Map();
     this.pendingBlockWrites = new Map();
+    this.pendingContainerWrites = new Map();
+    this.activeContainerLocks = new Map();
+    this.containerFlushInFlight = false;
+    this.containerFlushRequested = false;
+    this.containerFlushPromise = null;
+    this.remoteContainerLocks = new Map();
     this.unsubscribers = [];
     this.syncElapsed = 0;
     this.syncInFlight = false;
@@ -316,6 +355,10 @@ export class Multiplayer {
     localStorage.setItem('mc_last_room', code);
     await update(ref(this.db, `minecraft_game/players/${this.uid}`), { room: code, name: this.nickname });
     await update(ref(this.db, `minecraft_game/users/${this.uid}`), { room: code, name: this.nickname, online: true, ts: Date.now() });
+    // A tab may rejoin while Firebase is already connected, so the connection
+    // listener will not fire again. Replay writes retained for this room now.
+    await this._flushPendingBlockWrites();
+    await this._flushPendingContainerWrites();
 
     this._listen(onValue, ref(this.db, `minecraft_game/rooms/${code}/worldTime`), (snap) => {
       const time = snap.val();
@@ -383,6 +426,40 @@ export class Multiplayer {
     });
     // One room-level value listener gives a joining client the complete edit
     // snapshot and keeps it current when any participant changes a block.
+    this._listen(onValue, ref(this.db, `minecraft_game/rooms/${code}/containers`), (snap) => {
+      const shared = snap.val() || {};
+      this.game._containers ??= new Map();
+      for (const [key, record] of Object.entries(shared)) {
+        // Ignore malformed remote keys before they can pollute local block entities.
+        if (!isValidContainerKey(key)) continue;
+        if (record?.deleted === true) {
+          this.game._containers.delete(key);
+          if (this.game._activeContainer?.key === key) this.game._closeContainer?.();
+          continue;
+        }
+        const restored = deserializeContainer(record);
+        if (!restored) continue;
+        const current = this.game._containers.get(key);
+        if (current?.type === restored.type) {
+          if (JSON.stringify(serializeContainer(current.type, current.data)) === JSON.stringify(record)) continue;
+          // Preserve the live object/slot-array references held by an open UI.
+          if (restored.type === 'chest') {
+            current.data.slots.splice(0, current.data.slots.length, ...restored.data.slots);
+          } else {
+            Object.assign(current.data, restored.data);
+          }
+        } else {
+          this.game._containers.set(key, restored);
+        }
+        this.game._renderContainer?.();
+      }
+    });
+    this._listen(onValue, ref(this.db, `minecraft_game/rooms/${code}/containerLocks`), (snap) => {
+      const locks = snap.val() || {};
+      this.remoteContainerLocks = new Map(
+        Object.entries(locks).filter(([key]) => isValidContainerKey(key)),
+      );
+    });
     this._listen(onValue, ref(this.db, `minecraft_game/rooms/${code}/blocks`), (snap) => {
       const blocks = snap.val() || {};
       for (const block of Object.values(blocks)) {
@@ -451,6 +528,7 @@ export class Multiplayer {
       });
       this.firebaseError = '';
       await this._flushPendingBlockWrites();
+      await this._flushPendingContainerWrites();
       this._updateRoomHud();
     } catch (error) {
       this.firebaseError = error?.message || 'Не удалось восстановить сетевую сессию';
@@ -691,6 +769,146 @@ export class Multiplayer {
     }
   }
 
+
+
+  /** Acquire a short advisory lease so two online players do not edit one container at once. */
+  async acquireContainerLock(key) {
+    if (!this.roomId || !isValidContainerKey(key)) return { ok: true, local: true };
+    if (!this.db || !this.firebaseConnected || !runTransaction) return { ok: false, offline: true };
+    const roomId = this.roomId;
+    // Finish any previous screen's queued snapshot before a rapid reopen can
+    // obtain a fresh token for the same container.
+    await this._flushPendingContainerWrites();
+    const token = `${this.uid}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
+    const lockRef = ref(this.db, `minecraft_game/rooms/${roomId}/containerLocks/${key}`);
+    try {
+      const result = await runTransaction(lockRef, (current) => {
+        if (!canAcquireContainerLease(current, this.uid, Date.now())) return;
+        return {
+          owner: this.uid,
+          name: this.nickname,
+          token,
+          expiresAt: Date.now() + CONTAINER_LOCK_TTL_MS,
+        };
+      }, { applyLocally: false });
+      const lease = result.snapshot.val();
+      if (!result.committed || !ownsContainerLease(lease, this.uid, token)) {
+        return { ok: false, owner: lease?.name || 'другой игрок' };
+      }
+      if (this.roomId !== roomId) {
+        await runTransaction(lockRef, (current) => ownsContainerLease(current, this.uid, token) ? null : undefined);
+        return { ok: false, offline: true };
+      }
+      this.activeContainerLocks.set(key, { roomId, token, lockRef });
+      return { ok: true, token };
+    } catch (error) {
+      console.warn('[multiplayer] container lock acquire:', error);
+      return { ok: false, offline: true };
+    }
+  }
+
+  async renewContainerLock(key, token) {
+    const held = this.activeContainerLocks.get(key);
+    if (!held || held.token !== token || held.roomId !== this.roomId || !this.firebaseConnected) return false;
+    try {
+      const result = await runTransaction(held.lockRef, (current) => {
+        if (!ownsContainerLease(current, this.uid, token)) return;
+        return { ...current, expiresAt: Date.now() + CONTAINER_LOCK_TTL_MS };
+      }, { applyLocally: false });
+      if (!result.committed || !ownsContainerLease(result.snapshot.val(), this.uid, token)) {
+        this.activeContainerLocks.delete(key);
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.warn('[multiplayer] container lock renew:', error);
+      return false;
+    }
+  }
+
+  async releaseContainerLock(key, token) {
+    const held = this.activeContainerLocks.get(key);
+    if (!held || held.token !== token) return false;
+    // Publish the final inventory snapshot before allowing another player in.
+    await this._flushPendingContainerWrites();
+    // A fast close/reopen can acquire a new token while the old release waits
+    // for Firebase writes. Never delete or release that newer local lease.
+    const current = this.activeContainerLocks.get(key);
+    if (!current || current.token !== token) return false;
+    const queueKey = `${held.roomId}:${key}`;
+    if (this.pendingContainerWrites.has(queueKey)) {
+      // Keep the lease until its normal expiry if the final write could not be sent.
+      this.activeContainerLocks.delete(key);
+      return false;
+    }
+    this.activeContainerLocks.delete(key);
+    try {
+      const result = await runTransaction(held.lockRef, (current) =>
+        ownsContainerLease(current, this.uid, token) ? null : undefined,
+      { applyLocally: false });
+      return result.committed;
+    } catch (error) {
+      console.warn('[multiplayer] container lock release:', error);
+      return false;
+    }
+  }
+
+  async releaseAllContainerLocks() {
+    const held = [...this.activeContainerLocks.entries()];
+    await Promise.all(held.map(([key, value]) => this.releaseContainerLock(key, value.token)));
+  }
+
+  isContainerLockedByOther(key) {
+    return isContainerLeaseHeldByOther(this.remoteContainerLocks.get(key), this.uid);
+  }
+
+  /** Queue the newest snapshot per room/container, including while offline. */
+  pushContainerState(key, type, data) {
+    if (!this.roomId || !isValidContainerKey(key)) return;
+    const record = serializeContainer(type, data);
+    if (!record) return;
+    queueContainerWrite(this.pendingContainerWrites, this.roomId, key, record);
+    if (this.firebaseConnected) void this._flushPendingContainerWrites();
+  }
+
+  /** Queue a tombstone too, so an offline break cannot resurrect old contents. */
+  removeContainerState(key) {
+    if (!this.roomId || !isValidContainerKey(key)) return;
+    queueContainerWrite(this.pendingContainerWrites, this.roomId, key, { deleted: true, ts: Date.now() });
+    if (this.firebaseConnected) void this._flushPendingContainerWrites();
+  }
+
+  async _flushPendingContainerWrites() {
+    if (!this.db || !this.roomId || !this.firebaseConnected) return;
+    if (this.containerFlushInFlight) {
+      this.containerFlushRequested = true;
+      await this.containerFlushPromise;
+      return;
+    }
+    this.containerFlushInFlight = true;
+    this.containerFlushPromise = (async () => {
+      try {
+        for (const [queueKey, entry] of this.pendingContainerWrites) {
+          if (entry.roomId !== this.roomId) continue;
+          try {
+            await set(ref(this.db, `minecraft_game/rooms/${entry.roomId}/containers/${entry.key}`), entry.record);
+            if (this.pendingContainerWrites.get(queueKey) === entry) this.pendingContainerWrites.delete(queueKey);
+          } catch (error) {
+            console.warn('[multiplayer] queued container sync:', error);
+            break;
+          }
+        }
+      } finally {
+        const rerun = this.containerFlushRequested && this.firebaseConnected;
+        this.containerFlushRequested = false;
+        this.containerFlushInFlight = false;
+        this.containerFlushPromise = null;
+        if (rerun) await this._flushPendingContainerWrites();
+      }
+    })();
+    await this.containerFlushPromise;
+  }
+
   sendChat(text) {
     const value = String(text || '').trim().slice(0, 240);
     if (!value) return;
@@ -714,8 +932,14 @@ export class Multiplayer {
   }
 
   async leaveRoom(markOffline = false) {
+    if (this.game._activeContainer) this.game._closeContainer?.();
+    await this.game._containerReleasePromise?.catch(() => {});
     for (const unsubscribe of this.unsubscribers.splice(0)) unsubscribe();
     if (this.db && this.roomId) {
+      await this.releaseAllContainerLocks();
+      // Try to persist this room's last edits before clearing the active room ID.
+      await this._flushPendingBlockWrites();
+      await this._flushPendingContainerWrites();
       await remove(ref(this.db, `minecraft_game/rooms/${this.roomId}/players/${this.uid}`)).catch(() => {});
       await update(ref(this.db, `minecraft_game/players/${this.uid}`), { room: '' }).catch(() => {});
       await update(ref(this.db, `minecraft_game/users/${this.uid}`), { room: '', online: true, ts: Date.now() }).catch(() => {});
@@ -723,6 +947,7 @@ export class Multiplayer {
     this.roomId = null;
     this.isHost = false;
     this.remotePlayers.clear();
+    this.remoteContainerLocks.clear();
     this.pendingBlocks.clear();
     for (let i = (this.game.entities?.droppedItems?.length ?? 0) - 1; i >= 0; i--) {
       if (this.game.entities.droppedItems[i].networkOwner && this.game.entities.droppedItems[i].networkOwner !== this.uid) this.game.entities.droppedItems.splice(i, 1);

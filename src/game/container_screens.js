@@ -2,8 +2,9 @@
  * Chest and furnace screens (Java 1.12.2). A prototype mixin, applied to Game in main.js.
  *
  * The screen is built in code as an overlay, so no index.html markup is needed. Logic
- * lives in game/containers.js. Contents are kept in memory per block position and are
- * not yet saved to the .mcw file. Breaking a container does not drop its contents yet.
+ * lives in game/containers.js. Local contents are saved with the player record; online
+ * container snapshots are shared through the room's Firebase state. Breaking a container
+ * drops its contents in survival.
  *
  * Clicks: left click takes, swaps or merges with the cursor; right click takes half or
  * puts down one; shift-click moves a stack between the player's inventory and the container.
@@ -224,19 +225,30 @@ export const ContainerScreensMixin = {
   },
 
   _openChest(x, y, z) {
-    this._openContainer({ title: 'Сундук', slots: this._chestAt(x, y, z).slots, kind: 'chest' });
+    const key = this._containerKey(x, y, z);
+    this._openContainer({ title: 'Сундук', slots: this._chestAt(x, y, z).slots, kind: 'chest', key });
   },
 
   _openFurnace(x, y, z) {
     const furnace = this._furnaceAt(x, y, z);
-    this._openContainer({ title: 'Печь', furnace, kind: 'furnace' });
+    this._openContainer({ title: 'Печь', furnace, kind: 'furnace', key: this._containerKey(x, y, z) });
   },
 
   /** Advance every furnace that exists in the world. Called from the fixed tick. */
   _tickFurnaces() {
     if (!this._containers) return;
-    for (const { type, data } of this._containers.values()) {
-      if (type === 'furnace') data.tick();
+    // One deterministic room host advances online furnaces; otherwise every
+    // client would simulate and publish competing copies of the same timers.
+    if (this.multiplayer?.roomId && !this.multiplayer.isHost) return;
+    for (const [key, { type, data }] of this._containers) {
+      if (type !== 'furnace') continue;
+      // If a non-host player owns the advisory edit lease, pause host writes
+      // until that screen closes so the furnace snapshot cannot overwrite it.
+      if (this.multiplayer?.isContainerLockedByOther?.(key)) continue;
+      data.tick();
+      if (this.multiplayer?.roomId && this.tickCount % 20 === 0) {
+        this.multiplayer.pushContainerState(key, type, data);
+      }
     }
   },
 
@@ -244,6 +256,7 @@ export const ContainerScreensMixin = {
     ensureStyle();
     this._closeContainer();
     this._activeContainer = spec;
+    spec.lockState = this.multiplayer?.roomId ? 'pending' : 'local';
     this.inventoryOpen = true;
     document.exitPointerLock?.();
     const overlay = document.createElement('div');
@@ -252,6 +265,38 @@ export const ContainerScreensMixin = {
     document.body.appendChild(overlay);
     this._renderContainer();
     this._containerTimer = setInterval(() => this._renderContainer(), 250);
+    if (this.multiplayer?.roomId) {
+      const active = spec;
+      this.multiplayer.acquireContainerLock?.(spec.key).then((result) => {
+        if (this._activeContainer !== active) {
+          if (result?.ok && result.token) void this.multiplayer.releaseContainerLock?.(active.key, result.token);
+          return;
+        }
+        if (result?.ok) {
+          active.lockState = 'owned';
+          active.lockToken = result.token || null;
+          if (result.token) this._containerLockTimer = setInterval(async () => {
+            const renewed = await this.multiplayer.renewContainerLock?.(active.key, active.lockToken);
+            if (!renewed && this._activeContainer === active) {
+              active.lockState = 'lost';
+              clearInterval(this._containerLockTimer);
+              this._renderContainer();
+              this.ui?.toast?.('Блокировка контейнера потеряна. Изменения остановлены.', { error: true });
+            }
+          }, 5000);
+        } else {
+          active.lockState = result?.offline ? 'offline' : 'busy';
+          active.lockOwner = result?.owner || '';
+          this.ui?.toast?.(result?.offline ? 'Нет соединения: подключись, чтобы редактировать общий контейнер.' : 'Контейнер уже редактирует другой игрок.', { error: true });
+        }
+        this._renderContainer();
+      }).catch((error) => {
+        if (this._activeContainer !== active) return;
+        active.lockState = 'offline';
+        this._renderContainer();
+        console.warn('[container] lock acquisition failed:', error);
+      });
+    }
     // Handle both mouse buttons on pointer-down so slot transfers are immediate
     // and do not depend on a synthetic click surviving the UI re-render.
     overlay.onpointerdown = (e) => {
@@ -269,6 +314,11 @@ export const ContainerScreensMixin = {
     const overlay = document.getElementById(OVERLAY_ID);
     if (overlay) overlay.remove();
     clearInterval(this._containerTimer);
+    clearInterval(this._containerLockTimer);
+    const active = this._activeContainer;
+    this._containerReleasePromise = active?.lockToken
+      ? this.multiplayer?.releaseContainerLock?.(active.key, active.lockToken) || Promise.resolve(false)
+      : Promise.resolve(false);
     this._activeContainer = null;
     this.inventoryOpen = false;
     this._requestPointerLock?.();
@@ -312,6 +362,11 @@ export const ContainerScreensMixin = {
     body += '</div><div class="row slots-9">';
     for (let i = 0; i <= 8; i++) body += this._slotHtml('inv', i, inv.slots[i]);
     body += '</div>';
+    if (spec.lockState === 'pending') body += '<div class="hint">Проверка блокировки контейнера…</div>';
+    else if (spec.lockState === 'busy') body += '<div class="hint">Контейнер сейчас редактирует другой игрок.</div>';
+    else if (spec.lockState === 'offline') body += '<div class="hint">Нет соединения — редактирование общего контейнера отключено.</div>';
+    else if (spec.lockState === 'lost') body += '<div class="hint">Блокировка потеряна. Закрой и открой контейнер снова.</div>';
+    else if (spec.lockState === 'owned') body += '<div class="hint">Контейнер закреплён за вами на время редактирования.</div>';
     body += `<div class="hint">В курсоре: ${inv.cursor?.isEmpty ? 'пусто' : label(inv.cursor)}. Shift-клик переносит стак. Esc — закрыть.</div>`;
     body += '<button id="container-close">Закрыть</button>';
     overlay.innerHTML = `<div class="panel">${body}</div>`;
@@ -323,6 +378,7 @@ export const ContainerScreensMixin = {
     const inv = this.inventory;
     const spec = this._activeContainer;
     if (!spec) return;
+    if (['pending', 'busy', 'offline', 'lost'].includes(spec.lockState)) return;
 
     if (kind === 'inv') {
       if (shift && spec.kind === 'chest') {
@@ -344,6 +400,7 @@ export const ContainerScreensMixin = {
       }
       inv.version++;
       this._renderContainer();
+      this._syncActiveContainer();
       return;
     }
 
@@ -351,6 +408,13 @@ export const ContainerScreensMixin = {
     const target = this._containerSlot(spec, kind, index);
     if (!target) return;
     const { get, set } = target;
+    if (shift) {
+      this._moveContainerSlotToInventory(target);
+      inv.version++;
+      this._renderContainer();
+      this._syncActiveContainer();
+      return;
+    }
     const cursor = inv.cursor;
     if (target.outputOnly) {
       const output = get();
@@ -372,6 +436,14 @@ export const ContainerScreensMixin = {
     }
     inv.version++;
     this._renderContainer();
+    this._syncActiveContainer();
+  },
+
+  _syncActiveContainer() {
+    const spec = this._activeContainer;
+    if (!spec?.key || !['local', 'owned'].includes(spec.lockState)) return;
+    const entry = this._containers?.get(spec.key);
+    if (entry) this.multiplayer?.pushContainerState(spec.key, entry.type, entry.data);
   },
 
   _containerSlot(spec, kind, index) {
@@ -396,6 +468,19 @@ export const ContainerScreensMixin = {
       };
     }
     return null;
+  },
+
+  /** Shift-transfer as much as possible from a container slot into player storage. */
+  _moveContainerSlotToInventory(target) {
+    const stack = target.get();
+    if (stack.isEmpty) return false;
+    const copy = stack.clone();
+    const remainder = this.inventory.add(copy);
+    const moved = stack.count - remainder;
+    if (moved <= 0) return false;
+    stack.count = remainder;
+    target.set(remainder > 0 ? stack : ItemStack.EMPTY.clone());
+    return true;
   },
 
   _swapWithCursor(slotStack, set, button) {

@@ -10,6 +10,32 @@ import { mineshaftPlan } from '../src/world/gen/structures.js';
 /**
  * Chest and furnace rules from the 1.12.2 reference (docs/TARGET_1_12_2.md, sections 11 and 17).
  */
+
+describe('Online furnace authority', () => {
+  it('only the elected host advances and publishes shared furnace state', () => {
+    const furnace = new Furnace();
+    furnace.input = ItemStack.of('mc:iron_ore', 1);
+    furnace.fuel = ItemStack.of('mc:coal', 1);
+    const key = '4,64,8';
+    const writes = [];
+    const game = {
+      _containers: new Map([[key, { type: 'furnace', data: furnace }]]),
+      multiplayer: { roomId: 'ABCDE', isHost: false, pushContainerState: (...args) => writes.push(args) },
+      tickCount: 20,
+    };
+    ContainerScreensMixin._tickFurnaces.call(game);
+    assertEqual(furnace.burnLeft, 0);
+    assertEqual(writes.length, 0);
+
+    game.multiplayer.isHost = true;
+    ContainerScreensMixin._tickFurnaces.call(game);
+    assertEqual(furnace.burnLeft, furnace.burnTotal);
+    assertEqual(writes.length, 1);
+    assertEqual(writes[0][0], key);
+    assertEqual(writes[0][1], 'furnace');
+  });
+});
+
 describe('Chest', () => {
   it('has 27 slots', () => assertEqual(new Chest().slots.length, CHEST_SLOTS));
   it('fills matching partial stacks before empty slots', () => {
