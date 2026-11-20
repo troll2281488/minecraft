@@ -37,10 +37,20 @@ for (const wood of WOODS) {
     pattern: ['PP', 'PP', 'PP'],
     key: { P: `mc:${wood}_planks` },
   });
+  recipes.push({
+    result: `mc:${wood}_trapdoor`, count: 2,
+    pattern: ['PPP', 'PPP'],
+    key: { P: `mc:${wood}_planks` },
+  });
 }
 recipes.push({
   result: 'mc:iron_door', count: 3,
   pattern: ['II', 'II', 'II'],
+  key: { I: 'mc:iron_ingot' },
+});
+recipes.push({
+  result: 'mc:iron_trapdoor', count: 1,
+  pattern: ['II', 'II'],
   key: { I: 'mc:iron_ingot' },
 });
 
