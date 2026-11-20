@@ -341,6 +341,12 @@ class Game {
       player.attackTime = 8;
     }
     player.tick(world);
+    if (player.ridingHorse) {
+      player.ridingHorse.x = player.x;
+      player.ridingHorse.y = player.y - 0.15;
+      player.ridingHorse.z = player.z;
+      player.ridingHorse.yaw = player.yaw * Math.PI / 180;
+    }
     if (player.onGround && Math.hypot(player.vx ?? 0, player.vz ?? 0) > 0.09) {
       const under = world.getBlock(Math.floor(player.x), Math.floor(player.y - 0.15), Math.floor(player.z)).block;
       this.sounds?.step(under.soundGroup || 'stone');
