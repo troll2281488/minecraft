@@ -30,6 +30,7 @@ describe('1.12.2 Phase 1 items', () => {
     assert(RECIPES.recipes.some((recipe) => recipe.result === 'mc:lever'), 'lever recipe missing');
     assert(ITEMS.get('mc:redstone').block === 'mc:redstone_wire', 'redstone dust must place wire');
     assert(ITEMS.get('mc:redstone_torch') !== undefined, 'redstone torch item missing');
+    assert(RECIPES.recipes.some((recipe) => recipe.result === 'mc:repeater' && recipe.pattern?.length === 3), 'repeater recipe missing or malformed');
     assert(ITEMS.get('mc:repeater') !== undefined, 'repeater item missing');
     assert(ITEMS.get('mc:redstone_wire') === undefined, 'wire must not add a duplicate creative item');
     for (const id of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak', 'stone', 'polished_blackstone']) {
