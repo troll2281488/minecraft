@@ -90,6 +90,29 @@ describe('shapes: box geometry', () => {
     }
   });
 
+  it('buttons, levers and pressure plates have compact render geometry', () => {
+    const button = BLOCKS.get('mc:stone_button').defaultState;
+    assertDeepEqual(shapeBoxes(button), [[0.375, 0.375, 0, 0.625, 0.625, 0.125]]);
+    assertDeepEqual(shapeBoxes(button.with('powered', true)), [[0.375, 0.375, 0, 0.625, 0.625, 0.0625]]);
+    const plate = BLOCKS.get('mc:stone_pressure_plate').defaultState;
+    assertDeepEqual(shapeBoxes(plate), [[0, 0, 0, 1, 0.0625, 1]]);
+    assertDeepEqual(shapeBoxes(plate.with('powered', true)), [[0, 0, 0, 1, 0.03125, 1]]);
+    assertEqual(shapeBoxes(BLOCKS.get('mc:lever').defaultState).length, 2);
+    assert(isNonCube(button));
+  });
+
+  it('all Java 1.19 button, lever and pressure plate blocks are registered', () => {
+    for (const id of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) {
+      assert(BLOCKS.get(`mc:${id}_button`), `${id} button missing`);
+      assert(BLOCKS.get(`mc:${id}_pressure_plate`), `${id} pressure plate missing`);
+    }
+    for (const id of ['stone', 'polished_blackstone']) {
+      assert(BLOCKS.get(`mc:${id}_button`), `${id} button missing`);
+      assert(BLOCKS.get(`mc:${id}_pressure_plate`), `${id} pressure plate missing`);
+    }
+    assert(BLOCKS.get('mc:lever'), 'lever missing');
+  });
+
   it('all six wooden door variants and iron door are registered', () => {
     for (const id of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak', 'iron']) {
       const block = BLOCKS.get(`mc:${id}_door`);
