@@ -24,7 +24,8 @@ import { Chunk, GEN_STAGE } from '../chunk.js';
 import { BLOCKS } from '../block.js';
 import { CHUNK_SIZE, MIN_Y, MAX_Y, SEA_LEVEL } from '../../core/constants.js';
 import { clamp } from '../../core/math.js';
-import { buildTree } from './trees.js';
+import { buildTree, TREE_MARGIN } from './trees.js';
+import { hash01, seedToInt } from './hash.js';
 
 /** Bumped whenever generation output changes. Stored per world. */
 export const GENERATOR_VERSION = 12;
@@ -179,6 +180,7 @@ export class TerrainGenerator {
     this.ravine = new OctaveNoise(root.fork('ravine'), 2, 0.5, 2.0);
     this.ravineMask = new OctaveNoise(root.fork('ravine_mask'), 2, 0.5, 2.0);
 
+    this.hseed = seedToInt(this.seed);
     this.states = resolveStates();
   }
 
@@ -349,6 +351,7 @@ export class TerrainGenerator {
     this.placeOres(chunk, baseX, baseZ);
     this.applySurface(chunk, baseX, baseZ, heights, biomes);
     this.placeFeatures(chunk, baseX, baseZ, heights, biomes);
+    this.placeTrees(chunk, baseX, baseZ);
     this.placeCaveLakes(chunk, baseX, baseZ);
     this.placeFossils(chunk, baseX, baseZ);
     this.placeVillages(chunk, baseX, baseZ);
@@ -561,6 +564,59 @@ export class TerrainGenerator {
     }
   }
 
+  /** Deterministic tree origin, evaluated from world coordinates rather than chunk-local RNG. */
+  treeAt(wx, wz) {
+    const u = hash01(this.hseed, wx, 0, wz, 31337);
+    if (u > 0.1) return null;
+    const col = this.column(wx, wz);
+    if (col.h < SEA_LEVEL) return null;
+    const rule = BIOME_SURFACE[col.biome];
+    if (!rule || !rule.trees || u >= rule.trees) return null;
+    const ground = this.surfaceTop(col.biome, col.h, wx, wz);
+    if (!ground || !['mc:grass_block','mc:podzol','mc:coarse_dirt','mc:snow_block','mc:dirt','mc:red_sand','mc:mycelium'].includes(ground)) return null;
+    if (this.isCave(wx, col.h, wz, col.h + 6)) return null;
+    for (let dz=-2; dz<=2; dz++) for (let dx=-2; dx<=2; dx++) {
+      if (!dx && !dz) continue;
+      const nu=hash01(this.hseed,wx+dx,0,wz+dz,31337);
+      if (nu<u && nu<rule.trees) return null;
+    }
+    const rng=positionalRandom(this.seed,wx,777,wz,777);
+    let species=rule.species || 'oak';
+    if (rule.mix) {
+      let total=0; for (const [,weight] of rule.mix) total+=weight;
+      let roll=rng.nextInt(total);
+      for (const [name,weight] of rule.mix) { roll-=weight; if (roll<0) { species=name; break; } }
+    }
+    const shape=buildTree(species,rng);
+    shape.species=species; shape.y=col.h+1;
+    return shape;
+  }
+
+  /** Write tree pieces crossing chunk edges identically in every generation order. */
+  placeTrees(chunk, baseX, baseZ) {
+    const S=this.states.byId;
+    const passable=(id)=>id==='mc:air'||id==='mc:short_grass'||id==='mc:fern'||id==='mc:dandelion'||
+      id==='mc:poppy'||id==='mc:dead_bush'||id==='mc:red_mushroom'||id==='mc:brown_mushroom';
+    const margin=TREE_MARGIN+1;
+    for(let wz=baseZ-margin;wz<baseZ+CHUNK_SIZE+margin;wz++) for(let wx=baseX-margin;wx<baseX+CHUNK_SIZE+margin;wx++) {
+      const tree=this.treeAt(wx,wz); if(!tree) continue;
+      const log=S[`mc:${tree.species}_log`], leaves=S[`mc:${tree.species}_leaves`];
+      if(!log) continue;
+      for(const [dx,dy,dz] of tree.leaves) {
+        const x=wx+dx-baseX,z=wz+dz-baseZ;
+        if(x<0||x>=CHUNK_SIZE||z<0||z>=CHUNK_SIZE||!leaves) continue;
+        const id=chunk.getBlock(x,tree.y+dy,z).block.id;
+        if(passable(id)) chunk.setBlock(x,tree.y+dy,z,leaves);
+      }
+      for(const [dx,dy,dz] of tree.logs) {
+        const x=wx+dx-baseX,z=wz+dz-baseZ;
+        if(x<0||x>=CHUNK_SIZE||z<0||z>=CHUNK_SIZE) continue;
+        const id=chunk.getBlock(x,tree.y+dy,z).block.id;
+        if(passable(id)||/_leaves$/.test(id)) chunk.setBlock(x,tree.y+dy,z,log);
+      }
+    }
+  }
+
   /** Trees, grass, and bushes. */
   placeFeatures(chunk, baseX, baseZ, heights, biomes) {
     const S = this.states;
@@ -581,16 +637,6 @@ export class TerrainGenerator {
         }
         if (top < 0) continue;
         const groundId = chunk.getBlock(x, top, z).block.id;
-
-        if (surface.trees > 0 && ['mc:grass_block', 'mc:podzol', 'mc:coarse_dirt', 'mc:snow_block'].includes(groundId) && rng.nextDouble() < surface.trees) {
-          // Keep trunks away from the chunk edge: this generator writes only
-          // into its own chunk, so a canopy crossing the border would be
-          // clipped. Cross-chunk feature placement arrives in Phase 2.
-          if (x >= 2 && x <= 13 && z >= 2 && z <= 13) {
-            this.placeTree(chunk, x, top + 1, z, surface.species ?? 'oak', rng);
-            continue;
-          }
-        }
 
         if (biomes[i] === BIOME.MUSHROOM_FIELDS && groundId === 'mc:mycelium' && rng.nextDouble() < (surface.mushrooms ?? 0)) {
           const mushroom = rng.nextBoolean() ? S.byId['mc:red_mushroom'] : S.byId['mc:brown_mushroom'];
