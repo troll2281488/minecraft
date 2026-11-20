@@ -140,7 +140,7 @@ export class MobSystem {
 
   beginBowDraw() {
     const held = this.game.inventory?.held;
-    if (held?.item?.id !== 'mc:bow' || this.game.player?.gamemode !== 'survival') return false;
+    if (held?.item?.id !== 'mc:bow' || !['survival', 'creative'].includes(this.game.player?.gamemode)) return false;
     this.bowDrawStart = this.game.tickCount || 0;
     return true;
   }
@@ -184,9 +184,6 @@ export class MobSystem {
         mob.health = Math.max(0, mob.health - arrow.damage);
         mob.hurtTicks = 10;
         mob.anim.hurt = 1;
-        if (mob.health <= 0) {
-          for (const drop of rollMobDrops(mob.type)) this.game.inventory?.addItem(drop.id, drop.count);
-        }
       }
       if (arrow.done) this.arrows.splice(i, 1);
     }
