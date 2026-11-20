@@ -96,6 +96,7 @@ describe('shapes: box geometry', () => {
     assertEqual(collisionBoxes(repeater).length, 0);
     assertEqual(repeater.get('delay'), 1);
     assertEqual(repeater.with('delay', 4).get('delay'), 4);
+    assertEqual(repeater.with('facing', 'east').get('facing'), 'east');
   });
 
   it('redstone wire is a thin non-colliding surface', () => {
