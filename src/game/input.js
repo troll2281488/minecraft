@@ -11,6 +11,7 @@ import { GAMEMODE } from '../entity/player.js';
 import { ITEMS, ItemStack } from '../world/item.js';
 import { BLOCKS, parseStateString } from '../world/block.js';
 import { isAction, bindKey } from './keybinds.js';
+import { findNearestStructure } from '../world/gen/terrain.js';
 
 export const InputMixin = {
   _setupInput() {
@@ -222,7 +223,24 @@ export const InputMixin = {
     };
     if (!command) return;
     if (command === 'help' || command === '?') {
-      reply('Команды: /gamemode creative|survival|spectator · /give <предмет> [кол-во] · /tp <игрок> или /tp <x> <y> <z> · /setblock <x> <y> <z> <блок> · /time set day|night · /time add <тики> · /heal · /fly · /spawn · /save · /seed · /whereami');
+      reply('Команды: /locate <структура> · /dimension overworld|nether|end · /gamemode creative|survival|spectator · /give <предмет> [кол-во] · /tp <игрок> или /tp <x> <y> <z> · /setblock <x> <y> <z> <блок> · /time set day|night · /time add <тики> · /heal · /fly · /spawn · /save · /seed · /whereami');
+      return;
+    }
+
+    if (command === 'dimension' || command === 'dim') {
+      const target = (args[0] || '').toLowerCase();
+      if (!['overworld','nether','end'].includes(target)) {
+        reply('Использование: /dimension overworld|nether|end', true); return;
+      }
+      this._switchDimension(target).catch((error) => reply('Не удалось сменить измерение: '+error.message,true));
+      return;
+    }
+    if (command === 'locate') {
+      const structure=(args[0]||'').toLowerCase();
+      if(!structure){reply('Использование: /locate village|mineshaft|dungeon|stronghold|desert_temple|jungle_temple|swamp_hut|igloo|mansion|monument|fossil|fortress|end_city',true);return;}
+      const found=findNearestStructure(this.worldMeta?.seed ?? this.world.seed,this.world.dimension,structure,this.player.x,this.player.z,16000);
+      if(!found){reply('Структура не найдена поблизости или недоступна в этом измерении.',true);return;}
+      reply('Ближайшая '+structure+': X '+Math.floor(found.x)+' Y '+Math.floor(found.y??64)+' Z '+Math.floor(found.z)+' · '+Math.round(found.distance)+' блоков');
       return;
     }
     if (command === 'save') {
