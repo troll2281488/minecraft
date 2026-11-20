@@ -230,7 +230,7 @@ export function meshChunk(view) {
 
           if (shape === 'cross') { emitCross(opaque, view, state, x, wy, z, idx); continue; }
           if (shape === 'torch') { emitTorch(opaque, view, state, x, wy, z, idx); continue; }
-          if (shape === 'slab' || shape === 'stair' || shape === 'pane' || shape === 'ladder' || shape === 'door' || shape === 'trapdoor' || shape === 'button' || shape === 'lever' || shape === 'pressure_plate' || shape === 'redstone_wire' || shape === 'repeater') {
+          if (shape === 'slab' || shape === 'stair' || shape === 'pane' || shape === 'ladder' || shape === 'door' || shape === 'trapdoor' || shape === 'button' || shape === 'lever' || shape === 'pressure_plate' || shape === 'weighted_pressure_plate' || shape === 'redstone_wire' || shape === 'repeater') {
             emitBoxes(opaque, view, state, x, wy, z, idx, shapeBoxes(state));
             continue;
           }
