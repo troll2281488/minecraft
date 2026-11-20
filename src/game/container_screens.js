@@ -237,8 +237,15 @@ export const ContainerScreensMixin = {
   /** Advance every furnace that exists in the world. Called from the fixed tick. */
   _tickFurnaces() {
     if (!this._containers) return;
-    for (const { type, data } of this._containers.values()) {
-      if (type === 'furnace') data.tick();
+    // One deterministic room host advances online furnaces; otherwise every
+    // client would simulate and publish competing copies of the same timers.
+    if (this.multiplayer?.roomId && !this.multiplayer.isHost) return;
+    for (const [key, { type, data }] of this._containers) {
+      if (type !== 'furnace') continue;
+      data.tick();
+      if (this.multiplayer?.roomId && this.tickCount % 20 === 0) {
+        this.multiplayer.pushContainerState(key, type, data);
+      }
     }
   },
 
