@@ -96,7 +96,7 @@ export async function loadItsBrianTextures(blocks, items) {
     // Keep foliage and soil textures local. Grass top and side deliberately load
     // from ItsBrian: the shader tints only green pixels, never the brown dirt.
     if (name.endsWith('_leaves') || name.endsWith('_sapling') || [
-      'dirt', 'coarse_dirt', 'podzol_top',
+      'coarse_dirt', 'podzol_top',
       'podzol_side', 'plains_soil', 'forest_floor', 'birch_soil', 'jungle_soil',
       'savanna_soil', 'taiga_soil', 'swamp_mud', 'alpine_gravel',
     ].includes(name)) return null;
