@@ -1216,7 +1216,15 @@ export class TerrainGenerator {
         put(x0 - 11 + dx, y0 + 2, z0 + 4, S['mc:bookshelf']);
       }
     }
-    if (S['mc:chest']) put(x0 + 2, y0 + 1, z0 + 2, S['mc:chest']);
+    if (S['mc:chest']) {
+      // Storeroom / crossing chest.
+      put(x0 + 2, y0 + 1, z0 + 2, S['mc:chest']);
+      // Two library chests beside the bookshelf wall (large-library layout).
+      put(x0 - 10, y0 + 1, z0 + 8, S['mc:chest']);
+      put(x0 - 6, y0 + 1, z0 + 8, S['mc:chest']);
+      // Portal-room chest, separate from the lava recess and frame ring.
+      put(x0 + 20, y0 + 1, z0 + 10, S['mc:chest']);
+    }
   }
 
   placeMineshaft(chunk, baseX, baseZ, site) {
