@@ -245,7 +245,8 @@ export const SessionMixin = {
     const savedSpawn = this.worldMeta?.spawnPoint;
     if (this.world.dimension !== 'overworld') await this._switchDimension('overworld');
     if (savedSpawn && Number.isFinite(savedSpawn.x) && Number.isFinite(savedSpawn.y) && Number.isFinite(savedSpawn.z)) {
-      this.world.requestAround(savedSpawn.x, savedSpawn.z, 3, 24);
+      this.player.teleport(savedSpawn.x, savedSpawn.y, savedSpawn.z);
+      this.world.requestAround(savedSpawn.x, savedSpawn.z, 4, 32);
       await this._waitForSpawnChunks(false);
       spawn = savedSpawn;
     } else spawn = await this._findSafeSpawn();
