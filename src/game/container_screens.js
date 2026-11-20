@@ -11,7 +11,8 @@
 import { Chest, Furnace, SMELTING, SMELT_TICKS, serializeContainer, deserializeContainer } from './containers.js';
 import { ItemStack } from '../world/item.js';
 import { positionalRandom } from '../core/rng.js';
-import { TerrainGenerator, BIOME, dungeonCandidateForCell, villageCandidateForCell, mineshaftCandidateForCell, mineshaftPlan, desertTempleCandidateForCell, jungleTempleCandidateForCell, strongholdCandidateForCell } from '../world/gen/terrain.js';
+import { mineshaftPlan } from '../world/gen/structures.js';
+import { TerrainGenerator, BIOME, dungeonCandidateForCell, villageCandidateForCell, mineshaftCandidateForCell, desertTempleCandidateForCell, jungleTempleCandidateForCell, strongholdCandidateForCell } from '../world/gen/terrain.js';
 
 const OVERLAY_ID = 'container-overlay';
 
