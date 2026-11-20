@@ -25,6 +25,9 @@ export const BlockActionsMixin = {
   _breakBlock() {
     if (!this.hit) return;
     const { x, y, z, state } = this.hit;
+    const isDoor = state.block.renderShape === 'door';
+    const doorHalf = isDoor ? state.get('half') : null;
+    const pairedDoorY = isDoor ? y + (doorHalf === 'upper' ? -1 : 1) : null;
     if (state.block.isUnbreakable && this.player.gamemode !== GAMEMODE.CREATIVE) return;
 
     // Container block entities belong to this exact position. Remove them on
@@ -47,7 +50,9 @@ export const BlockActionsMixin = {
     if (this.player.gamemode === GAMEMODE.SURVIVAL) {
       // Seeded from the world seed and block position, so drops are
       // reproducible rather than depending on a global RNG.
-      const drops = blockDrops(state, this.inventory.held, this.world.seed, x, y, z);
+      // The upper door half is dependent on the lower half and never drops an item.
+      const drops = isDoor && doorHalf === 'upper'
+        ? [] : blockDrops(state, this.inventory.held, this.world.seed, x, y, z);
       for (const drop of drops) this.inventory.addItem(drop.id, drop.count);
       // Ore XP is awarded only for a valid survival harvest, never for creative breaking.
       if (canHarvest(state.block, this.inventory.held)) {
@@ -64,6 +69,10 @@ export const BlockActionsMixin = {
     this.sounds?.play('break', state.block.soundGroup || 'stone');
     this.world.setBlock(x, y, z, AIR.defaultState);
     this.multiplayer?.pushBlockChange(x, y, z, AIR.defaultState);
+    if (isDoor) {
+      this.world.setBlock(x, pairedDoorY, z, AIR.defaultState);
+      this.multiplayer?.pushBlockChange(x, pairedDoorY, z, AIR.defaultState);
+    }
     this.mining.reset();
   },
 
@@ -143,6 +152,24 @@ export const BlockActionsMixin = {
     if (this.entities?.feedAnimalFromPlayer()) return;
     if (this._farmInteraction()) return;
     const sneaking = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
+    if (this.hit && !sneaking && this.hit.state.block.renderShape === 'door') {
+      const doorState = this.hit.state;
+      // Iron doors require a redstone signal; manual interaction only works on wood.
+      if (doorState.block.id === 'mc:iron_door') return true;
+      const lowerY = doorState.get('half') === 'upper' ? this.hit.y - 1 : this.hit.y;
+      const lower = this.world.getBlock(this.hit.x, lowerY, this.hit.z);
+      const upper = this.world.getBlock(this.hit.x, lowerY + 1, this.hit.z);
+      if (lower.block.renderShape === 'door' && upper.block.renderShape === 'door') {
+        const open = !lower.get('open');
+        const nextLower = lower.with('open', open);
+        const nextUpper = upper.with('open', open);
+        this.world.setBlock(this.hit.x, lowerY, this.hit.z, nextLower);
+        this.world.setBlock(this.hit.x, lowerY + 1, this.hit.z, nextUpper);
+        this.multiplayer?.pushBlockChange(this.hit.x, lowerY, this.hit.z, nextLower);
+        this.multiplayer?.pushBlockChange(this.hit.x, lowerY + 1, this.hit.z, nextUpper);
+      }
+      return true;
+    }
     if (this.hit && !sneaking) {
       const handler = USABLE_BLOCKS[this.hit.state.block.id];
       if (handler) { handler(this); return; }
@@ -272,11 +299,25 @@ export const BlockActionsMixin = {
     if (!target) return;
     if (block.solid && wouldTrapPlayer(this.player, target.x, target.y, target.z)) return;
 
-    const state = orientPlacement(block, this.player, this.hit);
-    if (!this.world.setBlock(target.x, target.y, target.z, state)) return;
+    let state = orientPlacement(block, this.player, this.hit);
+    if (block.renderShape === 'door') {
+      const above = this.world.getBlock(target.x, target.y + 1, target.z);
+      const support = this.world.getBlock(target.x, target.y - 1, target.z);
+      if ((!above.block.replaceable && above.block.id !== 'mc:air') || !support.block.solid) return;
+      state = state.with('half', 'lower');
+      const upper = state.with('half', 'upper');
+      if (!this.world.setBlock(target.x, target.y, target.z, state)) return;
+      if (!this.world.setBlock(target.x, target.y + 1, target.z, upper)) {
+        this.world.setBlock(target.x, target.y, target.z, AIR.defaultState);
+        return;
+      }
+      this.multiplayer?.pushBlockChange(target.x, target.y, target.z, state);
+      this.multiplayer?.pushBlockChange(target.x, target.y + 1, target.z, upper);
+    } else {
+      if (!this.world.setBlock(target.x, target.y, target.z, state)) return;
+      this.multiplayer?.pushBlockChange(target.x, target.y, target.z, state);
+    }
     this.sounds?.play('place', block.soundGroup || 'stone');
-    this.multiplayer?.pushBlockChange(target.x, target.y, target.z, state);
-
     if (this.player.gamemode !== GAMEMODE.CREATIVE) this.inventory.consumeHeld(1);
   },
 
