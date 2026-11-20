@@ -236,7 +236,8 @@ export const InputMixin = {
       return;
     }
     if (command === 'locate') {
-      const structure=(args[0]||'').toLowerCase();
+      const rawStructure=(args[0]||'').toLowerCase();
+      const structure=rawStructure==='endcity'?'end_city':rawStructure==='desert_pyramid'?'desert_temple':rawStructure;
       if(!structure){reply('Использование: /locate village|mineshaft|dungeon|stronghold|desert_temple|jungle_temple|swamp_hut|igloo|mansion|monument|fossil|fortress|end_city',true);return;}
       const found=findNearestStructure(this.worldMeta?.seed ?? this.world.seed,this.world.dimension,structure,this.player.x,this.player.z,16000);
       if(!found){reply('Структура не найдена поблизости или недоступна в этом измерении.',true);return;}
