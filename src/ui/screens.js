@@ -24,7 +24,7 @@ export const ScreensMixin = {
 
     byId('btn-singleplayer').onclick = () => this._showWorldList();
     byId('btn-settings').onclick = () => this._openSettings();
-    byId('btn-settings-back').onclick = () => this.ui.showScreen(this._settingsReturnScreen || 'title');
+    byId('btn-settings-back').onclick = () => this._leaveSettings();
     byId('btn-fullscreen').onclick = async () => { try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen(); else await document.exitFullscreen(); } catch { this.ui.toast('Полноэкранный режим недоступен', { error: true }); } };
     byId('setting-fov').oninput = (e) => { this.fieldOfView = Number(e.target.value); byId('setting-fov-value').textContent = this.fieldOfView + '°'; this._saveSettings(); };
     byId('btn-rename-world').onclick = () => this._renameSelectedWorld();
@@ -135,6 +135,11 @@ export const ScreensMixin = {
       ui.showScreen('create');
       byId('world-name').value = 'New World';
       byId('world-seed').value = '';
+      byId('world-player-name').value = localStorage.getItem('voxel-player-name') || 'Игрок';
+      byId('world-cheats').checked = false;
+      byId('world-bonus-chest').checked = true;
+      byId('world-keep-inventory').checked = true;
+      byId('world-difficulty').value = 'normal';
     };
     byId('btn-create-back').onclick = () => this._showWorldList();
     byId('btn-create').onclick = () => this._createWorld();
@@ -237,9 +242,19 @@ export const ScreensMixin = {
   },
 
   _openSettings() {
+    // Settings opened from the pause screen must never fall back to the title
+    // panorama. Leave the game session intact and resume it when Done is pressed.
+    this._settingsReturnScreen = this.running ? 'pause' : 'title';
     this._loadSettings();
     this._buildKeybindSettings();
     this.ui.showScreen('settings');
+  },
+
+  _leaveSettings() {
+    const returnScreen = this._settingsReturnScreen || 'title';
+    this._settingsReturnScreen = null;
+    if (returnScreen === 'pause' && this.running) this._resume();
+    else this.ui.showScreen('title');
   },
 
   async _showWorldList() {
@@ -267,6 +282,8 @@ export const ScreensMixin = {
     const name = document.getElementById('world-name').value.trim() || 'New World';
     const seedText = document.getElementById('world-seed').value.trim();
     const seed = seedText || String(Math.floor(Math.random() * 2 ** 31));
+    const playerName = document.getElementById('world-player-name').value.trim().slice(0, 20) || 'Игрок';
+    localStorage.setItem('voxel-player-name', playerName);
 
     const meta = await storage.putWorld({
       id: `world-${Date.now()}`,
@@ -274,6 +291,11 @@ export const ScreensMixin = {
       seed,
       generatorVersion: GENERATOR_VERSION,
       time: 0,
+      playerName,
+      cheatsEnabled: document.getElementById('world-cheats').checked,
+      bonusChest: document.getElementById('world-bonus-chest').checked,
+      keepInventory: document.getElementById('world-keep-inventory').checked,
+      difficulty: document.getElementById('world-difficulty').value,
       createdWith: DATA_VERSION,
     });
 
