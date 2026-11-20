@@ -176,6 +176,53 @@ export const DUNGEON_LOOT_POOLS = Object.freeze([
   },
 ]);
 
+// Separate Java-style treasure pools for desert and jungle temples.
+// Entries are limited to item IDs currently implemented by this project.
+export const TEMPLE_LOOT_POOLS = Object.freeze({
+  desert_temple: Object.freeze([
+    { rolls: [2, 4], entries: [
+      ['mc:diamond', 5, 1, 1], ['mc:iron_ingot', 15, 1, 5], ['mc:gold_ingot', 15, 2, 7],
+      ['mc:emerald', 15, 1, 3], ['mc:bone', 25, 4, 6], ['mc:string', 25, 1, 8],
+    ] },
+    { rolls: [1, 3], entries: [
+      ['mc:saddle', 20, 1, 1], ['mc:iron_horse_armor', 15, 1, 1], ['mc:golden_horse_armor', 10, 1, 1],
+      ['mc:enchanted_book', 20, 1, 1], ['mc:golden_apple', 20, 1, 1],
+    ] },
+    { rolls: 4, entries: [
+      ['mc:bone', 10, 1, 8], ['mc:string', 10, 1, 8], ['mc:rotten_flesh', 10, 1, 8],
+      ['mc:iron_ingot', 5, 1, 3], ['mc:gold_ingot', 5, 1, 3],
+    ] },
+  ]),
+  jungle_temple: Object.freeze([
+    { rolls: [2, 6], entries: [
+      ['mc:diamond', 3, 1, 1], ['mc:iron_ingot', 10, 1, 5], ['mc:gold_ingot', 15, 2, 7],
+      ['mc:emerald', 2, 1, 3], ['mc:bone', 20, 4, 6], ['mc:string', 20, 1, 8],
+      ['mc:enchanted_book', 10, 1, 1], ['mc:saddle', 3, 1, 1], ['mc:golden_horse_armor', 2, 1, 1],
+      ['mc:iron_horse_armor', 5, 1, 1], ['mc:golden_apple', 2, 1, 1],
+    ] },
+    { rolls: 1, entries: [
+      ['mc:emerald', 10, 1, 1], ['mc:diamond', 5, 1, 1], ['mc:iron_ingot', 10, 1, 3],
+      ['mc:gold_ingot', 10, 1, 3], ['mc:enchanted_book', 5, 1, 1],
+    ] },
+  ]),
+});
+
+function fillWeightedPools(seed, x, y, z, chest, pools, salt) {
+  const rng = positionalRandom(seed, x, y, z, salt);
+  for (const pool of pools) {
+    const rolls = Array.isArray(pool.rolls)
+      ? pool.rolls[0] + rng.nextInt(pool.rolls[1] - pool.rolls[0] + 1)
+      : pool.rolls;
+    for (let i = 0; i < rolls; i++) {
+      const entry = chooseWeightedLootEntry(pool.entries, rng);
+      if (!entry) continue;
+      const [id, , minCount, maxCount] = entry;
+      chest.insert(ItemStack.of(id, minCount + rng.nextInt(maxCount - minCount + 1)));
+    }
+  }
+  scatterGeneratedChestLoot(seed, x, y, z, chest, pools === TEMPLE_LOOT_POOLS.desert_temple ? 'desert_temple' : 'jungle_temple');
+}
+
 export function chooseWeightedLootEntry(entries, rng) {
   if (!Array.isArray(entries) || entries.length === 0 || !rng?.nextInt) return null;
   const totalWeight = entries.reduce((sum, entry) => sum + Math.max(0, entry[1] | 0), 0);
@@ -222,6 +269,10 @@ function fillDungeonChest(seed, x, y, z, chest) {
 }
 
 export function fillGeneratedChest(seed, x, y, z, chest, kind) {
+  if (kind === 'desert_temple' || kind === 'jungle_temple') {
+    fillWeightedPools(seed, x, y, z, chest, TEMPLE_LOOT_POOLS[kind], kind === 'desert_temple' ? 3306 : 3307);
+    return;
+  }
   if (kind === 'dungeon') {
     fillDungeonChest(seed, x, y, z, chest);
     scatterGeneratedChestLoot(seed, x, y, z, chest, kind);
@@ -241,12 +292,6 @@ export function fillGeneratedChest(seed, x, y, z, chest, kind) {
     ['mc:diamond', 1, 2], ['mc:emerald', 1, 2], ['mc:apple', 1, 3], ['mc:paper', 1, 4],
     ['mc:iron_pickaxe', 1, 1], ['mc:gold_nugget', 2, 7],
   ];
-  const templeLoot = [
-    ['mc:bread', 1, 4], ['mc:apple', 1, 3], ['mc:iron_ingot', 1, 4],
-    ['mc:gold_ingot', 1, 4], ['mc:gold_nugget', 3, 9], ['mc:emerald', 1, 3],
-    ['mc:diamond', 1, 2], ['mc:coal', 2, 6], ['mc:bone', 1, 4],
-    ['mc:string', 2, 5], ['mc:wheat_seeds', 2, 6],
-  ];
   const strongholdLoot = [
     ['mc:bread', 1, 4], ['mc:apple', 1, 3], ['mc:iron_ingot', 1, 4],
     ['mc:gold_ingot', 1, 3], ['mc:emerald', 1, 2], ['mc:diamond', 1, 2],
@@ -262,7 +307,7 @@ export function fillGeneratedChest(seed, x, y, z, chest, kind) {
   const pool = kind === 'village' ? villageLoot
     : kind === 'dungeon' ? dungeonLoot
     : kind === 'stronghold' ? strongholdLoot
-    : kind === 'mineshaft' ? mineshaftLoot : templeLoot;
+    : mineshaftLoot;
   const rolls = kind === 'village' ? 5 + rng.nextInt(3)
     : kind === 'stronghold' ? 5 + rng.nextInt(3)
     : kind === 'mineshaft' ? 8 + rng.nextInt(5) : 6 + rng.nextInt(4);
