@@ -39,12 +39,15 @@ export const InputMixin = {
       if (document.pointerLockElement !== canvas) return;
       this.mouseButtons.add(e.button);
       if (e.button === 0 && this.player) this.player.attackTime = 8;
-      if (e.button === 2) this._useOrPlace();
+      if (e.button === 2) {
+        if (!this.entities?.beginBowDraw()) this._useOrPlace();
+      }
       if (e.button === 1) this._pickBlock();
     });
     document.addEventListener('mouseup', (e) => {
       this.mouseButtons.delete(e.button);
       if (e.button === 0) this.mining.reset();
+      if (e.button === 2) this.entities?.releaseBow();
     });
     document.addEventListener('contextmenu', (e) => e.preventDefault());
 

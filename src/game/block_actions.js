@@ -46,6 +46,7 @@ export const BlockActionsMixin = {
       if (this.inventory.held.item?.tool) this.inventory.damageHeld(1);
     }
 
+    this.entities?.spawnBlockParticles(x, y, z, state.block.id);
     this.sounds?.play('break', state.block.soundGroup || 'stone');
     this.world.setBlock(x, y, z, AIR.defaultState);
     this.multiplayer?.pushBlockChange(x, y, z, AIR.defaultState);
@@ -83,6 +84,7 @@ export const BlockActionsMixin = {
       if (spawned) this.ui.toast(`Spawned ${heldItem.spawnEggMob}`);
       return;
     }
+    if (this.entities?.tameFromPlayer()) return;
     if (this.entities?.useFishingRod()) return;
     if (this.entities?.shearFromPlayer()) return;
     if (this.entities?.feedAnimalFromPlayer()) return;

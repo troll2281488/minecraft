@@ -141,11 +141,11 @@ const BADLAND_BIOMES = new Set([BIOME.BADLANDS, BIOME.WOODED_BADLANDS, BIOME.ERO
 
 const ORES = [
   { block: 'mc:coal_ore',     veins: 20, size: 17, minY: 0, maxY: 127 },
-  { block: 'mc:iron_ore',     veins: 20, size: 9,  minY: 0, maxY: 63 },
-  { block: 'mc:gold_ore',     veins: 2,  size: 9,  minY: 0, maxY: 31 },
-  { block: 'mc:redstone_ore', veins: 8,  size: 8,  minY: 0, maxY: 15 },
+  { block: 'mc:iron_ore',     veins: 24, size: 10, minY: 0, maxY: 63 },
+  { block: 'mc:gold_ore',     veins: 3,  size: 10, minY: 0, maxY: 31 },
+  { block: 'mc:redstone_ore', veins: 10, size: 9,  minY: 0, maxY: 15 },
   { block: 'mc:lapis_ore',    veins: 1,  size: 7,  minY: 0, maxY: 31, peak: 16, triangular: true },
-  { block: 'mc:diamond_ore',  veins: 1,  size: 8,  minY: 0, maxY: 15 },
+  { block: 'mc:diamond_ore',  veins: 3,  size: 9,  minY: 0, maxY: 15 },
 ];
 
 const DIRT_PATCHES = [

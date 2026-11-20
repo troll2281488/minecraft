@@ -127,8 +127,15 @@ function vanillaLayerParts(model, layerName = 'main') {
 }
 
 const MOB_TEXTURE_FILES = Object.freeze({
-  cow:'cow.png', pig:'pig.png', sheep:'sheep.png', sheep_fur:'sheep_fur.png', chicken:'chicken.png', wolf:'wolf.png',
+  cow:'cow.png', pig:'pig.png', sheep:'sheep.png', sheep_fur:'sheep_fur.png', chicken:'chicken.png', wolf:'wolf.png', horse:'horse.png', rabbit:'rabbit.png', polar_bear:'polar_bear.png', mooshroom:'mooshroom.png',
   zombie:'zombie.png', skeleton:'skeleton.png', stray:'stray.png',
+  bat:'bat.png', blaze:'blaze.png', ghast:'ghast.png', guardian:'guardian.png',
+  elder_guardian:'guardian_elder.png', endermite:'endermite.png', magma_cube:'magmacube.png',
+  ocelot:'ocelot.png', parrot:'parrot.png', shulker:'shulker.png', silverfish:'silverfish.png',
+  slime:'slime.png', snow_golem:'snow_golem.png', squid:'squid.png', vex:'vex.png',
+  witch:'witch.png', wither:'wither.png', wither_skeleton:'wither_skeleton.png',
+  zombie_villager:'zombie_villager.png', husk:'husk.png', donkey:'donkey.png', mule:'mule.png',
+  skeleton_horse:'skeleton_horse.png', zombie_horse:'zombie_horse.png', llama:'llama.png',
   creeper:'creeper.png', enderman:'enderman.png', spider:'spider.png', cave_spider:'cave_spider.png',
 });
 
@@ -138,7 +145,7 @@ const SNOWY_LEAF_BIOMES = new Set([
 
 const VILLAGER_CAREER_TEXTURES = Object.freeze([
   'farmer','fisherman','shepherd','librarian','cleric',
-  'armorer','toolsmith','butcher','leatherworker','nitwit',
+  'armorer','toolsmith','butcher','leatherworker','fletcher','nitwit',
 ]);
 const MOB_UV = Object.freeze({
   cow:[[18,4,12,18,10],[0,0,8,8,6],null,null,null,null,[0,0,8,8,6],[0,0,8,8,6]],
@@ -412,7 +419,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     // A 0.05 plane wastes precision at normal block distances and can amplify z-fighting.
     mat4.perspective(this.projection, fov, aspect, 0.2, far);
     let cameraX = this.renderPosition.x;
-    let cameraY = this.renderPosition.y + player.eyeHeight;
+    let cameraY = this.renderPosition.y + player.eyeHeight + (player.ridingHorse ? 1.15 : 0);
     let cameraZ = this.renderPosition.z;
     let cameraYaw = player.yaw;
     let cameraPitch = player.pitch;
@@ -857,8 +864,8 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     }
     if (this.thirdPerson) {
       document.getElementById('held-item-view')?.classList.add('hidden');
-      draw(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, jumping: !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking, walking: this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035, attack: this.player.attackTime > 0, attackTime: this.player.attackTime }, true);
-      draw(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z, this.player.yaw * Math.PI / 180, outerHuman, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, sneaking: this.player.sneaking, skinLayer: true }, true);
+      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, jumping: !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking, walking: this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035, attack: this.player.attackTime > 0, attackTime: this.player.attackTime }, true);
+      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, outerHuman, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, sneaking: this.player.sneaking, skinLayer: true }, true);
       const armorColors = ['#b8b8b8','#8f8f9b','#b17a45','#6c778a'];
       const armorParts = [];
       for (let slot = 36; slot <= 39; slot++) {
@@ -890,6 +897,20 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, human, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, jumping: !!remote.jumping, sneaking: !!remote.sneaking, walking: !!remote.walking, attack: !!remote.attacking, attackTime: remote.attackTime ?? 0 }, true);
       draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, outerHuman, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, sneaking: !!remote.sneaking, skinLayer: true }, true);
     }
+    for (const particle of this.entities?.blockParticles ?? []) {
+      const size = 0.045 + Math.min(1, particle.life / 28) * 0.025;
+      draw(particle.x, particle.y, particle.z, 0, [
+        [[0,0,0],[size,size,size],particle.color],
+      ], 0, -1, -1, 1, {});
+    }
+    for (const arrow of this.entities?.arrows ?? []) {
+      const yaw = Math.atan2(-arrow.vx, arrow.vz);
+      const pitch = Math.atan2(-arrow.vy, Math.hypot(arrow.vx, arrow.vz));
+      draw(arrow.x, arrow.y, arrow.z, yaw, [
+        [[0,0,0],[0.045,0.045,0.62],[0.46,0.34,0.18,1]],
+        [[0,0.025,-0.24],[0.16,0.012,0.16],[0.82,0.82,0.82,1]],
+      ], pitch, -1, -1, 1, {});
+    }
     for (const mob of this.entities?.mobs ?? []) {
       const vanillaModel = this.entityModels?.getModel?.('minecraft:' + mob.type);
       const vanillaParts = vanillaLayerParts(vanillaModel, 'main');
@@ -920,9 +941,17 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       // Mob movement advances along +sin(yaw), +cos(yaw); render the model on that same forward axis.
       draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
         hurt: (mob.hurtTicks || 0) > 0, animal, humanoid, vanillaModel: !!vanillaParts,
-        mobType: mob.type, mobTextureKey: mob.type === 'villager' ? 'villager_' + (mob.villagerCareer || 'farmer') : mob.type,
+        mobType: mob.type, mobTextureKey: mob.type === 'villager' ? 'villager_' + (mob.villagerCareer === 'archer' ? 'fletcher' : (mob.villagerCareer || 'farmer')) : mob.type,
         idle: mob.anim?.idle ?? 0, walking: !!mob.anim?.walking,
       });
+      if (mob.type === 'horse' && mob.horseArmor) {
+        const armorColor = mob.horseArmor === 'diamond' ? [0.18,0.78,0.78,1]
+          : mob.horseArmor === 'golden' ? [0.92,0.70,0.18,1] : [0.68,0.72,0.76,1];
+        draw(mob.x, mob.y, mob.z, mob.yaw, [
+          [[0,0.92,0],[0.88,0.78,1.32],armorColor],
+          [[0,1.28,0.48],[0.48,0.62,0.48],armorColor],
+        ], mob.walkPhase, -1, -1, 1, {});
+      }
       if (mob.type === 'sheep' && !mob.sheared && vanillaModel?.layers?.fur) {
         const furParts = vanillaLayerParts(vanillaModel, 'fur');
         if (furParts) draw(mob.x, mob.y, mob.z, mob.yaw + Math.PI, furParts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
@@ -949,7 +978,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       // During an attack lift it vertically; do not thrust it toward the camera.
       const handDistance = 0.48;
       const handX = this.renderPosition.x + forwardX * handDistance + rightX * 0.34;
-      const handY = this.renderPosition.y + this.player.eyeHeight + forwardY * handDistance - 0.43;
+      const handY = this.renderPosition.y + this.player.eyeHeight + (this.player.ridingHorse ? 1.15 : 0) + forwardY * handDistance - 0.43;
       const handZ = this.renderPosition.z + forwardZ * handDistance + rightZ * 0.34;
       const handBob = Math.sin(this.player.walkPhase * 2) * 0.006;
       const armParts = [

@@ -96,6 +96,19 @@ describe('Pre-1.14 villager careers', () => {
     assert(restored.populatedVillages.has('1,-2'));
   });
 
+  it('offers 16 sticks for one emerald and bow supplies through the archer career', () => {
+    const archer = { villagerCareer: 'archer', villagerSeed: 7, villagerTier: 1,
+      villagerUsedOffers: [], villagerOfferUses: {}, villagerTradeCount: 0 };
+    const offers = getVillagerOffers(archer);
+    const sticks = offers.find((entry) => entry.id === 'sticks');
+    assert(sticks);
+    assertEqual(sticks.input, 'mc:stick');
+    assertEqual(sticks.inputCount, 16);
+    assertEqual(sticks.output, 'mc:emerald');
+    assert(ITEMS.get('mc:bow'));
+    assert(ITEMS.get('mc:arrow'));
+  });
+
   it('nitwits do not offer trades', () => {
     const villager = { villagerCareer: 'nitwit', villagerTier: 1 };
     assertEqual(getVillagerOffers(villager).length, 0);

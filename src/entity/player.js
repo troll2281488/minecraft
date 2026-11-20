@@ -72,7 +72,7 @@ export class Player {
   }
 
   get eyeY() {
-    return this.y + this.eyeHeight;
+    return this.y + this.eyeHeight + (this.ridingHorse ? 1.15 : 0);
   }
 
   get reach() {
@@ -158,7 +158,8 @@ export class Player {
    */
   _applyInput(slipperiness) {
     const target = perTick(
-      this.inWater ? (this.onGround ? SPEED.SNEAK : SPEED.SWIM)
+      this.ridingHorse ? SPEED.SPRINT * 1.35
+        : this.inWater ? (this.onGround ? SPEED.SNEAK : SPEED.SWIM)
         : this.sneaking ? SPEED.SNEAK
         : this.sprinting ? SPEED.SPRINT
         : SPEED.WALK,

@@ -2,7 +2,7 @@ import '../src/world/blocks/index.js';
 import { describe, it, assert, assertEqual } from './framework.js';
 import { Inventory, CraftingGrid, SLOT } from '../src/game/inventory.js';
 import { ItemStack } from '../src/world/item.js';
-import { calculateArmorDamage, MobSystem } from '../src/entity/mobs.js';
+import { calculateArmorDamage, calculateHorseArmorDamage, MobSystem } from '../src/entity/mobs.js';
 import { RECIPES } from '../src/game/recipes.js';
 
 /** Shift-click puts armour on (docs/TARGET_1_12_2.md, section 7.4). */
@@ -56,6 +56,12 @@ describe('armour protection', () => {
     for (const index of [0, 1, 2, 3, 5]) grid.set(index, ItemStack.of('mc:iron_ingot'));
     assert(grid.matched, 'iron helmet recipe did not match');
     assertEqual(grid.result.item.id, 'mc:iron_helmet');
+  });
+
+  it('horse armour reduces incoming damage by material', () => {
+    assertEqual(calculateHorseArmorDamage(10, null), 10);
+    assertEqual(calculateHorseArmorDamage(10, 'iron'), 8);
+    assertEqual(calculateHorseArmorDamage(10, 'diamond'), 7.6);
   });
 
   it('does not turn invalid or zero damage into health loss', () => {

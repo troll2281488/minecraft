@@ -1,6 +1,8 @@
 import { ItemStack } from '../world/item.js';
 import { TerrainGenerator, villageCandidateForCell } from '../world/gen/terrain.js';
 import { createVillagerProfile } from './villager_trades.js';
+import { drawPower, canFire } from '../game/bow.js';
+import { aimVector, createArrow, stepArrow } from './arrows.js';
 
 /**
  * Lightweight voxel creature simulation. Mobs use deterministic game ticks,
@@ -41,6 +43,22 @@ export const MOB_AI_PROFILES = Object.freeze({
   spider: Object.freeze({ detectionRange: 16, speedMultiplier: 1.48, meleeRange: 1.55, attackCooldown: 28, damage: 2, role: 'ambusher' }),
   cave_spider: Object.freeze({ detectionRange: 16, speedMultiplier: 1.35, meleeRange: 1.5, attackCooldown: 30, damage: 2, role: 'ambusher' }),
   enderman: Object.freeze({ detectionRange: 16, speedMultiplier: 1.25, meleeRange: 1.5, attackCooldown: 30, damage: 4, role: 'stalker' }),
+  husk: Object.freeze({ detectionRange: 14, speedMultiplier: 1, meleeRange: 1.35, attackCooldown: 40, damage: 1, role: 'pursuer' }),
+  zombie_villager: Object.freeze({ detectionRange: 14, speedMultiplier: 1, meleeRange: 1.35, attackCooldown: 40, damage: 1, role: 'pursuer' }),
+  wither_skeleton: Object.freeze({ detectionRange: 16, speedMultiplier: 1.08, meleeRange: 1.5, attackCooldown: 36, damage: 3, role: 'pursuer' }),
+  silverfish: Object.freeze({ detectionRange: 12, speedMultiplier: 1.25, meleeRange: 1.2, attackCooldown: 24, damage: 1, role: 'ambusher' }),
+  endermite: Object.freeze({ detectionRange: 12, speedMultiplier: 1.3, meleeRange: 1.2, attackCooldown: 24, damage: 1, role: 'ambusher' }),
+  slime: Object.freeze({ detectionRange: 12, speedMultiplier: 0.9, meleeRange: 1.5, attackCooldown: 32, damage: 2, role: 'jumper' }),
+  magma_cube: Object.freeze({ detectionRange: 12, speedMultiplier: 1, meleeRange: 1.5, attackCooldown: 32, damage: 3, role: 'jumper' }),
+  vex: Object.freeze({ detectionRange: 18, speedMultiplier: 1.5, meleeRange: 1.3, attackCooldown: 24, damage: 2, role: 'flying-ambusher' }),
+  vindicator: Object.freeze({ detectionRange: 18, speedMultiplier: 1.12, meleeRange: 1.5, attackCooldown: 32, damage: 3, role: 'pursuer' }),
+  evoker: Object.freeze({ detectionRange: 18, speedMultiplier: 0.78, rangedRange: 12, preferredRange: 8, attackCooldown: 70, damage: 3, role: 'caster' }),
+  witch: Object.freeze({ detectionRange: 18, speedMultiplier: 0.78, rangedRange: 12, preferredRange: 8, attackCooldown: 65, damage: 2, role: 'caster' }),
+  blaze: Object.freeze({ detectionRange: 20, speedMultiplier: 0.9, rangedRange: 16, preferredRange: 10, attackCooldown: 45, damage: 3, role: 'flying-ranged' }),
+  ghast: Object.freeze({ detectionRange: 24, speedMultiplier: 0.55, rangedRange: 20, preferredRange: 14, attackCooldown: 80, damage: 4, role: 'flying-ranged' }),
+  guardian: Object.freeze({ detectionRange: 18, speedMultiplier: 0.8, rangedRange: 14, preferredRange: 9, attackCooldown: 55, damage: 2, role: 'aquatic-ranged' }),
+  elder_guardian: Object.freeze({ detectionRange: 22, speedMultiplier: 0.65, rangedRange: 16, preferredRange: 10, attackCooldown: 60, damage: 3, role: 'aquatic-ranged' }),
+  wither: Object.freeze({ detectionRange: 24, speedMultiplier: 0.85, rangedRange: 18, preferredRange: 10, attackCooldown: 45, damage: 4, role: 'boss' }),
 });
 
 export const MOB_TYPES_112 = Object.freeze([
@@ -79,6 +97,11 @@ export function calculateArmorDamage(damage, armorPoints = 0, toughness = 0) {
   return damage * (1 - effectiveArmor / 25);
 }
 
+export function calculateHorseArmorDamage(damage, material = null) {
+  const points = ({ leather: 3, iron: 5, golden: 7, diamond: 11 })[material] || 0;
+  return calculateArmorDamage(damage, points, 0);
+}
+
 export function rollMobDrops(type, random = Math.random) {
   const amount = (min, max) => min + Math.floor(random() * (max - min + 1));
   if (type === 'pig') return [{ id: 'mc:raw_porkchop', count: amount(1, 3) }];
@@ -111,6 +134,9 @@ export class MobSystem {
   constructor(game) {
     this.game = game;
     this.mobs = [];
+    this.arrows = [];
+    this.blockParticles = [];
+    this.bowDrawStart = null;
     this.droppedItems = [];
     this.spawnTicks = 0;
     this.nextId = 1;
@@ -123,6 +149,9 @@ export class MobSystem {
 
   reset() {
     this.mobs.length = 0;
+    this.arrows.length = 0;
+    this.blockParticles.length = 0;
+    this.bowDrawStart = null;
     this.droppedItems.length = 0;
     this.spawnTicks = 0;
     this.nextId = 1;
@@ -130,6 +159,89 @@ export class MobSystem {
     this.villageCheckTicks = 0;
     this.villageGenerator = null;
     this.populatedVillages.clear();
+  }
+
+  spawnBlockParticles(x, y, z, blockId = '') {
+    const palette = blockId.includes('grass') ? [0.35, 0.58, 0.24, 1]
+      : blockId.includes('dirt') || blockId.includes('mud') ? [0.43, 0.29, 0.17, 1]
+      : blockId.includes('sand') ? [0.78, 0.70, 0.48, 1]
+      : blockId.includes('ore') ? [0.48, 0.47, 0.43, 1]
+      : blockId.includes('wood') || blockId.includes('log') ? [0.42, 0.29, 0.16, 1]
+      : [0.55, 0.55, 0.55, 1];
+    for (let i = 0; i < 10; i++) {
+      this.blockParticles.push({
+        x: x + 0.2 + Math.random() * 0.6,
+        y: y + 0.2 + Math.random() * 0.6,
+        z: z + 0.2 + Math.random() * 0.6,
+        vx: (Math.random() - 0.5) * 0.16,
+        vy: Math.random() * 0.12 + 0.025,
+        vz: (Math.random() - 0.5) * 0.16,
+        life: 18 + Math.floor(Math.random() * 10),
+        color: palette,
+      });
+    }
+  }
+
+  _tickBlockParticles() {
+    for (let i = this.blockParticles.length - 1; i >= 0; i--) {
+      const p = this.blockParticles[i];
+      p.x += p.vx; p.y += p.vy; p.z += p.vz;
+      p.vy -= 0.012;
+      p.vx *= 0.94; p.vz *= 0.94;
+      p.life--;
+      if (p.life <= 0) this.blockParticles.splice(i, 1);
+    }
+  }
+
+  beginBowDraw() {
+    const held = this.game.inventory?.held;
+    if (held?.item?.id !== 'mc:bow' || !['survival', 'creative'].includes(this.game.player?.gamemode)) return false;
+    this.bowDrawStart = this.game.tickCount || 0;
+    return true;
+  }
+
+  releaseBow() {
+    if (this.bowDrawStart === null) return false;
+    const held = this.game.inventory?.held;
+    const ticks = Math.max(0, (this.game.tickCount || 0) - this.bowDrawStart);
+    this.bowDrawStart = null;
+    if (held?.item?.id !== 'mc:bow' || !canFire(ticks)) return true;
+    const creative = this.game.player?.gamemode === 'creative';
+    const inventory = this.game.inventory;
+    if (!creative && inventory.remove('mc:arrow', 1) !== 1) {
+      this.game.ui?.toast('Нужны стрелы!', { error: true });
+      return true;
+    }
+    const player = this.game.player;
+    const direction = aimVector(player.yaw, player.pitch);
+    const power = drawPower(ticks);
+    this.arrows.push(createArrow(
+      player.x + direction[0] * 0.45,
+      player.eyeY + direction[1] * 0.45,
+      player.z + direction[2] * 0.45,
+      direction, power,
+    ));
+    if (!creative) inventory.damageHeld(1);
+    this.game.sounds?.play('bow');
+    return true;
+  }
+
+  _tickArrows() {
+    const world = this.game.world;
+    for (let i = this.arrows.length - 1; i >= 0; i--) {
+      const arrow = this.arrows[i];
+      const result = stepArrow(arrow,
+        (x, y, z) => world.getBlock(x, y, z).block.solid,
+        this.mobs,
+      );
+      if (result.hit === 'mob' && result.mob) {
+        const mob = result.mob;
+        mob.health = Math.max(0, mob.health - (mob.type === 'horse' ? calculateHorseArmorDamage(arrow.damage, mob.horseArmor) : arrow.damage));
+        mob.hurtTicks = 10;
+        mob.anim.hurt = 1;
+      }
+      if (arrow.done) this.arrows.splice(i, 1);
+    }
   }
 
   /** Toss a stack into the world with a small forward/upward impulse. */
@@ -290,10 +402,10 @@ export class MobSystem {
       id: this.nextId++, type, x: x + 0.5, y, z: z + 0.5,
       yaw: Math.random() * Math.PI * 2,
       targetYaw: Math.random() * Math.PI * 2,
-      speed: ['zombie','skeleton','stray','spider','creeper'].includes(type) ? 0.035 : type === 'enderman' ? 0.045 : 0.018,
+      speed: MOB_AI_PROFILES[type] ? 0.035 : 0.018,
       thinkTicks: 0, attackTicks: 0, walkPhase: Math.random() * 6,
       moveTicks: 0, pauseTicks: 45 + Math.floor(Math.random() * 100),
-      health: ({ zombie:20, skeleton:20, stray:20, creeper:20, enderman:40, spider:16, cow:10, pig:10, chicken:4, sheep:8, mooshroom:10, rabbit:3, wolf:8, polar_bear:30, villager:20 })[type] ?? 10,
+      health: ({ zombie:20, husk:20, zombie_villager:20, skeleton:20, stray:20, wither_skeleton:20, creeper:20, enderman:40, spider:16, cave_spider:12, silverfish:8, endermite:8, slime:16, magma_cube:16, vex:14, vindicator:24, evoker:24, witch:26, blaze:20, ghast:10, guardian:30, elder_guardian:80, wither:300, cow:10, pig:10, chicken:4, sheep:8, mooshroom:10, rabbit:3, wolf:8, horse:30, polar_bear:30, villager:20 })[type] ?? 10,
       sheared: false, hurtTicks: 0, fuseTicks: 0,
       ageTicks: 0, loveTicks: 0, breedCooldown: 0,
       anim: { walk: 0, idle: Math.random() * Math.PI * 2, attack: 0, hurt: 0, fuse: 0 },
@@ -346,7 +458,7 @@ export class MobSystem {
 
   /** Spawn a supported creature from a creative egg on the clicked block. */
   spawnFromEgg(type, x, z) {
-    if (!['cow','pig','sheep','chicken','mooshroom','rabbit','wolf','polar_bear','zombie','skeleton','stray','creeper','enderman','spider','cave_spider','villager'].includes(type)) return false;
+    if (!['cow','pig','sheep','chicken','mooshroom','rabbit','wolf','horse','polar_bear','zombie','husk','zombie_villager','skeleton','stray','wither_skeleton','creeper','enderman','spider','cave_spider','silverfish','endermite','slime','magma_cube','vex','vindicator','evoker','witch','blaze','ghast','guardian','elder_guardian','wither','villager'].includes(type)) return false;
     if (type === 'villager') {
       const world = this.game.world;
       const y = world.getHeight(x, z);
@@ -480,6 +592,64 @@ export class MobSystem {
     return true;
   }
 
+
+  tameFromPlayer() {
+    const mob = this.targetedMob();
+    const held = this.game.inventory?.held;
+    const player = this.game.player;
+    if (!mob || !player || !['survival', 'creative'].includes(player.gamemode)) return false;
+
+    if (mob.type === 'wolf' && !mob.tamed && held?.item?.id === 'mc:bone') {
+      if (player.gamemode !== 'creative') this.game.inventory.consumeHeld(1);
+      mob.tameProgress = (mob.tameProgress || 0) + 1;
+      if (mob.tameProgress >= 2) {
+        mob.tamed = true;
+        mob.owner = 'player';
+        mob.health = Math.max(mob.health, 20);
+        mob.sitting = false;
+        this.game.ui?.toast('Волк приручён!');
+      } else this.game.ui?.toast('Волк доверяет тебе больше. Дай ещё кость.');
+      return true;
+    }
+
+    if (mob.type === 'horse' && !mob.tamed && (!held || held.isEmpty)) {
+      mob.tameProgress = (mob.tameProgress || 0) + 1;
+      if (mob.tameProgress >= 3) {
+        mob.tamed = true;
+        mob.owner = 'player';
+        this.game.ui?.toast('Лошадь приручена! Теперь надень на неё седло.');
+      } else this.game.ui?.toast('Лошадь пока не доверяет тебе. Попробуй ещё раз.');
+      return true;
+    }
+
+    if (mob.type === 'horse' && mob.tamed && held?.item?.id === 'mc:saddle' && !mob.saddled) {
+      if (player.gamemode !== 'creative') this.game.inventory.consumeHeld(1);
+      mob.saddled = true;
+      this.game.ui?.toast('Седло надето на лошадь');
+      return true;
+    }
+
+    if (mob.type === 'horse' && mob.tamed && mob.saddled && (!held || held.isEmpty)) {
+      if (player.ridingHorse === mob) {
+        player.ridingHorse = null;
+        this.game.ui?.toast('Ты слез с лошади');
+      } else if (!player.ridingHorse) {
+        player.ridingHorse = mob;
+        mob.targetYaw = player.yaw * Math.PI / 180;
+        this.game.ui?.toast('Ты сел на лошадь');
+      }
+      return true;
+    }
+
+    if (mob.type === 'horse' && mob.tamed && held?.item?.horseArmor && !mob.horseArmor) {
+      mob.horseArmor = held.item.horseArmor;
+      if (player.gamemode !== 'creative') this.game.inventory.consumeHeld(1);
+      this.game.ui?.toast('Броня надета на лошадь');
+      return true;
+    }
+    return false;
+  }
+
   feedAnimalFromPlayer() {
     const animal = this.targetedMob();
     const held = this.game.inventory?.held;
@@ -597,7 +767,8 @@ export class MobSystem {
     const player = this.game.player;
     const held = this.game.inventory?.held;
     const damage = Math.max(1, held?.item?.attackDamage || 1);
-    mob.health = Math.max(0, mob.health - damage);
+    const finalDamage = mob.type === 'horse' ? calculateHorseArmorDamage(damage, mob.horseArmor) : damage;
+    mob.health = Math.max(0, mob.health - finalDamage);
     this.game.sounds?.play('hit');
     mob.hurtTicks = 10;
     mob.anim.hurt = 1;
@@ -662,6 +833,8 @@ export class MobSystem {
       }
     }
     if (this.attackCooldown > 0) this.attackCooldown--;
+    this._tickArrows();
+    this._tickBlockParticles();
     // Populate nearby loaded chunks quickly so a new world does not feel empty.
     if (this.spawnTicks >= 180 && this.mobs.length < 7) {
       this.spawnTicks = 0;
@@ -702,6 +875,8 @@ export class MobSystem {
             type = roll < 0.48 ? 'sheep' : roll < 0.76 ? 'pig' : 'chicken';
           } else if (roll < 0.07) {
             type = 'wolf';
+          } else if (roll < 0.12) {
+            type = 'horse';
           } else {
             type = roll < 0.28 ? 'sheep' : roll < 0.52 ? 'pig' : roll < 0.82 ? 'cow' : 'chicken';
           }
@@ -723,6 +898,26 @@ export class MobSystem {
       mob.anim.walk = mob.walkPhase;
       if (mob.hurtTicks > 0) mob.hurtTicks--;
       mob.anim.hurt = mob.hurtTicks > 0 ? mob.hurtTicks / 8 : 0;
+
+      if (this.game.daylight > 0.82 && ['zombie', 'skeleton', 'stray'].includes(mob.type)) {
+        const above = world.getBlock(Math.floor(mob.x), Math.floor(mob.y + 2), Math.floor(mob.z)).block;
+        if (!above.solid && !above.liquid) {
+          mob.sunBurnTicks = (mob.sunBurnTicks || 0) + 1;
+          if (mob.sunBurnTicks >= 20) {
+            mob.sunBurnTicks = 0;
+            mob.health -= 2;
+            mob.hurtTicks = 5;
+          }
+        } else mob.sunBurnTicks = 0;
+      }
+
+      if (player.ridingHorse === mob) {
+        mob.x = player.x; mob.y = player.y - 0.15; mob.z = player.z;
+        mob.yaw = player.yaw * Math.PI / 180;
+        mob.walkPhase += Math.hypot(player.vx || 0, player.vz || 0) * 8;
+        mob.anim.walking = Math.hypot(player.vx || 0, player.vz || 0) > 0.01;
+        continue;
+      }
 
       const profile = MOB_AI_PROFILES[mob.type] ?? null;
       const hostileType = profile !== null;
@@ -775,12 +970,16 @@ export class MobSystem {
       }
 
       if (mob.fleeTicks > 0) mob.fleeTicks--;
-      const fleeing = mob.type !== 'villager' && !hostileType && (distance < 4 || mob.fleeTicks > 0);
+      const tamedWolf = mob.type === 'wolf' && mob.tamed;
+      const fleeing = mob.type !== 'villager' && mob.type !== 'horse' && !tamedWolf &&
+        !hostileType && (distance < 4 || mob.fleeTicks > 0);
+      const followingOwner = tamedWolf && distance > 2.5;
       if (fleeing) mob.targetYaw = Math.atan2(mob.x - player.x, mob.z - player.z);
+      else if (followingOwner) mob.targetYaw = Math.atan2(player.x - mob.x, player.z - mob.z);
 
       // Passive mobs now pause between short wandering bursts instead of
       // sliding and cycling their legs continuously while apparently idle.
-      if (hostile || fleeing) {
+      if (hostile || fleeing || followingOwner) {
         mob.moveTicks = 2;
         mob.pauseTicks = 0;
       } else {
@@ -795,8 +994,8 @@ export class MobSystem {
           }
         }
       }
-      const moving = hostile || fleeing || mob.moveTicks > 0;
-      const speed = moving ? (hostile ? mob.speed * profile.speedMultiplier : fleeing ? 0.105 : mob.speed) : 0;
+      const moving = hostile || fleeing || followingOwner || mob.moveTicks > 0;
+      const speed = moving ? (hostile ? mob.speed * profile.speedMultiplier : fleeing ? 0.105 : followingOwner ? 0.045 : mob.speed) : 0;
       if (moving || Math.abs(mob.knockbackX || 0) + Math.abs(mob.knockbackZ || 0) > 0.005) {
         mob.yaw += Math.atan2(Math.sin(mob.targetYaw - mob.yaw), Math.cos(mob.targetYaw - mob.yaw)) * (fleeing ? 0.38 : 0.12);
       }
