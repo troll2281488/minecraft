@@ -251,13 +251,25 @@ export const RedstoneDevicesMixin = {
 
   _tickRedstoneTorches(baseX, baseY, baseZ, hasPlayer) {
     if (!hasPlayer) return;
-    const world = this.world;
+    const world = this.world, tick = this.tickCount || 0;
+    this._torchToggleHistory ||= new Map();
+    this._torchBurnoutTimers ||= new Map();
     // Floor-mounted redstone torches invert the power state of the solid block
-    // beneath them. Wall-mounted orientation and burnout are tracked separately.
+    // beneath them. Eight toggles within 60 ticks cause a 160-tick burnout.
     for (let y = baseY - 3; y <= baseY + 4; y++) {
       for (let x = baseX - 8; x <= baseX + 8; x++) for (let z = baseZ - 8; z <= baseZ + 8; z++) {
         const state = world.getBlock(x, y, z);
         if (state.block.id !== 'mc:redstone_torch') continue;
+        const key = `${x},${y},${z}`;
+        const burnedUntil = this._torchBurnoutTimers.get(key) || 0;
+        if (burnedUntil > tick) {
+          if (state.get('lit')) {
+            writeState(this, x, y, z, state.with('lit', false));
+            this._applyAdjacentRedstonePower(x, y, z, false);
+          }
+          continue;
+        }
+        if (burnedUntil) this._torchBurnoutTimers.delete(key);
         const sx = x, sy = y - 1, sz = z;
         let supportPowered = false;
         for (const [dx, dy, dz] of NEIGHBORS) {
@@ -265,8 +277,16 @@ export const RedstoneDevicesMixin = {
           if (nx === x && ny === y && nz === z) continue;
           if (readSignal(world, nx, ny, nz, sx, sy, sz) > 0) { supportPowered = true; break; }
         }
-        const lit = !supportPowered;
+        let lit = !supportPowered;
         if (state.get('lit') === lit) continue;
+        const history = (this._torchToggleHistory.get(key) || []).filter((at) => tick - at <= 60);
+        history.push(tick);
+        if (history.length >= 8) {
+          this._torchBurnoutTimers.set(key, tick + 160);
+          history.length = 0;
+          lit = false;
+        }
+        this._torchToggleHistory.set(key, history);
         writeState(this, x, y, z, state.with('lit', lit));
         this._applyAdjacentRedstonePower(x, y, z, lit);
       }
@@ -275,16 +295,30 @@ export const RedstoneDevicesMixin = {
 
   _tickRedstoneLamps(baseX, baseY, baseZ, hasPlayer) {
     if (!hasPlayer) return;
-    const world = this.world;
+    const world = this.world, tick = this.tickCount || 0;
+    this._redstoneLampTimers ||= new Map();
     for (let y = baseY - 3; y <= baseY + 4; y++) {
       for (let x = baseX - 8; x <= baseX + 8; x++) for (let z = baseZ - 8; z <= baseZ + 8; z++) {
         const state = world.getBlock(x, y, z);
         if (state.block.id !== 'mc:redstone_lamp') continue;
+        const key = `${x},${y},${z}`;
         let powered = false;
         for (const [dx, dy, dz] of NEIGHBORS) {
           if (readSignal(world, x + dx, y + dy, z + dz, x, y, z) > 0) { powered = true; break; }
         }
-        if (state.get('lit') !== powered) writeState(this, x, y, z, state.with('lit', powered));
+        if (powered) {
+          this._redstoneLampTimers.delete(key);
+          if (!state.get('lit')) writeState(this, x, y, z, state.with('lit', true));
+        } else if (state.get('lit')) {
+          const pending = this._redstoneLampTimers.get(key);
+          if (!pending) this._redstoneLampTimers.set(key, tick + 2);
+          else if (tick >= pending) {
+            writeState(this, x, y, z, state.with('lit', false));
+            this._redstoneLampTimers.delete(key);
+          }
+        } else {
+          this._redstoneLampTimers.delete(key);
+        }
       }
     }
   },
