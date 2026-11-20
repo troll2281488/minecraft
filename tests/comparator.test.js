@@ -30,6 +30,30 @@ describe('redstone comparator', () => {
     assertEqual(comparatorContainerOutput([{count:64,maxStackSize:64}], 1), 15);
     assertEqual(comparatorContainerOutput([{count:16,maxStackSize:16}], 1), 15);
   });
+  it('reads the fullness of a real chest block entity', () => {
+    const chestState = BLOCKS.get('mc:chest').defaultState;
+    const blocks = new Map([
+      ['0,0,0', BLOCKS.get('mc:comparator').defaultState],
+      ['0,0,1', chestState],
+    ]);
+    const slots = Array.from({length:27}, () => ({count:0,maxStackSize:64}));
+    slots[0] = {count:64,maxStackSize:64};
+    const game = {
+      tickCount: 4,
+      world: {
+        getBlock(x,y,z) { return blocks.get(String(x)+','+y+','+z) || BLOCKS.get('mc:air').defaultState; },
+        setBlock(x,y,z,state) { blocks.set(String(x)+','+y+','+z,state); return true; },
+      },
+      player: {x:0,y:0,z:0},
+      _chestAt() { return {slots}; },
+      multiplayer: {pushBlockChange(){}},
+      ...RedstoneDevicesMixin,
+    };
+    game._tickComparators(0,0,0,true);
+    game.tickCount = 6;
+    game._tickComparators(0,0,0,true);
+    assertEqual(blocks.get('0,0,0').get('power'), 1);
+  });
   it('updates comparator output after a two-tick delay', () => {
     const blocks = new Map([
       ['0,0,0', BLOCKS.get('mc:comparator').defaultState],
