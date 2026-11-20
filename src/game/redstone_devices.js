@@ -1,4 +1,5 @@
-import { AIR } from '../world/block.js';
+import { AIR, BLOCKS } from '../world/block.js';
+import { canPistonMove, planPistonMove, pistonVector } from './pistons.js';
 
 /**
  * Small redstone-device simulation for the Java 1.19 compatibility track.
@@ -253,6 +254,76 @@ export const RedstoneDevicesMixin = {
     this._tickRedstoneTorches(baseX, baseY, baseZ, !!player);
     this._tickRedstoneLamps(baseX, baseY, baseZ, !!player);
     this._tickNoteBlocks(baseX, baseY, baseZ, !!player);
+    this._tickPistons(baseX, baseY, baseZ, !!player);
+  },
+
+  _tickPistons(baseX, baseY, baseZ, hasPlayer) {
+    if (!hasPlayer) return;
+    const world = this.world;
+    const headBlock = BLOCKS.get('mc:piston_head');
+    if (!headBlock) return;
+
+    // Keep the same bounded active area as the other local redstone devices.
+    // Only actual extension/retraction writes are replicated, never per-tick
+    // position or animation data.
+    for (let y = baseY - 3; y <= baseY + 4; y++) {
+      for (let x = baseX - 8; x <= baseX + 8; x++) {
+        for (let z = baseZ - 8; z <= baseZ + 8; z++) {
+          const state = world.getBlock(x, y, z);
+          const id = state.block.id;
+          if (id !== 'mc:piston' && id !== 'mc:sticky_piston') continue;
+
+          const facing = state.get('facing') || 'north';
+          const vector = pistonVector(facing);
+          if (!vector) continue;
+          const [dx, dy, dz] = vector;
+          let powered = false;
+          for (const [nx, ny, nz] of NEIGHBORS) {
+            if (readSignal(world, x + nx, y + ny, z + nz, x, y, z) > 0) {
+              powered = true;
+              break;
+            }
+          }
+
+          const extended = state.get('extended') === true;
+          if (powered === extended) continue;
+
+          const headX = x + dx, headY = y + dy, headZ = z + dz;
+          if (powered) {
+            const plan = planPistonMove(world, x, y, z, facing);
+            if (plan === null) continue;
+            // Move from the far end toward the piston. This is a transaction:
+            // the complete line was validated before the first write.
+            for (let i = plan.length - 1; i >= 0; i--) {
+              const move = plan[i];
+              writeState(this, move.to.x, move.to.y, move.to.z, move.state);
+              writeState(this, move.from.x, move.from.y, move.from.z, AIR.defaultState);
+            }
+            const headState = headBlock.defaultState
+              .with('facing', facing)
+              .with('sticky', id === 'mc:sticky_piston');
+            writeState(this, headX, headY, headZ, headState);
+            writeState(this, x, y, z, state.with('extended', true));
+          } else {
+            const head = world.getBlock(headX, headY, headZ);
+            if (head.block.id === 'mc:piston_head') {
+              writeState(this, headX, headY, headZ, AIR.defaultState);
+            }
+            if (id === 'mc:sticky_piston') {
+              const pullX = x + dx * 2, pullY = y + dy * 2, pullZ = z + dz * 2;
+              const pull = world.getBlock(pullX, pullY, pullZ);
+              const frontNow = world.getBlock(headX, headY, headZ);
+              if (canPistonMove(pull) && pull.block.id !== 'mc:air' &&
+                  frontNow.block.id === 'mc:air') {
+                writeState(this, headX, headY, headZ, pull);
+                writeState(this, pullX, pullY, pullZ, AIR.defaultState);
+              }
+            }
+            writeState(this, x, y, z, state.with('extended', false));
+          }
+        }
+      }
+    }
   },
 
   _tickObservers(baseX, baseY, baseZ, hasPlayer) {
