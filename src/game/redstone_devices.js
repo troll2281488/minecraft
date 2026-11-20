@@ -298,7 +298,7 @@ export const RedstoneDevicesMixin = {
   },
 
   _tickPistons(baseX, baseY, baseZ, hasPlayer) {
-    if (!hasPlayer) return;
+    if (!hasPlayer || (this.multiplayer?.roomId && !this.multiplayer.isHost)) return;
     const world = this.world;
     const headBlock = BLOCKS.get('mc:piston_head');
     if (!headBlock) return;
