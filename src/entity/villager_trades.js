@@ -74,6 +74,11 @@ export const VILLAGER_CAREERS = Object.freeze({
     offer('tunic',2,'mc:emerald',7,12,'mc:leather_chestplate'),
     offer('boots',3,'mc:emerald',2,4,'mc:leather_boots'),
   ]}),
+  archer: Object.freeze({ label: 'Лучник', profession: 'fletcher', texture: 'archer', offers: [
+    offer('sticks',1,'mc:stick',16,20,'mc:emerald'),
+    offer('arrows',1,'mc:emerald',1,2,'mc:arrow',8,16),
+    offer('bow',2,'mc:emerald',2,3,'mc:bow'),
+  ]}),
   nitwit: Object.freeze({ label: 'Бездельник', profession: 'nitwit', texture: 'nitwit', offers: [] }),
 });
 
