@@ -447,6 +447,20 @@ function doorPanelTile(base, seed, upper) {
   return tile;
 }
 
+function trapdoorPanelTile(base, seed) {
+  const tile = planks(base, seed);
+  const frame = shade(base, 0.48), inset = shade(base, 0.72);
+  for (let i = 0; i < TILE_SIZE; i++) {
+    for (const p of [[i, 0], [i, 1], [i, 14], [i, 15], [0, i], [1, i], [14, i], [15, i]]) {
+      setPx(tile, p[0], p[1], frame[0], frame[1], frame[2]);
+    }
+  }
+  for (let i = 3; i <= 12; i++) {
+    for (const p of [[i, 4], [i, 11], [4, i], [11, i]]) setPx(tile, p[0], p[1], inset[0], inset[1], inset[2]);
+  }
+  return tile;
+}
+
 function ironDoorPanelTile(upper) {
   const tile = grainy(hex(0x999999), 0.18, upper ? 'iron_door_top' : 'iron_door_bottom');
   const dark = hex(0x555555), light = hex(0xc9c9c9);
@@ -601,10 +615,12 @@ for (const [species, c] of Object.entries(WOOD)) {
   // Offline fallback tiles; Java 1.19 resource-pack images override these.
   TEXTURES[`${species}_door_bottom`] = () => doorPanelTile(c.planks, `${species}_door_bottom`, false);
   TEXTURES[`${species}_door_top`] = () => doorPanelTile(c.planks, `${species}_door_top`, true);
+  TEXTURES[`${species}_trapdoor`] = () => trapdoorPanelTile(c.planks, `${species}_trapdoor`);
 }
 
 TEXTURES.iron_door_bottom = () => ironDoorPanelTile(false);
 TEXTURES.iron_door_top = () => ironDoorPanelTile(true);
+TEXTURES.iron_trapdoor = () => ironDoorPanelTile(false);
 
 /** Visible checkerboard fallback for a missing texture key. */
 function missingTexture() {
