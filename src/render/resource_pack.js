@@ -126,7 +126,7 @@ export async function loadCommunityTextures(blocks, items) {
   const itemIcons = new Map();
   const hud = {};
   const ui = {};
-  console.info('[textures] SimpleRP: ' + blockTextures.size + '/' + blockNames.size + ' block textures. Item and UI icons use the game's local assets.');
+  console.info("[textures] SimpleRP: " + blockTextures.size + "/" + blockNames.size + " block textures. Item and UI icons use local assets.");
   return { blocks: blockTextures, items: itemIcons, hud, ui };
 }
 
