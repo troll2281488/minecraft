@@ -1,5 +1,5 @@
 import { describe, it, assertEqual } from './framework.js';
-import { canAcquireContainerLease, electRoomHost, isValidContainerKey, listJoinableRooms, ownsContainerLease, queueContainerWrite } from '../src/game/multiplayer.js';
+import { canAcquireContainerLease, electRoomHost, isContainerLeaseHeldByOther, isValidContainerKey, listJoinableRooms, ownsContainerLease, queueContainerWrite } from '../src/game/multiplayer.js';
 
 describe('multiplayer container key validation', () => {
   it('accepts signed integer coordinates only', () => {
@@ -59,6 +59,13 @@ describe('multiplayer container edit leases', () => {
     assertEqual(ownsContainerLease(lease, 'player-a', 'tab-token'), true);
     assertEqual(ownsContainerLease(lease, 'player-a', 'other-token'), false);
     assertEqual(ownsContainerLease(lease, 'player-b', 'tab-token'), false);
+  });
+
+  it('detects another player only while their lease is active', () => {
+    const lease = { owner: 'player-b', expiresAt: 2000 };
+    assertEqual(isContainerLeaseHeldByOther(lease, 'player-a', 1000), true);
+    assertEqual(isContainerLeaseHeldByOther(lease, 'player-a', 2000), false);
+    assertEqual(isContainerLeaseHeldByOther(lease, 'player-b', 1000), false);
   });
 
   it('rejects attempts to create a lease without a player identity', () => {
