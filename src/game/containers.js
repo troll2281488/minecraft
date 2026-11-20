@@ -17,6 +17,8 @@ const COOL_PER_TICK = 2;
 
 /** Smelting table: input item id -> { result, count }. From the 1.12.2 smelting list. */
 export const SMELTING = new Map([
+  ['mc:cobblestone', { result: 'mc:stone', count: 1 }],
+  ['mc:sand', { result: 'mc:glass', count: 1 }],
   ['mc:oak_log',       { result: 'mc:charcoal', count: 1 }],
   ['mc:birch_log',     { result: 'mc:charcoal', count: 1 }],
   ['mc:spruce_log',    { result: 'mc:charcoal', count: 1 }],
