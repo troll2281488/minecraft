@@ -776,9 +776,11 @@ export class Multiplayer {
     if (!this.roomId || !isValidContainerKey(key)) return { ok: true, local: true };
     if (!this.db || !this.firebaseConnected || !runTransaction) return { ok: false, offline: true };
     const roomId = this.roomId;
+    // Finish any previous screen's queued snapshot before a rapid reopen can
+    // obtain a fresh token for the same container.
+    await this._flushPendingContainerWrites();
     const token = `${this.uid}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`;
     const lockRef = ref(this.db, `minecraft_game/rooms/${roomId}/containerLocks/${key}`);
-    const now = Date.now();
     try {
       const result = await runTransaction(lockRef, (current) => {
         if (!canAcquireContainerLease(current, this.uid, Date.now())) return;
