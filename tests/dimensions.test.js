@@ -7,7 +7,7 @@ describe('Nether and End dimensions', () => {
   it('generates a separate Nether chunk with bedrock and netherrack', () => {
     const generator = new TerrainGenerator('dimension-test', 'nether');
     const chunk = generator.generate(new Chunk(0, 0));
-    assertEqual(chunk.getBlock(0, -64, 0).block.id, 'mc:bedrock');
+    assertEqual(chunk.getBlock(0, 0, 0).block.id, 'mc:bedrock');
     assert(['mc:netherrack','mc:stone'].includes(chunk.getBlock(8, 10, 8).block.id));
   });
 
