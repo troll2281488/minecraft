@@ -23,7 +23,7 @@ self.onmessage = (event) => {
   const msg = event.data;
 
   if (msg.type === 'init') {
-    generator = new TerrainGenerator(msg.seed);
+    generator = new TerrainGenerator(msg.seed, msg.dimension || 'overworld');
     self.postMessage({ type: 'ready' });
     return;
   }
