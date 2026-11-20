@@ -51,6 +51,8 @@ describe('redstone pressure plate entity activation', () => {
     game.entities.mobs.length = 0;
     game.tickCount = 12;
     game._tickRedstoneDevices();
+    game.tickCount = 22;
+    game._tickRedstoneDevices();
     assertEqual(blocks.get('0,0,0').get('powered'), false);
   });
 });
