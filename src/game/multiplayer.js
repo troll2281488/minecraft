@@ -61,6 +61,7 @@ export class Multiplayer {
     this.roomId = null;
     this.remotePlayers = new Map();
     this.pendingBlocks = new Map();
+    this.pendingBlockWrites = new Map();
     this.unsubscribers = [];
     this.syncElapsed = 0;
     this.syncInFlight = false;
@@ -449,6 +450,7 @@ export class Multiplayer {
         online: true, room: code, name: this.nickname,
       });
       this.firebaseError = '';
+      await this._flushPendingBlockWrites();
       this._updateRoomHud();
     } catch (error) {
       this.firebaseError = error?.message || 'Не удалось восстановить сетевую сессию';
@@ -654,12 +656,39 @@ export class Multiplayer {
   }
 
   pushBlockChange(x, y, z, state) {
-    if (!this.db || !this.roomId || this.applyingRemoteBlock) return;
+    if (!this.roomId || this.applyingRemoteBlock) return;
     const stateString = state?.toString?.();
     if (!stateString) return;
-    set(ref(this.db, `minecraft_game/rooms/${this.roomId}/blocks/overworld_${x}_${y}_${z}`), {
-      x, y, z, state: stateString, ts: Date.now(),
-    }).catch((error) => this.game.ui.toast(`Не удалось синхронизировать блок: ${error.message}`, { error: true }));
+    const key = `${this.roomId}:overworld_${x}_${y}_${z}`;
+    this.pendingBlockWrites.set(key, {
+      roomId: this.roomId, key: `overworld_${x}_${y}_${z}`,
+      payload: { x, y, z, state: stateString, ts: Date.now() },
+    });
+    // Bound memory use during long offline periods; latest edit per coordinate wins.
+    while (this.pendingBlockWrites.size > 4096) {
+      this.pendingBlockWrites.delete(this.pendingBlockWrites.keys().next().value);
+    }
+    if (this.firebaseConnected) void this._flushPendingBlockWrites();
+  }
+
+  async _flushPendingBlockWrites() {
+    if (!this.db || !this.roomId || !this.firebaseConnected || this.blockFlushInFlight) return;
+    this.blockFlushInFlight = true;
+    try {
+      for (const [queueKey, entry] of this.pendingBlockWrites) {
+        if (entry.roomId !== this.roomId) continue;
+        try {
+          await set(ref(this.db, `minecraft_game/rooms/${entry.roomId}/blocks/${entry.key}`), entry.payload);
+          // Do not erase a newer edit queued while this write was in flight.
+          if (this.pendingBlockWrites.get(queueKey) === entry) this.pendingBlockWrites.delete(queueKey);
+        } catch (error) {
+          console.warn('[multiplayer] queued block sync:', error);
+          break; // Keep this and later edits queued until the next reconnect.
+        }
+      }
+    } finally {
+      this.blockFlushInFlight = false;
+    }
   }
 
   sendChat(text) {
