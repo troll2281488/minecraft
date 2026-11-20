@@ -2,6 +2,7 @@ import '../src/world/blocks/index.js';
 import { describe, it, assertEqual } from './framework.js';
 import { BLOCKS } from '../src/world/block.js';
 import { RedstoneDevicesMixin } from '../src/game/redstone_devices.js';
+import { blockDrops } from '../src/game/interaction.js';
 import { blockEmissionForState } from '../src/world/lighting.js';
 
 function makeWorld(entries) {
@@ -19,6 +20,13 @@ describe('redstone lamp and torch parity', () => {
     assertEqual(blockEmissionForState(BLOCKS.get('mc:redstone_lamp').defaultState.with('lit', true)), 15);
     assertEqual(blockEmissionForState(BLOCKS.get('mc:redstone_torch').defaultState), 7);
     assertEqual(blockEmissionForState(BLOCKS.get('mc:redstone_torch').defaultState.with('lit', false)), 0);
+  });
+  it('glowstone emits light and drops two to four dust', () => {
+    assertEqual(blockEmissionForState(BLOCKS.get('mc:glowstone').defaultState), 15);
+    const drops = blockDrops(BLOCKS.get('mc:glowstone').defaultState, null, 123, 4, 70, -2);
+    assertEqual(drops.length, 1);
+    assertEqual(drops[0].id, 'mc:glowstone_dust');
+    if (drops[0].count < 2 || drops[0].count > 4) throw new Error('glowstone dust count must be 2..4');
   });
   it('registers a lamp with an initially unlit state', () => {
     const lamp = BLOCKS.get('mc:redstone_lamp').defaultState;
