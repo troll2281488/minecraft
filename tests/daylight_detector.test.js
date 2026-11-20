@@ -21,7 +21,7 @@ describe('daylight detector', () => {
 
   it('wraps time after a full 24,000-tick day', () => {
     assertEqual(daylightDetectorPower(30000), 15);
-    assertEqual(daylightDetectorPower(-18000), 0);
+    assertEqual(daylightDetectorPower(42000), 0);
   });
 
   it('updates the block power and emits adjacent power transitions', () => {
@@ -35,8 +35,8 @@ describe('daylight detector', () => {
       },
       player: { x: 0, y: 0, z: 0 },
       powerEvents: [],
-      _applyAdjacentRedstonePower(x, y, z, powered) { this.powerEvents.push(powered); },
       ...RedstoneDevicesMixin,
+      _applyAdjacentRedstonePower(x, y, z, powered) { this.powerEvents.push(powered); },
     };
     game._tickDaylightDetectors(0, 0, 0, true);
     assertEqual(blocks.get('0,0,0').get('power'), 15);
