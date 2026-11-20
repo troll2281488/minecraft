@@ -127,7 +127,7 @@ function vanillaLayerParts(model, layerName = 'main') {
 }
 
 const MOB_TEXTURE_FILES = Object.freeze({
-  cow:'cow.png', pig:'pig.png', sheep:'sheep.png', sheep_fur:'sheep_fur.png', chicken:'chicken.png', wolf:'wolf.png', horse:'horse.png',
+  cow:'cow.png', pig:'pig.png', sheep:'sheep.png', sheep_fur:'sheep_fur.png', chicken:'chicken.png', wolf:'wolf.png', horse:'horse.png', rabbit:'rabbit.png', polar_bear:'polar_bear.png', mooshroom:'mooshroom.png',
   zombie:'zombie.png', skeleton:'skeleton.png', stray:'stray.png',
   creeper:'creeper.png', enderman:'enderman.png', spider:'spider.png', cave_spider:'cave_spider.png',
 });
@@ -138,7 +138,7 @@ const SNOWY_LEAF_BIOMES = new Set([
 
 const VILLAGER_CAREER_TEXTURES = Object.freeze([
   'farmer','fisherman','shepherd','librarian','cleric',
-  'armorer','toolsmith','butcher','leatherworker','nitwit',
+  'armorer','toolsmith','butcher','leatherworker','fletcher','nitwit',
 ]);
 const MOB_UV = Object.freeze({
   cow:[[18,4,12,18,10],[0,0,8,8,6],null,null,null,null,[0,0,8,8,6],[0,0,8,8,6]],
@@ -934,7 +934,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       // Mob movement advances along +sin(yaw), +cos(yaw); render the model on that same forward axis.
       draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
         hurt: (mob.hurtTicks || 0) > 0, animal, humanoid, vanillaModel: !!vanillaParts,
-        mobType: mob.type, mobTextureKey: mob.type === 'villager' ? 'villager_' + (mob.villagerCareer || 'farmer') : mob.type,
+        mobType: mob.type, mobTextureKey: mob.type === 'villager' ? 'villager_' + (mob.villagerCareer === 'archer' ? 'fletcher' : (mob.villagerCareer || 'farmer')) : mob.type,
         idle: mob.anim?.idle ?? 0, walking: !!mob.anim?.walking,
       });
       if (mob.type === 'horse' && mob.horseArmor) {
