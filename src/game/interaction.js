@@ -263,19 +263,18 @@ export function orientPlacement(block, player, hit) {
   }
 
   if (block.properties.facing) {
-    // Hoppers point downward by default when placed on a top face; side placement
-    // directs their outlet toward the block that was clicked.
-    if (block.id === 'mc:hopper') {
-      const facing = hit.face.dy !== 0 ? 'down' : yawToFacing(player.yaw + 180);
-      if (block.properties.facing.has(facing)) state = state.with('facing', facing);
-    }
     // Stairs ascend AWAY from the player (the tall step is on the far side), so
     // they face the way the player is looking. Most other directional blocks
     // face TOWARD the player instead.
     const faceDirection = hit.face.dx > 0 ? 'east' : hit.face.dx < 0 ? 'west'
       : hit.face.dz > 0 ? 'south' : hit.face.dz < 0 ? 'north' : null;
-    const facing = isStair || block.renderShape === 'door'
-      ? yawToFacing(player.yaw) : (isMountedDevice && faceDirection ? faceDirection : yawToFacing(player.yaw + 180));
+    const hopperFacing = hit.face.dy !== 0 ? 'down'
+      : hit.face.dx > 0 ? 'west' : hit.face.dx < 0 ? 'east'
+      : hit.face.dz > 0 ? 'north' : 'south';
+    const facing = block.id === 'mc:hopper' ? hopperFacing
+      : isStair || block.renderShape === 'door'
+        ? yawToFacing(player.yaw)
+        : (isMountedDevice && faceDirection ? faceDirection : yawToFacing(player.yaw + 180));
     if (block.properties.facing.has(facing)) state = state.with('facing', facing);
   }
 
