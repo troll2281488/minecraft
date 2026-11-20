@@ -304,13 +304,14 @@ void main() {
   // other without any per-face ordering.
   if (texel.a < uAlphaCutoff) discard;
 
-  // Grass-block side textures contain both green crown pixels and brown dirt.
-  // Tint only green-dominant pixels so biome colouring never stains the soil.
+  // Grass block top and the green crown pixels on all four sides receive the
+  // biome tint. Brown dirt pixels are deliberately excluded by greenMask.
   float greenMask = vFace == 4u ? 1.0 :
     smoothstep(0.015, 0.10, texel.g - max(texel.r, texel.b) * 0.85);
-  // Top texture is neutral grayscale: colour it green directly. Side pixels
-  // already contain vanilla green, so apply only the biome's relative shift.
-  vec3 sideShift = vGrassTint / vec3(0.43, 0.62, 0.28);
+  // The top tile is grayscale, so colour it directly. Side tiles already have
+  // vanilla green pixels; scale those pixels relative to plains green only.
+  vec3 plainsGreen = vec3(0.34, 0.72, 0.22);
+  vec3 sideShift = vGrassTint / plainsGreen;
   vec3 textureColor = vFace == 4u
     ? texel.rgb * vGrassTint
     : texel.rgb * mix(vec3(1.0), sideShift, greenMask);
