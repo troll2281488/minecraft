@@ -140,3 +140,14 @@ export function experienceDroppedOnDeath(level) {
   const currentLevel = Number.isFinite(level) ? Math.max(0, Math.floor(level)) : 0;
   return Math.min(100, currentLevel * 7);
 }
+
+
+/** Java 1.19 monster-spawner XP: 15 + two independent rolls of 0..14. */
+export function experienceForSpawner(random = Math.random) {
+  const roll = () => {
+    const value = Number(random());
+    const safe = Number.isFinite(value) ? Math.max(0, Math.min(0.999999, value)) : 0;
+    return Math.floor(safe * 15);
+  };
+  return 15 + roll() + roll();
+}

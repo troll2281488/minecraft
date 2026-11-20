@@ -307,6 +307,8 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
   // Blocks that do not drop themselves in vanilla without Silk Touch.
   // Silk Touch is not implemented yet, so these correctly yield nothing.
   if (id === 'mc:glass' || id === 'mc:ice') return [];
+  // Monster spawners are never item drops in Java Edition, even with Silk Touch.
+  if (id === 'mc:mob_spawner') return [];
 
   // A shovel breaks a snow block into four snowballs in Java 1.12.2.
   if (id === 'mc:snow_block') return [{ id: 'mc:snowball', count: 4 }];

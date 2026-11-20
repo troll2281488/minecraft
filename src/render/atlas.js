@@ -519,6 +519,23 @@ const TEXTURES = {
   furnace_top:         () => furnaceSideTile('furnace_top'),
   furnace_side:        () => furnaceSideTile('furnace_side'),
   furnace_front:       () => furnaceFrontTile('furnace_front'),
+  mob_spawner:         () => {
+    const tile = grainy(hex(0x343434), 0.2, 'mob_spawner', { clumps: 5 });
+    const iron = hex(0x999999), dark = hex(0x242424), ember = hex(0x9b633b);
+    // Pixel-art cage bars with a small warm core; the block remains decorative
+    // until the spawner simulation is implemented.
+    for (let p = 2; p < 14; p += 3) {
+      for (let y = 1; y < 15; y++) setPx(tile, p, y, iron[0], iron[1], iron[2]);
+      for (let x = 1; x < 15; x++) setPx(tile, x, p, iron[0], iron[1], iron[2]);
+    }
+    for (let y = 5; y <= 10; y++) for (let x = 5; x <= 10; x++) {
+      setPx(tile, x, y, dark[0], dark[1], dark[2]);
+    }
+    for (const [x, y] of [[7, 6], [8, 6], [6, 8], [9, 8], [8, 9]]) {
+      setPx(tile, x, y, ember[0], ember[1], ember[2]);
+    }
+    return tile;
+  },
 
   short_grass:        () => crossPlant('short_grass', (t, r) => grassBlades(t, r, GRASS_GREEN)),
   fern:               () => crossPlant('fern', (t, r) => grassBlades(t, r, hex(0x5f9440))),
