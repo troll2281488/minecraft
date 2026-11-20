@@ -109,6 +109,18 @@ describe('Pre-1.14 villager careers', () => {
     assert(ITEMS.get('mc:arrow'));
   });
 
+  it('master clerics sell three bottles o enchanting for three emeralds', () => {
+    const cleric = { villagerCareer: 'cleric', villagerSeed: 9, villagerTier: 5,
+      villagerUsedOffers: [], villagerOfferUses: {}, villagerTradeCount: 0 };
+    const trade = getVillagerOffers(cleric).find((entry) => entry.id === 'experience_bottles');
+    assert(trade);
+    assertEqual(trade.tier, 5);
+    assertEqual(trade.input, 'mc:emerald');
+    assertEqual(trade.inputCount, 3);
+    assertEqual(trade.output, 'mc:experience_bottle');
+    assertEqual(trade.outputCount, 3);
+  });
+
   it('nitwits do not offer trades', () => {
     const villager = { villagerCareer: 'nitwit', villagerTier: 1 };
     assertEqual(getVillagerOffers(villager).length, 0);

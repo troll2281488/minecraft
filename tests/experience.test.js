@@ -1,5 +1,5 @@
 import { describe, it, assertEqual } from './framework.js';
-import { PlayerExperience, experienceToNextLevel, splitExperienceIntoOrbs, experienceForMob, experienceForBlock, mergeExperienceOrbState, isExperienceOrbHazard, experienceForFishing, experienceForBreeding, experienceForVillagerTrade } from '../src/entity/experience.js';
+import { PlayerExperience, experienceToNextLevel, splitExperienceIntoOrbs, experienceForMob, experienceForBlock, mergeExperienceOrbState, isExperienceOrbHazard, experienceForFishing, experienceForBreeding, experienceForVillagerTrade, experienceForBottleOEnchanting } from '../src/entity/experience.js';
 import { Player } from '../src/entity/player.js';
 import { InputMixin } from '../src/game/input.js';
 
@@ -157,5 +157,13 @@ describe('Java-style XP from non-combat activities', () => {
   it('rolls villager trade XP from 3 through 6 points', () => {
     assertEqual(experienceForVillagerTrade(() => 0), 3);
     assertEqual(experienceForVillagerTrade(() => 0.999), 6);
+  });
+});
+
+
+describe("Java-style bottle o' enchanting XP", () => {
+  it('returns a random value from 3 through 11 points', () => {
+    assertEqual(experienceForBottleOEnchanting(() => 0), 3);
+    assertEqual(experienceForBottleOEnchanting(() => 0.999), 11);
   });
 });

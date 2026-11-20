@@ -13,7 +13,7 @@
 import { BLOCKS, AIR } from '../world/block.js';
 import { ITEMS, ItemStack } from '../world/item.js';
 import { GAMEMODE } from '../entity/player.js';
-import { experienceForBlock, experienceForVillagerTrade } from '../entity/experience.js';
+import { experienceForBlock, experienceForVillagerTrade, experienceForBottleOEnchanting } from '../entity/experience.js';
 import {
   placementTarget, orientPlacement, blockDrops, wouldTrapPlayer, canHarvest,
 } from './interaction.js';
@@ -71,6 +71,23 @@ export const BlockActionsMixin = {
       return;
     }
     const heldItem = this.inventory?.held?.item;
+    // The XP bottle is consumed on use in Survival; its glass bottle is returned.
+    // The current entity layer has no throwable-potion projectile, so XP appears
+    // at the player's hand rather than after a bottle-flight collision.
+    if (heldItem?.id === 'mc:experience_bottle' &&
+        [GAMEMODE.SURVIVAL, GAMEMODE.CREATIVE].includes(this.player?.gamemode)) {
+      const points = experienceForBottleOEnchanting();
+      this.entities?.spawnExperienceOrbs(points, this.player.x, this.player.y + this.player.eyeHeight - 0.2, this.player.z);
+      if (this.player.gamemode === GAMEMODE.SURVIVAL) {
+        this.inventory.consumeHeld(1);
+        if (this.inventory.addItem('mc:glass_bottle', 1) > 0) {
+          this.entities?.dropStack(ItemStack.of('mc:glass_bottle', 1));
+        }
+      }
+      this.sounds?.play('xp');
+      this.ui.toast('Получено опыта: ' + points);
+      return;
+    }
     if (this.hit?.state?.block?.id === 'mc:bed') {
       if (this.world.dimension !== 'overworld') {
         this.ui.toast('В этом измерении нельзя спать.', { error: true });

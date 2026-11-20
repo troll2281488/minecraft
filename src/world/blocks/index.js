@@ -467,6 +467,7 @@ const MATERIALS = [
   ['mc:wheat', {}],
   ['mc:paper', {}],
   ['mc:book', {}],
+  ['mc:glass_bottle', { stackSize: 64 }],
 ];
 for (const [id, opts] of MATERIALS) ITEMS.define(id, opts);
 
@@ -513,6 +514,8 @@ ITEMS.define('mc:saddle', { stackSize: 1 });
 ITEMS.define('mc:iron_horse_armor', { stackSize: 1, horseArmor: 'iron' });
 ITEMS.define('mc:golden_horse_armor', { stackSize: 1, horseArmor: 'golden' });
 ITEMS.define('mc:diamond_horse_armor', { stackSize: 1, horseArmor: 'diamond' });
+
+ITEMS.define('mc:experience_bottle', { stackSize: 64, rarity: 'uncommon' });
 
 // Creative-only spawn eggs for the mobs currently supported by the renderer.
 for (const mobType of [
