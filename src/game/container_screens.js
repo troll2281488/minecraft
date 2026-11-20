@@ -263,6 +263,8 @@ export const ContainerScreensMixin = {
         if (el) this._onContainerClick(el.dataset.kind, Number(el.dataset.index), 2, false);
       }
     };
+    // E is the inventory key in-game; while a container is open it must close
+    // that container instead of trying to close the personal inventory.
   },
 
   _closeContainer() {
