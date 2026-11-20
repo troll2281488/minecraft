@@ -27,7 +27,7 @@ import { clamp } from '../../core/math.js';
 import { buildTree } from './trees.js';
 
 /** Bumped whenever generation output changes. Stored per world. */
-export const GENERATOR_VERSION = 10;
+export const GENERATOR_VERSION = 11;
 
 
 // ---------------------------------------------------------------------------
