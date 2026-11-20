@@ -15,7 +15,9 @@ import { TILE_SIZE, TEXTURES } from './atlas.js';
 const STORAGE_KEY = 'mc-resource-pack';
 
 
-const ITSBRIAN_RAW = 'https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/';
+// Community-authored texture sources. Floydicus Old Pack permits reuse with attribution;
+ // SimpleRP's exported PNGs are covered by its GPL source licence.
+const SIMPLE_RP_RAW = 'https://raw.githubusercontent.com/elhedran/SimpleRP/master/build/16/assets/minecraft/textures/blocks/';
 
 const BLOCK_TEXTURE_ALIASES = Object.freeze({
   // The game uses a few descriptive keys that differ from vanilla asset names.
@@ -24,36 +26,14 @@ const BLOCK_TEXTURE_ALIASES = Object.freeze({
   water: 'water_still',
 });
 
-const ITEM_TEXTURE_ALIASES = Object.freeze({
-  raw_beef: 'beef',
-  raw_porkchop: 'porkchop',
-  raw_chicken: 'chicken',
-  raw_mutton: 'mutton',
-  raw_cod: 'cod',
-  raw_salmon: 'salmon',
-});
-
-const UI_TEXTURES = Object.freeze({
-  widgets: 'gui/widgets.png',
-  icons: 'gui/icons.png',
-  inventory: 'gui/container/inventory.png',
-  genericContainer: 'gui/container/generic_54.png',
-  furnace: 'gui/container/furnace.png',
-  craftingTable: 'gui/container/crafting_table.png',
-  titleLogo: 'gui/title/minecraft.png',
-  optionsBackground: 'gui/options_background.png',
-  creativeInventory: 'gui/container/creative_inventory/tab_items.png',
-  asciiFont: 'font/ascii.png',
-  europeanFont: 'font/nonlatin_european.png',
-});
-
-// Spawn eggs are generated from their mob's two vanilla colors by item_icons.js.
+// Kept as a public selection helper for the resource-pack UI/tests. The
+// community pack currently supplies block textures only, so item icons remain local.
 export function shouldFetchExternalItemTexture(item) {
   return Boolean(item && !item.block && !item.spawnEggMob);
 }
 
-async function fetchImage(path) {
-  const response = await fetch(ITSBRIAN_RAW + path, { signal: AbortSignal.timeout(4000) });
+async function fetchImage(path, base = SIMPLE_RP_RAW) {
+  const response = await fetch(base + path, { signal: AbortSignal.timeout(4000) });
   if (!response.ok) return null;
   return createImageBitmap(await response.blob());
 }
@@ -81,7 +61,7 @@ async function mapWithLimit(values, limit, task) {
 }
 
 /** Load every matching block/item texture and the legacy HUD sprites used by this game. */
-export async function loadItsBrianTextures(blocks, items) {
+export async function loadCommunityTextures(blocks, items) {
   const blockNames = new Set();
   for (const state of blocks.statesById) {
     const t = state.block.textures;
@@ -92,36 +72,55 @@ export async function loadItsBrianTextures(blocks, items) {
     } else if (state.block.texture) blockNames.add(state.block.texture);
   }
 
+  const blockAliases = {
+    ...BLOCK_TEXTURE_ALIASES,
+    // SimpleRP exports the legacy 1.12-style textures under a plural "blocks"
+    // directory. These aliases bridge the game's descriptive texture keys.
+    grass_block_top: 'grass_top',
+    grass_block_side: 'grass_side',
+    podzol_top: 'hardened_clay_stained_brown',
+    podzol_side: 'grass_side',
+    coarse_dirt: 'dirt',
+    plains_soil: 'dirt',
+    forest_floor: 'hardened_clay_stained_brown',
+    birch_soil: 'sand',
+    taiga_soil: 'stone',
+    swamp_mud: 'clay',
+    alpine_gravel: 'gravel',
+    mossy_cobblestone: 'cobblestone_mossy',
+    
+  };
+  const simpleLeafNames = {
+    oak_leaves: 'leaves_oak',
+    spruce_leaves: 'leaves_spruce',
+    birch_leaves: 'leaves_birch',
+    jungle_leaves: 'leaves_jungle',
+    acacia_leaves: 'leaves_acacia',
+    dark_oak_leaves: 'leaves_big_oak',
+  };
+  const simpleTextureNames = {
+    ...simpleLeafNames,
+    oak_log: 'log_oak', oak_log_top: 'log_oak_top',
+    spruce_log: 'log_spruce', spruce_log_top: 'log_spruce_top',
+    birch_log: 'log_birch', birch_log_top: 'log_birch_top',
+    jungle_log: 'log_jungle', jungle_log_top: 'log_jungle_top',
+    acacia_log: 'log_acacia', acacia_log_top: 'log_acacia_top',
+    dark_oak_log: 'log_big_oak', dark_oak_log_top: 'log_big_oak_top',
+    oak_sapling: 'sapling_oak', spruce_sapling: 'sapling_spruce',
+    birch_sapling: 'sapling_birch', jungle_sapling: 'sapling_jungle',
+    acacia_sapling: 'sapling_acacia', dark_oak_sapling: 'sapling_roofed_oak',
+    short_grass: 'tallgrass',
+    jungle_soil: 'hardened_clay',
+    savanna_soil: 'sandstone_normal',
+  };
   const blockEntries = await mapWithLimit([...blockNames], 24, async (name) => {
-    // Keep foliage and soil textures local: third-party packs may supply already-
-    // coloured leaves, which look pale or incorrect when multiplied by biome tint.
-    if (name.endsWith('_leaves') || name.endsWith('_sapling') || [
-      'grass_block_top', 'grass_block_side', 'dirt', 'coarse_dirt', 'podzol_top',
-      'podzol_side', 'plains_soil', 'forest_floor', 'birch_soil', 'jungle_soil',
-      'savanna_soil', 'taiga_soil', 'swamp_mud', 'alpine_gravel',
-    ].includes(name)) return null;
-    const sourceName = BLOCK_TEXTURE_ALIASES[name] ?? name;
-    if (name === 'chest_side' || name === 'chest_top') {
-      // Vanilla stores the chest as a 64x64 model skin rather than a block tile.
-      // Rebuild the two 16x16 face tiles from the front/top UV regions.
-      const skin = await fetchImage('entity/chest/normal.png');
-      if (!skin) return null;
-      const canvas = document.createElement('canvas');
-      canvas.width = TILE_SIZE;
-      canvas.height = TILE_SIZE;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      ctx.imageSmoothingEnabled = false;
-      if (name === 'chest_top') {
-        ctx.drawImage(skin, 14, 0, 14, 14, 0, 0, TILE_SIZE, TILE_SIZE);
-      } else {
-        ctx.drawImage(skin, 0, 14, 14, 5, 0, 0, TILE_SIZE, 5);
-        ctx.drawImage(skin, 0, 33, 14, 10, 0, 5, TILE_SIZE, 11);
-      }
-      const pixels = new Uint8Array(ctx.getImageData(0, 0, TILE_SIZE, TILE_SIZE).data);
-      skin.close();
-      return [name, pixels];
-    }
-    const bitmap = await fetchImage('block/' + encodeURIComponent(sourceName) + '.png');
+    const communityName = simpleTextureNames[name];
+    const sourceName = blockAliases[name] ?? name;
+    const bitmap = communityName
+      ? await fetchImage(encodeURIComponent(communityName) + '.png', SIMPLE_RP_RAW)
+      : await fetchImage(encodeURIComponent(sourceName) + '.png');
+    // A few files in older resource packs use legacy names. Missing textures are
+    // left to the atlas fallback instead of inventing replacement artwork.
     if (!bitmap) return null;
     const { ctx } = canvasFor(bitmap);
     const pixels = new Uint8Array(ctx.getImageData(0, 0, TILE_SIZE, TILE_SIZE).data);
@@ -129,53 +128,11 @@ export async function loadItsBrianTextures(blocks, items) {
     return [name, pixels];
   });
 
-  const itemEntries = await mapWithLimit([...items.items.values()].filter(shouldFetchExternalItemTexture), 12, async (item) => {
-    const name = item.id.slice(item.id.indexOf(':') + 1);
-    const sourceName = ITEM_TEXTURE_ALIASES[name] ?? name;
-    const bitmap = await fetchImage('item/' + encodeURIComponent(sourceName) + '.png');
-    if (!bitmap) return null;
-    const { canvas } = canvasFor(bitmap);
-    bitmap.close();
-    return [item.id, canvas.toDataURL('image/png')];
-  });
-
-  const uiEntries = await Promise.all(Object.entries(UI_TEXTURES).map(async ([key, path]) => {
-    try {
-      const bitmap = await fetchImage(path);
-      if (!bitmap) return null;
-      const canvas = document.createElement('canvas');
-      canvas.width = bitmap.width;
-      canvas.height = bitmap.height;
-      canvas.getContext('2d').drawImage(bitmap, 0, 0);
-      bitmap.close();
-      return [key, canvas.toDataURL('image/png')];
-    } catch {
-      return null;
-    }
-  }));
-
-  const hud = {};
-  try {
-    const bitmap = await fetchImage('gui/icons.png');
-    if (bitmap) {
-      const crop = (key, sx, sy) => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 9; canvas.height = 9;
-        canvas.getContext('2d').drawImage(bitmap, sx, sy, 9, 9, 0, 0, 9, 9);
-        hud[key] = canvas.toDataURL('image/png');
-      };
-      // Legacy Java HUD atlas: empty/full/half heart and food sprites.
-      crop('heart_empty', 16, 0); crop('heart_full', 52, 0); crop('heart_half', 61, 0);
-      crop('food_empty', 16, 27); crop('food_full', 52, 27); crop('food_half', 61, 27);
-      crop('bubble_empty', 16, 18); crop('bubble_full', 25, 18);
-      bitmap.close();
-    }
-  } catch { /* Keep the game's built-in HUD icons if the atlas cannot be read. */ }
-
   const blockTextures = new Map(blockEntries);
-  const itemIcons = new Map(itemEntries);
-  const ui = Object.fromEntries(uiEntries.filter(Boolean));
-  console.info('[textures] ItsBrian: ' + blockTextures.size + '/' + blockNames.size + ' block textures, ' + itemIcons.size + ' item icons, ' + Object.keys(hud).length + ' HUD sprites, ' + Object.keys(ui).length + ' GUI assets.');
+  const itemIcons = new Map();
+  const hud = {};
+  const ui = {};
+  console.info("[textures] SimpleRP: " + blockTextures.size + "/" + blockNames.size + " block textures. Item and UI icons use local assets.");
   return { blocks: blockTextures, items: itemIcons, hud, ui };
 }
 

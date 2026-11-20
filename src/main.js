@@ -24,7 +24,7 @@ import { ITEMS } from './world/item.js';
 
 import { buildTextures, buildBlockTextureTable, TILE_SIZE } from './render/atlas.js';
 import { buildItemIconCache } from './render/item_icons.js';
-import { loadItsBrianTextures, setMinecraftUiTextures } from './render/resource_pack.js';
+import { loadCommunityTextures, setMinecraftUiTextures } from './render/resource_pack.js';
 import { setHudSprites } from './ui/hud_bars.js';
 import { loadEntityModelPack } from './render/entity_models.js';
 import { createContext, createTextureArray } from './render/gl.js';
@@ -69,9 +69,9 @@ export async function boot() {
   const canvas = document.getElementById('canvas');
   const gl = createContext(canvas);
 
-  // Load available ItsBrian textures; missing files fall back to the built-in art.
+  // Load attributed community textures; unmatched files use the atlas fallback.
   const [remoteTextures, entityModels] = await Promise.all([
-    loadItsBrianTextures(BLOCKS, ITEMS),
+    loadCommunityTextures(BLOCKS, ITEMS),
     loadEntityModelPack(),
   ]);
   setHudSprites(remoteTextures.hud);
