@@ -183,6 +183,19 @@ export class TerrainGenerator {
 
     this.hseed = seedToInt(this.seed);
     this.states = resolveStates();
+    this.bands = this.buildTerracottaBands(root.fork('bands'));
+  }
+
+  buildTerracottaBands(rng) {
+    const S=this.states.byId;
+    const palette=['orange','orange','yellow','white','brown','red','light_gray','orange'];
+    const out=new Array(MAX_Y).fill(S['mc:orange_terracotta']||S['mc:red_sand']);
+    let y=0;
+    while(y<MAX_Y){const color=palette[rng.nextInt(palette.length)],thick=1+rng.nextInt(4);
+      const state=S[`mc:${color}_terracotta`]||S['mc:orange_terracotta']||S['mc:red_sand'];
+      for(let k=0;k<thick&&y<MAX_Y;k++,y++)out[y]=state;
+    }
+    return out;
   }
 
   /** Warped, quantile-normalized climate fields shared by terrain and biome selection. */
@@ -350,6 +363,7 @@ export class TerrainGenerator {
 
     this.placePatches(chunk, baseX, baseZ);
     this.placeOres(chunk, baseX, baseZ);
+    this.placeEmeralds(chunk, baseX, baseZ, biomes);
     this.applySurface(chunk, baseX, baseZ, heights, biomes);
     this.placeFeatures(chunk, baseX, baseZ, heights, biomes);
     this.placeTrees(chunk, baseX, baseZ);
@@ -357,7 +371,7 @@ export class TerrainGenerator {
     this.placeFossils(chunk, baseX, baseZ);
     this.placeVillages(chunk, baseX, baseZ);
     this.placeSurfaceStructures(chunk, baseX, baseZ);
-    this.placeUndergroundStructures(chunk, baseX, baseZ);
+    this.placeUndergroundStructures(chunk, baseX, baseZ, heights);
 
     chunk.rebuildHeightmap();
     chunk.generatedStage = GEN_STAGE.FEATURES;
@@ -525,6 +539,18 @@ export class TerrainGenerator {
     }
   }
 
+  /** Emeralds are rare and restricted to mountain biomes. */
+  placeEmeralds(chunk, baseX, baseZ, biomes) {
+    if(![BIOME.MOUNTAINS,BIOME.WINDSWEPT_HILLS].includes(biomes[8*CHUNK_SIZE+8])) return;
+    const state=this.states.byId['mc:emerald_ore']; if(!state) return;
+    const rng=positionalRandom(this.seed,chunk.cx,9200,chunk.cz,9200);
+    const n=3+rng.nextInt(6);
+    for(let i=0;i<n;i++){
+      const x=rng.nextInt(CHUNK_SIZE),z=rng.nextInt(CHUNK_SIZE),y=4+rng.nextInt(29);
+      if(['mc:stone','mc:granite','mc:diorite','mc:andesite'].includes(chunk.getBlock(x,y,z).block.id)) chunk.setBlock(x,y,z,state);
+    }
+  }
+
   /** Replace the topmost stone with the biome's surface and filler material. */
   applySurface(chunk, baseX, baseZ, heights, biomes) {
     const S = this.states;
@@ -550,6 +576,15 @@ export class TerrainGenerator {
         const topId = submerged && biome !== BIOME.OCEAN ? 'mc:sand' : surface.top;
 
         const topState = S.byId[topId];
+        const badlands = biome === BIOME.BADLANDS || biome === BIOME.WOODED_BADLANDS || biome === BIOME.ERODED_BADLANDS;
+        if (badlands && !submerged) {
+          if (S.byId['mc:red_sand'] && STONE_REPLACEABLE.has(chunk.getBlock(x,top,z).block.id)) chunk.setBlock(x,top,z,S.byId['mc:red_sand']);
+          for(let y=top-1;y>=Math.max(MIN_Y+1,SEA_LEVEL-6);y--){
+            if(!STONE_REPLACEABLE.has(chunk.getBlock(x,y,z).block.id)) break;
+            if(this.bands[y]) chunk.setBlock(x,y,z,this.bands[y]);
+          }
+          continue;
+        }
         if (topState && STONE_REPLACEABLE.has(chunk.getBlock(x, top, z).block.id)) {
           chunk.setBlock(x, top, z, topState);
         }
