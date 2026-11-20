@@ -231,6 +231,7 @@ export class MobSystem {
 
   _tickArrows() {
     const world = this.game.world;
+    const player = this.game.player;
     for (let i = this.arrows.length - 1; i >= 0; i--) {
       const arrow = this.arrows[i];
       if (arrow.stuck) {
