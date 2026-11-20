@@ -181,6 +181,11 @@ export class ChunkRenderer {
 
     const surfaceY = Math.max(MIN_Y, Math.min(MAX_Y - 1, chunk.heightmap[8 + 8 * CHUNK_SIZE]));
     mesh.biome = chunk.getBiome(8, surfaceY, 8);
+    // Four corner samples let the shader smoothly blend biome grass colours.
+    mesh.grassBiomes = [[0, 0], [15, 0], [0, 15], [15, 15]].map(([x, z]) => {
+      const y = Math.max(MIN_Y, Math.min(MAX_Y - 1, chunk.heightmap[x + z * CHUNK_SIZE]));
+      return chunk.getBiome(x, y, z);
+    });
     mesh.opaqueQuads = geometry.opaqueQuads;
     mesh.translucentQuads = geometry.translucentQuads;
     mesh.opaqueVertexCount = geometry.opaqueQuads * 4;
@@ -260,7 +265,7 @@ export class ChunkRenderer {
         continue;
       }
 
-      setChunkOrigin(minX, MIN_Y, minZ, mesh.biome);
+      setChunkOrigin(minX, MIN_Y, minZ, mesh.biome, mesh.grassBiomes);
 
       gl.bindVertexArray(mesh.vao);
       const firstQuad = pass === 'opaque' ? 0 : mesh.opaqueQuads;
