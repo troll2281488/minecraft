@@ -50,7 +50,8 @@ export class Multiplayer {
     this.remotePlayers = new Map();
     this.pendingBlocks = new Map();
     this.unsubscribers = [];
-    this.syncElapsed = 0;\n    this.syncInFlight = false;
+    this.syncElapsed = 0;
+    this.syncInFlight = false;
     this.presenceElapsed = 0;
     this.worldSyncElapsed = 0;
     this.hudElapsed = 0;
