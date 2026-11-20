@@ -37,7 +37,10 @@ export function nextSpawnerDelay(random = Math.random) {
 
 /** Spawn points are biased toward the cage, as in Java's difference-of-randoms sampling. */
 export function spawnerSpawnPosition(spawner, random = Math.random) {
-  const sample = () => Number.isFinite(Number(random())) ? Number(random()) : 0.5;
+  const sample = () => {
+    const value = Number(random());
+    return Number.isFinite(value) ? Math.max(0, Math.min(0.999999, value)) : 0.5;
+  };
   const offset = () => Math.round((sample() - sample()) * 4);
   return {
     x: spawner.x + offset(),
