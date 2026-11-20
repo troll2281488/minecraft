@@ -797,6 +797,14 @@
       Текстовый ключ преобразуется так же, как в Minecraft: одинаковый ключ создаёт
       одинаковый мир при каждом создании.
     </p>
+    <h2>Параметры мира</h2>
+    <label for="world-player-name">Имя игрока</label>
+    <input id="world-player-name" type="text" maxlength="20" value="Игрок">
+    <label class="settings-row"><input id="world-cheats" type="checkbox"> Разрешить команды (читы)</label>
+    <label class="settings-row"><input id="world-bonus-chest" type="checkbox" checked> Бонусный сундук</label>
+    <label class="settings-row"><input id="world-keep-inventory" type="checkbox" checked> Сохранение инвентаря после смерти</label>
+    <label for="world-difficulty">Сложность</label>
+    <select id="world-difficulty"><option value="peaceful">Мирная</option><option value="easy">Лёгкая</option><option value="normal" selected>Обычная</option><option value="hard">Сложная</option></select>
     <button id="btn-create">Создать мир</button>
     <button id="btn-create-back" class="secondary">Назад</button>
   </div>

@@ -122,7 +122,7 @@ export const InputMixin = {
     this.keys.add(e.code);
 
     if (e.code === 'Escape') {
-      if (this.ui.current === 'settings') { this.ui.showScreen(this._settingsReturnScreen || (this.running ? 'pause' : 'title')); return; }
+      if (this.ui.current === 'settings') { this._leaveSettings?.(); return; }
       if (this.tradeOpen) { this._closeVillagerTrade(); return; }
       if (this._activeContainer) this._closeContainer();
       else if (this.inventoryOpen) this._closeInventory();
@@ -131,6 +131,13 @@ export const InputMixin = {
       return;
     }
 
+    if (this.player?.ridingHorse && (e.code === 'ShiftLeft' || e.code === 'ShiftRight')) {
+      this.keys.delete(e.code);
+      this.player.ridingHorse = null;
+      this.player.vy = 0;
+      this.ui.toast('Ты слез с лошади');
+      return;
+    }
     if (!this.running || this.paused) return;
 
     if (isAction(e.code, 'jump')) {
@@ -227,6 +234,13 @@ export const InputMixin = {
       else this.ui.toast(message, { duration: 2500 });
     };
     if (!command) return;
+    if (this.worldMeta) {
+      this.multiplayer?.addChat(`[Команда] ${this.worldMeta.playerName || 'Игрок'}: /${(cleaned.startsWith('/') ? cleaned.slice(1) : cleaned)}`);
+    }
+    if (this.worldMeta?.cheatsEnabled === false && !['help','?','save','seed','whereami','pos'].includes(command)) {
+      reply('Команды отключены в настройках этого мира.', true);
+      return;
+    }
     if (command === 'help' || command === '?') {
       reply('Команды: /locate <структура> · /dimension overworld|nether|end · /gamemode creative|survival|spectator · /give <предмет> [кол-во] · /tp <игрок> или /tp <x> <y> <z> · /setblock <x> <y> <z> <блок> · /time set day|night · /time add <тики> · /heal · /fly · /spawn · /save · /seed · /whereami');
       return;

@@ -748,6 +748,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
             const attackProgress = Math.max(0, Math.min(1, (8 - (pose.attackTime ?? 0)) / 8));
             swing = -1.45 * Math.sin(attackProgress * Math.PI);
           }
+          else if (pose.riding && isLeg) swing = -1.05;
           else if (pose.swimming) swing = isArm ? Math.sin(walkPhase * 1.7 + phase) * 0.82 : Math.sin(walkPhase * 1.7 + phase) * 0.52;
           else if (pose.airborne) swing = isArm ? (pose.jumping ? -0.72 : -0.18) : (pose.jumping ? 0.58 : 0.22);
           else if (pose.sneaking) swing = isArm ? 0.18 + Math.sin(walkPhase + phase) * 0.09 : 0.48 + Math.sin(walkPhase + phase) * 0.10;
@@ -864,8 +865,8 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     }
     if (this.thirdPerson) {
       document.getElementById('held-item-view')?.classList.add('hidden');
-      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, jumping: !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking, walking: this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035, attack: this.player.attackTime > 0, attackTime: this.player.attackTime }, true);
-      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, outerHuman, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, sneaking: this.player.sneaking, skinLayer: true }, true);
+      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.ridingHorse && !this.player.onGround, jumping: !this.player.ridingHorse && !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking || !!this.player.ridingHorse, riding: !!this.player.ridingHorse, walking: !this.player.ridingHorse && this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035, attack: this.player.attackTime > 0, attackTime: this.player.attackTime }, true);
+      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, outerHuman, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.ridingHorse && !this.player.onGround, sneaking: this.player.sneaking || !!this.player.ridingHorse, riding: !!this.player.ridingHorse, skinLayer: true }, true);
       const armorColors = ['#b8b8b8','#8f8f9b','#b17a45','#6c778a'];
       const armorParts = [];
       for (let slot = 36; slot <= 39; slot++) {
@@ -904,8 +905,8 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       ], 0, -1, -1, 1, {});
     }
     for (const arrow of this.entities?.arrows ?? []) {
-      const yaw = Math.atan2(-arrow.vx, arrow.vz);
-      const pitch = Math.atan2(-arrow.vy, Math.hypot(arrow.vx, arrow.vz));
+      const yaw = arrow.stuckYaw ?? Math.atan2(-arrow.vx, arrow.vz);
+      const pitch = arrow.stuckPitch ?? Math.atan2(-arrow.vy, Math.hypot(arrow.vx, arrow.vz));
       draw(arrow.x, arrow.y, arrow.z, yaw, [
         [[0,0,0],[0.045,0.045,0.62],[0.46,0.34,0.18,1]],
         [[0,0.025,-0.24],[0.16,0.012,0.16],[0.82,0.82,0.82,1]],
@@ -998,16 +999,10 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       // block items are rendered as volumetric cubes using that same source art.
       const held = this.inventory?.held;
       const itemView = document.getElementById('held-item-view');
-      if (itemView) {
-        const heldIcon = held && !held.isEmpty && held.item ? this.ui.icons.get(held.item.id) : null;
-        if (heldIcon) {
-          if (itemView.src !== new URL(heldIcon, document.baseURI).href) itemView.src = heldIcon;
-          itemView.classList.remove('hidden');
-        } else {
-          itemView.classList.add('hidden');
-          itemView.removeAttribute('src');
-        }
-      }
+      // The hotbar icon is not the held object. Keep the DOM overlay hidden;
+      // the item is drawn below as a camera-space 3D sprite/cube.
+      itemView?.classList.add('hidden');
+      if (itemView) itemView.removeAttribute('src');
       if (held && !held.isEmpty && held.item) {
         const id = held.item.id;
         const icon = this.ui.icons.get(id);
@@ -1024,7 +1019,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           };
           image.src = icon;
         }
-        if (false && this.heldItemTextureReady) {
+        if (this.heldItemTextureReady) {
           const isBlock = !!held.item.block;
           const size = isBlock ? [0.135, 0.135, 0.135] : [0.16, 0.27, 0.025];
           const itemParts = [[[0, 0, 0], size, [1, 1, 1, 1], null, null, [0.22, 0, -0.42]]];

@@ -231,8 +231,26 @@ export class MobSystem {
 
   _tickArrows() {
     const world = this.game.world;
+    const player = this.game.player;
     for (let i = this.arrows.length - 1; i >= 0; i--) {
       const arrow = this.arrows[i];
+      if (arrow.stuck) {
+        arrow.age++;
+        if (Math.hypot(player.x - arrow.x, player.y - arrow.y, player.z - arrow.z) < 1.15 && arrow.age > 12) {
+          const left = this.game.inventory?.addItem('mc:arrow', 1) ?? 1;
+          if (left === 0) { this.arrows.splice(i, 1); this.game.ui?.toast('Стрела поднята'); continue; }
+        }
+        if (arrow.age > 1200) this.arrows.splice(i, 1);
+        continue;
+      }
+      if (arrow.stuckMobId) {
+        arrow.age++;
+        const target = this.mobs.find((mob) => mob.id === arrow.stuckMobId);
+        if (target) { arrow.x = target.x + (arrow.offsetX || 0); arrow.y = target.y + (arrow.offsetY || 0); arrow.z = target.z + (arrow.offsetZ || 0); }
+        if (!target) { arrow.stuckMobId = null; arrow.stuck = true; arrow.vx = arrow.vy = arrow.vz = 0; }
+        if (arrow.age > 1200) this.arrows.splice(i, 1);
+        continue;
+      }
       const result = stepArrow(arrow,
         (x, y, z) => world.getBlock(x, y, z).block.solid,
         this.mobs,
@@ -242,6 +260,15 @@ export class MobSystem {
         mob.health = Math.max(0, mob.health - (mob.type === 'horse' ? calculateHorseArmorDamage(arrow.damage, mob.horseArmor) : arrow.damage));
         mob.hurtTicks = 10;
         mob.anim.hurt = 1;
+        arrow.stuckMobId = mob.id;
+        arrow.offsetX = arrow.x - mob.x; arrow.offsetY = arrow.y - mob.y; arrow.offsetZ = arrow.z - mob.z;
+        arrow.done = false;
+      } else if (result.hit === 'block') {
+        arrow.stuck = true;
+        arrow.stuckYaw = Math.atan2(-arrow.vx, arrow.vz);
+        arrow.stuckPitch = Math.atan2(-arrow.vy, Math.hypot(arrow.vx, arrow.vz));
+        arrow.vx = arrow.vy = arrow.vz = 0;
+        arrow.done = false;
       }
       if (arrow.done) this.arrows.splice(i, 1);
     }
@@ -736,6 +763,9 @@ export class MobSystem {
   _damagePlayer(amount) {
     const player = this.game.player;
     if (!player || player.gamemode !== 'survival' || amount <= 0) return 0;
+    const difficulty = this.game.worldMeta?.difficulty || 'normal';
+    if (difficulty === 'peaceful') return 0;
+    amount *= difficulty === 'easy' ? 0.5 : difficulty === 'hard' ? 1.5 : 1;
     const inventory = this.game.inventory;
     let armorPoints = 0;
     let toughness = 0;
@@ -855,7 +885,7 @@ export class MobSystem {
         const surfaceY = world.getHeight(x, z);
         const biome = chunk?.getBiome(localX, surfaceY, localZ) || 'mc:plains';
         let type;
-        if (night) {
+        if (night && this.game.worldMeta?.difficulty !== 'peaceful') {
           const snowy = ['mc:snowy_plains','mc:snowy_taiga','mc:ice_spikes','mc:frozen_ocean','mc:deep_frozen_ocean'].includes(biome);
           type = snowy
             ? (roll < 0.24 ? 'stray' : roll < 0.43 ? 'skeleton' : roll < 0.62 ? 'zombie' : roll < 0.76 ? 'spider' : roll < 0.86 ? 'creeper' : 'enderman')
@@ -925,7 +955,7 @@ export class MobSystem {
       }
 
       const profile = MOB_AI_PROFILES[mob.type] ?? null;
-      const hostileType = profile !== null;
+      const hostileType = profile !== null && this.game.worldMeta?.difficulty !== 'peaceful';
       const targeted = this.targetedMob(32) === mob;
       const endermanWater = mob.type === 'enderman' && (
         world.getBlock(Math.floor(mob.x), Math.floor(mob.y), Math.floor(mob.z)).block.id === 'mc:water' ||

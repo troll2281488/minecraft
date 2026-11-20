@@ -2,6 +2,25 @@ import { describe, it, assert, assertEqual } from './framework.js';
 import {
   MOB_TYPES_112, MOB_AI_PROFILES, chooseMobDetourYaw, shearSheep, rollFishingCatch, calculateArmorDamage, rollMobDrops,
 } from '../src/entity/mobs.js';
+import { createArrow, stepArrow } from '../src/entity/arrows.js';
+
+describe('Arrow flight and hit detection', () => {
+  it('detects a mob hit instead of letting the arrow pass through', () => {
+    const arrow = createArrow(0, 1, 0, [0, 0, 1], 1);
+    const mob = { x: 0, y: 0.5, z: 0.7, health: 20 };
+    const result = stepArrow(arrow, () => false, [mob]);
+    assertEqual(result.hit, 'mob');
+    assertEqual(result.mob, mob);
+    assertEqual(arrow.done, true);
+  });
+
+  it('stops an arrow when it reaches a solid block', () => {
+    const arrow = createArrow(0, 1, 0, [0, 0, 1], 1);
+    const result = stepArrow(arrow, (x, y, z) => z >= 0.5, []);
+    assertEqual(result.hit, 'block');
+    assertEqual(arrow.done, true);
+  });
+});
 
 describe('Mob data and loot', () => {
   it('registers the classic 1.12.2 creature roster without duplicates', () => {
