@@ -33,6 +33,26 @@ export function electRoomHost(room, players) {
 }
 
 /** Keep valid room records discoverable even when every player temporarily disconnects. */
+/** Apply validated animation and status fields from a remote player snapshot. */
+export function applyRemotePlayerState(current, snapshot) {
+  if (!current || !snapshot || typeof snapshot !== 'object') return current;
+  current.name = safeName(snapshot.name);
+  current.health = Number.isFinite(snapshot.health) ? Math.max(0, Math.min(20, snapshot.health)) : 20;
+  current.food = Number.isFinite(snapshot.food) ? Math.max(0, Math.min(20, snapshot.food)) : 20;
+  current.inWater = snapshot.inWater === true;
+  current.sneaking = snapshot.sneaking === true;
+  current.sprinting = snapshot.sprinting === true;
+  current.airborne = snapshot.onGround === false;
+  current.gamemode = ['survival', 'creative', 'spectator'].includes(snapshot.gamemode) ? snapshot.gamemode : 'survival';
+  current.attackTime = Number.isFinite(snapshot.attackTime) ? Math.max(0, Math.min(10, snapshot.attackTime)) : 0;
+  current.attacking = current.attackTime > 0;
+  current.targetX = snapshot.x;
+  current.targetY = snapshot.y;
+  current.targetZ = snapshot.z;
+  current.targetYaw = Number.isFinite(snapshot.yaw) ? snapshot.yaw : 0;
+  return current;
+}
+
 export function isValidContainerKey(key) {
   return typeof key === 'string' && /^-?\d+,-?\d+,-?\d+$/.test(key);
 }
@@ -395,13 +415,7 @@ export class Multiplayer {
       for (const [uid, p] of Object.entries(players)) {
         if (uid === this.uid || !Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.z)) continue;
         const current = this.remotePlayers.get(uid) || { id: uid, name: safeName(p.name), x: p.x, y: p.y, z: p.z, yaw: p.yaw || 0, targetX: p.x, targetY: p.y, targetZ: p.z, targetYaw: p.yaw || 0 };
-        current.name = safeName(p.name);
-        current.health = Number.isFinite(p.health) ? p.health : 20;
-        current.food = Number.isFinite(p.food) ? p.food : 20;
-        current.inWater = !!p.inWater;
-        current.sneaking = !!p.sneaking;
-        current.airborne = p.onGround === false;
-        current.targetX = p.x; current.targetY = p.y; current.targetZ = p.z; current.targetYaw = p.yaw || 0;
+        applyRemotePlayerState(current, p);
         this.remotePlayers.set(uid, current);
       }
       if (!this.spawnSeparationChecked && this.remotePlayers.size > 0) {
@@ -614,6 +628,8 @@ export class Multiplayer {
       inWater: !!p.inWater,
       onGround: !!p.onGround,
       sneaking: !!p.sneaking,
+      sprinting: !!p.sprinting,
+      attackTime: Math.max(0, Math.min(10, Number(p.attackTime) || 0)),
       ts: Date.now(),
     };
   }
