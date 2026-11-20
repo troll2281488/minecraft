@@ -113,6 +113,54 @@ function ladderBoxes(state) {
 }
 
 // ---------------------------------------------------------------------------
+// Doors and wall buttons
+// ---------------------------------------------------------------------------
+
+const DOOR_CACHE = new Map();
+function doorBoxes(state) {
+  const facing = state.get('facing') || 'north';
+  const open = state.get('open') === true;
+  const hinge = state.get('hinge') || 'left';
+  const key = facing + ':' + open + ':' + hinge;
+  if (DOOR_CACHE.has(key)) return DOOR_CACHE.get(key);
+  let box;
+  if (!open) {
+    box = facing === 'north' ? [0, 0, 0.40625, 1, 1, 0.59375]
+      : facing === 'south' ? [0, 0, 0.40625, 1, 1, 0.59375]
+      : facing === 'west' ? [0.40625, 0, 0, 0.59375, 1, 1]
+      : [0.40625, 0, 0, 0.59375, 1, 1];
+  } else {
+    const left = hinge === 'left';
+    if (facing === 'north' || facing === 'south') {
+      const x0 = left ? 0.40625 : 0.59375, x1 = left ? 0.59375 : 0.40625;
+      box = left ? [0, 0, 0.40625, 0.1875, 1, 1] : [0.8125, 0, 0, 1, 1, 0.59375];
+    } else {
+      box = left ? [0, 0, 0, 0.59375, 1, 0.1875] : [0.40625, 0, 0.8125, 1, 1, 1];
+    }
+  }
+  const frozen = Object.freeze([Object.freeze(box)]);
+  DOOR_CACHE.set(key, frozen);
+  return frozen;
+}
+
+const BUTTON_CACHE = new Map();
+function buttonBoxes(state) {
+  const facing = state.get('facing') || 'north';
+  const powered = state.get('powered') === true;
+  const key = facing + ':' + powered;
+  if (BUTTON_CACHE.has(key)) return BUTTON_CACHE.get(key);
+  const inset = powered ? 0.125 : 0.0625;
+  let box;
+  if (facing === 'north') box = [0.3125, 0.375, 0, 0.6875, 0.625, inset];
+  else if (facing === 'south') box = [0.3125, 0.375, 1 - inset, 0.6875, 0.625, 1];
+  else if (facing === 'west') box = [0, 0.375, 0.3125, inset, 0.625, 0.6875];
+  else box = [1 - inset, 0.375, 0.3125, 1, 0.625, 0.6875];
+  const frozen = Object.freeze([Object.freeze(box)]);
+  BUTTON_CACHE.set(key, frozen);
+  return frozen;
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -125,7 +173,7 @@ export function shapeBoxes(state) {
     case 'slab': return slabBoxes(state);
     case 'stair': return stairBoxes(state);
     case 'pane': return PANE_BOXES;
-    case 'ladder': return ladderBoxes(state);
+    case 'ladder': return ladderBoxes(state);\n    case 'door': return doorBoxes(state);\n    case 'button': return buttonBoxes(state);
     default: return FULL_LIST;
   }
 }
@@ -142,8 +190,8 @@ export function collisionBoxes(state) {
 /** True if this block is anything other than a plain full cube. */
 export function isNonCube(state) {
   const shape = state.block.renderShape;
-  return shape === 'slab' || shape === 'stair' || shape === 'pane' || shape === 'ladder';
+  return shape === 'slab' || shape === 'stair' || shape === 'pane' || shape === 'ladder' || shape === 'door' || shape === 'button';
 }
 
 /** The shapes the mesher must render with the box emitter rather than as a cube. */
-export const BOX_SHAPES = Object.freeze(new Set(['slab', 'stair', 'pane', 'ladder']));
+export const BOX_SHAPES = Object.freeze(new Set(['slab', 'stair', 'pane', 'ladder', 'door', 'button']));
