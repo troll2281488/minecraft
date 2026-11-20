@@ -358,7 +358,17 @@ export const RedstoneDevicesMixin = {
         const state = world.getBlock(x, y, z);
         if (state.block.renderShape !== 'comparator') continue;
         const [dx, , dz] = FACING_VECTOR[state.get('facing')] || [0, 0, -1];
-        const rear = readSignal(world, x - dx, y, z - dz, x, y, z);
+        const rearX = x - dx, rearY = y, rearZ = z - dz;
+        const rearBlock = world.getBlock(rearX, rearY, rearZ);
+        let containerPower = 0;
+        if (rearBlock.block.id === 'mc:chest' || rearBlock.block.id === 'mc:trapped_chest') {
+          const chest = this._chestAt?.(rearX, rearY, rearZ);
+          if (chest?.slots) containerPower = comparatorContainerOutput(chest.slots, chest.slots.length);
+        } else if (rearBlock.block.id === 'mc:furnace') {
+          const furnace = this._furnaceAt?.(rearX, rearY, rearZ);
+          if (furnace) containerPower = comparatorContainerOutput([furnace.input, furnace.fuel, furnace.output], 3);
+        }
+        const rear = Math.max(readSignal(world, rearX, rearY, rearZ, x, y, z), containerPower);
         const left = sideSignal(x + dz, y, z - dx, x, y, z);
         const right = sideSignal(x - dz, y, z + dx, x, y, z);
         const desired = comparatorOutput(rear, left, right, state.get('mode') === 'subtract');
