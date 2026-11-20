@@ -126,6 +126,12 @@ export const BIOME_SURFACE = {
 const smooth01 = (v, a, b) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 const quant = (v) => 0.5 + 0.5 * Math.tanh(0.8 * v / 0.19);
 
+const COLD_BIOMES = new Set([
+  BIOME.SNOWY_PLAINS, BIOME.ICE_SPIKES, BIOME.SNOWY_TAIGA, BIOME.GIANT_SPRUCE_TAIGA,
+  BIOME.SNOWY_BEACH, BIOME.FROZEN_OCEAN, BIOME.DEEP_FROZEN_OCEAN, BIOME.FROZEN_RIVER,
+]);
+const BADLAND_BIOMES = new Set([BIOME.BADLANDS, BIOME.WOODED_BADLANDS, BIOME.ERODED_BADLANDS]);
+
 // ---------------------------------------------------------------------------
 // Ore distribution
 //
