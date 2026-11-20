@@ -361,7 +361,7 @@ export const ContainerScreensMixin = {
     for (let i = 0; i <= 8; i++) body += this._slotHtml('inv', i, inv.slots[i]);
     body += '</div>';
     if (spec.lockState === 'pending') body += '<div class="hint">Проверка блокировки контейнера…</div>';
-    else if (spec.lockState === 'busy') body += `<div class="hint">Контейнер редактирует ${spec.lockOwner || 'другой игрок'}</div>`;
+    else if (spec.lockState === 'busy') body += '<div class="hint">Контейнер сейчас редактирует другой игрок.</div>';
     else if (spec.lockState === 'offline') body += '<div class="hint">Нет соединения — редактирование общего контейнера отключено.</div>';
     else if (spec.lockState === 'lost') body += '<div class="hint">Блокировка потеряна. Закрой и открой контейнер снова.</div>';
     else if (spec.lockState === 'owned') body += '<div class="hint">Контейнер закреплён за вами на время редактирования.</div>';
