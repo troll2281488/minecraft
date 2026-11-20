@@ -26,7 +26,7 @@ export const SessionMixin = {
     this.world?.dispose();
     this.chunkRenderer.dispose();
 
-    this.world = new World({ seed: meta.seed, textureTable: this.textureTable });
+    this.world = new World({ seed: meta.seed, textureTable: this.textureTable, dimension: meta.dimension || 'overworld' });
     this.entities?.reset();
     this.world.time = meta.time ?? 0;
 
@@ -37,7 +37,7 @@ export const SessionMixin = {
     // in Firebase. Loading this browser's private cached chunks here would make
     // every participant see a different terrain snapshot.
     if (!this.multiplayer?.roomId) {
-      const saved = await storage.getAllChunks(meta.id, 'mc:overworld');
+      const saved = await storage.getAllChunks(meta.id, this.world.dimension);
       for (const record of saved) {
         const chunk = materializeChunk(
           ...record.key.split(',').map(Number),
@@ -99,6 +99,39 @@ export const SessionMixin = {
       this._loopStarted = true;
       requestAnimationFrame((t) => this._frame(t));
     }
+  },
+
+
+  async _switchDimension(dimension) {
+    const next = String(dimension || '').toLowerCase();
+    if (!['overworld','nether','end'].includes(next)) throw new Error('Измерение: overworld, nether или end');
+    if (!this.world || next === this.world.dimension) return;
+    await this._save(false);
+    const previous = this.world.dimension;
+    const oldX = this.player.x, oldZ = this.player.z;
+    this.world.dispose();
+    this.chunkRenderer.dispose();
+    this.world = new World({ seed: this.worldMeta.seed, textureTable: this.textureTable, dimension: next });
+    this.worldMeta.dimension = next;
+    this.entities?.reset();
+    this.world.time = this.worldMeta.time ?? 0;
+    if (!this.multiplayer?.roomId) {
+      const saved = await storage.getAllChunks(this.worldMeta.id, next);
+      for (const record of saved) {
+        const [cx,cz] = record.key.split(',').map(Number);
+        this.world.adoptChunk(materializeChunk(cx,cz,decodeChunkBinary(record.bytes)));
+      }
+    }
+    let x=oldX,z=oldZ,y=80;
+    if (previous==='overworld' && next==='nether') { x=oldX/8; z=oldZ/8; y=64; }
+    else if (previous==='nether' && next==='overworld') { x=oldX*8; z=oldZ*8; y=80; }
+    else if (next==='end') { x=0; z=0; y=80; }
+    else if (next==='overworld') { x=0; z=0; y=80; }
+    this.player.teleport(x,y,z);
+    await this._waitForSpawnChunks(false);
+    const safe = this.world.findSpawn(Math.floor(x),Math.floor(z),32);
+    if (safe) this.player.teleport(safe.x,safe.y,safe.z);
+    this.ui.toast('Измерение: '+({overworld:'Обычный мир',nether:'Нижний мир',end:'Край'})[next]);
   },
 
   async _findSafeSpawn() {
@@ -208,7 +241,7 @@ export const SessionMixin = {
       chunk.dirty = false;
     }
 
-    await storage.putChunks(this.worldMeta.id, 'mc:overworld', dirty);
+    await storage.putChunks(this.worldMeta.id, this.world.dimension, dirty);
     await storage.putPlayer(this.worldMeta.id, 'local', {
       ...this.player.toJSON(),
       inventory: this.inventory.toJSON(),
@@ -221,7 +254,7 @@ export const SessionMixin = {
       // Preserve nearby creatures, including health and sheep shearing, in local saves.
       mobs: this.multiplayer?.roomId ? [] : this.entities?.toJSON?.() ?? [],
     });
-    await storage.putWorld({ ...this.worldMeta, time: this.world.time });
+    await storage.putWorld({ ...this.worldMeta, time: this.world.time, dimension: this.world.dimension });
 
     if (showToast) {
       this.ui.toast(`Saved ${dirty.length} modified chunk${dirty.length === 1 ? '' : 's'}.`);
