@@ -201,7 +201,10 @@ uniform mat4 uViewProjection;
 uniform vec3 uChunkOrigin;
 uniform vec3 uCameraPos;      // passed in, NOT recovered by inverting uViewProjection
 uniform float uDaylight;      // 0 at midnight, 1 at noon
-uniform vec3 uGrassColor;
+uniform vec3 uGrassColor00;
+uniform vec3 uGrassColor10;
+uniform vec3 uGrassColor01;
+uniform vec3 uGrassColor11;
 uniform vec3 uFoliageColor;
 uniform vec3 uWaterColor;
 
@@ -256,7 +259,12 @@ void main() {
   float shade = FACE_SHADE[min(face, 5u)];
 
   vec3 tint = vec3(1.0);
-  if (tintKind == 1u) tint = uGrassColor;
+  if (tintKind == 1u) {
+    vec2 biomeUv = clamp(localPos.xz / 16.0, 0.0, 1.0);
+    vec3 nearZ = mix(uGrassColor00, uGrassColor10, biomeUv.x);
+    vec3 farZ = mix(uGrassColor01, uGrassColor11, biomeUv.x);
+    tint = mix(nearZ, farZ, biomeUv.y);
+  }
   else if (tintKind == 2u) tint = uFoliageColor;
   else if (tintKind == 3u) tint = uWaterColor;
 
