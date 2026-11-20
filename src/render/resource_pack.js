@@ -96,8 +96,8 @@ export async function loadCommunityTextures(blocks, items) {
 
   const blockAliases = {
     ...BLOCK_TEXTURE_ALIASES,
-    // Floydicus uses the modern singular "block" directory and mostly vanilla
-    // 1.12-era names. These aliases bridge the game's descriptive texture keys.
+    // SimpleRP exports the legacy 1.12-style textures under a plural "blocks"
+    // directory. These aliases bridge the game's descriptive texture keys.
     grass_block_top: 'grass_top',
     grass_block_side: 'grass_side',
     podzol_top: 'hardened_clay_stained_brown',
