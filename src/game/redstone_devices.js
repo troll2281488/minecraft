@@ -120,6 +120,18 @@ export const RedstoneDevicesMixin = {
     }
 
     const activeNow = new Set();
+    const activatePressurePlate = (x, y, z) => {
+      const state = world.getBlock(x, y, z);
+      if (state.block.renderShape !== 'pressure_plate') return;
+      const key = `${x},${y},${z}`;
+      activeNow.add(key);
+      this._knownPressurePlates.add(key);
+      this._pressurePlateTimers.delete(key);
+      if (!state.get('powered')) {
+        writeState(this, x, y, z, state.with('powered', true));
+        this._applyAdjacentRedstonePower(x, y, z, true);
+      }
+    };
     // Pick up previously powered plates in the nearby loaded area as well, so
     // a save/reconnect cannot leave one latched after the player has moved off.
     if (player) {
@@ -144,14 +156,33 @@ export const RedstoneDevicesMixin = {
             && box.minZ < z + 1 && box.maxZ > z
             && box.minY <= y + 0.09 && box.maxY > y;
           if (!overlaps) continue;
-          activeNow.add(key);
-          this._knownPressurePlates.add(key);
-          this._pressurePlateTimers.delete(key);
-          if (!state.get('powered')) {
-            writeState(this, x, y, z, state.with('powered', true));
-            this._applyAdjacentRedstonePower(x, y, z, true);
+          activatePressurePlate(x, y, z);
+        }
+      }
+    }
+
+    // Mobs activate both stone and wooden plates; dropped item entities
+    // activate wooden plates only. Each entity contributes one press.
+    for (const mob of this.entities?.mobs || []) {
+      if (!mob || !Number.isFinite(mob.x) || !Number.isFinite(mob.y) || !Number.isFinite(mob.z)) continue;
+      for (let x = Math.floor(mob.x - 0.3); x <= Math.floor(mob.x + 0.3); x++) {
+        for (let z = Math.floor(mob.z - 0.3); z <= Math.floor(mob.z + 0.3); z++) {
+          if (mob.x + 0.3 <= x || mob.x - 0.3 >= x + 1 || mob.z + 0.3 <= z || mob.z - 0.3 >= z + 1) continue;
+          for (const y of [Math.floor(mob.y), Math.floor(mob.y) - 1]) {
+            if (mob.y <= y + 0.1 && mob.y + 1.8 > y) activatePressurePlate(x, y, z);
           }
         }
+      }
+    }
+    for (const drop of this.entities?.droppedItems || []) {
+      if (!drop || !Number.isFinite(drop.x) || !Number.isFinite(drop.y) || !Number.isFinite(drop.z)) continue;
+      const x = Math.floor(drop.x), z = Math.floor(drop.z);
+      for (const y of [Math.floor(drop.y), Math.floor(drop.y) - 1]) {
+        const state = world.getBlock(x, y, z);
+        const wooden = state.block.renderShape === 'pressure_plate' &&
+          !['mc:stone_pressure_plate', 'mc:polished_blackstone_pressure_plate'].includes(state.block.id);
+        if (wooden && drop.x >= x && drop.x < x + 1 && drop.z >= z && drop.z < z + 1 &&
+            drop.y >= y && drop.y <= y + 0.25) activatePressurePlate(x, y, z);
       }
     }
 
@@ -194,7 +225,7 @@ export const RedstoneDevicesMixin = {
       for (const mob of mobs) {
         if (!mob || !Number.isFinite(mob.x) || !Number.isFinite(mob.y) || !Number.isFinite(mob.z)) continue;
         if (mob.x + 0.3 > x && mob.x - 0.3 < x + 1 && mob.z + 0.3 > z && mob.z - 0.3 < z + 1 &&
-            mob.y <= y + 1.8 && mob.y + 1.8 > y) count++;
+            mob.y <= y + 0.1 && mob.y + 1.8 > y) count++;
       }
       for (const drop of drops) {
         if (!drop || !Number.isFinite(drop.x) || !Number.isFinite(drop.y) || !Number.isFinite(drop.z)) continue;
