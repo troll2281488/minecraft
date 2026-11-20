@@ -136,6 +136,7 @@ Reference target for this compatibility track is **Minecraft: Java Edition 1.19.
 | Doors (oak, spruce, birch, jungle, acacia, dark oak, iron) — two-block placement, paired state, wooden toggle, open/closed collision and removal | yes | 🟡 *(iron redstone activation, hinge placement rules and exact door sound/UV polish remain)* |
 | Door geometry / collision | shared 1/16-thick model | 🟡 *(axis-aligned panel boxes; model is simplified)* |
 | Trapdoors (six wood types + iron) — open/closed shape, collision, hand toggle and recipes | yes | 🟡 *(iron requires redstone; attachment validation and exact orientation remain)* |
+| Buttons (wood, stone, polished blackstone), lever and pressure plates — placement, models and recipes | yes | 🟡 *(local toggles/pulses and player pressure plates; full dust propagation remains)* |
 | Fence, gate, wall models | yes | ⬜ |
 | Cloud layer, weather, particles | yes | ⬜ |
 
