@@ -73,7 +73,7 @@ export const BlockActionsMixin = {
       this._openVillagerTrade(villager);
       return;
     }
-    const heldItem = this.inventory?.held?.item;
+    const heldItem = this.inventory?.held?.item;\n    if (this.hit?.state?.block?.id === 'mc:oak_door') { this._toggleDoorAt(this.hit.x, this.hit.y, this.hit.z); return; }\n    if (this.hit?.state?.block?.id === 'mc:iron_door') return;\n    if (this.hit?.state?.block?.id === 'mc:stone_button') { this._pressStrongholdButton(this.hit.x, this.hit.y, this.hit.z); return; }
     if (this.hit?.state?.block?.id === 'mc:bed') {
       if (this.world.dimension !== 'overworld') {
         this.ui.toast('В этом измерении нельзя спать.', { error: true });
@@ -152,6 +152,51 @@ export const BlockActionsMixin = {
     // survival. A full food bar prevents ordinary food from being consumed.
     if (!sneaking && this._eatHeldFood()) return;
     this._placeBlock();
+  },
+
+  _toggleDoorAt(x, y, z) {
+    const clicked = this.world.getBlock(x, y, z);
+    const id = clicked.block.id;
+    if (id !== 'mc:oak_door' && id !== 'mc:iron_door') return false;
+    if (id === 'mc:iron_door') return false;
+    const lowerY = clicked.get('half') === 'top' ? y - 1 : y;
+    const lower = this.world.getBlock(x, lowerY, z);
+    const upper = this.world.getBlock(x, lowerY + 1, z);
+    if (lower.block.id !== id || upper.block.id !== id) return false;
+    const open = !lower.get('open');
+    const lowerState = lower.with('open', open);
+    const upperState = upper.with('open', open);
+    this.world.setBlock(x, lowerY, z, lowerState);
+    this.world.setBlock(x, lowerY + 1, z, upperState);
+    this.multiplayer?.pushBlockChange(x, lowerY, z, lowerState);
+    this.multiplayer?.pushBlockChange(x, lowerY + 1, z, upperState);
+    this.sounds?.play('place', 'wood');
+    return true;
+  },
+
+  _pressStrongholdButton(x, y, z) {
+    const button = this.world.getBlock(x, y, z);
+    if (button.block.id !== 'mc:stone_button') return false;
+    const powered = !button.get('powered');
+    const nextButton = button.with('powered', powered);
+    this.world.setBlock(x, y, z, nextButton);
+    this.multiplayer?.pushBlockChange(x, y, z, nextButton);
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      for (const dy of [0, -1]) {
+        const door = this.world.getBlock(x + dx, y + dy, z + dz);
+        if (door.block.id !== 'mc:iron_door' || door.get('half') !== 'bottom') continue;
+        const upper = this.world.getBlock(x + dx, y + dy + 1, z + dz);
+        if (upper.block.id !== 'mc:iron_door') continue;
+        const open = powered;
+        const lowerState = door.with('open', open), upperState = upper.with('open', open);
+        this.world.setBlock(x + dx, y + dy, z + dz, lowerState);
+        this.world.setBlock(x + dx, y + dy + 1, z + dz, upperState);
+        this.multiplayer?.pushBlockChange(x + dx, y + dy, z + dz, lowerState);
+        this.multiplayer?.pushBlockChange(x + dx, y + dy + 1, z + dz, upperState);
+      }
+    }
+    this.sounds?.play('place', 'stone');
+    return true;
   },
 
   _openVillagerTrade(villager) {
