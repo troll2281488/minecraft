@@ -247,7 +247,7 @@ export function placeStrongholdRoomNetwork(w, S, site, seed) {
   const ironDoor = S['mc:iron_door'], button = S['mc:stone_button'];
   if (ironDoor) {
     put(x + 15, y + 1, z - 12, ironDoor.with('facing', 'east').with('half', 'bottom'));
-    put(x + 15, y + 2, z - 12, ironDoor.with('facing', 'north').with('half', 'top'));
+    put(x + 15, y + 2, z - 12, ironDoor.with('facing', 'east').with('half', 'top'));
   }
   if (button) put(x + 14, y + 1, z - 12, button.with('facing', 'west'));
   if (S['mc:torch']) {
