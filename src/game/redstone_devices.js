@@ -40,7 +40,7 @@ export function daylightDetectorPower(time, inverted = false) {
   return inverted ? 15 - power : power;
 }
 
-function readSignal(world, x, y, z, targetX, targetY, targetZ) {
+export function readSignal(world, x, y, z, targetX, targetY, targetZ) {
   const state = world.getBlock(x,y,z);
   if (state.block.id === 'mc:redstone_block') return 15;
   if (state.block.renderShape === 'redstone_wire') return state.get('power') || 0;

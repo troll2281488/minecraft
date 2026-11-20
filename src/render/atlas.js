@@ -676,6 +676,17 @@ TEXTURES.redstone_wire = () => {
   }
   return tile;
 };
+TEXTURES.hopper = () => {
+  const tile = grainy(hex(0x777777), 0.16, 'hopper');
+  const dark = hex(0x343434), iron = hex(0xb0b0b0), rim = hex(0x555555);
+  for (let y = 2; y < 14; y++) for (let x = 2; x < 14; x++) {
+    const edge = x < 4 || x > 11 || y < 4 || y > 11;
+    const throat = x >= 6 && x <= 9 && y >= 6 && y <= 10;
+    const c = throat ? dark : edge ? rim : iron;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
 TEXTURES.redstone_lamp = () => {
   const tile = grainy(hex(0x8d7856), 0.1, 'redstone_lamp');
   const gold = hex(0xe4b94e), pale = hex(0xffe8a0), dark = hex(0x5d4932);

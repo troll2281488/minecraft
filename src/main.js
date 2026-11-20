@@ -333,6 +333,7 @@ class Game {
     world.time = (world.time + 1) % (TICKS_PER_DAY * 8);
     this._tickRedstoneDevices?.();
     this._tickFurnaces?.();
+    this._tickHoppers?.();
 
     if (!this.inventoryOpen && !this.tradeOpen) {
       player.input.forward =

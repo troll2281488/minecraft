@@ -9,7 +9,8 @@
  * Clicks: left click takes, swaps or merges with the cursor; right click takes half or
  * puts down one; shift-click moves a stack between the player's inventory and the container.
  */
-import { Chest, Furnace, SMELTING, SMELT_TICKS, serializeContainer, deserializeContainer } from './containers.js';
+import { Chest, Hopper, Furnace, SMELTING, SMELT_TICKS, moveOneItem, serializeContainer, deserializeContainer } from './containers.js';
+import { readSignal } from './redstone_devices.js';
 import { ItemStack } from '../world/item.js';
 import { positionalRandom, normalizeSeed } from '../core/rng.js';
 import { mineshaftPlan, dungeonDims } from '../world/gen/structures.js';
@@ -424,6 +425,16 @@ export const ContainerScreensMixin = {
     return this._containers.get(key).data;
   },
 
+  _hopperAt(x, y, z) {
+    this._containers ??= new Map();
+    const key = this._containerKey(x, y, z);
+    const entry = this._containers.get(key);
+    if (entry?.type !== 'hopper' || !(entry.data instanceof Hopper) || entry.data.slots.length !== 5) {
+      this._containers.set(key, { type: 'hopper', data: new Hopper() });
+    }
+    return this._containers.get(key).data;
+  },
+
   _furnaceAt(x, y, z) {
     this._containers ??= new Map();
     const key = this._containerKey(x, y, z);
@@ -437,6 +448,11 @@ export const ContainerScreensMixin = {
   _openChest(x, y, z) {
     const key = this._containerKey(x, y, z);
     this._openContainer({ title: 'Сундук', slots: this._chestAt(x, y, z).slots, kind: 'chest', key });
+  },
+
+  _openHopper(x, y, z) {
+    const hopper = this._hopperAt(x, y, z);
+    this._openContainer({ title: 'Воронка', slots: hopper.slots, kind: 'hopper', key: this._containerKey(x, y, z) });
   },
 
   _openFurnace(x, y, z) {
@@ -458,6 +474,143 @@ export const ContainerScreensMixin = {
       data.tick();
       if (this.multiplayer?.roomId && this.tickCount % 20 === 0) {
         this.multiplayer.pushContainerState(key, type, data);
+      }
+    }
+  },
+
+  /** Transfer one item between a hopper and another supported container. */
+  _hopperTransferOne(sourceEntry, destinationEntry, destinationFace = 'side') {
+    if (!sourceEntry || !destinationEntry) return false;
+    let sourceSlots;
+    if (sourceEntry.type === 'furnace') {
+      // A hopper below a furnace extracts only its finished output.
+      const source = sourceEntry.data.output;
+      if (!source || source.isEmpty) return false;
+      const destinationSlots = destinationEntry.data?.slots;
+      if (destinationEntry.type !== 'furnace') {
+        const moved = moveOneItem([source], destinationSlots);
+        if (moved && source.count <= 0) sourceEntry.data.output = ItemStack.EMPTY.clone();
+        return moved;
+      }
+      sourceSlots = [source];
+    } else {
+      sourceSlots = sourceEntry.data?.slots;
+    }
+    if (!Array.isArray(sourceSlots)) return false;
+
+    if (destinationEntry.type === 'furnace') {
+      const key = destinationFace === 'top' ? 'input'
+        : destinationFace === 'side' ? 'fuel' : null;
+      if (!key) return false;
+      const sourceIndex = sourceSlots.findIndex((stack) => stack && !stack.isEmpty);
+      if (sourceIndex < 0) return false;
+      const source = sourceSlots[sourceIndex];
+      const target = destinationEntry.data[key];
+      const one = ItemStack.of(source.item.id, 1, source.damage, source.data);
+      if (!target.isEmpty) {
+        if (!target.canStackWith(one) || target.count >= target.maxStackSize) return false;
+        target.count += 1;
+      } else {
+        if (key === 'input' && !SMELTING.has(one.item.id)) return false;
+        if (key === 'fuel' && one.item.fuelTicks <= 0) return false;
+        destinationEntry.data[key] = one;
+      }
+      source.count -= 1;
+      if (source.count <= 0) sourceSlots[sourceIndex] = ItemStack.EMPTY.clone();
+      return true;
+    }
+    return moveOneItem(sourceSlots, destinationEntry.data?.slots);
+  },
+
+  /** Host-authoritative hopper transfer, sampled every eight game ticks nearby. */
+  _tickHoppers() {
+    const player = this.player;
+    if (!player || (this.multiplayer?.roomId && !this.multiplayer.isHost)) return;
+    const tick = this.tickCount || 0;
+    // Container contents are batched at 1 Hz in multiplayer; never publish
+    // every eight-tick transfer as a separate database write.
+    if (this.multiplayer?.roomId && this.multiplayer.isHost && tick % 20 === 0 &&
+        this._hopperDirtyKeys?.size) {
+      for (const dirtyKey of this._hopperDirtyKeys) {
+        const entry = this._containers?.get(dirtyKey);
+        if (entry) this.multiplayer.pushContainerState(dirtyKey, entry.type, entry.data);
+      }
+      this._hopperDirtyKeys.clear();
+    }
+    if (tick % 8 !== 0) return;
+    const world = this.world;
+    const baseX = Math.floor(player.x), baseY = Math.floor(player.y), baseZ = Math.floor(player.z);
+    const directions = {
+      down: [0, -1, 0], north: [0, 0, -1], south: [0, 0, 1],
+      west: [-1, 0, 0], east: [1, 0, 0],
+    };
+    for (let y = baseY - 4; y <= baseY + 4; y++) {
+      for (let x = baseX - 6; x <= baseX + 6; x++) for (let z = baseZ - 6; z <= baseZ + 6; z++) {
+        let state = world.getBlock(x, y, z);
+        if (state.block.id !== 'mc:hopper') continue;
+        const key = this._containerKey(x, y, z);
+        if (this.multiplayer?.isContainerLockedByOther?.(key)) continue;
+        let powered = false;
+        for (const [dx, dy, dz] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]) {
+          if (readSignal(world, x + dx, y + dy, z + dz, x, y, z) > 0) { powered = true; break; }
+        }
+        const enabled = !powered;
+        if (state.get('enabled') !== enabled) {
+          state = state.with('enabled', enabled);
+          world.setBlock(x, y, z, state);
+          this.multiplayer?.pushBlockChange(x, y, z, state);
+        }
+        if (!enabled) continue;
+
+        const hopper = this._hopperAt(x, y, z);
+        const hopperEntry = { type: 'hopper', data: hopper };
+        const [dx, dy, dz] = directions[state.get('facing')] || directions.down;
+        const tx = x + dx, ty = y + dy, tz = z + dz;
+        const targetBlock = world.getBlock(tx, ty, tz).block.id;
+        let moved = false;
+        let destinationEntry = null;
+        if (targetBlock === 'mc:chest' || targetBlock === 'mc:trapped_chest') {
+          destinationEntry = { type: 'chest', data: this._chestAt(tx, ty, tz) };
+        } else if (targetBlock === 'mc:furnace') {
+          destinationEntry = { type: 'furnace', data: this._furnaceAt(tx, ty, tz) };
+        } else if (targetBlock === 'mc:hopper') {
+          destinationEntry = { type: 'hopper', data: this._hopperAt(tx, ty, tz) };
+        }
+        if (destinationEntry) {
+          const targetKey = this._containerKey(tx, ty, tz);
+          if (!this.multiplayer?.isContainerLockedByOther?.(targetKey)) {
+            moved = this._hopperTransferOne(hopperEntry, destinationEntry, dy < 0 ? 'top' : 'side');
+            if (moved && this.multiplayer?.roomId) {
+              this._hopperDirtyKeys ||= new Set();
+              this._hopperDirtyKeys.add(targetKey);
+            }
+          }
+        }
+
+        // If the outlet could not accept an item, pull one from the container above.
+        if (!moved) {
+          const sourceId = world.getBlock(x, y + 1, z).block.id;
+          let sourceEntry = null;
+          if (sourceId === 'mc:chest' || sourceId === 'mc:trapped_chest') {
+            sourceEntry = { type: 'chest', data: this._chestAt(x, y + 1, z) };
+          } else if (sourceId === 'mc:furnace') {
+            sourceEntry = { type: 'furnace', data: this._furnaceAt(x, y + 1, z) };
+          } else if (sourceId === 'mc:hopper') {
+            sourceEntry = { type: 'hopper', data: this._hopperAt(x, y + 1, z) };
+          }
+          const sourceKey = this._containerKey(x, y + 1, z);
+          if (sourceEntry && !this.multiplayer?.isContainerLockedByOther?.(sourceKey)) {
+            moved = this._hopperTransferOne(sourceEntry, hopperEntry, 'bottom');
+            if (moved && this.multiplayer?.roomId) {
+              this._hopperDirtyKeys ||= new Set();
+              this._hopperDirtyKeys.add(sourceKey);
+            }
+          }
+        }
+        if (moved && this.multiplayer?.roomId) {
+          this._hopperDirtyKeys ||= new Set();
+          this._hopperDirtyKeys.add(key);
+        }
       }
     }
   },
@@ -550,9 +703,9 @@ export const ContainerScreensMixin = {
     if (!overlay || !spec) return;
     const inv = this.inventory;
     let body = '';
-    if (spec.kind === 'chest') {
+    if (spec.kind === 'chest' || spec.kind === 'hopper') {
       body += `<h3>${spec.title}</h3><div class="row slots-9">`;
-      for (let i = 0; i < spec.slots.length; i++) body += this._slotHtml('chest', i, spec.slots[i]);
+      for (let i = 0; i < spec.slots.length; i++) body += this._slotHtml(spec.kind, i, spec.slots[i]);
       body += '</div>';
     } else {
       const f = spec.furnace;
@@ -591,11 +744,11 @@ export const ContainerScreensMixin = {
     if (['pending', 'busy', 'offline', 'lost'].includes(spec.lockState)) return;
 
     if (kind === 'inv') {
-      if (shift && spec.kind === 'chest') {
+      if (shift && (spec.kind === 'chest' || spec.kind === 'hopper')) {
         const stack = inv.slots[index];
-        if (!stack.isEmpty && this._moveToChest(spec, stack)) {
-          inv.slots[index] = ItemStack.EMPTY.clone();
-        }
+        const movedAll = !stack.isEmpty && (spec.kind === 'chest'
+          ? this._moveToChest(spec, stack) : this._moveToHopper(spec, stack));
+        if (movedAll) inv.slots[index] = ItemStack.EMPTY.clone();
       } else if (shift && spec.kind === 'furnace') {
         const stack = inv.slots[index];
         if (!stack.isEmpty && this._moveToFurnace(spec, stack) && stack.count <= 0) {
@@ -670,7 +823,7 @@ export const ContainerScreensMixin = {
   },
 
   _containerSlot(spec, kind, index) {
-    if (kind === 'chest') {
+    if (kind === 'chest' || kind === 'hopper') {
       return { get: () => spec.slots[index], set: (v) => { spec.slots[index] = v; } };
     }
     const f = spec.furnace;
@@ -750,6 +903,15 @@ export const ContainerScreensMixin = {
     else current.count += moved;
     stack.count -= moved;
     return true;
+  },
+
+  /** Move as much of `stack` into the hopper as fits. Returns true if all moved. */
+  _moveToHopper(spec, stack) {
+    const hopper = new Hopper();
+    hopper.slots = spec.slots;
+    const rest = hopper.insert(stack.clone());
+    stack.count = rest;
+    return rest === 0;
   },
 
   /** Move as much of `stack` into the chest as fits. Returns true if all of it moved. */

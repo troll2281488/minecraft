@@ -268,8 +268,13 @@ export function orientPlacement(block, player, hit) {
     // face TOWARD the player instead.
     const faceDirection = hit.face.dx > 0 ? 'east' : hit.face.dx < 0 ? 'west'
       : hit.face.dz > 0 ? 'south' : hit.face.dz < 0 ? 'north' : null;
-    const facing = isStair || block.renderShape === 'door'
-      ? yawToFacing(player.yaw) : (isMountedDevice && faceDirection ? faceDirection : yawToFacing(player.yaw + 180));
+    const hopperFacing = hit.face.dy !== 0 ? 'down'
+      : hit.face.dx > 0 ? 'west' : hit.face.dx < 0 ? 'east'
+      : hit.face.dz > 0 ? 'north' : 'south';
+    const facing = block.id === 'mc:hopper' ? hopperFacing
+      : isStair || block.renderShape === 'door'
+        ? yawToFacing(player.yaw)
+        : (isMountedDevice && faceDirection ? faceDirection : yawToFacing(player.yaw + 180));
     if (block.properties.facing.has(facing)) state = state.with('facing', facing);
   }
 
