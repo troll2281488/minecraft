@@ -92,9 +92,9 @@ export const BIOME_SURFACE = {
   [BIOME.SPARSE_JUNGLE]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.035, grass:0.2, species:'jungle', ferns:0.12 },
   [BIOME.BAMBOO_JUNGLE]: { top:'mc:podzol', filler:'mc:dirt', trees:0.08, grass:0.18, species:'jungle', ferns:0.24 },
   [BIOME.DESERT]: { top:'mc:sand', filler:'mc:sand', trees:0, grass:0, deadBush:0.025 },
-  [BIOME.SAVANNA]: { top:'mc:coarse_dirt', filler:'mc:dirt', trees:0.032, grass:0.18, species:'acacia' },
-  [BIOME.SAVANNA_PLATEAU]: { top:'mc:coarse_dirt', filler:'mc:stone', trees:0.025, grass:0.14, species:'acacia' },
-  [BIOME.SHATTERED_SAVANNA]: { top:'mc:stone', filler:'mc:coarse_dirt', trees:0.012, grass:0.08, species:'acacia' },
+  [BIOME.SAVANNA]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.042, grass:0.48, species:'acacia', deadBush:0.006 },
+  [BIOME.SAVANNA_PLATEAU]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.034, grass:0.42, species:'acacia', deadBush:0.008 },
+  [BIOME.SHATTERED_SAVANNA]: { top:'mc:grass_block', filler:'mc:coarse_dirt', trees:0.022, grass:0.34, species:'acacia', deadBush:0.01 },
   [BIOME.BADLANDS]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0, grass:0, deadBush:0.02 },
   [BIOME.WOODED_BADLANDS]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0.012, grass:0.015, species:'oak', deadBush:0.012 },
   [BIOME.ERODED_BADLANDS]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0, grass:0, deadBush:0.01 },
@@ -209,10 +209,10 @@ export class TerrainGenerator {
     const wxw = wx + this.warp.sample2(wx, wz, 0.004) * 24;
     const wzw = wz + this.warp.sample2(wz + 913, wx - 421, 0.004) * 24;
     const c = this.continent.sample2(wxw, wzw, 0.0021);
-    const T = quant(this.temperature.sample2(wxw, wzw, 0.0032));
-    const H = quant(this.humidity.sample2(wxw, wzw, 0.0036));
-    const R = quant(this.biomeRarity.sample2(wxw, wzw, 0.0045));
-    const D = quant(this.biomeDetail.sample2(wxw, wzw, 0.012));
+    const T = quant(this.temperature.sample2(wxw, wzw, 0.00125));
+    const H = quant(this.humidity.sample2(wxw, wzw, 0.00135));
+    const R = quant(this.biomeRarity.sample2(wxw, wzw, 0.0017));
+    const D = quant(this.biomeDetail.sample2(wxw, wzw, 0.0045));
     const rel = quant(this.relief.sample2(wxw, wzw, 0.0042));
     const rv = this.river.sample2(wxw, wzw, 0.0021);
     const desertness = smooth01(T, 0.7, 0.8) * (1 - smooth01(H, 0.25, 0.4));
@@ -231,6 +231,16 @@ export class TerrainGenerator {
     const hillM = smooth01(f.rel, 0.5, 0.85) * (1 - f.desertness * 0.7);
     land += hillM * Math.max(0, this.detail.sample2(wx + 200, wz - 300, 0.03) + 0.06) * 45;
     if (f.mountM > 0.001) land += f.mountM * (this.ridge.ridged2(wx, wz, 0.005) * 62 - 14);
+    // Ice-spike fields are actual terrain formations, not tiny packed-ice "trees".
+    // Keep their footprint restricted to the same cold/rare climate used by _biome().
+    const spikeClimate = smooth01(0.17 - f.T, 0.0, 0.12) *
+      smooth01(f.R, 0.88, 0.96) * (1 - smooth01(f.rel, 0.48, 0.62)) *
+      (1 - smooth01(f.H, 0.48, 0.66));
+    if (spikeClimate > 0.01) {
+      const peaks = this.ridge.ridged2(wx + 1700, wz - 900, 0.018);
+      const spike = smooth01(peaks, 0.58, 0.82);
+      land += spikeClimate * spike * 48;
+    }
     if (f.mesaZ > 0.001) {
       const m = quant(this.mesa.sample2(wx, wz, 0.007)) * 4;
       const step = Math.floor(m) + smooth01(m - Math.floor(m), 0.82, 1);
