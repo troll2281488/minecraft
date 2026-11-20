@@ -10,10 +10,21 @@ const NEIGHBORS = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
 const HORIZONTAL = [[1,0,0,'east','west'],[-1,0,0,'west','east'],[0,0,1,'south','north'],[0,0,-1,'north','south']];
 const FACING_VECTOR = { north: [0,0,-1], south: [0,0,1], east: [1,0,0], west: [-1,0,0] };
 
+export function daylightDetectorPower(time, inverted = false) {
+  const t = ((Math.floor(time || 0) % 24000) + 24000) % 24000;
+  let power;
+  if (t < 12000) power = 15;
+  else if (t < 13000) power = Math.round(15 * (13000 - t) / 1000);
+  else if (t < 23000) power = 0;
+  else power = Math.round(15 * (t - 23000) / 1000);
+  return inverted ? 15 - power : power;
+}
+
 function readSignal(world, x, y, z, targetX, targetY, targetZ) {
   const state = world.getBlock(x,y,z);
   if (state.block.id === 'mc:redstone_block') return 15;
   if (state.block.renderShape === 'redstone_wire') return state.get('power') || 0;
+  if (state.block.id === 'mc:daylight_detector') return state.get('power') || 0;
   if (state.block.id === 'mc:redstone_torch') return 15;
   if ((state.block.renderShape === 'lever' || state.block.renderShape === 'button' || state.block.renderShape === 'pressure_plate') && state.get('powered')) return 15;
   if (state.block.renderShape === 'weighted_pressure_plate') return state.get('power') || 0;
@@ -202,9 +213,26 @@ export const RedstoneDevicesMixin = {
       this._knownPressurePlates.delete(key);
     }
 
+    this._tickDaylightDetectors(baseX, baseY, baseZ, !!player);
     this._tickWeightedPressurePlates(baseX, baseY, baseZ, !!player);
     this._tickRepeaters(baseX, baseY, baseZ, !!player);
     this._tickRedstoneWireNetwork(baseX, baseY, baseZ, !!player);
+  },
+
+  _tickDaylightDetectors(baseX, baseY, baseZ, hasPlayer) {
+    if (!hasPlayer) return;
+    const world = this.world;
+    for (let y = baseY - 3; y <= baseY + 3; y++) {
+      for (let x = baseX - 8; x <= baseX + 8; x++) for (let z = baseZ - 8; z <= baseZ + 8; z++) {
+        const state = world.getBlock(x, y, z);
+        if (state.block.id !== 'mc:daylight_detector') continue;
+        const power = daylightDetectorPower(world.time, state.get('inverted'));
+        if (state.get('power') === power) continue;
+        const next = state.with('power', power);
+        writeState(this, x, y, z, next);
+        if ((state.get('power') > 0) !== (power > 0)) this._applyAdjacentRedstonePower(x, y, z, power > 0);
+      }
+    }
   },
 
   _tickWeightedPressurePlates(baseX, baseY, baseZ, hasPlayer) {
