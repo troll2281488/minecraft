@@ -325,6 +325,27 @@ define('mc:dropper', {
   properties: { facing: PROPS.facingAll }, defaultValues: { facing: 'north' },
 });
 
+define('mc:piston', {
+  hardness: 1.5, resistance: 1.5, tool: 'pickaxe', soundGroup: 'wood',
+  textures: { top: 'piston_top', bottom: 'piston_bottom', side: 'piston_side' },
+  properties: { facing: PROPS.facingAll, extended: PROPS.extended },
+  defaultValues: { facing: 'north', extended: false },
+});
+define('mc:sticky_piston', {
+  hardness: 1.5, resistance: 1.5, tool: 'pickaxe', soundGroup: 'slime',
+  textures: { top: 'sticky_piston_top', bottom: 'piston_bottom', side: 'piston_side' },
+  properties: { facing: PROPS.facingAll, extended: PROPS.extended },
+  defaultValues: { facing: 'north', extended: false },
+});
+// The head is an internal moving part, not a placeable inventory block.
+define('mc:piston_head', {
+  hardness: 0, resistance: 0, soundGroup: 'wood', texture: 'piston_top',
+  renderShape: 'piston_head', solid: true, opaqueCube: false, opacity: 0,
+  properties: { facing: PROPS.facingAll, sticky: PROPS.powered },
+  defaultValues: { facing: 'north', sticky: false },
+  notInCreative: true,
+});
+
 define('mc:observer', {
   hardness: 3, resistance: 3, tool: 'pickaxe', harvestLevel: 0,
   requiresTool: true, soundGroup: 'stone', texture: 'observer',
