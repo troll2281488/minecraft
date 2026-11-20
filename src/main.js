@@ -14,6 +14,7 @@
  * that time is strictly better than either.
  */
 
+import { experienceDroppedOnDeath } from './entity/experience.js';
 import { MS_PER_TICK, RENDER, TICKS_PER_DAY, SAVE } from './core/constants.js';
 import { Frustum } from './core/mat4.js';
 
@@ -382,6 +383,16 @@ class Game {
     }
     this.entities?.tick();
     if (player.health <= 0 && !this.deathScreenOpen) {
+      // Java 1.19: keepInventory preserves XP; otherwise drop 7 × level (max 100).
+      // This prototype currently handles death XP in the Overworld, where respawn
+      // does not switch dimensions and the orbs can remain at the actual death site.
+      if (player.gamemode === 'survival' && this.world?.dimension === 'overworld' && this.worldMeta?.keepInventory === false) {
+        const points = experienceDroppedOnDeath(player.experience?.level);
+        this._pendingDeathExperience = points > 0 ? {
+          points, x: player.x, y: player.y + 0.5, z: player.z, dimension: this.world.dimension,
+        } : null;
+        player.experience?.loadFrom({ level: 0, progress: 0, total: 0 });
+      }
       this.deathScreenOpen = true;
       this.paused = true;
       this.keys.clear();
