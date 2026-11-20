@@ -74,6 +74,8 @@ export const PROPS = {
   eye: boolProp('eye'),
   spawnerType: enumProp('spawner_type', ['dungeon', 'silverfish']),
   facingAll: enumProp('facing', ['down', 'up', 'north', 'south', 'west', 'east']),
+  hopperFacing: enumProp('facing', ['down', 'north', 'south', 'west', 'east']),
+  enabled: boolProp('enabled'),
   axis: enumProp('axis', ['x', 'y', 'z']),
   half: enumProp('half', ['bottom', 'top']),
   slabType: enumProp('type', ['bottom', 'top', 'double']),
