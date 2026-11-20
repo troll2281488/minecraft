@@ -382,6 +382,14 @@ for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) {
 }
 trapdoor('iron', 'iron_trapdoor', true);
 
+// Daylight detector: analogue output follows the world's 24,000-tick day clock.
+define('mc:daylight_detector', {
+  hardness: 0.2, resistance: 0.2, tool: 'axe', soundGroup: 'wood',
+  texture: 'daylight_detector',
+  properties: { power: PROPS.power, inverted: PROPS.inverted },
+  defaultValues: { power: 0, inverted: false },
+});
+
 // Redstone power sources from the Java 1.19 block set.
 function button(id, texture, wood = false) {
   define(`mc:${id}_button`, {
@@ -601,6 +609,7 @@ const MATERIALS = [
   ['mc:snowball', {}],
   ['mc:clay_ball', {}],
   ['mc:string', {}],
+  ['mc:quartz', {}],
   ['mc:bone', {}],
   ['mc:leather', {}],
   ['mc:feather', {}],

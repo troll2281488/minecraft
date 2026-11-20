@@ -68,6 +68,7 @@ recipes.push({ result: 'mc:redstone_torch', count: 1, pattern: ['R', 'S'], key: 
 recipes.push({ result: 'mc:repeater', count: 1, pattern: ['T T', ' R ', 'SSS'], key: { T: 'mc:redstone_torch', R: 'mc:redstone', S: 'mc:stone' } });
 recipes.push({ result: 'mc:light_weighted_pressure_plate', count: 1, pattern: ['GG'], key: { G: 'mc:gold_ingot' } });
 recipes.push({ result: 'mc:heavy_weighted_pressure_plate', count: 1, pattern: ['II'], key: { I: 'mc:iron_ingot' } });
+recipes.push({ result: 'mc:daylight_detector', count: 1, pattern: ['GGG', 'QQQ', 'SSS'], key: { G: 'mc:glass', Q: 'mc:quartz', S: 'mc:oak_slab' } });
 
 recipes.push({
   result: 'mc:stick', count: 4,
