@@ -2,11 +2,12 @@ import { AIR } from '../world/block.js';
 
 /**
  * Small redstone-device simulation for the Java 1.19 compatibility track.
- * Buttons, levers and player-triggered pressure plates power adjacent doors
- * and trapdoors. Dust, repeaters, comparators, pistons and mob/item activation
- * remain separate systems and are not claimed as implemented here.
+ * Buttons, levers, player-triggered pressure plates and redstone dust power
+ * adjacent doors/trapdoors. Dust signal strength decays along connected wire.
+ * Repeaters, comparators, pistons and mob/item plate activation remain separate.
  */
 const NEIGHBORS = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+const HORIZONTAL = [[1,0,0,'east','west'],[-1,0,0,'west','east'],[0,0,1,'south','north'],[0,0,-1,'north','south']];
 
 function writeState(game, x, y, z, state) {
   game.world.setBlock(x, y, z, state);
@@ -153,6 +154,67 @@ export const RedstoneDevicesMixin = {
       }
       this._pressurePlateTimers.delete(key);
       this._knownPressurePlates.delete(key);
+    }
+
+    this._tickRedstoneWireNetwork(baseX, baseY, baseZ, !!player);
+  },
+
+  _tickRedstoneWireNetwork(baseX, baseY, baseZ, hasPlayer) {
+    if (!hasPlayer) return;
+    const world = this.world;
+    const minX = baseX - 8, maxX = baseX + 8;
+    const minY = baseY - 3, maxY = baseY + 4;
+    const minZ = baseZ - 8, maxZ = baseZ + 8;
+    const wires = new Map();
+    const keyOf = (x,y,z) => `${x},${y},${z}`;
+    const sourcePower = (x,y,z) => {
+      const state = world.getBlock(x,y,z);
+      if (state.block.id === 'mc:redstone_block') return 15;
+      if ((state.block.renderShape === 'lever' || state.block.renderShape === 'button' || state.block.renderShape === 'pressure_plate') && state.get('powered')) return 15;
+      return 0;
+    };
+    for (let y=minY;y<=maxY;y++) for(let x=minX;x<=maxX;x++) for(let z=minZ;z<=maxZ;z++) {
+      const state=world.getBlock(x,y,z);
+      if(state.block.renderShape==='redstone_wire') wires.set(keyOf(x,y,z),{x,y,z,state,power:0});
+    }
+    if (!wires.size) return;
+    for (const wire of wires.values()) {
+      for (const [dx,dy,dz] of NEIGHBORS) wire.power=Math.max(wire.power,sourcePower(wire.x+dx,wire.y+dy,wire.z+dz));
+    }
+    for(let pass=0;pass<15;pass++) {
+      let changed=false;
+      for(const wire of wires.values()) {
+        let next=wire.power;
+        for(const [dx,dy,dz] of HORIZONTAL) {
+          const neighbor=wires.get(keyOf(wire.x+dx,wire.y+dy,wire.z+dz));
+          if(neighbor) next=Math.max(next,neighbor.power-1);
+          const above=wires.get(keyOf(wire.x+dx,wire.y+1,wire.z+dz));
+          if(above) next=Math.max(next,above.power-1);
+          const below=wires.get(keyOf(wire.x+dx,wire.y-1,wire.z+dz));
+          if(below) next=Math.max(next,below.power-1);
+        }
+        next=Math.max(0,next);
+        if(next!==wire.power){wire.power=next;changed=true;}
+      }
+      if(!changed)break;
+    }
+    for(const wire of wires.values()) {
+      const old=wire.state;
+      let next=old;
+      if(old.get('power')!==wire.power)next=next.with('power',wire.power);
+      for(const [dx,dy,dz,prop] of [[1,0,0,'east'],[-1,0,0,'west'],[0,0,1,'south'],[0,0,-1,'north']]) {
+        const connected=wires.has(keyOf(wire.x+dx,wire.y+dy,wire.z+dz)) || sourcePower(wire.x+dx,wire.y+dy,wire.z+dz)>0;
+        if(next.get(prop)!==connected)next=next.with(prop,connected);
+      }
+      if(next!==old)writeState(this,wire.x,wire.y,wire.z,next);
+    }
+    for(const wire of wires.values()) {
+      const powered=wire.power>0;
+      for(const [dx,dy,dz] of NEIGHBORS) {
+        const x=wire.x+dx,y=wire.y+dy,z=wire.z+dz;
+        const state=world.getBlock(x,y,z);
+        if(['door','trapdoor'].includes(state.block.renderShape)) applyMechanism(this,x,y,z,state,powered);
+      }
     }
   },
 };
