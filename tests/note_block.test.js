@@ -13,8 +13,8 @@ describe('note block', () => {
 
   it('maps note indices to equal-tempered pitches', () => {
     assertEqual(noteBlockFrequency(12), 440);
-    assertEqual(noteBlockFrequency(0), 110);
-    assertEqual(noteBlockFrequency(24), 1760);
+    assertEqual(noteBlockFrequency(0), 220);
+    assertEqual(noteBlockFrequency(24), 880);
   });
 
   it('plays once on a redstone rising edge, not continuously while powered', () => {
