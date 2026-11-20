@@ -28,13 +28,23 @@ function layer(leaves, y, radius, rng, trimCorners) {
 }
 
 function roundTree(species, rng) {
-  const h = species === 'birch' ? 5 + rng.nextInt(3) : 4 + rng.nextInt(3);
+  const birch = species === 'birch';
+  const h = birch ? 7 + rng.nextInt(4) : 4 + rng.nextInt(3);
   const logs = [], leaves = [];
   for (let y = 0; y < h; y++) logs.push([0, y, 0]);
-  layer(leaves, h - 3, 2, rng, 'random');
-  layer(leaves, h - 2, 2, rng, 'random');
-  layer(leaves, h - 1, 1, rng, 'random');
-  layer(leaves, h, 1, rng, 'always');
+  if (birch) {
+    // Vanilla birch crowns are taller and narrower than oak crowns.
+    layer(leaves, h - 4, 1, rng, 'random');
+    layer(leaves, h - 3, 2, rng, 'random');
+    layer(leaves, h - 2, 2, rng, 'random');
+    layer(leaves, h - 1, 1, rng, 'random');
+    layer(leaves, h, 1, rng, 'always');
+  } else {
+    layer(leaves, h - 3, 2, rng, 'random');
+    layer(leaves, h - 2, 2, rng, 'random');
+    layer(leaves, h - 1, 1, rng, 'random');
+    layer(leaves, h, 1, rng, 'always');
+  }
   return { logs, leaves };
 }
 
