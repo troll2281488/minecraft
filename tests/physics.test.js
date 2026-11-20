@@ -30,6 +30,43 @@ describe('cobweb movement', () => {
   });
 });
 
+describe('ladder movement', () => {
+  const ladderWorld = { getBlock: (x, y, z) => ({ block:
+    x === 0 && z === 0 && y >= 65 && y <= 67 ? BLOCKS.get('mc:ladder') : BLOCKS.get('mc:air'),
+  }) };
+
+  it('climbs when forward input is held against a ladder', () => {
+    const player = new Player(0.5, 65, 0.5);
+    player.vy = -0.8;
+    player.input.forward = 1;
+    assertEqual(player._applyLadderMovement(ladderWorld), true);
+    assertEqual(player.vy, 0.2);
+  });
+
+  it('prevents rapid falling when touching a ladder without climbing', () => {
+    const player = new Player(0.5, 65, 0.5);
+    player.vy = -0.8;
+    assertEqual(player._applyLadderMovement(ladderWorld), true);
+    assertEqual(player.vy, -0.15);
+  });
+
+  it('sneaking holds the player on a ladder', () => {
+    const player = new Player(0.5, 65, 0.5);
+    player.vy = -0.8;
+    player.input.sneak = true;
+    assertEqual(player._applyLadderMovement(ladderWorld), true);
+    assertEqual(player.vy, 0);
+  });
+
+  it('does not change movement away from ladders', () => {
+    const player = new Player(0.5, 65, 0.5);
+    player.vy = -0.8;
+    const airWorld = { getBlock: () => ({ block: BLOCKS.get('mc:air') }) };
+    assertEqual(player._applyLadderMovement(airWorld), false);
+    assertEqual(player.vy, -0.8);
+  });
+});
+
 describe('survival fall damage', () => {
   it('takes no fall damage at or below three blocks', () => {
     const player = new Player();
