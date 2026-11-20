@@ -162,13 +162,16 @@ export class MobSystem {
   }
 
   spawnBlockParticles(x, y, z, blockId = '') {
+    const mode = this.game.particlesMode || 'all';
+    if (mode === 'off') return;
+    const count = mode === 'reduced' ? 3 : 10;
     const palette = blockId.includes('grass') ? [0.35, 0.58, 0.24, 1]
       : blockId.includes('dirt') || blockId.includes('mud') ? [0.43, 0.29, 0.17, 1]
       : blockId.includes('sand') ? [0.78, 0.70, 0.48, 1]
       : blockId.includes('ore') ? [0.48, 0.47, 0.43, 1]
       : blockId.includes('wood') || blockId.includes('log') ? [0.42, 0.29, 0.16, 1]
       : [0.55, 0.55, 0.55, 1];
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < count; i++) {
       this.blockParticles.push({
         x: x + 0.2 + Math.random() * 0.6,
         y: y + 0.2 + Math.random() * 0.6,
@@ -835,6 +838,7 @@ export class MobSystem {
     if (this.attackCooldown > 0) this.attackCooldown--;
     this._tickArrows();
     this._tickBlockParticles();
+    if (this.game.mobSimulationEnabled === false) return;
     // Populate nearby loaded chunks quickly so a new world does not feel empty.
     if (this.spawnTicks >= 180 && this.mobs.length < 7) {
       this.spawnTicks = 0;
@@ -894,6 +898,7 @@ export class MobSystem {
       const dx = player.x - mob.x;
       const dz = player.z - mob.z;
       const distance = Math.hypot(dx, dz);
+      if (distance > (this.game.simulationDistance || 6) * 16) continue;
       mob.anim.idle += 0.045;
       mob.anim.walk = mob.walkPhase;
       if (mob.hurtTicks > 0) mob.hurtTicks--;

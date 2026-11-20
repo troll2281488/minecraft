@@ -24,7 +24,7 @@ export const ScreensMixin = {
 
     byId('btn-singleplayer').onclick = () => this._showWorldList();
     byId('btn-settings').onclick = () => this._openSettings();
-    byId('btn-settings-back').onclick = () => this.ui.showScreen('title');
+    byId('btn-settings-back').onclick = () => this.ui.showScreen(this._settingsReturnScreen || 'title');
     byId('btn-fullscreen').onclick = async () => { try { if (!document.fullscreenElement) await document.documentElement.requestFullscreen(); else await document.exitFullscreen(); } catch { this.ui.toast('Полноэкранный режим недоступен', { error: true }); } };
     byId('setting-fov').oninput = (e) => { this.fieldOfView = Number(e.target.value); byId('setting-fov-value').textContent = this.fieldOfView + '°'; this._saveSettings(); };
     byId('btn-rename-world').onclick = () => this._renameSelectedWorld();
@@ -36,6 +36,13 @@ export const ScreensMixin = {
       byId('setting-distance-value').textContent = this.renderDistance + ' чанков';
       this._saveSettings();
     };
+    byId('setting-simulation-distance').oninput = (e) => {
+      this.simulationDistance = Number(e.target.value);
+      byId('setting-simulation-distance-value').textContent = this.simulationDistance + ' чанков';
+      this._saveSettings();
+    };
+    byId('setting-simulation').onchange = (e) => { this.mobSimulationEnabled = e.target.checked; this._saveSettings(); };
+    byId('setting-particles').onchange = (e) => { this.particlesMode = e.target.value; this.entities?.blockParticles?.splice(0); this._saveSettings(); };
     byId('setting-sensitivity').oninput = (e) => {
       this.mouseSensitivity = Number(e.target.value);
       this._saveSettings();
@@ -136,6 +143,7 @@ export const ScreensMixin = {
     byId('btn-export-world').onclick = () => this._exportSelectedWorld();
 
     byId('btn-resume').onclick = () => this._resume();
+    byId('btn-pause-settings').onclick = () => this._openSettings();
     byId('btn-respawn').onclick = () => this._respawnAfterDeath();
     byId('btn-death-save').onclick = () => this._save(true);
     byId('btn-save').onclick = () => this._save(true);
@@ -156,12 +164,19 @@ export const ScreensMixin = {
   _loadSettings() {
     let saved = {};
     try { saved = JSON.parse(localStorage.getItem('voxel-game-settings') || '{}'); } catch {}
-    this.renderDistance = Math.max(3, Math.min(16, Number(saved.renderDistance) || 8));
+    this.renderDistance = Math.max(2, Math.min(16, Number(saved.renderDistance) || 8));
     this.mouseSensitivity = Math.max(0.04, Math.min(0.5, Number(saved.mouseSensitivity) || 0.15));
     this.graphicsQuality = ['performance','balanced','high'].includes(saved.graphicsQuality) ? saved.graphicsQuality : 'balanced';
     this.fieldOfView = Math.max(50, Math.min(110, Number(saved.fieldOfView) || 70));
+    this.simulationDistance = Math.max(2, Math.min(12, Number(saved.simulationDistance) || 6));
+    this.mobSimulationEnabled = saved.mobSimulationEnabled !== false;
+    this.particlesMode = ['all','reduced','off'].includes(saved.particlesMode) ? saved.particlesMode : 'all';
     document.getElementById('setting-distance').value = this.renderDistance;
     document.getElementById('setting-distance-value').textContent = this.renderDistance + ' чанков';
+    document.getElementById('setting-simulation-distance').value = this.simulationDistance;
+    document.getElementById('setting-simulation-distance-value').textContent = this.simulationDistance + ' чанков';
+    document.getElementById('setting-simulation').checked = this.mobSimulationEnabled;
+    document.getElementById('setting-particles').value = this.particlesMode;
     document.getElementById('setting-sensitivity').value = this.mouseSensitivity;
     document.getElementById('setting-quality').value = this.graphicsQuality;
     document.getElementById('setting-fov').value = this.fieldOfView;
@@ -214,6 +229,9 @@ export const ScreensMixin = {
         mouseSensitivity: this.mouseSensitivity,
         graphicsQuality: this.graphicsQuality,
         fieldOfView: this.fieldOfView,
+        simulationDistance: this.simulationDistance,
+        mobSimulationEnabled: this.mobSimulationEnabled,
+        particlesMode: this.particlesMode,
       }));
     } catch {}
   },

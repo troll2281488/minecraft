@@ -897,7 +897,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, human, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, jumping: !!remote.jumping, sneaking: !!remote.sneaking, walking: !!remote.walking, attack: !!remote.attacking, attackTime: remote.attackTime ?? 0 }, true);
       draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, outerHuman, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, sneaking: !!remote.sneaking, skinLayer: true }, true);
     }
-    for (const particle of this.entities?.blockParticles ?? []) {
+    for (const particle of (this.particlesMode === 'off' ? [] : this.entities?.blockParticles ?? [])) {
       const size = 0.045 + Math.min(1, particle.life / 28) * 0.025;
       draw(particle.x, particle.y, particle.z, 0, [
         [[0,0,0],[size,size,size],particle.color],
