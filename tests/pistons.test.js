@@ -7,6 +7,7 @@ import { RedstoneDevicesMixin } from '../src/game/redstone_devices.js';
 import { RECIPES } from '../src/game/recipes.js';
 import { ITEMS } from '../src/world/item.js';
 import { rollMobDrops } from '../src/entity/mobs.js';
+import { MAX_Y } from '../src/core/constants.js';
 
 const AIR = BLOCKS.get('mc:air').defaultState;
 const STONE = BLOCKS.get('mc:stone').defaultState;
@@ -62,6 +63,18 @@ describe('piston and sticky piston', () => {
     ({ world, blocks } = makeWorld([['1,0,0', BLOCKS.get('mc:obsidian').defaultState]]));
     assertEqual(planPistonMove(world, 0, 0, 0, 'east'), null);
     assertEqual(blocks.get('1,0,0').block.id, 'mc:obsidian');
+  });
+
+  it('refuses to push beyond build height or into an unloaded chunk', () => {
+    const { world } = makeWorld();
+    assertEqual(planPistonMove(world, 0, MAX_Y - 1, 0, 'up'), null);
+
+    const blocks = new Map([['15,0,0', STONE]]);
+    const chunkAwareWorld = {
+      chunks: new Map([['0,0', {}]]),
+      getBlock(x, y, z) { return blocks.get(`${x},${y},${z}`) || AIR; },
+    };
+    assertEqual(planPistonMove(chunkAwareWorld, 14, 0, 0, 'east'), null);
   });
 
   it('extends on redstone power, moves blocks, then retracts a normal piston', () => {
