@@ -262,8 +262,13 @@ export const InputMixin = {
       reply('Команды отключены в настройках этого мира.', true);
       return;
     }
+    if (command === 'kill') {
+      this.player.health = 0;
+      reply('Команда /kill выполнена.');
+      return;
+    }
     if (command === 'help' || command === '?') {
-      reply('Команды: /locate <структура> · /dimension overworld|nether|end · /gamemode creative|survival|spectator · /give <предмет> [кол-во] · /tp <игрок> или /tp <x> <y> <z> · /setblock <x> <y> <z> <блок> · /time set day|night · /time add <тики> · /heal · /fly · /spawn · /save · /seed · /whereami');
+      reply('Команды: /kill · /locate <структура> · /dimension overworld|nether|end · /gamemode creative|survival|spectator · /give <предмет> [кол-во] · /tp <игрок> или /tp <x> <y> <z> · /setblock <x> <y> <z> <блок> · /time set day|night · /time add <тики> · /heal · /fly · /spawn · /save · /seed · /whereami');
       return;
     }
 
