@@ -1,5 +1,5 @@
 import { describe, it, assertEqual } from './framework.js';
-import { PlayerExperience, experienceToNextLevel } from '../src/entity/experience.js';
+import { PlayerExperience, experienceToNextLevel, splitExperienceIntoOrbs, experienceForMob } from '../src/entity/experience.js';
 import { Player } from '../src/entity/player.js';
 
 describe('Java-style player experience', () => {
@@ -7,7 +7,8 @@ describe('Java-style player experience', () => {
     assertEqual(experienceToNextLevel(0), 7);
     assertEqual(experienceToNextLevel(15), 37);
     assertEqual(experienceToNextLevel(16), 42);
-    assertEqual(experienceToNextLevel(31), 117);
+    assertEqual(experienceToNextLevel(30), 112);
+    assertEqual(experienceToNextLevel(31), 121);
     assertEqual(experienceToNextLevel(32), 130);
   });
 
@@ -50,5 +51,23 @@ describe('Java-style player experience', () => {
     assertEqual(loaded.experience.level, player.experience.level);
     assertEqual(loaded.experience.progress, player.experience.progress);
     assertEqual(loaded.experience.total, 40);
+  });
+});
+
+describe('Java-style experience orb rules', () => {
+  it('splits experience into the largest vanilla orb denominations first', () => {
+    assertEqual(splitExperienceIntoOrbs(1000).join(','), '617,307,73,3');
+    assertEqual(splitExperienceIntoOrbs(0).length, 0);
+    assertEqual(splitExperienceIntoOrbs(-8).length, 0);
+  });
+
+  it('assigns common mob XP and excludes mobs that do not drop XP', () => {
+    assertEqual(experienceForMob('zombie'), 5);
+    assertEqual(experienceForMob('blaze'), 10);
+    assertEqual(experienceForMob('villager'), 0);
+    assertEqual(experienceForMob('bat'), 0);
+    assertEqual(experienceForMob('cow', () => 0), 1);
+    assertEqual(experienceForMob('cow', () => 0.999), 3);
+    assertEqual(experienceForMob('cow', () => 0.5, { baby: true }), 0);
   });
 });
