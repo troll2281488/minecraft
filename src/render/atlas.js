@@ -663,6 +663,8 @@ TEXTURES.repeater = () => {
   for (const x of [4,5,10,11]) for(let y=5;y<11;y++) setPx(tile,x,y,red[0],red[1],red[2]);
   return tile;
 };
+TEXTURES.light_weighted_pressure_plate = () => pressurePlateTile(hex(0xd8ad35), 'light_weighted_pressure_plate');
+TEXTURES.heavy_weighted_pressure_plate = () => pressurePlateTile(hex(0xb8b8b8), 'heavy_weighted_pressure_plate');
 TEXTURES.redstone_wire = () => {
   const tile = grainy(hex(0x8f1717), 0.1, 'redstone_wire');
   const red = hex(0xd52c2c), dark = hex(0x701010);
