@@ -12,7 +12,7 @@
 import { Chest, Furnace, SMELTING, SMELT_TICKS, serializeContainer, deserializeContainer } from './containers.js';
 import { ItemStack } from '../world/item.js';
 import { positionalRandom } from '../core/rng.js';
-import { mineshaftPlan } from '../world/gen/structures.js';
+import { mineshaftPlan, dungeonDims } from '../world/gen/structures.js';
 import { hash01 } from '../world/gen/hash.js';
 import { TerrainGenerator, BIOME, dungeonCandidateForCell, villageCandidateForCell, mineshaftCandidateForCell, desertTempleCandidateForCell, jungleTempleCandidateForCell, strongholdCandidateForCell } from '../world/gen/terrain.js';
 
@@ -53,14 +53,22 @@ function label(stack) {
   return `${name}${stack.count > 1 ? ` <span class="n">${stack.count}</span>` : ''}`;
 }
 
-function generatedChestKind(seed, x, y, z) {
+export function generatedChestKind(seed, x, y, z) {
   if (seed === undefined || seed === null) return null;
 
-  // Dungeon chests are at room origin + (1, 1, 1).
+  // Dungeon rooms always have the north-west chest; a second diagonal chest
+  // is added by the same seeded roll used by placeDungeonRoom. Recognize both
+  // exact coordinates so either chest receives its own deterministic loot.
   for (let gx = Math.floor((x - 64) / 80); gx <= Math.floor(x / 80); gx++) {
     for (let gz = Math.floor((z - 64) / 80); gz <= Math.floor(z / 80); gz++) {
       const room = dungeonCandidateForCell(seed, gx, gz);
-      if (room && x === room.x + 1 && y === room.y + 1 && z === room.z + 1) return 'dungeon';
+      if (!room || y !== room.y + 1) continue;
+      const firstChest = x === room.x + 1 && z === room.z + 1;
+      const roomRng = positionalRandom(seed, room.x, 7301, room.z, 7301);
+      const hasSecondChest = roomRng.nextBoolean();
+      const { ix, iz } = dungeonDims(room);
+      const secondChest = hasSecondChest && x === room.x + ix && z === room.z + iz;
+      if (firstChest || secondChest) return 'dungeon';
     }
   }
 
@@ -123,7 +131,7 @@ function generatedChestKind(seed, x, y, z) {
   return null;
 }
 
-function fillGeneratedChest(seed, x, y, z, chest, kind) {
+export function fillGeneratedChest(seed, x, y, z, chest, kind) {
   const salt = kind === 'dungeon' ? 3301 : kind === 'village' ? 3302 : kind === 'stronghold' ? 3304 : kind === 'mineshaft' ? 3305 : 3303;
   const rng = positionalRandom(seed, x, y, z, salt);
   const villageLoot = [
