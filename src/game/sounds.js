@@ -8,7 +8,7 @@ export const SOUND_EVENTS = Object.freeze({
   'block.chest.open':'chestOpen','block.chest.close':'chestClose',
   'block.furnace.start':'furnace','block.note':'note',
   'entity.player.hurt':'hurt','entity.player.levelup':'levelup',
-  'entity.item.pickup':'pickup','entity.item.drop':'drop',
+  'entity.item.pickup':'pickup','entity.item.drop':'drop','entity.experience_orb.pickup':'xp',
   'entity.arrow.shoot':'shoot','entity.arrow.hit':'arrowHit',
   'entity.generic.explode':'explode','entity.mob.ambient':'ambient',
   'entity.mob.hurt':'mobHurt','entity.mob.death':'mobDeath',
@@ -20,7 +20,7 @@ export const SOUND_EVENTS = Object.freeze({
 export const SOUND_PRESETS = Object.freeze({
   break:{f:190,d:.13,type:'square',volume:.075}, place:{f:320,d:.075,type:'triangle',volume:.07},
   hit:{f:105,d:.09,type:'sawtooth',volume:.075}, hurt:{f:78,d:.16,type:'triangle',volume:.085},
-  pickup:{f:620,d:.12,type:'sine',volume:.065}, drop:{f:250,d:.08,type:'triangle',volume:.06},
+  pickup:{f:620,d:.12,type:'sine',volume:.065}, xp:{f:940,d:.10,type:'sine',volume:.045}, drop:{f:250,d:.08,type:'triangle',volume:.06},
   step:{f:120,d:.045,type:'triangle',volume:.035}, equip:{f:440,d:.10,type:'sine',volume:.06},
   cast:{f:520,d:.12,type:'triangle',volume:.065}, reel:{f:360,d:.10,type:'triangle',volume:.06},
   bite:{f:880,d:.08,type:'sine',volume:.07}, catch:{f:740,d:.16,type:'sine',volume:.07},
