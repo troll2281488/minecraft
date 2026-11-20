@@ -1,6 +1,6 @@
 import { positionalRandom } from '../core/rng.js';
 
-export const SPAWNER_MOB_TYPES = Object.freeze(['zombie', 'skeleton', 'spider']);
+export const SPAWNER_MOB_TYPES = Object.freeze(['zombie', 'skeleton', 'spider', 'silverfish']);
 
 /** Java dungeon spawners use a weighted 50/25/25 zombie/skeleton/spider roll. */
 export function spawnerMobType(seed, x, y, z) {
