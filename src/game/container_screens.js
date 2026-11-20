@@ -129,6 +129,7 @@ function fillGeneratedChest(seed, x, y, z, chest, kind) {
     ['mc:bread', 2, 5], ['mc:apple', 1, 3], ['mc:wheat_seeds', 2, 6],
     ['mc:stick', 2, 6], ['mc:iron_ingot', 1, 2], ['mc:gold_nugget', 2, 5],
     ['mc:leather', 1, 3], ['mc:coal', 2, 5], ['mc:paper', 1, 4],
+    ['mc:saddle', 1, 1], ['mc:iron_horse_armor', 1, 1],
   ];
   const dungeonLoot = [
     ['mc:bread', 1, 4], ['mc:iron_ingot', 1, 4], ['mc:gold_ingot', 1, 3],
