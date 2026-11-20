@@ -45,6 +45,41 @@ describe('redstone lamp and torch parity', () => {
     game._tickRedstoneLamps(0,0,0,true);
     assertEqual(blocks.get('0,0,0').get('lit'), false);
   });
+  it('keeps a lamp lit for two ticks after power is removed', () => {
+    const { blocks, world } = makeWorld([
+      ['0,0,0', BLOCKS.get('mc:redstone_lamp').defaultState],
+      ['1,0,0', BLOCKS.get('mc:redstone_block').defaultState],
+    ]);
+    const game = { world, player: { x:0,y:0,z:0 }, tickCount:1, multiplayer:{pushBlockChange(){}}, ...RedstoneDevicesMixin };
+    game._tickRedstoneLamps(0,0,0,true);
+    assertEqual(blocks.get('0,0,0').get('lit'), true);
+    blocks.set('1,0,0', BLOCKS.get('mc:air').defaultState);
+    game.tickCount = 2; game._tickRedstoneLamps(0,0,0,true);
+    assertEqual(blocks.get('0,0,0').get('lit'), true);
+    game.tickCount = 3; game._tickRedstoneLamps(0,0,0,true);
+    assertEqual(blocks.get('0,0,0').get('lit'), true);
+    game.tickCount = 4; game._tickRedstoneLamps(0,0,0,true);
+    assertEqual(blocks.get('0,0,0').get('lit'), false);
+  });
+  it('burns out after eight toggles in a short window and recovers after 160 ticks', () => {
+    const { blocks, world } = makeWorld([
+      ['0,1,0', BLOCKS.get('mc:redstone_torch').defaultState],
+      ['0,0,0', BLOCKS.get('mc:stone').defaultState],
+    ]);
+    const game = { world, player: { x:0,y:1,z:0 }, tickCount:1, multiplayer:{pushBlockChange(){}}, ...RedstoneDevicesMixin };
+    for (let i = 1; i <= 8; i++) {
+      blocks.set('1,0,0', i % 2 ? BLOCKS.get('mc:redstone_block').defaultState : BLOCKS.get('mc:air').defaultState);
+      game.tickCount = i;
+      game._tickRedstoneTorches(0,1,0,true);
+    }
+    assertEqual(blocks.get('0,1,0').get('lit'), false);
+    game.tickCount = 167;
+    game._tickRedstoneTorches(0,1,0,true);
+    assertEqual(blocks.get('0,1,0').get('lit'), false);
+    game.tickCount = 168;
+    game._tickRedstoneTorches(0,1,0,true);
+    assertEqual(blocks.get('0,1,0').get('lit'), true);
+  });
   it('turns off a floor torch when its support block is powered', () => {
     const { blocks, world } = makeWorld([
       ['0,1,0', BLOCKS.get('mc:redstone_torch').defaultState],
