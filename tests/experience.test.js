@@ -1,5 +1,5 @@
 import { describe, it, assertEqual } from './framework.js';
-import { PlayerExperience, experienceToNextLevel, splitExperienceIntoOrbs, experienceForMob, experienceForBlock, mergeExperienceOrbState, isExperienceOrbHazard } from '../src/entity/experience.js';
+import { PlayerExperience, experienceToNextLevel, splitExperienceIntoOrbs, experienceForMob, experienceForBlock, mergeExperienceOrbState, isExperienceOrbHazard, experienceForFishing, experienceForBreeding, experienceForVillagerTrade } from '../src/entity/experience.js';
 import { Player } from '../src/entity/player.js';
 import { InputMixin } from '../src/game/input.js';
 
@@ -137,5 +137,23 @@ describe('Java-style mining experience and orb entity rules', () => {
     assertEqual(isExperienceOrbHazard('mc:lava'), true);
     assertEqual(isExperienceOrbHazard('mc:cactus'), true);
     assertEqual(isExperienceOrbHazard('mc:stone'), false);
+  });
+});
+
+
+describe('Java-style XP from non-combat activities', () => {
+  it('rolls fishing XP from 1 through 6 points', () => {
+    assertEqual(experienceForFishing(() => 0), 1);
+    assertEqual(experienceForFishing(() => 0.999), 6);
+  });
+
+  it('rolls animal breeding XP from 1 through 7 points', () => {
+    assertEqual(experienceForBreeding(() => 0), 1);
+    assertEqual(experienceForBreeding(() => 0.999), 7);
+  });
+
+  it('rolls villager trade XP from 3 through 6 points', () => {
+    assertEqual(experienceForVillagerTrade(() => 0), 3);
+    assertEqual(experienceForVillagerTrade(() => 0.999), 6);
   });
 });
