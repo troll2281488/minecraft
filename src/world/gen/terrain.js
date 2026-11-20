@@ -88,9 +88,9 @@ export const BIOME_SURFACE = {
   [BIOME.BIRCH_FOREST]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.065, grass:0.16, species:'birch' },
   [BIOME.TALL_BIRCH_FOREST]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.075, grass:0.12, species:'birch' },
   [BIOME.DARK_FOREST]: { top:'mc:podzol', filler:'mc:dirt', trees:0.075, grass:0.08, species:'dark_oak' },
-  [BIOME.JUNGLE]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.072, grass:0.18, species:'jungle', ferns:0.2 },
-  [BIOME.SPARSE_JUNGLE]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.035, grass:0.2, species:'jungle', ferns:0.12 },
-  [BIOME.BAMBOO_JUNGLE]: { top:'mc:podzol', filler:'mc:dirt', trees:0.08, grass:0.18, species:'jungle', ferns:0.24 },
+  [BIOME.JUNGLE]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.14, grass:0.28, species:'jungle', ferns:0.42 },
+  [BIOME.SPARSE_JUNGLE]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.075, grass:0.24, species:'jungle', ferns:0.24 },
+  [BIOME.BAMBOO_JUNGLE]: { top:'mc:podzol', filler:'mc:dirt', trees:0.13, grass:0.26, species:'jungle', ferns:0.4 },
   [BIOME.DESERT]: { top:'mc:sand', filler:'mc:sand', trees:0, grass:0, deadBush:0.025 },
   [BIOME.SAVANNA]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.042, grass:0.48, species:'acacia', deadBush:0.006 },
   [BIOME.SAVANNA_PLATEAU]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.034, grass:0.42, species:'acacia', deadBush:0.008 },
@@ -589,7 +589,8 @@ export class TerrainGenerator {
         if (top < 0) continue;
 
         const submerged = top < SEA_LEVEL;
-        const topId = submerged && biome !== BIOME.OCEAN ? 'mc:sand' : surface.top;
+        const junglePodzol = [BIOME.JUNGLE, BIOME.JUNGLE_HILLS, BIOME.BAMBOO_JUNGLE].includes(biome) && this.patch.sample2(baseX + x, baseZ + z, 0.09) > 0.18;
+        const topId = submerged && biome !== BIOME.OCEAN ? 'mc:sand' : junglePodzol ? 'mc:podzol' : surface.top;
 
         const topState = S.byId[topId];
         const badlands = biome === BIOME.BADLANDS || biome === BIOME.WOODED_BADLANDS || biome === BIOME.ERODED_BADLANDS;
@@ -659,7 +660,7 @@ export class TerrainGenerator {
   placeTrees(chunk, baseX, baseZ) {
     const S=this.states.byId;
     const passable=(id)=>id==='mc:air'||id==='mc:short_grass'||id==='mc:fern'||id==='mc:dandelion'||
-      id==='mc:poppy'||id==='mc:dead_bush'||id==='mc:red_mushroom'||id==='mc:brown_mushroom';
+      id==='mc:poppy'||id==='mc:dead_bush'||id==='mc:red_mushroom'||id==='mc:brown_mushroom'||id==='mc:vine';
     const margin=TREE_MARGIN+1;
     for(let wz=baseZ-margin;wz<baseZ+CHUNK_SIZE+margin;wz++) for(let wx=baseX-margin;wx<baseX+CHUNK_SIZE+margin;wx++) {
       const tree=this.treeAt(wx,wz); if(!tree) continue;
@@ -676,6 +677,13 @@ export class TerrainGenerator {
         if(x<0||x>=CHUNK_SIZE||z<0||z>=CHUNK_SIZE) continue;
         const id=chunk.getBlock(x,tree.y+dy,z).block.id;
         if(passable(id)||/_leaves$/.test(id)) chunk.setBlock(x,tree.y+dy,z,log);
+      }
+      const vine=S['mc:vine'];
+      if(vine) for(const [dx,dy,dz] of tree.vines ?? []) {
+        const x=wx+dx-baseX,z=wz+dz-baseZ;
+        if(x<0||x>=CHUNK_SIZE||z<0||z>=CHUNK_SIZE) continue;
+        const id=chunk.getBlock(x,tree.y+dy,z).block.id;
+        if(passable(id)) chunk.setBlock(x,tree.y+dy,z,vine);
       }
     }
   }
