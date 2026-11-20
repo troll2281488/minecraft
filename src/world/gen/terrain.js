@@ -98,8 +98,8 @@ export const BIOME_SURFACE = {
   [BIOME.BADLANDS]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0, grass:0, deadBush:0.02 },
   [BIOME.WOODED_BADLANDS]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0.012, grass:0.015, species:'oak', deadBush:0.012 },
   [BIOME.ERODED_BADLANDS]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0, grass:0, deadBush:0.01 },
-  [BIOME.MOUNTAINS]: { top:'mc:alpine_gravel', filler:'mc:stone', trees:0.004, grass:0.025, species:'oak' },
-  [BIOME.WINDSWEPT_HILLS]: { top:'mc:alpine_gravel', filler:'mc:stone', trees:0.012, grass:0.04, species:'oak' },
+  [BIOME.MOUNTAINS]: { top:'mc:gravel', filler:'mc:stone', trees:0.004, grass:0.025, species:'oak' },
+  [BIOME.WINDSWEPT_HILLS]: { top:'mc:gravel', filler:'mc:stone', trees:0.012, grass:0.04, species:'oak' },
   [BIOME.SNOWY_PLAINS]: { top:'mc:snow_block', filler:'mc:dirt', trees:0.002, grass:0 },
   [BIOME.ICE_SPIKES]: { top:'mc:snow_block', filler:'mc:dirt', trees:0.0035, grass:0, species:'ice_spike' },
   [BIOME.TAIGA]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.05, grass:0.12, species:'spruce' },
@@ -111,8 +111,8 @@ export const BIOME_SURFACE = {
   [BIOME.DESERT_HILLS]: { top:'mc:sand', filler:'mc:sand', trees:0, grass:0, deadBush:0.025 },
   [BIOME.FOREST_HILLS]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.06, grass:0.15, species:'oak' },
   [BIOME.TAIGA_HILLS]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.055, grass:0.12, species:'spruce' },
-  [BIOME.EXTREME_HILLS_EDGE]: { top:'mc:alpine_gravel', filler:'mc:stone', trees:0.006, grass:0.035, species:'oak' },
-  [BIOME.EXTREME_HILLS_PLUS]: { top:'mc:alpine_gravel', filler:'mc:stone', trees:0.008, grass:0.02, species:'oak' },
+  [BIOME.EXTREME_HILLS_EDGE]: { top:'mc:gravel', filler:'mc:stone', trees:0.006, grass:0.035, species:'oak' },
+  [BIOME.EXTREME_HILLS_PLUS]: { top:'mc:gravel', filler:'mc:stone', trees:0.008, grass:0.02, species:'oak' },
   [BIOME.JUNGLE_HILLS]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.078, grass:0.18, species:'jungle', ferns:0.22 },
   [BIOME.JUNGLE_EDGE]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.028, grass:0.16, species:'jungle', ferns:0.08 },
   [BIOME.BIRCH_FOREST_HILLS]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.07, grass:0.14, species:'birch' },
@@ -527,6 +527,13 @@ export class TerrainGenerator {
   scatterVeins(chunk, baseX, baseZ, spec, salt, deepslateVariants) {
     const rng = positionalRandom(this.seed, chunk.cx, salt, chunk.cz, salt);
     const S = this.states;
+    // Keep coal and iron a few blocks below the natural surface, including on
+    // tall mountain peaks. This prevents exposed ore speckles on open terrain.
+    const oreSurface = spec.block.endsWith('_ore') ? new Int16Array(CHUNK_SIZE * CHUNK_SIZE) : null;
+    if (oreSurface) for (let z = 0; z < CHUNK_SIZE; z++) for (let x = 0; x < CHUNK_SIZE; x++) {
+      const wx = baseX + x, wz = baseZ + z;
+      oreSurface[z * CHUNK_SIZE + x] = Math.floor(this._height(this._fields(wx, wz), wx, wz));
+    }
 
     for (let v = 0; v < spec.veins; v++) {
       const ox = rng.nextInt(CHUNK_SIZE);
@@ -541,7 +548,8 @@ export class TerrainGenerator {
       for (let i = 0; i < count; i++) {
         if (y > MIN_Y && y < MAX_Y && x >= 0 && x < CHUNK_SIZE && z >= 0 && z < CHUNK_SIZE) {
           const existing = chunk.getBlock(x, y, z);
-          if ((spec.block.endsWith('_ore') ? STONE_ORE_REPLACEABLE : STONE_REPLACEABLE).has(existing.block.id)) {
+          const belowSurface = !oreSurface || y < oreSurface[z * CHUNK_SIZE + x] - 3;
+          if (belowSurface && (spec.block.endsWith('_ore') ? STONE_ORE_REPLACEABLE : STONE_REPLACEABLE).has(existing.block.id)) {
             let target = spec.block;
             const state = S.byId[target];
             if (state) chunk.setBlock(x, y, z, state);
