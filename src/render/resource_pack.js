@@ -62,8 +62,8 @@ export function shouldFetchExternalItemTexture(item) {
   return Boolean(item && !item.block && !item.spawnEggMob);
 }
 
-async function fetchImage(path) {
-  const response = await fetch(ITSBRIAN_RAW + path, { signal: AbortSignal.timeout(4000) });
+async function fetchImage(path, signal) {
+  const response = await fetch(ITSBRIAN_RAW + path, { signal: signal || AbortSignal.timeout(4000) });
   if (!response.ok) return null;
   return createImageBitmap(await response.blob());
 }
