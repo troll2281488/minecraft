@@ -3,6 +3,7 @@ import { shouldFetchExternalItemTexture, shouldFetchExternalBlockTexture } from 
 import '../src/world/blocks/index.js';
 import { BLOCKS } from '../src/world/block.js';
 import { buildTextures, buildBlockTextureTable } from '../src/render/atlas.js';
+import { packSurface } from '../src/render/mesher.js';
 
 describe('External item texture selection', () => {
   it('uses built-in generated icons for spawn eggs', () => {
@@ -76,5 +77,29 @@ describe('ItsBrian terrain and jungle vine textures', () => {
 
   it('tints jungle vines with the biome foliage colour instead of leaving them grey', () => {
     assertEqual(BLOCKS.get('mc:vine').tint, 'foliage');
+  });
+});
+
+
+describe('Snow leaf tint channel', () => {
+  it('marks leaves separately from ordinary foliage so only leaves turn white in snow biomes', () => {
+    assertEqual(BLOCKS.get('mc:oak_leaves').tint, 'leaves');
+    assertEqual(BLOCKS.get('mc:birch_leaves').tint, 'leaves');
+    assertEqual(BLOCKS.get('mc:vine').tint, 'foliage');
+  });
+
+  it('packs the new leaf tint without corrupting ambient occlusion or light', () => {
+    const word = packSurface(7, 5, 2, 4, 3, 15, 11);
+    assertEqual((word >>> 17) & 7, 4);
+    assertEqual((word >>> 20) & 3, 3);
+    assertEqual((word >>> 22) & 15, 15);
+    assertEqual((word >>> 26) & 15, 11);
+  });
+
+  it('has a dedicated leaf colour in the terrain shader', async () => {
+    const { TERRAIN_VERTEX_SHADER, TERRAIN_FRAGMENT_SHADER } = await import('../src/render/gl.js');
+    assert(TERRAIN_VERTEX_SHADER.includes('uLeavesColor'));
+    assert(TERRAIN_VERTEX_SHADER.includes('tintKind == 4u'));
+    assert(TERRAIN_FRAGMENT_SHADER.includes('vTintKind == 4u && uLeavesColor.r > 0.9'));
   });
 });

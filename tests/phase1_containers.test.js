@@ -276,3 +276,30 @@ describe('Furnace', () => {
     assertEqual(f.cookProgress, 98);
   });
 });
+
+
+describe('Furnace screen item placement', () => {
+  it('accepts smeltable items and fuel from shift-clicked inventory stacks', () => {
+    const spec = { kind: 'furnace', furnace: new Furnace() };
+    const ore = ItemStack.of('mc:iron_ore', 3);
+    const fuel = ItemStack.of('mc:coal', 4);
+    assert(ContainerScreensMixin._moveToFurnace(spec, ore));
+    assertEqual(spec.furnace.input.count, 3);
+    assert(ore.isEmpty, 'all ore should move into input');
+    assert(ContainerScreensMixin._moveToFurnace(spec, fuel));
+    assertEqual(spec.furnace.fuel.count, 4);
+    assert(fuel.isEmpty, 'all fuel should move into fuel slot');
+  });
+
+  it('leaves incompatible items in inventory and preserves overflow', () => {
+    const spec = { kind: 'furnace', furnace: new Furnace() };
+    const incompatible = ItemStack.of('mc:diamond', 2);
+    assert(!ContainerScreensMixin._moveToFurnace(spec, incompatible));
+    assertEqual(incompatible.count, 2);
+    spec.furnace.input = ItemStack.of('mc:iron_ore', 63);
+    const overflow = ItemStack.of('mc:iron_ore', 4);
+    assert(ContainerScreensMixin._moveToFurnace(spec, overflow));
+    assertEqual(spec.furnace.input.count, 64);
+    assertEqual(overflow.count, 3);
+  });
+});

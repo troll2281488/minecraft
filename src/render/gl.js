@@ -15,10 +15,10 @@
  * word 1:  bits  0..11   texture layer     (0..4095)
  *          bits 12..14   face index        (0..5)
  *          bits 15..16   uv corner         (0..3)
- *          bits 17..18   tint kind         (0=none, 1=grass, 2=foliage, 3=water)
- *          bits 19..20   ambient occlusion (0..3)
- *          bits 21..24   sky light         (0..15)
- *          bits 25..28   block light       (0..15)
+ *          bits 17..19   tint kind         (0=none, 1=grass, 2=foliage, 3=water, 4=leaves)
+ *          bits 20..21   ambient occlusion (0..3)
+ *          bits 22..25   sky light         (0..15)
+ *          bits 26..29   block light       (0..15)
  *
  * A naive layout -- vec3 position, vec2 uv, vec3 normal, float ao, vec2 light --
  * is 44 bytes. At render distance 10 that difference is the better part of a
@@ -206,6 +206,7 @@ uniform vec3 uGrassColor10;
 uniform vec3 uGrassColor01;
 uniform vec3 uGrassColor11;
 uniform vec3 uFoliageColor;
+uniform vec3 uLeavesColor;
 uniform vec3 uWaterColor;
 
 out vec3 vTexCoord;           // xy within the tile, z is the array layer
@@ -234,10 +235,10 @@ void main() {
   uint layer      =  w1        & 4095u;
   uint face       = (w1 >> 12) & 7u;
   uint corner     = (w1 >> 15) & 3u;
-  uint tintKind   = (w1 >> 17) & 3u;
-  uint ao         = (w1 >> 19) & 3u;
-  uint skyLight   = (w1 >> 21) & 15u;
-  uint blockLight = (w1 >> 25) & 15u;
+  uint tintKind   = (w1 >> 17) & 7u;
+  uint ao         = (w1 >> 20) & 3u;
+  uint skyLight   = (w1 >> 22) & 15u;
+  uint blockLight = (w1 >> 26) & 15u;
 
   vec3 worldPos = uChunkOrigin + localPos;
   gl_Position = uViewProjection * vec4(worldPos, 1.0);
@@ -271,6 +272,7 @@ void main() {
   }
   else if (tintKind == 2u) tint = uFoliageColor;
   else if (tintKind == 3u) tint = uWaterColor;
+  else if (tintKind == 4u) tint = uLeavesColor;
 
   vGrassTint = grassTint;
   vTintKind = tintKind;
@@ -293,6 +295,7 @@ in float vFogDistance;
 
 uniform sampler2DArray uTexture;
 uniform vec3 uFogColor;
+uniform vec3 uLeavesColor;
 uniform float uFogStart;
 uniform float uFogEnd;
 uniform float uAlphaCutoff;
@@ -325,6 +328,11 @@ void main() {
       vec3 sideShift = vGrassTint / plainsGreen;
       textureColor = texel.rgb * mix(vec3(1.0), sideShift, greenMask);
     }
+  } else if (vTintKind == 4u && uLeavesColor.r > 0.9) {
+    // Snowy biomes bleach only leaf pixels; keep the texture's light/dark
+    // pattern so the canopy remains textured rather than becoming a flat tile.
+    float leafShade = dot(texel.rgb, vec3(0.299, 0.587, 0.114));
+    textureColor = vec3(0.91, 0.95, 1.0) * (0.84 + leafShade * 0.16);
   }
   vec4 color = vec4(textureColor * vColor.rgb, texel.a * vColor.a);
 

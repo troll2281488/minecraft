@@ -127,10 +127,14 @@ function vanillaLayerParts(model, layerName = 'main') {
 }
 
 const MOB_TEXTURE_FILES = Object.freeze({
-  cow:'cow.png', pig:'pig.png', sheep:'sheep.png', sheep_fur:'sheep_fur.png', chicken:'chicken.png',
+  cow:'cow.png', pig:'pig.png', sheep:'sheep.png', sheep_fur:'sheep_fur.png', chicken:'chicken.png', wolf:'wolf.png',
   zombie:'zombie.png', skeleton:'skeleton.png', stray:'stray.png',
   creeper:'creeper.png', enderman:'enderman.png', spider:'spider.png', cave_spider:'cave_spider.png',
 });
+
+const SNOWY_LEAF_BIOMES = new Set([
+  'mc:snowy_plains', 'mc:snowy_taiga', 'mc:snowy_taiga_hills', 'mc:ice_spikes',
+]);
 
 const VILLAGER_CAREER_TEXTURES = Object.freeze([
   'farmer','fisherman','shepherd','librarian','cleric',
@@ -141,6 +145,7 @@ const MOB_UV = Object.freeze({
   pig:[[28,8,10,16,8],[0,0,8,8,8],[16,16,4,3,1],[0,16,4,6,4],[0,16,4,6,4],[0,16,4,6,4],[0,16,4,6,4]],
   sheep:[[28,8,8,16,6],[0,0,6,6,8],[0,16,4,12,4],[0,16,4,12,4],[0,16,4,12,4],[0,16,4,12,4]],
   chicken:[[0,9,6,8,6],[0,0,4,6,3],[14,0,4,2,2],[14,4,2,2,2],[26,0,3,5,3],[26,0,3,5,3]],
+  wolf:[[18,14,6,9,6],[0,0,6,6,6]],
   zombie:[[0,0,8,8,8],[16,16,8,12,4],[40,16,4,12,4],[40,16,4,12,4],[0,16,4,12,4],[0,16,4,12,4]],
   skeleton:[[0,0,8,8,8],[16,16,8,12,4],[40,16,4,12,4],[40,16,4,12,4],[0,16,4,12,4],[0,16,4,12,4]],
   stray:[[0,0,8,8,8],[16,16,8,12,4],[40,16,4,12,4],[40,16,4,12,4],[0,16,4,12,4],[0,16,4,12,4]],
@@ -550,6 +555,8 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       gl.uniform3f(uniforms.uGrassColor11, ...colors[3]);
       const [, foliage] = tintByBiome[biome] || defaultTint;
       gl.uniform3f(uniforms.uFoliageColor, foliage[0], foliage[1], foliage[2]);
+      const leaves = SNOWY_LEAF_BIOMES.has(biome) ? [0.96, 0.98, 1.0] : foliage;
+      gl.uniform3f(uniforms.uLeavesColor, leaves[0], leaves[1], leaves[2]);
     };
 
     // Opaque and cutout share a pass: both write depth and use alpha testing,

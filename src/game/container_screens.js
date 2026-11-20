@@ -21,10 +21,10 @@ const STYLE = `
 #${OVERLAY_ID} { position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex;
   align-items:center; justify-content:center; z-index:50; font-family:system-ui,sans-serif; }
 #${OVERLAY_ID} .panel { position:relative; isolation:isolate; background:#c6c6c6; border:3px solid #000; padding:12px; color:#222; width:max-content; max-width:calc(100vw - 24px); box-sizing:border-box; box-shadow:0 12px 36px rgba(0,0,0,.5); }
-#${OVERLAY_ID} .panel::before { content:""; position:absolute; inset:0; z-index:-1; background-image:var(--mc-gui-generic-container, none); background-size:100% 100%; opacity:.42; pointer-events:none; }
-#${OVERLAY_ID}[data-kind="furnace"] .panel::before { background-image:var(--mc-gui-furnace, none); opacity:.48; }
+#${OVERLAY_ID} .panel::before { content:none; display:none; background-image:none; }
 #${OVERLAY_ID} h3 { margin:0 0 8px; font-size:16px; color:#222; text-shadow:1px 1px rgba(255,255,255,.45); }
-#${OVERLAY_ID} .row { display:flex; gap:4px; margin-bottom:8px; flex-wrap:wrap; }
+#${OVERLAY_ID} .row { display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap; }
+#${OVERLAY_ID} .slot-group { display:flex; flex-direction:column; gap:4px; font-size:11px; color:#333; }
 #${OVERLAY_ID} .row.slots-9 { display:grid; grid-template-columns:repeat(9,40px); gap:4px; }
 #${OVERLAY_ID} .slot { box-sizing:border-box; width:40px; height:40px; background:#8b8b8b; border:2px solid #373737; border-radius:0; display:flex; align-items:center; justify-content:center; font-size:11px; cursor:pointer; text-align:center; overflow:hidden; color:#fff; user-select:none; box-shadow:inset 2px 2px 0 rgba(0,0,0,.32),inset -2px -2px 0 rgba(255,255,255,.22); }
 #${OVERLAY_ID} .slot.empty { background:#8b8b8b; }
@@ -251,18 +251,15 @@ export const ContainerScreensMixin = {
     document.body.appendChild(overlay);
     this._renderContainer();
     this._containerTimer = setInterval(() => this._renderContainer(), 250);
-    overlay.onclick = (e) => {
-      const el = e.target.closest?.('[data-kind]');
+    // Handle both mouse buttons on pointer-down so slot transfers are immediate
+    // and do not depend on a synthetic click surviving the UI re-render.
+    overlay.onpointerdown = (e) => {
+      const el = e.target.closest?.('[data-kind][data-index]');
       if (!el) return;
+      e.preventDefault();
       this._onContainerClick(el.dataset.kind, Number(el.dataset.index), e.button ?? 0, e.shiftKey);
     };
     overlay.oncontextmenu = (e) => e.preventDefault();
-    overlay.onmousedown = (e) => {
-      if (e.button === 2) {
-        const el = e.target.closest?.('[data-kind]');
-        if (el) this._onContainerClick(el.dataset.kind, Number(el.dataset.index), 2, false);
-      }
-    };
     // E is the inventory key in-game; while a container is open it must close
     // that container instead of trying to close the personal inventory.
   },
@@ -301,11 +298,11 @@ export const ContainerScreensMixin = {
       const pct = f.cookProgress / SMELT_TICKS;
       const burn = f.burnTotal > 0 ? f.burnLeft / f.burnTotal : 0;
       body += `<h3>${spec.title}</h3>`;
-      body += `<div class="row">${this._slotHtml('furnace-in', 0, f.input)}`;
-      body += `${this._slotHtml('furnace-out', 0, f.output)}</div>`;
+      body += `<div class="row furnace-slots"><div class="slot-group"><span>Сырьё</span>${this._slotHtml('furnace-in', 0, f.input)}</div>`;
+      body += `<div class="slot-group"><span>Результат</span>${this._slotHtml('furnace-out', 0, f.output)}</div></div>`;
       body += `<div class="bar"><div style="width:${Math.round(pct * 100)}%"></div></div>`;
-      body += `<div class="row">${this._slotHtml('furnace-fuel', 0, f.fuel)}`;
-      body += `<span class="hint">Топливо: ${Math.round(burn * 100)}%</span></div>`;
+      body += `<div class="row furnace-slots"><div class="slot-group"><span>Топливо</span>${this._slotHtml('furnace-fuel', 0, f.fuel)}</div>`;
+      body += `<span class="hint">Горение: ${Math.round(burn * 100)}%</span></div>`;
     }
     body += '<h3>Инвентарь</h3><div class="row slots-9">';
     // Java order: 27 main-inventory slots, followed by the 9-slot hotbar.
@@ -330,6 +327,11 @@ export const ContainerScreensMixin = {
       if (shift && spec.kind === 'chest') {
         const stack = inv.slots[index];
         if (!stack.isEmpty && this._moveToChest(spec, stack)) {
+          inv.slots[index] = ItemStack.EMPTY.clone();
+        }
+      } else if (shift && spec.kind === 'furnace') {
+        const stack = inv.slots[index];
+        if (!stack.isEmpty && this._moveToFurnace(spec, stack) && stack.count <= 0) {
           inv.slots[index] = ItemStack.EMPTY.clone();
         }
       } else if (shift) {
@@ -422,6 +424,23 @@ export const ContainerScreensMixin = {
       set(cursor);
       inv.cursor = slotStack;
     }
+  },
+
+  /** Move a stack to the furnace input or fuel slot; preserve any remainder. */
+  _moveToFurnace(spec, stack) {
+    const furnace = spec.furnace;
+    const key = SMELTING.has(stack.item.id) ? 'input' :
+      stack.item.fuelTicks > 0 ? 'fuel' : null;
+    if (!key) return false;
+    const current = furnace[key];
+    const capacity = current.isEmpty ? stack.maxStackSize :
+      current.canStackWith(stack) ? current.maxStackSize - current.count : 0;
+    const moved = Math.min(stack.count, Math.max(0, capacity));
+    if (moved <= 0) return false;
+    if (current.isEmpty) furnace[key] = ItemStack.of(stack.item.id, moved, stack.damage, stack.data);
+    else current.count += moved;
+    stack.count -= moved;
+    return true;
   },
 
   /** Move as much of `stack` into the chest as fits. Returns true if all of it moved. */

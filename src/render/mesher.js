@@ -94,7 +94,7 @@ const AO_OFFSETS = FACE_GEOMETRY.map((geom, faceIndex) => {
   });
 });
 
-const TINT_KIND = { none: 0, grass: 1, foliage: 2, water: 3 };
+const TINT_KIND = { none: 0, grass: 1, foliage: 2, water: 3, leaves: 4 };
 
 // ---------------------------------------------------------------------------
 // Section scratch
@@ -488,10 +488,10 @@ function packSurface(layer, face, uvIndex, tintKind, ao, sky, blockLight) {
     ((layer & 4095) |
      ((face & 7) << 12) |
      ((uvIndex & 3) << 15) |
-     ((tintKind & 3) << 17) |
-     ((ao & 3) << 19) |
-     ((sky & 15) << 21) |
-     ((blockLight & 15) << 25)) >>> 0
+     ((tintKind & 7) << 17) |
+     ((ao & 3) << 20) |
+     ((sky & 15) << 22) |
+     ((blockLight & 15) << 26)) >>> 0
   );
 }
 
