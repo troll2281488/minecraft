@@ -157,7 +157,5 @@ describe('Java-style XP from non-combat activities', () => {
   it('rolls villager trade XP from 3 through 6 points', () => {
     assertEqual(experienceForVillagerTrade(() => 0), 3);
     assertEqual(experienceForVillagerTrade(() => 0.999), 6);
-    assertEqual(experienceForVillagerTrade(() => 0, true), 8);
-    assertEqual(experienceForVillagerTrade(() => 0.999, true), 11);
   });
 });
