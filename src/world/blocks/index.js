@@ -346,6 +346,25 @@ define('mc:ladder', {
   properties: { facing: PROPS.facing }, defaultValues: { facing: 'north' },
 });
 
+// Two-block Java-style doors. Both halves carry the same orientation/open
+// state so a click or save/load never leaves the upper half out of sync.
+function door(id, texture, iron = false) {
+  define(`mc:${id}_door`, {
+    hardness: iron ? 5 : 3, resistance: iron ? 5 : 3,
+    tool: iron ? 'pickaxe' : 'axe', soundGroup: iron ? 'metal' : 'wood',
+    renderShape: 'door', texture, opaqueCube: false,
+    properties: {
+      facing: PROPS.facing, half: PROPS.doorHalf, hinge: PROPS.hinge,
+      open: PROPS.open, powered: PROPS.powered,
+    },
+    defaultValues: { facing: 'north', half: 'lower', hinge: 'left', open: false, powered: false },
+  });
+}
+for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) {
+  door(wood, `${wood}_door`);
+}
+door('iron', 'iron_door', true);
+
 define('mc:end_portal_frame', {
   hardness: -1, resistance: 3600000, soundGroup: 'stone',
   texture: 'end_portal_frame',
