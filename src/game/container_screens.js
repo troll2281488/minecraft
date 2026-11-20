@@ -231,7 +231,7 @@ export const ContainerScreensMixin = {
 
   _openFurnace(x, y, z) {
     const furnace = this._furnaceAt(x, y, z);
-    this._openContainer({ title: 'Печь', furnace, kind: 'furnace', key: this._containerKey(x, y, z) });
+    this._openContainer({ title: 'Печь', furnace, kind: 'furnace', key: this._containerKey(x, y, z), x, y, z });
   },
 
   /** Advance every furnace that exists in the world. Called from the fixed tick. */
@@ -409,12 +409,15 @@ export const ContainerScreensMixin = {
     if (!target) return;
     const { get, set } = target;
     if (shift) {
+      const outputBefore = target.outputOnly ? target.get().count : 0;
       this._moveContainerSlotToInventory(target);
+      if (target.outputOnly) this._claimFurnaceExperience(spec, outputBefore - target.get().count);
       inv.version++;
       this._renderContainer();
       this._syncActiveContainer();
       return;
     }
+    const outputBefore = target.outputOnly ? target.get().count : 0;
     const cursor = inv.cursor;
     if (target.outputOnly) {
       const output = get();
@@ -434,9 +437,19 @@ export const ContainerScreensMixin = {
     } else {
       this._swapWithCursor(get(), set, button);
     }
+    if (target.outputOnly) this._claimFurnaceExperience(spec, outputBefore - target.get().count);
     inv.version++;
     this._renderContainer();
     this._syncActiveContainer();
+  },
+
+  _claimFurnaceExperience(spec, removedCount) {
+    if (removedCount <= 0 || !spec?.furnace) return;
+    const points = spec.furnace.claimExperienceForOutput(removedCount);
+    if (points <= 0) return;
+    const whole = Math.floor(points);
+    const awarded = whole + (Math.random() < points - whole ? 1 : 0);
+    if (awarded > 0) this.entities?.spawnExperienceOrbs(awarded, (spec.x ?? 0) + 0.5, (spec.y ?? 64) + 0.5, (spec.z ?? 0) + 0.5);
   },
 
   _syncActiveContainer() {

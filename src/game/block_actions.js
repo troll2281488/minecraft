@@ -13,8 +13,9 @@
 import { BLOCKS, AIR } from '../world/block.js';
 import { ITEMS, ItemStack } from '../world/item.js';
 import { GAMEMODE } from '../entity/player.js';
+import { experienceForBlock, experienceForVillagerTrade } from '../entity/experience.js';
 import {
-  placementTarget, orientPlacement, blockDrops, wouldTrapPlayer,
+  placementTarget, orientPlacement, blockDrops, wouldTrapPlayer, canHarvest,
 } from './interaction.js';
 import { USABLE_BLOCKS } from './usable_blocks.js';
 import { drainContainer } from './containers.js';
@@ -35,6 +36,10 @@ export const BlockActionsMixin = {
       this._containers.delete(containerKey);
       this.multiplayer?.removeContainerState(containerKey);
       if (this.player.gamemode === GAMEMODE.SURVIVAL) {
+        const storedXP = container.type === 'furnace' ? (container.data.xpStored || 0) : 0;
+        const wholeXP = Math.floor(storedXP);
+        const droppedXP = wholeXP + (Math.random() < storedXP - wholeXP ? 1 : 0);
+        if (droppedXP > 0) this.entities?.spawnExperienceOrbs(droppedXP, x + 0.5, y + 0.5, z + 0.5);
         for (const stack of drainContainer(container.type, container.data)) this.inventory.add(stack);
       }
     }
@@ -44,6 +49,11 @@ export const BlockActionsMixin = {
       // reproducible rather than depending on a global RNG.
       const drops = blockDrops(state, this.inventory.held, this.world.seed, x, y, z);
       for (const drop of drops) this.inventory.addItem(drop.id, drop.count);
+      // Ore XP is awarded only for a valid survival harvest, never for creative breaking.
+      if (canHarvest(state.block, this.inventory.held)) {
+        const experience = experienceForBlock(state.block.id);
+        if (experience > 0) this.entities?.spawnExperienceOrbs(experience, x + 0.5, y + 0.5, z + 0.5);
+      }
       if (this.inventory.held.item?.tool) this.inventory.damageHeld(1);
     }
 
@@ -160,6 +170,11 @@ export const BlockActionsMixin = {
             this.ui.toast(result.reason, { error: true });
           } else {
             this.ui.updateHotbar(this.inventory);
+            if (this.player?.gamemode === GAMEMODE.SURVIVAL) {
+              this.entities?.spawnExperienceOrbs(
+                experienceForVillagerTrade(), villager.x, villager.y + 0.5, villager.z,
+              );
+            }
             this.ui.toast(result.unlocked ? 'Новая сделка открыта!' : 'Обмен выполнен');
             refresh();
           }

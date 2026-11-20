@@ -1,5 +1,5 @@
 import { describe, it, assertEqual } from './framework.js';
-import { PlayerExperience, experienceToNextLevel, splitExperienceIntoOrbs, experienceForMob } from '../src/entity/experience.js';
+import { PlayerExperience, experienceToNextLevel, splitExperienceIntoOrbs, experienceForMob, experienceForBlock, mergeExperienceOrbState, isExperienceOrbHazard, experienceForFishing, experienceForBreeding, experienceForVillagerTrade } from '../src/entity/experience.js';
 import { Player } from '../src/entity/player.js';
 import { InputMixin } from '../src/game/input.js';
 
@@ -107,5 +107,55 @@ describe('experience commands', () => {
     game._run('/xp add -5');
     assertEqual(game.player.experience.total, 0);
     assertEqual(game.messages.some((message) => message.includes('Использование')), true);
+  });
+});
+
+
+describe('Java-style mining experience and orb entity rules', () => {
+  it('uses the documented random XP ranges for ores', () => {
+    assertEqual(experienceForBlock('mc:coal_ore', () => 0), 0);
+    assertEqual(experienceForBlock('mc:coal_ore', () => 0.999), 2);
+    assertEqual(experienceForBlock('mc:lapis_ore', () => 0), 2);
+    assertEqual(experienceForBlock('mc:redstone_ore', () => 0.999), 5);
+    assertEqual(experienceForBlock('mc:diamond_ore', () => 0.999), 7);
+    assertEqual(experienceForBlock('mc:nether_quartz_ore', () => 0), 2);
+    assertEqual(experienceForBlock('mc:nether_gold_ore', () => 0), 0);
+    assertEqual(experienceForBlock('mc:nether_gold_ore', () => 0.999), 1);
+    assertEqual(experienceForBlock('mc:stone'), 0);
+  });
+
+  it('merges only equal-value orbs and preserves separate pickup count', () => {
+    const primary = { value: 3, count: 1, age: 200 };
+    assertEqual(mergeExperienceOrbState(primary, { value: 3, count: 2, age: 20 }), true);
+    assertEqual(primary.value, 3);
+    assertEqual(primary.count, 3);
+    assertEqual(primary.age, 20);
+    assertEqual(mergeExperienceOrbState(primary, { value: 7, count: 1, age: 0 }), false);
+  });
+
+  it('recognizes fire, soul fire, lava and cactus as orb hazards', () => {
+    assertEqual(isExperienceOrbHazard('mc:fire'), true);
+    assertEqual(isExperienceOrbHazard('mc:soul_fire'), true);
+    assertEqual(isExperienceOrbHazard('mc:lava'), true);
+    assertEqual(isExperienceOrbHazard('mc:cactus'), true);
+    assertEqual(isExperienceOrbHazard('mc:stone'), false);
+  });
+});
+
+
+describe('Java-style XP from non-combat activities', () => {
+  it('rolls fishing XP from 1 through 6 points', () => {
+    assertEqual(experienceForFishing(() => 0), 1);
+    assertEqual(experienceForFishing(() => 0.999), 6);
+  });
+
+  it('rolls animal breeding XP from 1 through 7 points', () => {
+    assertEqual(experienceForBreeding(() => 0), 1);
+    assertEqual(experienceForBreeding(() => 0.999), 7);
+  });
+
+  it('rolls villager trade XP from 3 through 6 points', () => {
+    assertEqual(experienceForVillagerTrade(() => 0), 3);
+    assertEqual(experienceForVillagerTrade(() => 0.999), 6);
   });
 });
