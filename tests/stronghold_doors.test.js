@@ -4,6 +4,10 @@ import { BLOCKS } from '../src/world/block.js';
 import { shapeBoxes, collisionBoxes } from '../src/world/shapes.js';
 import { BlockActionsMixin } from '../src/game/block_actions.js';
 import { Player, GAMEMODE } from '../src/entity/player.js';
+import { Chunk } from '../src/world/chunk.js';
+import { ChunkWriter, placeStrongholdRoomNetwork } from '../src/world/gen/structures.js';
+import { hash01, seedToInt } from '../src/world/gen/hash.js';
+import { normalizeSeed } from '../src/core/rng.js';
 
 const AIR = BLOCKS.get('mc:air').defaultState;
 const STONE = BLOCKS.get('mc:stone').defaultState;
@@ -60,6 +64,28 @@ describe('Java stronghold doors and buttons', () => {
     BlockActionsMixin._pressStrongholdButton.call(game, 1, 5, 0);
     assertEqual(world.getBlock(2, 5, 0).get('open'), false);
     assertEqual(world.getBlock(1, 5, 0).get('powered'), false);
+  });
+
+
+  it('generates an oak library door and an iron prison door with its button', () => {
+    const site = { x: 8, y: 20, z: 8 };
+    const seed = Array.from({ length: 100 }, (_, i) => 'door-seed-' + i).find((candidate) =>
+      hash01(seedToInt(normalizeSeed(candidate)), site.x, site.y, site.z, 7419) >= 0.22);
+    assert(seed, 'test seed should select the duplex library');
+    const states = Object.fromEntries([...BLOCKS.blocks.keys()].map((id) => [id, BLOCKS.get(id).defaultState]));
+
+    const libraryChunk = new Chunk(-1, 0);
+    placeStrongholdRoomNetwork(new ChunkWriter(libraryChunk, -16, 0), states, site, seed);
+    const libraryDoor = (x, y, z) => libraryChunk.getBlock(x + 16, y, z).block.id;
+    assertEqual(libraryDoor(-10, site.y + 1, site.z), 'mc:oak_door');
+    assertEqual(libraryDoor(-10, site.y + 2, site.z), 'mc:oak_door');
+
+    const prisonChunk = new Chunk(1, -1);
+    placeStrongholdRoomNetwork(new ChunkWriter(prisonChunk, 16, -16), states, site, seed);
+    const prisonBlock = (x, y, z) => prisonChunk.getBlock(x - 16, y, z + 16).block.id;
+    assertEqual(prisonBlock(23, site.y + 1, -4), 'mc:iron_door');
+    assertEqual(prisonBlock(23, site.y + 2, -4), 'mc:iron_door');
+    assertEqual(prisonBlock(22, site.y + 1, -4), 'mc:stone_button');
   });
 
   it('cobwebs strongly reduce player movement speed', () => {
