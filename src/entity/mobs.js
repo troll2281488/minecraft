@@ -1,5 +1,5 @@
 import { ItemStack } from '../world/item.js';
-import { experienceForMob, splitExperienceIntoOrbs, mergeExperienceOrbState, isExperienceOrbHazard } from './experience.js';
+import { experienceForMob, experienceForFishing, experienceForBreeding, splitExperienceIntoOrbs, mergeExperienceOrbState, isExperienceOrbHazard } from './experience.js';
 import { TerrainGenerator, villageCandidateForCell } from '../world/gen/terrain.js';
 import { createVillagerProfile } from './villager_trades.js';
 import { drawPower, canFire } from '../game/bow.js';
@@ -644,6 +644,9 @@ export class MobSystem {
       this.game.inventory.damageHeld(1);
     }
     player.attackTime = 8;
+    if (player.gamemode === 'survival') {
+      this.spawnExperienceOrbs(experienceForFishing(), player.x, player.y + 0.65, player.z);
+    }
     this.game.sounds?.play('reel');
     this.game.sounds?.play('catch');
     this.fishing = null;
@@ -746,6 +749,10 @@ export class MobSystem {
         partner.loveTicks = 0;
         animal.breedCooldown = 6000;
         partner.breedCooldown = 6000;
+        if (player.gamemode === 'survival') {
+          this.spawnExperienceOrbs(experienceForBreeding(),
+            (animal.x + partner.x) / 2, (animal.y + partner.y) / 2 + 0.5, (animal.z + partner.z) / 2);
+        }
         this.game.ui?.toast('Animal bred');
       }
     } else {
