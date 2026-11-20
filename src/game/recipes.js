@@ -115,6 +115,8 @@ recipes.push({
   key: { F: 'mc:flint', S: 'mc:stick', G: 'mc:feather' },
 });
 
+recipes.push({ result: 'mc:flint_and_steel', count: 1, pattern: ['F ', ' I'], key: { F: 'mc:flint', I: 'mc:iron_ingot' } });
+
 recipes.push({
   result: 'mc:bread', count: 1,
   pattern: ['WWW'],
