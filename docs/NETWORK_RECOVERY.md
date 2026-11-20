@@ -32,9 +32,15 @@ Implementation branch: `feature/multiplayer-reconnect-stability`.
   packet loss, a disconnected device, or a completely unavailable service.
 - Only block edits are queued in this change. Chat, combat events, item drops,
   and other transient operations are not durable offline messages.
-- The shared world remains a deterministic seed plus a room-level block-edit
-  overlay. Full authoritative chunk storage, inventory/container state, mobs,
-  dimensions, conflict resolution, and server-side anti-cheat are future work.
+- The shared world remains a deterministic seed plus room-level block and
+  container-state overlays. Chest and furnace snapshots now replicate through
+  the room's `containers` node, and breaking a container publishes a tombstone
+  so stale contents are not restored by another client. This is best-effort
+  client-side replication, not an authoritative inventory service: two players
+  editing the same container at nearly the same time can still overwrite one
+  another. Container writes are not queued while offline. Full authoritative
+  chunk storage, player inventory, mobs, dimensions, conflict resolution, and
+  server-side anti-cheat remain future work.
 - Room records older than 30 days are hidden by the lobby helper. They are not
   deleted from Firebase.
 
@@ -44,3 +50,16 @@ Pure helper tests cover room host election and discoverability of empty rooms.
 Run `npm test` (or `node tests/run-node.mjs`) from the repository root.
 Live multi-browser/network-loss testing still needs to be performed in browsers
 with two separate player sessions.
+
+## Shared container state
+
+Chest and furnace block-entity snapshots are stored per room and block position
+under `minecraft_game/rooms/{code}/containers`. A joining client applies the
+current snapshot, local slot changes publish an updated serialized record, and
+breaking a container publishes a deletion marker. The live object is updated in
+place when a remote snapshot arrives so an open screen keeps its slot references.
+
+This is an initial replication layer only. It does not lock a container while a
+player edits it, queue changes during network loss, or provide server-side item
+validation. Avoid treating simultaneous edits as conflict-free until those
+protections and live two-browser tests are added.
