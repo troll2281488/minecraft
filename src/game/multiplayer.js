@@ -326,6 +326,10 @@ export class Multiplayer {
     localStorage.setItem('mc_last_room', code);
     await update(ref(this.db, `minecraft_game/players/${this.uid}`), { room: code, name: this.nickname });
     await update(ref(this.db, `minecraft_game/users/${this.uid}`), { room: code, name: this.nickname, online: true, ts: Date.now() });
+    // A tab may rejoin while Firebase is already connected, so the connection
+    // listener will not fire again. Replay writes retained for this room now.
+    await this._flushPendingBlockWrites();
+    await this._flushPendingContainerWrites();
 
     this._listen(onValue, ref(this.db, `minecraft_game/rooms/${code}/worldTime`), (snap) => {
       const time = snap.val();
@@ -797,6 +801,9 @@ export class Multiplayer {
   async leaveRoom(markOffline = false) {
     for (const unsubscribe of this.unsubscribers.splice(0)) unsubscribe();
     if (this.db && this.roomId) {
+      // Try to persist this room's last edits before clearing the active room ID.
+      await this._flushPendingBlockWrites();
+      await this._flushPendingContainerWrites();
       await remove(ref(this.db, `minecraft_game/rooms/${this.roomId}/players/${this.uid}`)).catch(() => {});
       await update(ref(this.db, `minecraft_game/players/${this.uid}`), { room: '' }).catch(() => {});
       await update(ref(this.db, `minecraft_game/users/${this.uid}`), { room: '', online: true, ts: Date.now() }).catch(() => {});
