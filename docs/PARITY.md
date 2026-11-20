@@ -136,7 +136,7 @@ Reference target for this compatibility track is **Minecraft: Java Edition 1.19.
 | Doors (oak, spruce, birch, jungle, acacia, dark oak, iron) — two-block placement, paired state, wooden toggle, open/closed collision and removal | yes | 🟡 *(iron redstone activation, hinge placement rules and exact door sound/UV polish remain)* |
 | Door geometry / collision | shared 1/16-thick model | 🟡 *(axis-aligned panel boxes; model is simplified)* |
 | Trapdoors (six wood types + iron) — open/closed shape, collision, hand toggle and recipes | yes | 🟡 *(iron requires redstone; attachment validation and exact orientation remain)* |
-| Buttons (wood, stone, polished blackstone), lever, standard and weighted pressure plates, daylight detector, note block, redstone wire, redstone torch (floor-mounted inversion), repeater, comparator (compare/subtract modes, directional 0–15 output, 2-tick delay), redstone lamp and glowstone | yes | 🟡 *(local simulation; double-chest merging, item-frame/portal-frame reads, piston, torch burnout/wall mounting and exact side-input rules remain)* |
+| Buttons (wood, stone, polished blackstone), lever, standard and weighted pressure plates, daylight detector, note block, redstone wire, redstone torch (floor-mounted inversion), repeater, comparator (compare/subtract modes, directional 0–15 output, 2-tick delay), redstone lamp and glowstone, hopper (five-slot inventory, eight-tick item transfer between nearby hoppers/chests/furnaces, redstone lock) | yes | 🟡 *(local simulation; double-chest merging, item-frame/portal-frame reads, piston, torch burnout/wall mounting and exact side-input rules remain)* |
 | Fence, gate, wall models | yes | ⬜ |
 | Cloud layer, weather, particles | yes | ⬜ |
 
@@ -161,6 +161,10 @@ Reference target for this compatibility track is **Minecraft: Java Edition 1.19.
 ## Multiplayer (experimental)
 
 Room-code joining, remote avatar rendering, chat, shared overworld block edits, player health/food/experience status display, sprint/sneak state, attack animation, held/offhand item identifiers and simplified remote armor/equipment rendering, a host-synchronized day/night clock with deterministic handoff when the host leaves, and per-player local save persistence across reconnects are implemented. This is not yet a complete co-op survival session: each browser still simulates its own mobs and combat; mob damage, inventory/container contents, XP orbs and XP awards, weather and dimensions are not shared/authoritative. Firebase access also depends on the configured Realtime Database being reachable and its deployed security rules allowing the intended operations.
+
+### Hopper automation
+
+Hoppers now have a five-slot saved inventory, a vanilla-shaped recipe, a container UI, one-item transfers on an eight-tick cadence between nearby hoppers/chests/furnaces, and redstone locking. The simulation is host-authoritative in multiplayer and only scans a small area around the active player to limit work and network traffic. Dropped-item pickup, minecart containers, exact sided furnace slot rules, and full unloaded-chunk scheduling remain incomplete.
 
 ## Not yet started
 
