@@ -797,7 +797,7 @@ export class MobSystem {
 
   attackFromPlayer() {
     const mob = this.targetedMob();
-    if (!mob) return false;
+    if (!mob) return this.game.multiplayer?.attackFromPlayer() ?? false;
     if (this.attackCooldown > 0) return true;
     const player = this.game.player;
     const held = this.game.inventory?.held;
@@ -813,8 +813,8 @@ export class MobSystem {
     const length = Math.max(0.01, Math.hypot(dx, dz));
     // A visible hit impulse: mobs slide away for several ticks instead of
     // receiving a single tiny position nudge that their AI immediately cancels.
-    mob.knockbackX = (dx / length) * 0.82;
-    mob.knockbackZ = (dz / length) * 0.82;
+    mob.knockbackX = (dx / length) * 0.16;
+    mob.knockbackZ = (dz / length) * 0.16;
     mob.knockbackY = 0.10;
     if (!['zombie','skeleton','stray','creeper','spider','cave_spider','enderman'].includes(mob.type)) {
       mob.fleeTicks = 180;
@@ -997,7 +997,7 @@ export class MobSystem {
           if (distance < profile.blastRange) {
             const damage = Math.max(0, Math.ceil((profile.blastRange - distance) * 3));
             this._damagePlayer(damage);
-            const knock = 0.35 / Math.max(distance, 0.2);
+            const knock = 0.11 / Math.max(distance, 0.2);
             player.vx += dx * knock; player.vz += dz * knock;
           }
           mob.health = 0;
@@ -1018,7 +1018,7 @@ export class MobSystem {
       if (mob.fleeTicks > 0) mob.fleeTicks--;
       const tamedWolf = mob.type === 'wolf' && mob.tamed;
       const fleeing = mob.type !== 'villager' && mob.type !== 'horse' && !tamedWolf &&
-        !hostileType && (distance < 4 || mob.fleeTicks > 0);
+        !hostileType && mob.fleeTicks > 0;
       const followingOwner = tamedWolf && distance > 2.5;
       if (fleeing) mob.targetYaw = Math.atan2(mob.x - player.x, mob.z - player.z);
       else if (followingOwner) mob.targetYaw = Math.atan2(player.x - mob.x, player.z - mob.z);

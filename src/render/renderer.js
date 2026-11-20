@@ -1021,11 +1021,19 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         }
         if (this.heldItemTextureReady) {
           const isBlock = !!held.item.block;
-          const size = isBlock ? [0.135, 0.135, 0.135] : [0.16, 0.27, 0.025];
-          const itemParts = [[[0, 0, 0], size, [1, 1, 1, 1], null, null, [0.22, 0, -0.42]]];
-          const itemX = handX + forwardX * 0.055 + rightX * 0.025;
-          const itemY = handY + 0.015;
-          const itemZ = handZ + forwardZ * 0.055 + rightZ * 0.025;
+          const isFishingRod = id.includes('fishing_rod');
+          const isBow = id.includes('bow');
+          const isTool = /sword|pickaxe|axe|shovel|hoe/.test(id);
+          const size = isBlock ? [0.19, 0.19, 0.19]
+            : isFishingRod ? [0.16, 0.58, 0.035]
+            : isBow ? [0.34, 0.56, 0.035]
+            : isTool ? [0.27, 0.56, 0.035] : [0.24, 0.38, 0.035];
+          const itemParts = [[[0, 0, 0], size, [1, 1, 1, 1], null, null, [0.12, 0, -0.18]]];
+          // The bottom of the arm is the wrist: anchor the held sprite there,
+          // rather than in the middle of the forearm.
+          const itemX = handX + rightX * 0.018;
+          const itemY = handY - 0.24;
+          const itemZ = handZ + forwardZ * 0.025 + rightZ * 0.018;
           const itemSwing = this.player.attackTime > 0
             ? -0.55 * Math.sin((8 - this.player.attackTime) / 8 * Math.PI) : -0.12;
           draw(itemX, itemY, itemZ, yaw, itemParts, 0, -1, -1, 1,
@@ -1248,9 +1256,14 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     // already been drawn, and writing depth would let it occlude anything
     // rendered afterwards.
     gl.depthMask(false);
+    // Pull the crack faces slightly toward the camera to avoid z-fighting
+    // with the block surface (the old exact-coplanar overlay was invisible).
+    gl.enable(gl.POLYGON_OFFSET_FILL);
+    gl.polygonOffset(-1, -1);
     gl.bindVertexArray(this.crackVao);
     gl.drawArrays(gl.TRIANGLES, 0, 36);
     gl.bindVertexArray(null);
+    gl.disable(gl.POLYGON_OFFSET_FILL);
     gl.depthMask(true);
     gl.disable(gl.BLEND);
   },

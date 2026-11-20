@@ -444,6 +444,6 @@ float crackMask(vec2 uv, float progress) {
 void main() {
   float m = crackMask(vUv, uProgress);
   if (m < 0.25) discard;
-  fragColor = vec4(0.0, 0.0, 0.0, m * 0.55);
+  fragColor = vec4(0.025, 0.025, 0.025, m * 0.92);
 }
 `;
