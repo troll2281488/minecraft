@@ -187,6 +187,23 @@ export function chooseWeightedLootEntry(entries, rng) {
   return entries[entries.length - 1];
 }
 
+/** Spread generated loot across chest slots with a coordinate-seeded shuffle. */
+export function scatterGeneratedChestLoot(seed, x, y, z, chest, kind = 'dungeon') {
+  if (!chest || !Array.isArray(chest.slots)) return;
+  const stacks = chest.slots.filter((stack) => stack && !stack.isEmpty);
+  const slotOrder = Array.from({ length: chest.slots.length }, (_, i) => i);
+  const salt = 0x534c4f54 + (kind === 'dungeon' ? 0 : kind === 'village' ? 1 : kind === 'stronghold' ? 2 : kind === 'mineshaft' ? 3 : 4);
+  const rng = positionalRandom(seed, x, y, z, salt);
+  for (let i = slotOrder.length - 1; i > 0; i--) {
+    const j = rng.nextInt(i + 1);
+    [slotOrder[i], slotOrder[j]] = [slotOrder[j], slotOrder[i]];
+  }
+  chest.slots = Array.from({ length: chest.slots.length }, () => ItemStack.EMPTY.clone());
+  stacks.forEach((stack, i) => {
+    if (i < slotOrder.length) chest.slots[slotOrder[i]] = stack;
+  });
+}
+
 function fillDungeonChest(seed, x, y, z, chest) {
   const rng = positionalRandom(seed, x, y, z, 3301);
   for (const pool of DUNGEON_LOOT_POOLS) {
@@ -206,6 +223,7 @@ function fillDungeonChest(seed, x, y, z, chest) {
 export function fillGeneratedChest(seed, x, y, z, chest, kind) {
   if (kind === 'dungeon') {
     fillDungeonChest(seed, x, y, z, chest);
+    scatterGeneratedChestLoot(seed, x, y, z, chest, kind);
     return;
   }
   const salt = kind === 'dungeon' ? 3301 : kind === 'village' ? 3302 : kind === 'stronghold' ? 3304 : kind === 'mineshaft' ? 3305 : 3303;
@@ -251,6 +269,7 @@ export function fillGeneratedChest(seed, x, y, z, chest, kind) {
     const [id, min, max] = pool[rng.nextInt(pool.length)];
     chest.insert(ItemStack.of(id, min + rng.nextInt(max - min + 1)));
   }
+  scatterGeneratedChestLoot(seed, x, y, z, chest, kind);
 }
 
 export const ContainerScreensMixin = {
