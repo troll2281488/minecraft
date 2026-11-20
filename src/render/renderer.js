@@ -748,6 +748,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
             const attackProgress = Math.max(0, Math.min(1, (8 - (pose.attackTime ?? 0)) / 8));
             swing = -1.45 * Math.sin(attackProgress * Math.PI);
           }
+          else if (pose.riding && isLeg) swing = -1.05;
           else if (pose.swimming) swing = isArm ? Math.sin(walkPhase * 1.7 + phase) * 0.82 : Math.sin(walkPhase * 1.7 + phase) * 0.52;
           else if (pose.airborne) swing = isArm ? (pose.jumping ? -0.72 : -0.18) : (pose.jumping ? 0.58 : 0.22);
           else if (pose.sneaking) swing = isArm ? 0.18 + Math.sin(walkPhase + phase) * 0.09 : 0.48 + Math.sin(walkPhase + phase) * 0.10;
@@ -864,8 +865,8 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     }
     if (this.thirdPerson) {
       document.getElementById('held-item-view')?.classList.add('hidden');
-      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.ridingHorse && !this.player.onGround, jumping: !this.player.ridingHorse && !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking, walking: !this.player.ridingHorse && this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035, attack: this.player.attackTime > 0, attackTime: this.player.attackTime }, true);
-      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, outerHuman, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, sneaking: this.player.sneaking, skinLayer: true }, true);
+      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.ridingHorse && !this.player.onGround, jumping: !this.player.ridingHorse && !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking || !!this.player.ridingHorse, riding: !!this.player.ridingHorse, walking: !this.player.ridingHorse && this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035, attack: this.player.attackTime > 0, attackTime: this.player.attackTime }, true);
+      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, outerHuman, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.ridingHorse && !this.player.onGround, sneaking: this.player.sneaking || !!this.player.ridingHorse, riding: !!this.player.ridingHorse, skinLayer: true }, true);
       const armorColors = ['#b8b8b8','#8f8f9b','#b17a45','#6c778a'];
       const armorParts = [];
       for (let slot = 36; slot <= 39; slot++) {
