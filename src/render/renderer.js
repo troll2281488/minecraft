@@ -1000,6 +1000,8 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       const itemView = document.getElementById('held-item-view');
       // The hotbar icon is not the held object. Keep the DOM overlay hidden;
       // the item is drawn below as a camera-space 3D sprite/cube.
+      itemView?.classList.add('hidden');
+      if (itemView) itemView.removeAttribute('src');
       if (held && !held.isEmpty && held.item) {
         const id = held.item.id;
         const icon = this.ui.icons.get(id);
