@@ -208,3 +208,33 @@ describe('container edit lock UI gate', () => {
   });
 });
 
+
+
+describe('host furnace lease coordination', () => {
+  it('pauses furnace ticks while another player owns the edit lease', () => {
+    let ticks = 0;
+    const game = Object.assign({}, ContainerScreensMixin, {
+      _containers: new Map([['1,64,2', { type: 'furnace', data: { tick: () => { ticks++; } } }]]),
+      multiplayer: { roomId: 'ABCDE', isHost: true, isContainerLockedByOther: () => true },
+      tickCount: 20,
+    });
+
+    ContainerScreensMixin._tickFurnaces.call(game);
+
+    assertEqual(ticks, 0);
+  });
+
+  it('continues furnace ticks when no other player owns the lease', () => {
+    let ticks = 0;
+    const game = Object.assign({}, ContainerScreensMixin, {
+      _containers: new Map([['1,64,2', { type: 'furnace', data: { tick: () => { ticks++; } } }]]),
+      multiplayer: { roomId: 'ABCDE', isHost: true, isContainerLockedByOther: () => false, pushContainerState() {} },
+      tickCount: 1,
+    });
+
+    ContainerScreensMixin._tickFurnaces.call(game);
+
+    assertEqual(ticks, 1);
+  });
+});
+
