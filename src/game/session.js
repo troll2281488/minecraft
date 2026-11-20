@@ -15,6 +15,7 @@ import { Inventory, CraftingGrid } from './inventory.js';
 import { RECIPES } from './recipes.js';
 import * as storage from '../save/storage.js';
 import { buildSave, exportWorld } from '../save/io.js';
+import { GENERATOR_VERSION } from '../world/gen/terrain.js';
 import { materializeChunk, decodeChunkBinary, encodeChunk } from '../save/format.js';
 
 const SAVE_DIMENSION = { overworld: 'mc:overworld', nether: 'mc:the_nether', end: 'mc:the_end' };
@@ -30,6 +31,12 @@ export const SessionMixin = {
     this.chunkRenderer.dispose();
 
     this.world = new World({ seed: meta.seed, textureTable: this.textureTable, dimension: meta.dimension || 'overworld' });
+    if (this.world.dimension === 'nether' && meta.netherGeneratorVersion !== GENERATOR_VERSION) {
+      if (!this.multiplayer?.roomId) await storage.clearDimensionChunks(meta.id, SAVE_DIMENSION.nether);
+      meta.netherGeneratorVersion = GENERATOR_VERSION;
+      await storage.putWorld(meta);
+      this.ui.toast('Нижний мир обновлён: старая генерация Незера заменена новой.', { duration: 6000 });
+    }
     this.entities?.reset();
     this.world.time = meta.time ?? 0;
 
@@ -129,6 +136,12 @@ export const SessionMixin = {
     this.chunkRenderer.dispose();
     this.world = new World({ seed: this.worldMeta.seed, textureTable: this.textureTable, dimension: next });
     this.worldMeta.dimension = next;
+    if (next === 'nether' && this.worldMeta.netherGeneratorVersion !== GENERATOR_VERSION) {
+      if (!this.multiplayer?.roomId) await storage.clearDimensionChunks(this.worldMeta.id, SAVE_DIMENSION.nether);
+      this.worldMeta.netherGeneratorVersion = GENERATOR_VERSION;
+      await storage.putWorld(this.worldMeta);
+      this.ui.toast('Нижний мир обновлён: старая генерация Незера заменена новой.', { duration: 6000 });
+    }
     this.entities?.reset();
     this.world.time = this.worldMeta.time ?? 0;
     if (!this.multiplayer?.roomId) {
