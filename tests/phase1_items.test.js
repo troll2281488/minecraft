@@ -32,6 +32,10 @@ describe('1.12.2 Phase 1 items', () => {
     assert(ITEMS.get('mc:redstone_torch') !== undefined, 'redstone torch item missing');
     assert(RECIPES.recipes.some((recipe) => recipe.result === 'mc:repeater' && recipe.pattern?.length === 3), 'repeater recipe missing or malformed');
     assert(ITEMS.get('mc:repeater') !== undefined, 'repeater item missing');
+    assert(ITEMS.get('mc:light_weighted_pressure_plate') !== undefined, 'light weighted plate item missing');
+    assert(ITEMS.get('mc:heavy_weighted_pressure_plate') !== undefined, 'heavy weighted plate item missing');
+    assert(RECIPES.recipes.some((recipe) => recipe.result === 'mc:light_weighted_pressure_plate'), 'light weighted plate recipe missing');
+    assert(RECIPES.recipes.some((recipe) => recipe.result === 'mc:heavy_weighted_pressure_plate'), 'heavy weighted plate recipe missing');
     assert(ITEMS.get('mc:redstone_wire') === undefined, 'wire must not add a duplicate creative item');
     for (const id of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak', 'stone', 'polished_blackstone']) {
       assert(RECIPES.recipes.some((recipe) => recipe.result === `mc:${id}_button`), `${id} button recipe missing`);
