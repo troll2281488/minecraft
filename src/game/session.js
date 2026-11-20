@@ -166,8 +166,20 @@ export const SessionMixin = {
     if (safe) this.player.teleport(safe.x,safe.y,safe.z);
     if (next === 'nether') {
       const obsidian=BLOCKS.get('mc:obsidian')?.defaultState;
-      if(obsidian) for(let dz=-2;dz<=2;dz++) for(let dx=-2;dx<=2;dx++) this.world.setBlock(Math.floor(this.player.x)+dx,63,Math.floor(this.player.z)+dz,obsidian);
-      this.player.teleport(Math.floor(this.player.x)+0.5,64,Math.floor(this.player.z)+0.5);
+      const landingX=Math.floor(this.player.x), landingZ=Math.floor(this.player.z);
+      if(obsidian) for(let dz=-2;dz<=2;dz++) for(let dx=-2;dx<=2;dx++) {
+        this.world.setBlock(landingX+dx,63,landingZ+dz,obsidian);
+        this.world.setBlock(landingX+dx,64,landingZ+dz,BLOCKS.get('mc:air').defaultState);
+        this.world.setBlock(landingX+dx,65,landingZ+dz,BLOCKS.get('mc:air').defaultState);
+        this.world.setBlock(landingX+dx,66,landingZ+dz,BLOCKS.get('mc:air').defaultState);
+      }
+      this.player.teleport(landingX+0.5,64,landingZ+0.5);
+      // Build a lit return gate on the safe landing pad.
+      const portal=BLOCKS.get('mc:portal')?.defaultState, gateX=landingX+4, gateZ=landingZ;
+      if(obsidian&&portal) {
+        for(let dx=0;dx<4;dx++) for(let dy=0;dy<5;dy++) if(dx===0||dx===3||dy===0||dy===4) this.world.setBlock(gateX+dx,64+dy,gateZ,obsidian);
+        for(let dx=1;dx<=2;dx++) for(let dy=1;dy<=3;dy++) this.world.setBlock(gateX+dx,64+dy,gateZ,portal);
+      }
       const baseX=36,baseZ=36;
       for(const [dx,dz] of [[0,0],[4,2],[-3,4]]) this.entities?._spawn?.('blaze',baseX+dx,baseZ+dz,{y:53});
       if(!this.worldMeta.netherFortressLootPlaced) {
