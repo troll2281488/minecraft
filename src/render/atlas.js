@@ -676,6 +676,16 @@ TEXTURES.redstone_wire = () => {
   }
   return tile;
 };
+TEXTURES.daylight_detector = () => {
+  const tile = grainy(hex(0x795b3b), 0.08, 'daylight_detector');
+  const quartz = hex(0xd6c6a5), dark = hex(0x4d3827), center = hex(0x9a7952);
+  for(let y=2;y<14;y++) for(let x=2;x<14;x++) {
+    const dx=x-7.5,dy=y-7.5,dist=dx*dx+dy*dy;
+    const c=dist<7?quartz:dist<20?center:dark;
+    setPx(tile,x,y,c[0],c[1],c[2]);
+  }
+  return tile;
+};
 TEXTURES.lever = () => {
   const tile = grainy(hex(0x777777), 0.12, 'lever');
   const light = hex(0xb0b0b0), dark = hex(0x454545);
