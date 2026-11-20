@@ -166,8 +166,8 @@ export const SessionMixin = {
       const baseX=36,baseZ=36;
       for(const [dx,dz] of [[0,0],[4,2],[-3,4]]) this.entities?._spawn?.('blaze',baseX+dx,baseZ+dz,{y:53});
       if(!this.worldMeta.netherFortressLootPlaced) {
-        for (const [cx, cz] of [[46, 53, 36], [60, 53, 34], [69, 53, 38]]) {
-          const chest = this._chestAt?.(cx, cz);
+        for (const [cx, cy, cz] of [[46, 53, 36], [60, 53, 34], [69, 53, 38]]) {
+          const chest = this._chestAt?.(cx, cy, cz);
           if (chest) for (const [id, count] of [['mc:gold_ingot', 3], ['mc:iron_ingot', 2], ['mc:diamond', 1], ['mc:blaze_rod', 1], ['mc:gold_nugget', 8]]) {
             const stack = ItemStack.of(id, count);
             if (stack) chest.insert(stack);
