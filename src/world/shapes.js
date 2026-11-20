@@ -89,6 +89,30 @@ const PANE_BOXES = Object.freeze([
 ]);
 
 // ---------------------------------------------------------------------------
+// Ladders (wall-mounted rails and rungs)
+// ---------------------------------------------------------------------------
+
+const LADDER_CACHE = new Map();
+function ladderBoxes(state) {
+  const facing = state.get('facing') || 'north';
+  if (LADDER_CACHE.has(facing)) return LADDER_CACHE.get(facing);
+  const boxes = [];
+  const horizontal = facing === 'north' || facing === 'south';
+  const plane = facing === 'north' ? [0, 0.125] : facing === 'south' ? [0.875, 1]
+    : facing === 'west' ? [0, 0.125] : [0.875, 1];
+  if (horizontal) {
+    boxes.push([0.08, 0, plane[0], 0.2, 1, plane[1]], [0.8, 0, plane[0], 0.92, 1, plane[1]]);
+    for (let i = 1; i <= 7; i++) { const y = i / 8; boxes.push([0.08, y, plane[0], 0.92, y + 0.055, plane[1]]); }
+  } else {
+    boxes.push([plane[0], 0, 0.08, plane[1], 1, 0.2], [plane[0], 0, 0.8, plane[1], 1, 0.92]);
+    for (let i = 1; i <= 7; i++) { const z = i / 8; boxes.push([plane[0], 0, z, plane[1], 1, z + 0.055]); }
+  }
+  const frozen = Object.freeze(boxes.map((box) => Object.freeze(box)));
+  LADDER_CACHE.set(facing, frozen);
+  return frozen;
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -100,7 +124,7 @@ export function shapeBoxes(state) {
   switch (state.block.renderShape) {
     case 'slab': return slabBoxes(state);
     case 'stair': return stairBoxes(state);
-    case 'pane': return PANE_BOXES;
+    case 'pane': return PANE_BOXES;\n    case 'ladder': return ladderBoxes(state);
     default: return FULL_LIST;
   }
 }
@@ -117,8 +141,8 @@ export function collisionBoxes(state) {
 /** True if this block is anything other than a plain full cube. */
 export function isNonCube(state) {
   const shape = state.block.renderShape;
-  return shape === 'slab' || shape === 'stair' || shape === 'pane';
+  return shape === 'slab' || shape === 'stair' || shape === 'pane' || shape === 'ladder';
 }
 
 /** The shapes the mesher must render with the box emitter rather than as a cube. */
-export const BOX_SHAPES = Object.freeze(new Set(['slab', 'stair', 'pane']));
+export const BOX_SHAPES = Object.freeze(new Set(['slab', 'stair', 'pane', 'ladder']));
