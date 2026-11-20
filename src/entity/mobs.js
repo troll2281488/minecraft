@@ -43,6 +43,22 @@ export const MOB_AI_PROFILES = Object.freeze({
   spider: Object.freeze({ detectionRange: 16, speedMultiplier: 1.48, meleeRange: 1.55, attackCooldown: 28, damage: 2, role: 'ambusher' }),
   cave_spider: Object.freeze({ detectionRange: 16, speedMultiplier: 1.35, meleeRange: 1.5, attackCooldown: 30, damage: 2, role: 'ambusher' }),
   enderman: Object.freeze({ detectionRange: 16, speedMultiplier: 1.25, meleeRange: 1.5, attackCooldown: 30, damage: 4, role: 'stalker' }),
+  husk: Object.freeze({ detectionRange: 14, speedMultiplier: 1, meleeRange: 1.35, attackCooldown: 40, damage: 1, role: 'pursuer' }),
+  zombie_villager: Object.freeze({ detectionRange: 14, speedMultiplier: 1, meleeRange: 1.35, attackCooldown: 40, damage: 1, role: 'pursuer' }),
+  wither_skeleton: Object.freeze({ detectionRange: 16, speedMultiplier: 1.08, meleeRange: 1.5, attackCooldown: 36, damage: 3, role: 'pursuer' }),
+  silverfish: Object.freeze({ detectionRange: 12, speedMultiplier: 1.25, meleeRange: 1.2, attackCooldown: 24, damage: 1, role: 'ambusher' }),
+  endermite: Object.freeze({ detectionRange: 12, speedMultiplier: 1.3, meleeRange: 1.2, attackCooldown: 24, damage: 1, role: 'ambusher' }),
+  slime: Object.freeze({ detectionRange: 12, speedMultiplier: 0.9, meleeRange: 1.5, attackCooldown: 32, damage: 2, role: 'jumper' }),
+  magma_cube: Object.freeze({ detectionRange: 12, speedMultiplier: 1, meleeRange: 1.5, attackCooldown: 32, damage: 3, role: 'jumper' }),
+  vex: Object.freeze({ detectionRange: 18, speedMultiplier: 1.5, meleeRange: 1.3, attackCooldown: 24, damage: 2, role: 'flying-ambusher' }),
+  vindicator: Object.freeze({ detectionRange: 18, speedMultiplier: 1.12, meleeRange: 1.5, attackCooldown: 32, damage: 3, role: 'pursuer' }),
+  evoker: Object.freeze({ detectionRange: 18, speedMultiplier: 0.78, rangedRange: 12, preferredRange: 8, attackCooldown: 70, damage: 3, role: 'caster' }),
+  witch: Object.freeze({ detectionRange: 18, speedMultiplier: 0.78, rangedRange: 12, preferredRange: 8, attackCooldown: 65, damage: 2, role: 'caster' }),
+  blaze: Object.freeze({ detectionRange: 20, speedMultiplier: 0.9, rangedRange: 16, preferredRange: 10, attackCooldown: 45, damage: 3, role: 'flying-ranged' }),
+  ghast: Object.freeze({ detectionRange: 24, speedMultiplier: 0.55, rangedRange: 20, preferredRange: 14, attackCooldown: 80, damage: 4, role: 'flying-ranged' }),
+  guardian: Object.freeze({ detectionRange: 18, speedMultiplier: 0.8, rangedRange: 14, preferredRange: 9, attackCooldown: 55, damage: 2, role: 'aquatic-ranged' }),
+  elder_guardian: Object.freeze({ detectionRange: 22, speedMultiplier: 0.65, rangedRange: 16, preferredRange: 10, attackCooldown: 60, damage: 3, role: 'aquatic-ranged' }),
+  wither: Object.freeze({ detectionRange: 24, speedMultiplier: 0.85, rangedRange: 18, preferredRange: 10, attackCooldown: 45, damage: 4, role: 'boss' }),
 });
 
 export const MOB_TYPES_112 = Object.freeze([
@@ -386,10 +402,10 @@ export class MobSystem {
       id: this.nextId++, type, x: x + 0.5, y, z: z + 0.5,
       yaw: Math.random() * Math.PI * 2,
       targetYaw: Math.random() * Math.PI * 2,
-      speed: ['zombie','skeleton','stray','spider','creeper'].includes(type) ? 0.035 : type === 'enderman' ? 0.045 : 0.018,
+      speed: MOB_AI_PROFILES[type] ? 0.035 : 0.018,
       thinkTicks: 0, attackTicks: 0, walkPhase: Math.random() * 6,
       moveTicks: 0, pauseTicks: 45 + Math.floor(Math.random() * 100),
-      health: ({ zombie:20, skeleton:20, stray:20, creeper:20, enderman:40, spider:16, cow:10, pig:10, chicken:4, sheep:8, mooshroom:10, rabbit:3, wolf:8, horse:30, polar_bear:30, villager:20 })[type] ?? 10,
+      health: ({ zombie:20, husk:20, zombie_villager:20, skeleton:20, stray:20, wither_skeleton:20, creeper:20, enderman:40, spider:16, cave_spider:12, silverfish:8, endermite:8, slime:16, magma_cube:16, vex:14, vindicator:24, evoker:24, witch:26, blaze:20, ghast:10, guardian:30, elder_guardian:80, wither:300, cow:10, pig:10, chicken:4, sheep:8, mooshroom:10, rabbit:3, wolf:8, horse:30, polar_bear:30, villager:20 })[type] ?? 10,
       sheared: false, hurtTicks: 0, fuseTicks: 0,
       ageTicks: 0, loveTicks: 0, breedCooldown: 0,
       anim: { walk: 0, idle: Math.random() * Math.PI * 2, attack: 0, hurt: 0, fuse: 0 },
@@ -442,7 +458,7 @@ export class MobSystem {
 
   /** Spawn a supported creature from a creative egg on the clicked block. */
   spawnFromEgg(type, x, z) {
-    if (!['cow','pig','sheep','chicken','mooshroom','rabbit','wolf','horse','polar_bear','zombie','skeleton','stray','creeper','enderman','spider','cave_spider','villager'].includes(type)) return false;
+    if (!['cow','pig','sheep','chicken','mooshroom','rabbit','wolf','horse','polar_bear','zombie','husk','zombie_villager','skeleton','stray','wither_skeleton','creeper','enderman','spider','cave_spider','silverfish','endermite','slime','magma_cube','vex','vindicator','evoker','witch','blaze','ghast','guardian','elder_guardian','wither','villager'].includes(type)) return false;
     if (type === 'villager') {
       const world = this.game.world;
       const y = world.getHeight(x, z);
