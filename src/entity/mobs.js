@@ -168,7 +168,7 @@ export class MobSystem {
       : blockId.includes('ore') ? [0.48, 0.47, 0.43, 1]
       : blockId.includes('wood') || blockId.includes('log') ? [0.42, 0.29, 0.16, 1]
       : [0.55, 0.55, 0.55, 1];
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < count; i++) {
       this.blockParticles.push({
         x: x + 0.2 + Math.random() * 0.6,
         y: y + 0.2 + Math.random() * 0.6,
