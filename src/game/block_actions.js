@@ -13,7 +13,7 @@
 import { BLOCKS, AIR } from '../world/block.js';
 import { ITEMS, ItemStack } from '../world/item.js';
 import { GAMEMODE } from '../entity/player.js';
-import { experienceForBlock } from '../entity/experience.js';
+import { experienceForBlock, experienceForVillagerTrade } from '../entity/experience.js';
 import {
   placementTarget, orientPlacement, blockDrops, wouldTrapPlayer, canHarvest,
 } from './interaction.js';
@@ -166,6 +166,9 @@ export const BlockActionsMixin = {
             this.ui.toast(result.reason, { error: true });
           } else {
             this.ui.updateHotbar(this.inventory);
+            if (this.player?.gamemode === GAMEMODE.SURVIVAL) {
+              this.entities?.spawnExperienceOrbs(experienceForVillagerTrade(), villager.x, villager.y + 0.5, villager.z);
+            }
             this.ui.toast(result.unlocked ? 'Новая сделка открыта!' : 'Обмен выполнен');
             refresh();
           }
