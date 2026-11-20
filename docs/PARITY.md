@@ -206,6 +206,10 @@ brewing, dimensions, structures, villagers and audio are not implemented. See
 Player movement now detects ladder contact: forward or jump input climbs at a capped upward velocity, falling is limited while attached, and sneaking holds vertical position. This is an initial movement implementation; directional attachment validation and exact vanilla climbing acceleration remain parity work.
 
 
+### Redstone ore
+
+Redstone ore has a saved lit state. Right-clicking it or stepping on it activates a 30-tick glow; the lit state emits block light level 9 and uses a brighter procedural texture. Repeated contact refreshes the timer. This is a local player-contact approximation; projectile activation, exact vanilla mining-start hooks and mob contact are not included.
+
 ### Pistons
 
 Normal and sticky pistons now react to adjacent local redstone signals. Extension validates the complete push line before mutating anything, moves up to 12 movable blocks from farthest to nearest, creates an oriented internal piston head, and records the extended blockstate. Retraction removes the head; sticky pistons pull one movable block from two blocks ahead when the front cell is clear. Bedrock, obsidian, portal blocks, piston parts, containers, spawners and other registered immovable IDs block movement. The piston head has a shared render/collision box model. This remains a deliberately bounded first implementation: no slime/honey adhesion, moving-block entity interpolation, quasi-connectivity, block-entity movement, or complete Java neighbor-update scheduler.
