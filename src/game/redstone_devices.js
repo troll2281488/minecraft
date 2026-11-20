@@ -14,7 +14,7 @@ function readSignal(world, x, y, z, targetX, targetY, targetZ) {
   const state = world.getBlock(x,y,z);
   if (state.block.id === 'mc:redstone_block') return 15;
   if (state.block.renderShape === 'redstone_wire') return state.get('power') || 0;
-  if (state.block.renderShape === 'redstone_torch') return 15;
+  if (state.block.id === 'mc:redstone_torch') return 15;
   if ((state.block.renderShape === 'lever' || state.block.renderShape === 'button' || state.block.renderShape === 'pressure_plate') && state.get('powered')) return 15;
   if (state.block.renderShape === 'repeater' && state.get('powered')) {
     const [dx,dy,dz] = FACING_VECTOR[state.get('facing')] || [0,0,-1];
