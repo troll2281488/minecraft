@@ -81,6 +81,11 @@ export function calculateArmorDamage(damage, armorPoints = 0, toughness = 0) {
   return damage * (1 - effectiveArmor / 25);
 }
 
+export function calculateHorseArmorDamage(damage, material = null) {
+  const points = ({ leather: 3, iron: 5, golden: 7, diamond: 11 })[material] || 0;
+  return calculateArmorDamage(damage, points, 0);
+}
+
 export function rollMobDrops(type, random = Math.random) {
   const amount = (min, max) => min + Math.floor(random() * (max - min + 1));
   if (type === 'pig') return [{ id: 'mc:raw_porkchop', count: amount(1, 3) }];
@@ -215,7 +220,7 @@ export class MobSystem {
       );
       if (result.hit === 'mob' && result.mob) {
         const mob = result.mob;
-        mob.health = Math.max(0, mob.health - arrow.damage);
+        mob.health = Math.max(0, mob.health - (mob.type === 'horse' ? calculateHorseArmorDamage(arrow.damage, mob.horseArmor) : arrow.damage));
         mob.hurtTicks = 10;
         mob.anim.hurt = 1;
       }
@@ -746,7 +751,8 @@ export class MobSystem {
     const player = this.game.player;
     const held = this.game.inventory?.held;
     const damage = Math.max(1, held?.item?.attackDamage || 1);
-    mob.health = Math.max(0, mob.health - damage);
+    const finalDamage = mob.type === 'horse' ? calculateHorseArmorDamage(damage, mob.horseArmor) : damage;
+    mob.health = Math.max(0, mob.health - finalDamage);
     this.game.sounds?.play('hit');
     mob.hurtTicks = 10;
     mob.anim.hurt = 1;
