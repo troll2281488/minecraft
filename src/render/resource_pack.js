@@ -84,7 +84,7 @@ async function mapWithLimit(values, limit, task) {
 }
 
 /** Load every matching block/item texture and the legacy HUD sprites used by this game. */
-export async function loadItsBrianTextures(blocks, items) {
+export async function loadCommunityTextures(blocks, items) {
   const blockNames = new Set();
   for (const state of blocks.statesById) {
     const t = state.block.textures;
@@ -115,16 +115,7 @@ export async function loadItsBrianTextures(blocks, items) {
     mossy_cobblestone: 'mossy_cobblestone',
     chest_top: 'chest_front',
     chest_side: 'chest_side',
-    oak_log: 'acacia_log',
-    oak_log_top: 'acacia_log',
-    birch_log: 'acacia_log',
-    birch_log_top: 'acacia_log',
-    spruce_log: 'acacia_log',
-    spruce_log_top: 'acacia_log',
-    jungle_log: 'acacia_log',
-    jungle_log_top: 'acacia_log',
-    dark_oak_log: 'acacia_log',
-    dark_oak_log_top: 'acacia_log',
+    
   };
   const simpleLeafNames = {
     oak_leaves: 'leaves_oak',
@@ -134,11 +125,24 @@ export async function loadItsBrianTextures(blocks, items) {
     acacia_leaves: 'leaves_acacia',
     dark_oak_leaves: 'leaves_big_oak',
   };
+  const simpleTextureNames = {
+    ...simpleLeafNames,
+    oak_log: 'log_oak', oak_log_top: 'log_oak_top',
+    spruce_log: 'log_spruce', spruce_log_top: 'log_spruce_top',
+    birch_log: 'log_birch', birch_log_top: 'log_birch_top',
+    jungle_log: 'log_jungle', jungle_log_top: 'log_jungle_top',
+    acacia_log: 'log_acacia', acacia_log_top: 'log_acacia_top',
+    dark_oak_log: 'log_big_oak', dark_oak_log_top: 'log_big_oak_top',
+    oak_sapling: 'sapling_oak', spruce_sapling: 'sapling_spruce',
+    birch_sapling: 'sapling_birch', jungle_sapling: 'sapling_jungle',
+    acacia_sapling: 'sapling_acacia', dark_oak_sapling: 'sapling_roofed_oak',
+    short_grass: 'tallgrass',
+  };
   const blockEntries = await mapWithLimit([...blockNames], 24, async (name) => {
-    const leafName = simpleLeafNames[name];
+    const communityName = simpleTextureNames[name];
     const sourceName = blockAliases[name] ?? name;
-    let bitmap = leafName
-      ? await fetchImage(encodeURIComponent(leafName) + '.png', SIMPLE_RP_RAW)
+    const bitmap = communityName
+      ? await fetchImage(encodeURIComponent(communityName) + '.png', SIMPLE_RP_RAW)
       : await fetchImage(encodeURIComponent(sourceName) + '.png');
     // A few files in older resource packs use legacy names. Missing textures are
     // left to the atlas fallback instead of requesting ItsBrian or painting pixels.
@@ -152,7 +156,7 @@ export async function loadItsBrianTextures(blocks, items) {
   const itemEntries = await mapWithLimit([...items.items.values()].filter(shouldFetchExternalItemTexture), 12, async (item) => {
     const name = item.id.slice(item.id.indexOf(':') + 1);
     const sourceName = ITEM_TEXTURE_ALIASES[name] ?? name;
-    const bitmap = await fetchImage('item/' + encodeURIComponent(sourceName) + '.png');
+    const bitmap = await fetchImage(encodeURIComponent(sourceName) + '.png', FLOYDICUS_RAW + 'item/');
     if (!bitmap) return null;
     const { canvas } = canvasFor(bitmap);
     bitmap.close();
@@ -161,7 +165,7 @@ export async function loadItsBrianTextures(blocks, items) {
 
   const uiEntries = await Promise.all(Object.entries(UI_TEXTURES).map(async ([key, path]) => {
     try {
-      const bitmap = await fetchImage(path);
+      const bitmap = await fetchImage(path, FLOYDICUS_RAW);
       if (!bitmap) return null;
       const canvas = document.createElement('canvas');
       canvas.width = bitmap.width;
@@ -176,7 +180,7 @@ export async function loadItsBrianTextures(blocks, items) {
 
   const hud = {};
   try {
-    const bitmap = await fetchImage('gui/icons.png');
+    const bitmap = await fetchImage('gui/icons.png', FLOYDICUS_RAW);
     if (bitmap) {
       const crop = (key, sx, sy) => {
         const canvas = document.createElement('canvas');
