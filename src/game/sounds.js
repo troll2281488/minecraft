@@ -36,6 +36,11 @@ export const SOUND_PRESETS = Object.freeze({
   click:{f:520,d:.035,type:'square',volume:.035}, toast:{f:720,d:.10,type:'sine',volume:.045},
 });
 const MATERIAL_PITCH = Object.freeze({wood:.78,grass:1.28,stone:1,sand:.92,metal:1.55,glass:1.8});
+
+export function noteBlockFrequency(note) {
+  const pitch = Math.max(0, Math.min(24, Math.floor(Number(note) || 0)));
+  return 440 * Math.pow(2, (pitch - 12) / 12);
+}
 export class GameSounds {
   constructor(){this.context=null;this.lastStep=0;this.enabled=true;this.masterVolume=1;}
   _ctx(){
@@ -64,6 +69,17 @@ export class GameSounds {
     osc.type=p.type;osc.frequency.setValueAtTime(frequency,now);
     osc.frequency.exponentialRampToValueAtTime(Math.max(30,frequency*.55),now+p.d);
     osc.connect(gain);osc.start(now);osc.stop(now+p.d+.015);
+  }
+  playNote(note, material = 'wood'){
+    const c=this._ctx();if(!c)return false;
+    const now=c.currentTime,gain=c.createGain(),osc=c.createOscillator();
+    const instrument=material==='metal'?'square':material==='stone'||material==='sand'?'triangle':'sine';
+    const frequency=noteBlockFrequency(note);
+    gain.gain.setValueAtTime(.085*this.masterVolume,now);
+    gain.gain.exponentialRampToValueAtTime(.001,now+.32);gain.connect(c.destination);
+    osc.type=instrument;osc.frequency.setValueAtTime(frequency,now);
+    osc.connect(gain);osc.start(now);osc.stop(now+.34);
+    return true;
   }
   step(material){
     const now=globalThis.performance?.now?.()??0;
