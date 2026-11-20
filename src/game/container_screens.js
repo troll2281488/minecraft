@@ -129,6 +129,7 @@ export function generatedChestKind(seed, x, y, z) {
       // The three room types are placed at fixed, world-seed-derived
       // coordinates by TerrainGenerator.placeStronghold.
       if (x === stronghold.x + 2 && z === stronghold.z + 2) return 'stronghold_crossing';
+      if (x === stronghold.x + 7 && z === stronghold.z - 24) return 'stronghold_crossing';
       if ((x === stronghold.x - 10 && z === stronghold.z + 8) ||
           (x === stronghold.x - 6 && z === stronghold.z + 8)) return 'stronghold_library';
       if (x === stronghold.x + 20 && z === stronghold.z + 10) return 'stronghold_corridor';
