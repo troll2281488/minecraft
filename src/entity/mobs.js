@@ -293,7 +293,7 @@ export class MobSystem {
       speed: ['zombie','skeleton','stray','spider','creeper'].includes(type) ? 0.035 : type === 'enderman' ? 0.045 : 0.018,
       thinkTicks: 0, attackTicks: 0, walkPhase: Math.random() * 6,
       moveTicks: 0, pauseTicks: 45 + Math.floor(Math.random() * 100),
-      health: ({ zombie:20, skeleton:20, stray:20, creeper:20, enderman:40, spider:16, cow:10, pig:10, chicken:4, sheep:8, mooshroom:10, rabbit:3, wolf:8, polar_bear:30, villager:20 })[type] ?? 10,
+      health: ({ zombie:20, skeleton:20, stray:20, creeper:20, enderman:40, spider:16, cow:10, pig:10, chicken:4, sheep:8, mooshroom:10, rabbit:3, wolf:8, horse:30, polar_bear:30, villager:20 })[type] ?? 10,
       sheared: false, hurtTicks: 0, fuseTicks: 0,
       ageTicks: 0, loveTicks: 0, breedCooldown: 0,
       anim: { walk: 0, idle: Math.random() * Math.PI * 2, attack: 0, hurt: 0, fuse: 0 },
@@ -346,7 +346,7 @@ export class MobSystem {
 
   /** Spawn a supported creature from a creative egg on the clicked block. */
   spawnFromEgg(type, x, z) {
-    if (!['cow','pig','sheep','chicken','mooshroom','rabbit','wolf','polar_bear','zombie','skeleton','stray','creeper','enderman','spider','cave_spider','villager'].includes(type)) return false;
+    if (!['cow','pig','sheep','chicken','mooshroom','rabbit','wolf','horse','polar_bear','zombie','skeleton','stray','creeper','enderman','spider','cave_spider','villager'].includes(type)) return false;
     if (type === 'villager') {
       const world = this.game.world;
       const y = world.getHeight(x, z);
@@ -478,6 +478,52 @@ export class MobSystem {
     this.fishing = null;
     this.game.ui?.toast('Поймано: ' + caught.id.replace('mc:', ''));
     return true;
+  }
+
+
+  tameFromPlayer() {
+    const mob = this.targetedMob();
+    const held = this.game.inventory?.held;
+    const player = this.game.player;
+    if (!mob || !player || !['survival', 'creative'].includes(player.gamemode)) return false;
+
+    if (mob.type === 'wolf' && !mob.tamed && held?.item?.id === 'mc:bone') {
+      if (player.gamemode !== 'creative') this.game.inventory.consumeHeld(1);
+      mob.tameProgress = (mob.tameProgress || 0) + 1;
+      if (mob.tameProgress >= 2) {
+        mob.tamed = true;
+        mob.owner = 'player';
+        mob.health = Math.max(mob.health, 20);
+        mob.sitting = false;
+        this.game.ui?.toast('Волк приручён!');
+      } else this.game.ui?.toast('Волк доверяет тебе больше. Дай ещё кость.');
+      return true;
+    }
+
+    if (mob.type === 'horse' && !mob.tamed && (!held || held.isEmpty)) {
+      mob.tameProgress = (mob.tameProgress || 0) + 1;
+      if (mob.tameProgress >= 3) {
+        mob.tamed = true;
+        mob.owner = 'player';
+        this.game.ui?.toast('Лошадь приручена! Теперь надень на неё седло.');
+      } else this.game.ui?.toast('Лошадь пока не доверяет тебе. Попробуй ещё раз.');
+      return true;
+    }
+
+    if (mob.type === 'horse' && mob.tamed && held?.item?.id === 'mc:saddle' && !mob.saddled) {
+      if (player.gamemode !== 'creative') this.game.inventory.consumeHeld(1);
+      mob.saddled = true;
+      this.game.ui?.toast('Седло надето на лошадь');
+      return true;
+    }
+
+    if (mob.type === 'horse' && mob.tamed && held?.item?.horseArmor && !mob.horseArmor) {
+      mob.horseArmor = held.item.horseArmor;
+      if (player.gamemode !== 'creative') this.game.inventory.consumeHeld(1);
+      this.game.ui?.toast('Броня надета на лошадь');
+      return true;
+    }
+    return false;
   }
 
   feedAnimalFromPlayer() {
@@ -702,6 +748,8 @@ export class MobSystem {
             type = roll < 0.48 ? 'sheep' : roll < 0.76 ? 'pig' : 'chicken';
           } else if (roll < 0.07) {
             type = 'wolf';
+          } else if (roll < 0.12) {
+            type = 'horse';
           } else {
             type = roll < 0.28 ? 'sheep' : roll < 0.52 ? 'pig' : roll < 0.82 ? 'cow' : 'chicken';
           }
@@ -723,6 +771,18 @@ export class MobSystem {
       mob.anim.walk = mob.walkPhase;
       if (mob.hurtTicks > 0) mob.hurtTicks--;
       mob.anim.hurt = mob.hurtTicks > 0 ? mob.hurtTicks / 8 : 0;
+
+      if (this.game.daylight > 0.82 && ['zombie', 'skeleton', 'stray'].includes(mob.type)) {
+        const above = world.getBlock(Math.floor(mob.x), Math.floor(mob.y + 2), Math.floor(mob.z)).block;
+        if (!above.solid && !above.liquid) {
+          mob.sunBurnTicks = (mob.sunBurnTicks || 0) + 1;
+          if (mob.sunBurnTicks >= 20) {
+            mob.sunBurnTicks = 0;
+            mob.health -= 2;
+            mob.hurtTicks = 5;
+          }
+        } else mob.sunBurnTicks = 0;
+      }
 
       const profile = MOB_AI_PROFILES[mob.type] ?? null;
       const hostileType = profile !== null;
