@@ -402,14 +402,14 @@ export class TerrainGenerator {
   generateNetherChunk(chunk) {
     const baseX = chunk.cx * CHUNK_SIZE, baseZ = chunk.cz * CHUNK_SIZE;
     const S = this.states.byId, netherrack = S['mc:netherrack'] || S['mc:stone'];
-    const bedrock = S['mc:bedrock'], lava = netherrack;
+    const bedrock = S['mc:bedrock'], lava = S['mc:lava'] || netherrack;
     const soul = S['mc:soul_sand'] || netherrack, gravel = S['mc:gravel'] || netherrack;
     const glowstone = S['mc:glowstone'] || netherrack;
     for (let z=0; z<CHUNK_SIZE; z++) for (let x=0; x<CHUNK_SIZE; x++) {
       const wx=baseX+x, wz=baseZ+z;
       const cave=this.caveA.sample3(wx*0.035, 62*0.035, wz*0.035);
       const ceiling=112+Math.floor(this.detail.sample2(wx,wz,0.018)*9);
-      const floor=28+Math.floor(this.detail.sample2(wx+91,wz-37,0.02)*8);
+      const floor = Math.hypot(wx,wz)<58 ? 30 : 28+Math.floor(this.detail.sample2(wx+91,wz-37,0.02)*8);
       for(let y=MIN_Y;y<MAX_Y;y++) {
         let state=null;
         if(y<=MIN_Y+1 || y>=ceiling-1) state=bedrock;
@@ -435,14 +435,15 @@ export class TerrainGenerator {
     const minZ=Math.floor((baseZ-48)/384), maxZ=Math.floor((baseZ+CHUNK_SIZE+48)/384);
     for(let gz=minZ;gz<=maxZ;gz++) for(let gx=minX;gx<=maxX;gx++) {
       const rng=positionalRandom(this.seed,gx,4101,gz,4101);
-      if(rng.nextInt(3)!==0) continue;
-      const x=gx*384+64+rng.nextInt(256), z=gz*384+64+rng.nextInt(256), y=48+rng.nextInt(20);
+      if((gx!==0||gz!==0)&&rng.nextInt(3)!==0) continue;
+      const x=gx===0&&gz===0?36:gx*384+64+rng.nextInt(256), z=gx===0&&gz===0?36:gz*384+64+rng.nextInt(256), y=gx===0&&gz===0?52:48+rng.nextInt(20);
       const put=(wx,wy,wz,state)=>{if(!state)return;const lx=wx-baseX,lz=wz-baseZ;if(lx>=0&&lx<16&&lz>=0&&lz<16&&wy>=MIN_Y&&wy<MAX_Y)chunk.setBlock(lx,wy,lz,state);};
-      const length=38+rng.nextInt(24);
+      const length=gx===0&&gz===0?34:38+rng.nextInt(24), air=S['mc:air'];
       for(let i=0;i<length;i++) for(let dx=-2;dx<=2;dx++) {
         put(x+i,y,z+dx,brick); put(x+i,y+5,z+dx,brick);
-        for(let dy=1;dy<5;dy++) put(x+i,y+dy,z+dx,(dx===-2||dx===2)?brick:null);
+        for(let dy=1;dy<5;dy++) { if(Math.abs(dx)<=1) put(x+i,y+dy,z+dx,air); if(Math.abs(dx)===2) put(x+i,y+dy,z+dx,brick); }
       }
+      if(gx===0&&gz===0) put(x+10,y+1,z,S['mc:chest']);
       for(const offset of [8,24]) {
         for(let dx=-4;dx<=4;dx++) for(let dz=-4;dz<=4;dz++) {
           put(x+offset+dx,y+6,z+dz,brick);
