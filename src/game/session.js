@@ -10,6 +10,7 @@ import { SAVE } from '../core/constants.js';
 import { World } from '../world/world.js';
 import { Player } from '../entity/player.js';
 import { BLOCKS } from '../world/block.js';
+import { ItemStack } from '../world/item.js';
 import { Inventory, CraftingGrid } from './inventory.js';
 import { RECIPES } from './recipes.js';
 import * as storage from '../save/storage.js';
@@ -65,6 +66,19 @@ export const SessionMixin = {
     if (isNew) {
       const spawn = await this._findSafeSpawn();
       this.player.teleport(spawn.x, spawn.y, spawn.z);
+      if (meta.bonusChest && !meta.bonusChestSpawned) {
+        const chestX = Math.floor(spawn.x + 2), chestY = Math.floor(spawn.y), chestZ = Math.floor(spawn.z + 1);
+        const chestBlock = BLOCKS.get('mc:chest');
+        if (chestBlock && this.world.setBlock(chestX, chestY, chestZ, chestBlock.defaultState)) {
+          const chest = this._chestAt(chestX, chestY, chestZ);
+          for (const [id, count] of [['mc:oak_planks', 16], ['mc:stick', 8], ['mc:bread', 3], ['mc:apple', 3], ['mc:wooden_pickaxe', 1], ['mc:wooden_axe', 1]]) {
+            const item = ItemStack.of(id, count);
+            if (item) chest.insert(item);
+          }
+          meta.bonusChestSpawned = true;
+          await storage.putWorld(meta);
+        }
+      }
     } else {
       // Old saves may contain the previous ocean fallback position. Inspect
       // the player's feet column down to the first solid floor: if water is
@@ -204,6 +218,12 @@ export const SessionMixin = {
   async _respawnAfterDeath() {
     if (!this.world || !this.player) return;
     const spawn = await this._findSafeSpawn();
+    if (this.worldMeta?.keepInventory === false) {
+      for (let slot = 0; slot < this.inventory.slots.length; slot++) {
+        const stack = this.inventory.get(slot);
+        if (!stack.isEmpty) { this.entities?.dropStack(stack.clone()); this.inventory.set(slot, null); }
+      }
+    }
     this.player.teleport(spawn.x, spawn.y, spawn.z);
     this.player.health = 20;
     this.player.vitals = new this.player.vitals.constructor();
@@ -216,7 +236,7 @@ export const SessionMixin = {
     document.body.classList.remove('menu-active');
     this._requestPointerLock();
     await this._save(false);
-    this.ui.toast('Ты возродился на точке появления. Инвентарь сохранён.');
+    this.ui.toast(this.worldMeta?.keepInventory === false ? 'Ты возродился. Предметы остались на месте гибели.' : 'Ты возродился на точке появления. Инвентарь сохранён.');
   },
 
   async _quitToTitle() {
