@@ -1,5 +1,24 @@
 import { describe, it, assertEqual } from './framework.js';
-import { electRoomHost, listJoinableRooms } from '../src/game/multiplayer.js';
+import { electRoomHost, listJoinableRooms, queueContainerWrite } from '../src/game/multiplayer.js';
+
+describe('multiplayer container write queue', () => {
+  it('keeps only the newest pending snapshot for a room and container', () => {
+    const queue = new Map();
+    queueContainerWrite(queue, 'ABCDE', '1,64,2', { slots: [1] });
+    queueContainerWrite(queue, 'ABCDE', '1,64,2', { slots: [2] });
+    assertEqual(queue.size, 1);
+    assertEqual(queue.get('ABCDE:1,64,2').record.slots[0], 2);
+  });
+  it('keeps rooms isolated and bounds pending container writes', () => {
+    const queue = new Map();
+    queueContainerWrite(queue, 'ABCDE', '1,64,2', { value: 1 }, 2);
+    queueContainerWrite(queue, 'ABCDE', '2,64,2', { value: 2 }, 2);
+    queueContainerWrite(queue, 'FGHIJ', '1,64,2', { value: 3 }, 2);
+    assertEqual(queue.size, 2);
+    assertEqual(queue.has('ABCDE:1,64,2'), false);
+    assertEqual(queue.has('FGHIJ:1,64,2'), true);
+  });
+});
 
 describe('multiplayer room recovery', () => {
   it('keeps the current host while that player is still in the room', () => {
