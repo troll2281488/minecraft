@@ -91,6 +91,7 @@ export const PROPS = {
   level: intProp('level', 0, 15),
   power: intProp('power', 0, 15),
   repeaterDelay: intProp('delay', 1, 4),
+  repeaterDelay: intProp('delay', 1, 4),
   layers: intProp('layers', 1, 8),
   north: boolProp('north'),
   south: boolProp('south'),
