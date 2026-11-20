@@ -115,6 +115,66 @@ export function placeDungeonRoom(w,S,room,seed,heights) {
   if(spawner) w.set(room.x+3,room.y+1,room.z+3,spawner);
 }
 
+/**
+ * Java 1.19 stronghold portal chamber: a 5x5 frame ring, 15 lava sources,
+ * a staircase spawner, and deterministic 10% eye prefill per frame.
+ */
+export function placeStrongholdPortalRoom(w, S, site, seed) {
+  const brick = S['mc:stone_bricks'] || S['mc:cobblestone'];
+  const mossy = S['mc:mossy_stone_bricks'] || S['mc:mossy_cobblestone'] || brick;
+  const frame = S['mc:end_portal_frame'];
+  if (!brick || !frame) return;
+  const y0 = site.y, px = site.x + 18, pz = site.z + 5;
+  for (let dx = 0; dx < 11; dx++) for (let dz = 0; dz < 11; dz++) {
+    w.set(px + dx, y0, pz + dz, brick);
+    if (dx === 0 || dx === 10 || dz === 0 || dz === 10) {
+      for (let dy = 1; dy <= 5; dy++) {
+        const wall = hash01(seedToInt(normalizeSeed(seed)), px + dx, y0 + dy, pz + dz, 7311) < 0.18 ? mossy : brick;
+        w.set(px + dx, y0 + dy, pz + dz, wall);
+      }
+    }
+  }
+  const lava = S['mc:lava'];
+  if (lava) {
+    for (let dz = 4; dz <= 6; dz++) {
+      for (let dx = 4; dx <= 6; dx++) w.set(px + dx, y0, pz + dz, lava);
+      w.set(px + 2, y0, pz + dz, lava);
+      w.set(px + 8, y0, pz + dz, lava);
+    }
+  }
+  const framePositions = [];
+  for (let i = 0; i < 3; i++) {
+    framePositions.push([px + 4 + i, pz + 2, 'south']);
+    framePositions.push([px + 4 + i, pz + 8, 'north']);
+    framePositions.push([px + 2, pz + 4 + i, 'east']);
+    framePositions.push([px + 8, pz + 4 + i, 'west']);
+  }
+  for (const [x, z, facing] of framePositions) {
+    const rng = positionalRandom(seed, x, y0 + 1, z, 0x454e4450);
+    let state = frame.with('facing', facing);
+    if (rng.nextInt(10) === 0) state = state.with('eye', true);
+    w.set(x, y0 + 1, z, state);
+  }
+  const stairs = S['mc:stone_brick_stairs'];
+  if (stairs) w.set(px + 5, y0 + 1, pz + 1, stairs.with('facing', 'south'));
+  const spawner = S['mc:mob_spawner'];
+  if (spawner) w.set(px + 5, y0 + 2, pz + 1, spawner.with('spawner_type', 'silverfish'));
+  const bookshelf = S['mc:bookshelf'];
+  if (bookshelf) {
+    for (let dx = 1; dx < 8; dx++) {
+      w.set(site.x - 11 + dx, y0 + 1, site.z + 4, bookshelf);
+      w.set(site.x - 11 + dx, y0 + 2, site.z + 4, bookshelf);
+    }
+  }
+  const chest = S['mc:chest'];
+  if (chest) {
+    w.set(site.x + 2, y0 + 1, site.z + 2, chest);
+    w.set(site.x - 10, y0 + 1, site.z + 8, chest);
+    w.set(site.x - 6, y0 + 1, site.z + 8, chest);
+    w.set(site.x + 20, y0 + 1, site.z + 10, chest);
+  }
+}
+
 export const VILLAGE_STYLES={
   plains:{log:'mc:oak_log',plank:'mc:oak_planks',path:'mc:coarse_dirt',roof:'mc:oak_stairs'},
   taiga:{log:'mc:spruce_log',plank:'mc:spruce_planks',path:'mc:gravel',roof:'mc:spruce_stairs'},
