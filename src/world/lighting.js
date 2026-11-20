@@ -187,7 +187,13 @@ function computeBlockLight(chunk) {
     for (let y = y0; y < y0 + SECTION_HEIGHT; y++) {
       for (let z = 0; z < CHUNK_SIZE; z++) {
         for (let x = 0; x < CHUNK_SIZE; x++) {
-          const emission = chunk.getBlock(x, y, z).block.lightEmission;
+          const state = chunk.getBlock(x, y, z);
+          const id = state.block.id;
+          const emission = id === 'mc:redstone_torch'
+            ? (state.get('lit') === false ? 0 : 7)
+            : id === 'mc:redstone_lamp'
+              ? (state.get('lit') ? 15 : 0)
+              : state.block.lightEmission;
           if (emission > 0) {
             setBlockLight(chunk, x, y, z, emission);
             queue.push(x, y, z, emission);
