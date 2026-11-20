@@ -890,6 +890,14 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, human, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, jumping: !!remote.jumping, sneaking: !!remote.sneaking, walking: !!remote.walking, attack: !!remote.attacking, attackTime: remote.attackTime ?? 0 }, true);
       draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, outerHuman, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, sneaking: !!remote.sneaking, skinLayer: true }, true);
     }
+    for (const arrow of this.entities?.arrows ?? []) {
+      const yaw = Math.atan2(-arrow.vx, arrow.vz);
+      const pitch = Math.atan2(-arrow.vy, Math.hypot(arrow.vx, arrow.vz));
+      draw(arrow.x, arrow.y, arrow.z, yaw, [
+        [[0,0,0],[0.045,0.045,0.62],[0.46,0.34,0.18,1]],
+        [[0,0.025,-0.24],[0.16,0.012,0.16],[0.82,0.82,0.82,1]],
+      ], pitch, -1, -1, 1, {});
+    }
     for (const mob of this.entities?.mobs ?? []) {
       const vanillaModel = this.entityModels?.getModel?.('minecraft:' + mob.type);
       const vanillaParts = vanillaLayerParts(vanillaModel, 'main');
