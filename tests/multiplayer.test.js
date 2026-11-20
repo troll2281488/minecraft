@@ -1,5 +1,5 @@
 import { describe, it, assertEqual } from './framework.js';
-import { canAcquireContainerLease, electRoomHost, isContainerLeaseHeldByOther, isValidContainerKey, listJoinableRooms, ownsContainerLease, queueContainerWrite } from '../src/game/multiplayer.js';
+import { applyRemotePlayerState, canAcquireContainerLease, electRoomHost, isContainerLeaseHeldByOther, isValidContainerKey, listJoinableRooms, ownsContainerLease, queueContainerWrite } from '../src/game/multiplayer.js';
 
 describe('multiplayer container key validation', () => {
   it('accepts signed integer coordinates only', () => {
@@ -111,5 +111,44 @@ describe('multiplayer room recovery', () => {
     }, 1000, 500);
     assertEqual(rooms.length, 1);
     assertEqual(rooms[0][0], 'MNO12');
+  });
+});
+
+describe('multiplayer remote player state', () => {
+  it('replicates sprint, sneak, attack animation, and game mode', () => {
+    const remote = applyRemotePlayerState({}, {
+      name: 'Runner', health: 17, food: 13, inWater: false, sneaking: true,
+      sprinting: true, onGround: true, gamemode: 'creative', attackTime: 6,
+      x: 1, y: 2, z: 3, yaw: 90,
+    });
+    assertEqual(remote.name, 'Runner');
+    assertEqual(remote.sprinting, true);
+    assertEqual(remote.sneaking, true);
+    assertEqual(remote.attacking, true);
+    assertEqual(remote.attackTime, 6);
+    assertEqual(remote.gamemode, 'creative');
+    assertEqual(remote.targetYaw, 90);
+  });
+
+  it('clamps untrusted status and animation values and supplies safe defaults', () => {
+    const remote = applyRemotePlayerState({}, {
+      name: '<bad>', health: 99, food: -4, attackTime: 999,
+      gamemode: 'invalid', x: 0, y: 0, z: 0,
+    });
+    assertEqual(remote.health, 20);
+    assertEqual(remote.food, 0);
+    assertEqual(remote.attackTime, 10);
+    assertEqual(remote.attacking, true);
+    assertEqual(remote.gamemode, 'survival');
+    assertEqual(remote.sprinting, false);
+    assertEqual(remote.sneaking, false);
+  });
+
+  it('clears a previous attack pose when the next snapshot is idle', () => {
+    const remote = applyRemotePlayerState({ attacking: true, attackTime: 4 }, {
+      name: 'Player', attackTime: 0, x: 0, y: 0, z: 0,
+    });
+    assertEqual(remote.attacking, false);
+    assertEqual(remote.attackTime, 0);
   });
 });
