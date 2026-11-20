@@ -409,7 +409,7 @@ export class TerrainGenerator {
       const wx=baseX+x, wz=baseZ+z;
       const cave=this.caveA.sample3(wx*0.035, 62*0.035, wz*0.035);
       const ceiling=112+Math.floor(this.detail.sample2(wx,wz,0.018)*9);
-      const floor = Math.hypot(wx,wz)<58 ? 30 : 28+Math.floor(this.detail.sample2(wx+91,wz-37,0.02)*8);
+      const floor = Math.hypot(wx,wz)<58 ? 27 : 28+Math.floor(this.detail.sample2(wx+91,wz-37,0.02)*8);
       for(let y=MIN_Y;y<MAX_Y;y++) {
         let state=null;
         if(y<=MIN_Y+1 || y>=ceiling-1) state=bedrock;
