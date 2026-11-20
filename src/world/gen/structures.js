@@ -248,6 +248,91 @@ export function placeStrongholdRoomNetwork(w, S, site, seed) {
     put(x + 17, y + 3, z - 14, S['mc:torch']);
     put(x + 21, y + 3, z - 10, S['mc:torch']);
   }
+
+  // Library wing: a deterministic compact/duplex variant. The large room has
+  // a second gallery, wooden balcony, ladder access and two loot chests; the
+  // compact room keeps one floor and one chest. Both connect to the west hall.
+  const largeLibrary = hash01(seedToInt(normalizeSeed(seed)), x, y, z, 7419) >= 0.22;
+  const lx = x - (largeLibrary ? 32 : 28), lz = z - (largeLibrary ? 7 : 5);
+  const size = largeLibrary ? 15 : 11, top = largeLibrary ? 10 : 5;
+  const bookshelf = S['mc:bookshelf'], planks = S['mc:oak_planks'];
+  const fence = S['mc:oak_fence'];
+  const ladder = S['mc:ladder'];
+  const cobweb = S['mc:cobweb'];
+  const chest = S['mc:chest'];
+  const inside = (dx, dz) => dx > 0 && dx < size - 1 && dz > 0 && dz < size - 1;
+  for (let dx = 0; dx < size; dx++) for (let dz = 0; dz < size; dz++) {
+    const wx = lx + dx, wz = lz + dz;
+    put(wx, y, wz, brick);
+    put(wx, y + top, wz, brick);
+    for (let dy = 1; dy < top; dy++) {
+      const edge = dx === 0 || dx === size - 1 || dz === 0 || dz === size - 1;
+      const eastDoor = dx === size - 1 && dz >= Math.floor(size / 2) - 1 && dz <= Math.floor(size / 2) + 1 && dy <= 3;
+      if (!edge || eastDoor) put(wx, y + dy, wz, air);
+      else put(wx, y + dy, wz, hash01(seedToInt(normalizeSeed(seed)), wx, y + dy, wz, 7420) < 0.12 ? moss : brick);
+    }
+  }
+  // Entry corridor joins the library doorway to the bent western passage.
+  hallX(lx + size - 1, x - 16, z - 2, z);
+  for (let dy = 1; dy <= 3; dy++) put(lx + size - 1, y + dy, z - 1, air);
+
+  // Dense bookcases form the perimeter shelves and paired interior rows.
+  if (bookshelf) {
+    for (let dx = 2; dx < size - 2; dx++) {
+      for (const dz of [2, size - 3]) {
+        for (let dy = 1; dy <= 3; dy++) put(lx + dx, y + dy, lz + dz, bookshelf);
+      }
+    }
+    for (let dz = 3; dz < size - 3; dz++) {
+      for (const dx of [2, size - 3]) {
+        for (let dy = 1; dy <= 3; dy++) put(lx + dx, y + dy, lz + dz, bookshelf);
+      }
+    }
+    for (let dx = 4; dx <= size - 5; dx += 2) {
+      for (let dy = 1; dy <= 3; dy++) put(lx + dx, y + dy, lz + Math.floor(size / 2), bookshelf);
+    }
+  }
+  if (largeLibrary && planks) {
+    // Upper gallery floor, oak-fence railings and a ladder on the western wall.
+    for (let dx = 1; dx < size - 1; dx++) for (let dz = 1; dz < size - 1; dz++) {
+      if (dx === 1 || dx === size - 2 || dz === 1 || dz === size - 2) continue;
+      put(lx + dx, y + 5, lz + dz, planks);
+    }
+    if (fence) {
+      for (let dx = 2; dx < size - 2; dx++) {
+        put(lx + dx, y + 6, lz + 1, fence);
+        put(lx + dx, y + 6, lz + size - 2, fence);
+      }
+      for (let dz = 2; dz < size - 2; dz++) {
+        put(lx + 1, y + 6, lz + dz, fence);
+        put(lx + size - 2, y + 6, lz + dz, fence);
+      }
+    }
+    if (ladder) for (let dy = 1; dy <= 7; dy++) put(lx + 1, y + dy, lz + 1, ladder.with('facing', 'east'));
+    if (bookshelf) {
+      for (let dx = 3; dx < size - 3; dx++) for (let dy = 6; dy <= 8; dy++) {
+        put(lx + dx, y + dy, lz + 2, bookshelf);
+        put(lx + dx, y + dy, lz + size - 3, bookshelf);
+      }
+    }
+  }
+  if (chest) {
+    if (largeLibrary) {
+      put(lx + 2, y + 1, lz + 2, chest);
+      put(lx + 2, y + 6, lz + size - 3, chest);
+    } else put(lx + 2, y + 1, lz + 2, chest);
+  }
+  if (S['mc:torch']) {
+    put(lx + 1, y + 4, lz + 1, S['mc:torch']);
+    if (largeLibrary) put(lx + size - 2, y + 9, lz + size - 2, S['mc:torch']);
+  }
+  // Vanilla libraries replace eligible low-ceiling air with cobwebs at 7%.
+  if (cobweb) for (let dx = 1; dx < size - 1; dx++) for (let dz = 1; dz < size - 1; dz++) {
+    for (let dy = 1; dy <= 4; dy++) {
+      const wx = lx + dx, wy = y + dy, wz = lz + dz;
+      if (w.id(wx, wy, wz) === 'mc:air' && hash01(seedToInt(normalizeSeed(seed)), wx, wy, wz, 7421) < 0.07) put(wx, wy, wz, cobweb);
+    }
+  }
 }
 
 export function placeStrongholdPortalRoom(w, S, site, seed) {
