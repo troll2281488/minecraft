@@ -97,8 +97,9 @@ describe('Snow leaf tint channel', () => {
   });
 
   it('has a dedicated leaf colour in the terrain shader', async () => {
-    const { TERRAIN_VERTEX_SHADER } = await import('../src/render/gl.js');
+    const { TERRAIN_VERTEX_SHADER, TERRAIN_FRAGMENT_SHADER } = await import('../src/render/gl.js');
     assert(TERRAIN_VERTEX_SHADER.includes('uLeavesColor'));
     assert(TERRAIN_VERTEX_SHADER.includes('tintKind == 4u'));
+    assert(TERRAIN_FRAGMENT_SHADER.includes('vTintKind == 4u && uLeavesColor.r > 0.9'));
   });
 });
