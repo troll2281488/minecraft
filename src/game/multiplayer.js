@@ -812,6 +812,14 @@ export class Multiplayer {
   async releaseContainerLock(key, token) {
     const held = this.activeContainerLocks.get(key);
     if (!held || held.token !== token) return false;
+    // Publish the final inventory snapshot before allowing another player in.
+    await this._flushPendingContainerWrites();
+    const queueKey = `${held.roomId}:${key}`;
+    if (this.pendingContainerWrites.has(queueKey)) {
+      // Keep the lease until its normal expiry if the final write could not be sent.
+      this.activeContainerLocks.delete(key);
+      return false;
+    }
     this.activeContainerLocks.delete(key);
     try {
       await runTransaction(held.lockRef, (current) =>
@@ -849,27 +857,31 @@ export class Multiplayer {
     if (!this.db || !this.roomId || !this.firebaseConnected) return;
     if (this.containerFlushInFlight) {
       this.containerFlushRequested = true;
+      await this.containerFlushPromise;
       return;
     }
     this.containerFlushInFlight = true;
-    try {
-      for (const [queueKey, entry] of this.pendingContainerWrites) {
-        if (entry.roomId !== this.roomId) continue;
-        try {
-          await set(ref(this.db, `minecraft_game/rooms/${entry.roomId}/containers/${entry.key}`), entry.record);
-          if (this.pendingContainerWrites.get(queueKey) === entry) this.pendingContainerWrites.delete(queueKey);
-        } catch (error) {
-          console.warn('[multiplayer] queued container sync:', error);
-          break;
+    this.containerFlushPromise = (async () => {
+      try {
+        for (const [queueKey, entry] of this.pendingContainerWrites) {
+          if (entry.roomId !== this.roomId) continue;
+          try {
+            await set(ref(this.db, `minecraft_game/rooms/${entry.roomId}/containers/${entry.key}`), entry.record);
+            if (this.pendingContainerWrites.get(queueKey) === entry) this.pendingContainerWrites.delete(queueKey);
+          } catch (error) {
+            console.warn('[multiplayer] queued container sync:', error);
+            break;
+          }
         }
-      }
-    } finally {
-      this.containerFlushInFlight = false;
-      if (this.containerFlushRequested && this.firebaseConnected) {
+      } finally {
+        const rerun = this.containerFlushRequested && this.firebaseConnected;
         this.containerFlushRequested = false;
-        void this._flushPendingContainerWrites();
+        this.containerFlushInFlight = false;
+        this.containerFlushPromise = null;
+        if (rerun) await this._flushPendingContainerWrites();
       }
-    }
+    })();
+    await this.containerFlushPromise;
   }
 
   sendChat(text) {
