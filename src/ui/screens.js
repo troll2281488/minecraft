@@ -156,7 +156,7 @@ export const ScreensMixin = {
   _loadSettings() {
     let saved = {};
     try { saved = JSON.parse(localStorage.getItem('voxel-game-settings') || '{}'); } catch {}
-    this.renderDistance = Math.max(3, Math.min(16, Number(saved.renderDistance) || 8));
+    this.renderDistance = Math.max(2, Math.min(16, Number(saved.renderDistance) || 8));
     this.mouseSensitivity = Math.max(0.04, Math.min(0.5, Number(saved.mouseSensitivity) || 0.15));
     this.graphicsQuality = ['performance','balanced','high'].includes(saved.graphicsQuality) ? saved.graphicsQuality : 'balanced';
     this.fieldOfView = Math.max(50, Math.min(110, Number(saved.fieldOfView) || 70));\n    this.simulationDistance = Math.max(2, Math.min(12, Number(saved.simulationDistance) || 6));\n    this.mobSimulationEnabled = saved.mobSimulationEnabled !== false;\n    this.particlesMode = ['all','reduced','off'].includes(saved.particlesMode) ? saved.particlesMode : 'all';
