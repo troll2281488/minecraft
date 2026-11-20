@@ -27,7 +27,7 @@ import { clamp } from '../../core/math.js';
 import { buildTree } from './trees.js';
 
 /** Bumped whenever generation output changes. Stored per world. */
-export const GENERATOR_VERSION = 11;
+export const GENERATOR_VERSION = 12;
 
 
 // ---------------------------------------------------------------------------
@@ -121,6 +121,9 @@ export const BIOME_SURFACE = {
   [BIOME.MESA_PLATEAU_F]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0.006, grass:0.01, species:'oak', deadBush:0.01 },
 };
 
+const smooth01 = (v, a, b) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const quant = (v) => 0.5 + 0.5 * Math.tanh(0.8 * v / 0.19);
+
 // ---------------------------------------------------------------------------
 // Ore distribution
 //
@@ -168,137 +171,129 @@ export class TerrainGenerator {
     this.caveA = new PerlinNoise(root.fork('cave_a'));
     this.caveB = new PerlinNoise(root.fork('cave_b'));
     this.cheese = new OctaveNoise(root.fork('cheese'), 3, 0.5, 2.0);
+    // Domain warp and climate fields from the user's worldgen archive.
+    this.relief = new OctaveNoise(root.fork('relief'), 3, 0.5, 2.0);
+    this.warp = new OctaveNoise(root.fork('warp'), 2, 0.5, 2.0);
+    this.mesa = new OctaveNoise(root.fork('mesa'), 2, 0.5, 2.0);
+    this.patch = new OctaveNoise(root.fork('patch'), 2, 0.5, 2.0);
+    this.ravine = new OctaveNoise(root.fork('ravine'), 2, 0.5, 2.0);
+    this.ravineMask = new OctaveNoise(root.fork('ravine_mask'), 2, 0.5, 2.0);
 
     this.states = resolveStates();
   }
 
-  /** Surface height at a world column, in blocks. */
-  heightAt(wx, wz) {
-    // Continent noise sets the broad shape: oceans, lowlands, highlands.
-    const continent = this.continent.sample2(wx, wz, 0.0018);
-
-    // Ridged noise adds mountain ranges, but only where the continent is high.
-    // Multiplying by the continent value is what keeps mountains from erupting
-    // out of the ocean floor.
-    const mountainMask = clamp((continent - 0.15) * 2.5, 0, 1);
-    const ridge = this.ridge.ridged2(wx, wz, 0.0035) * mountainMask;
-
-    const detail = this.detail.sample2(wx, wz, 0.012);
-
-    let height = SEA_LEVEL
-      + continent * 42
-      + ridge * 58
-      + detail * 6;
-
-    // Flatten the sea floor so oceans read as basins rather than noisy sludge.
-    if (height < SEA_LEVEL - 4) {
-      height = SEA_LEVEL - 4 - (SEA_LEVEL - 4 - height) * 0.55;
-    }
-
-    // A low-frequency river field carves connected, gently sloped channels
-    // down to the water table. The same field labels the channel biome below.
-    const riverDistance = Math.abs(this.river.sample2(wx, wz, 0.0017));
-    // Blend river valleys gradually into the surrounding terrain. The former
-    // hard height clamp made narrow, steep-sided water trenches that looked
-    // like giant artificial canyons.
-    const riverT = clamp(1 - riverDistance / 0.07, 0, 1);
-    const riverBlend = riverT * riverT * (3 - 2 * riverT);
-    height = height * (1 - riverBlend) + (SEA_LEVEL - 1.1) * riverBlend;
-    return height;
+  /** Warped, quantile-normalized climate fields shared by terrain and biome selection. */
+  _fields(wx, wz) {
+    const wxw = wx + this.warp.sample2(wx, wz, 0.004) * 24;
+    const wzw = wz + this.warp.sample2(wz + 913, wx - 421, 0.004) * 24;
+    const c = this.continent.sample2(wxw, wzw, 0.0021);
+    const T = quant(this.temperature.sample2(wxw, wzw, 0.0032));
+    const H = quant(this.humidity.sample2(wxw, wzw, 0.0036));
+    const R = quant(this.biomeRarity.sample2(wxw, wzw, 0.0045));
+    const D = quant(this.biomeDetail.sample2(wxw, wzw, 0.012));
+    const rel = quant(this.relief.sample2(wxw, wzw, 0.0042));
+    const rv = this.river.sample2(wxw, wzw, 0.0021);
+    const desertness = smooth01(T, 0.7, 0.8) * (1 - smooth01(H, 0.25, 0.4));
+    const mesaZ = smooth01(T, 0.8, 0.88) * (1 - smooth01(H, 0.15, 0.3)) * smooth01(R, 0.35, 0.55) * smooth01(c, -0.03, 0.04);
+    const mountM = smooth01(rel, 0.72, 0.9) * smooth01(c, -0.02, 0.2);
+    const swampZ = smooth01(H, 0.8, 0.88) * smooth01(T, 0.3, 0.4) * (1 - smooth01(T, 0.64, 0.72)) * smooth01(c, -0.06, -0.02) * (1 - mountM);
+    return { c, T, H, R, D, rel, rv, desertness, mesaZ, mountM, swampZ };
   }
 
-  biomeAt(wx, wz, height) {
-    const riverDistance = Math.abs(this.river.sample2(wx, wz, 0.0017));
-    const riverTemp = this.temperature.sample2(wx, wz, 0.0013);
-    if (riverDistance < 0.018 && height >= SEA_LEVEL - 2) {
-      return riverTemp < -0.48 ? BIOME.FROZEN_RIVER : BIOME.RIVER;
+  _height(f, wx, wz) {
+    const detail = this.detail.sample2(wx, wz, 0.014);
+    const landMask = smooth01(f.c, -0.105, -0.085);
+    const depthT = smooth01(-f.c, 0.1, 0.3);
+    const floor = SEA_LEVEL - 4 - depthT * 30 + detail * 2.5;
+    let land = SEA_LEVEL + 2.4 + Math.max(0, f.c + 0.085) * 26 + detail * 2;
+    const hillM = smooth01(f.rel, 0.5, 0.85) * (1 - f.desertness * 0.7);
+    land += hillM * Math.max(0, this.detail.sample2(wx + 200, wz - 300, 0.03) + 0.06) * 45;
+    if (f.mountM > 0.001) land += f.mountM * (this.ridge.ridged2(wx, wz, 0.005) * 62 - 14);
+    if (f.mesaZ > 0.001) {
+      const m = quant(this.mesa.sample2(wx, wz, 0.007)) * 4;
+      const step = Math.floor(m) + smooth01(m - Math.floor(m), 0.82, 1);
+      land = land * (1 - f.mesaZ) + (SEA_LEVEL + 5 + step * 7) * f.mesaZ;
     }
-    const temp = this.temperature.sample2(wx, wz, 0.0013);
-    const humid = this.humidity.sample2(wx, wz, 0.0017);
-    const detail = this.biomeDetail.sample2(wx, wz, 0.0022);
-    const rare = this.biomeRarity.sample2(wx, wz, 0.0010);
-
-    if (height < SEA_LEVEL - 2) {
-      const deep = height < SEA_LEVEL - 13;
-      if (temp < -0.48) return deep ? BIOME.DEEP_FROZEN_OCEAN : BIOME.FROZEN_OCEAN;
-      if (temp < -0.12) return deep ? BIOME.DEEP_COLD_OCEAN : BIOME.COLD_OCEAN;
-      if (temp > 0.48) return deep ? BIOME.DEEP_LUKEWARM_OCEAN : BIOME.WARM_OCEAN;
-      return deep ? BIOME.DEEP_OCEAN : BIOME.LUKEWARM_OCEAN;
+    if (f.swampZ > 0.001) land = land * (1 - f.swampZ) + (SEA_LEVEL - 0.6 + detail * 3.4) * f.swampZ;
+    let h = floor * (1 - landMask) + land * landMask;
+    const t = clamp(1 - Math.abs(f.rv) / 0.05, 0, 1);
+    if (t > 0) {
+      const blend = t * t * (3 - 2 * t) * landMask * (1 - f.mountM * 0.85);
+      h = h * (1 - blend) + (SEA_LEVEL - 1.7) * blend;
     }
-    if (height <= SEA_LEVEL + 1) {
-      if (temp < -0.48) return BIOME.SNOWY_BEACH;
-      return detail > 0.68 ? BIOME.STONE_SHORE : BIOME.BEACH;
+    return h;
+  }
+
+  _biome(f, height) {
+    const { c, T, H, R, D, rel } = f, riverD = Math.abs(f.rv);
+    const landish = smooth01(c, -0.105, -0.085) > 0.5, wet = height < SEA_LEVEL;
+    if (wet) {
+      if (!landish) {
+        const deep = height < SEA_LEVEL - 14;
+        if (T < 0.14) return deep ? BIOME.DEEP_FROZEN_OCEAN : BIOME.FROZEN_OCEAN;
+        if (T < 0.34) return deep ? BIOME.DEEP_COLD_OCEAN : BIOME.COLD_OCEAN;
+        if (T > 0.82) return deep ? BIOME.DEEP_LUKEWARM_OCEAN : BIOME.WARM_OCEAN;
+        if (T > 0.64) return deep ? BIOME.DEEP_LUKEWARM_OCEAN : BIOME.LUKEWARM_OCEAN;
+        return deep ? BIOME.DEEP_OCEAN : BIOME.OCEAN;
+      }
+      if (f.swampZ > 0.5) return BIOME.SWAMP;
+      return T < 0.14 ? BIOME.FROZEN_RIVER : BIOME.RIVER;
     }
-    if (height > SEA_LEVEL + 42) return detail > 0.2 ? BIOME.EXTREME_HILLS_PLUS : BIOME.MOUNTAINS;
-    if (height > SEA_LEVEL + 30 && detail > 0.48) return BIOME.EXTREME_HILLS_EDGE;
-
-    // Mushroom islands are deliberately scarce, isolated climate pockets.
-    if (humid > 0.12 && rare > 0.79 && detail > -0.15) return BIOME.MUSHROOM_FIELDS;
-
-    // Cold climates: snowy plains are common; ice spikes and snowy taiga are
-    // uncommon variants, while giant conifer forests remain a rarer subregion.
-    if (temp < -0.48) {
-      if (rare > 0.72 && detail > 0.2) return BIOME.ICE_SPIKES;
-      if (humid > 0.12 && rare < -0.42) return detail > 0.35 ? BIOME.MEGA_TAIGA_HILLS : BIOME.GIANT_SPRUCE_TAIGA;
-      if (humid > -0.05) return rare > 0.38 ? BIOME.COLD_TAIGA_HILLS : BIOME.COLD_TAIGA;
+    if (c < -0.03 && height < SEA_LEVEL + 3) return T < 0.14 ? BIOME.SNOWY_BEACH : (rel > 0.72 ? BIOME.STONE_SHORE : BIOME.BEACH);
+    if (riverD < 0.012 && height < SEA_LEVEL + 1) return T < 0.14 ? BIOME.FROZEN_RIVER : BIOME.RIVER;
+    if (height > SEA_LEVEL + 34) return D > 0.55 ? BIOME.WINDSWEPT_HILLS : BIOME.MOUNTAINS;
+    if (f.mesaZ > 0.5) return R > 0.85 ? BIOME.ERODED_BADLANDS : (D > 0.7 ? BIOME.WOODED_BADLANDS : BIOME.BADLANDS);
+    if (f.swampZ > 0.5) return BIOME.SWAMP;
+    if (R > 0.985 && H > 0.5 && c < 0.12) return BIOME.MUSHROOM_FIELDS;
+    if (T < 0.17) {
+      if (R > 0.9 && rel < 0.55 && H < 0.6) return BIOME.ICE_SPIKES;
+      if (H > 0.62) return R > 0.78 ? BIOME.GIANT_SPRUCE_TAIGA : BIOME.SNOWY_TAIGA;
+      if (H > 0.45 && D > 0.55) return BIOME.SNOWY_TAIGA;
       return BIOME.SNOWY_PLAINS;
     }
-
-    // Hot and dry lowlands are primarily savanna. True deserts and
-    // badlands are reserved for the driest climate pockets.
-    if (temp > 0.12 && humid < 0.2) {
-      if (humid < -0.48 && rare > 0.78) return detail > 0.35 ? BIOME.ERODED_BADLANDS : (detail < -0.35 ? BIOME.MESA_PLATEAU : BIOME.MESA_PLATEAU_F);
-      if (humid < -0.14 && rare > 0.22) return detail > 0.55 ? BIOME.DESERT_HILLS : BIOME.DESERT;
-      return detail > 0.58 && rare > 0.55 ? BIOME.SAVANNA_PLATEAU : BIOME.SAVANNA;
+    if (T < 0.36) {
+      if (H > 0.55) return R > 0.75 ? BIOME.GIANT_TREE_TAIGA : BIOME.TAIGA;
+      if (H > 0.35) return D > 0.5 ? BIOME.TAIGA : BIOME.FOREST;
+      return rel > 0.7 ? BIOME.WINDSWEPT_HILLS : BIOME.PLAINS;
     }
-
-    // Warm, wet climates: jungle remains a distinct large region, with bamboo
-    // as a less common sub-biome.
-    if (temp > 0.48 && humid > 0.2) {
-      if (rare > 0.72) return BIOME.BAMBOO_JUNGLE;
-      if (detail > 0.62) return BIOME.JUNGLE_HILLS;
-      if (rare < -0.25) return BIOME.JUNGLE_EDGE;
-      return detail > 0.42 ? BIOME.SPARSE_JUNGLE : BIOME.JUNGLE;
+    if (T < 0.64) {
+      if (H > 0.78) return D > 0.4 ? BIOME.DARK_FOREST : BIOME.TALL_BIRCH_FOREST;
+      if (H > 0.45 && R > 0.66) return BIOME.FLOWER_FOREST;
+      if (H > 0.6) return D > 0.45 ? BIOME.BIRCH_FOREST : BIOME.FOREST;
+      if (H > 0.4) return D > 0.5 ? BIOME.FOREST : BIOME.PLAINS;
+      return R > 0.9 ? BIOME.SUNFLOWER_PLAINS : BIOME.PLAINS;
     }
-    if (humid > 0.42 && temp > -0.08 && temp < 0.46) return BIOME.SWAMP;
-    if (temp < -0.28 && temp > -0.48 && humid > 0.08) return detail > 0.55 ? BIOME.TAIGA_HILLS : BIOME.TAIGA;
-
-    // The four intended everyday biomes dominate temperate land:
-    // birch forest, flower forest, plains and a smaller share of oak forest.
-    if (temp > -0.42 && temp < 0.58) {
-      if (humid > 0.08) {
-        if (rare < -0.08) return detail > 0.25 ? BIOME.BIRCH_FOREST_HILLS : BIOME.BIRCH_FOREST;
-        if (detail > 0.7 && rare < 0.16) return BIOME.FOREST_HILLS;
-        return BIOME.FLOWER_FOREST;
-      }
-      if (rare > 0.72) return BIOME.SUNFLOWER_PLAINS;
-      return BIOME.PLAINS;
+    if (T < 0.8) {
+      if (H > 0.75) return D > 0.5 ? BIOME.FOREST : BIOME.BIRCH_FOREST;
+      if (H > 0.45) return rel > 0.7 && D > 0.5 ? BIOME.SAVANNA_PLATEAU : BIOME.SAVANNA;
+      if (H > 0.28) return R > 0.9 ? BIOME.SHATTERED_SAVANNA : BIOME.SAVANNA;
+      return BIOME.DESERT;
     }
-    if (humid > 0.28 && detail > 0.62) return BIOME.BIRCH_FOREST;
-    if (humid > 0.12) return BIOME.FLOWER_FOREST;
-    return BIOME.PLAINS;
+    if (H > 0.66) return R > 0.8 ? BIOME.BAMBOO_JUNGLE : (D > 0.6 ? BIOME.SPARSE_JUNGLE : BIOME.JUNGLE);
+    return H > 0.4 ? BIOME.SAVANNA : BIOME.DESERT;
   }
 
-  /**
-   * True where a cave should carve away solid ground.
-   *
-   * Two systems, as in vanilla: thin winding tunnels from the intersection of
-   * two noise fields (each near zero only along a surface; both near zero only
-   * along a line), plus large "cheese" cavities from a single low-frequency
-   * field.
-   */
-  isCave(wx, wy, wz) {
-    // Fade caves out near the surface so the world is not visibly full of holes.
-    if (wy > SEA_LEVEL + 8) return false;
+  heightAt(wx, wz) { return this._height(this._fields(wx, wz), wx, wz); }
+  biomeAt(wx, wz, height) {
+    const f = this._fields(wx, wz);
+    return this._biome(f, height === undefined ? this._height(f, wx, wz) : height);
+  }
+  column(wx, wz) {
+    const f = this._fields(wx, wz), h = Math.floor(this._height(f, wx, wz));
+    return { h, biome: this._biome(f, h), fields: f };
+  }
 
+  isCave(wx, wy, wz, height = 255, ravineR = -1) {
+    if (wy <= MIN_Y + 4 || (height < SEA_LEVEL && wy > height - 5) || wy > 110) return false;
+    if (ravineR >= 0 && wy >= 9 && wy <= height) {
+      const profile = clamp(1 - Math.pow((wy - 42) / 40, 2), 0, 1);
+      if (ravineR < 0.0026 * (0.35 + 2.2 * profile)) return true;
+    }
     const a = this.caveA.sample3(wx * 0.014, wy * 0.022, wz * 0.014);
     const b = this.caveB.sample3(wx * 0.014, wy * 0.022, wz * 0.014);
-    if (a * a + b * b < 0.0016) return true;
-
-    const cheese = this.cheese.sample3(wx, wy * 1.6, wz, 0.008);
-    if (cheese > 0.62) return true;
-
-    return false;
+    const cover = height - wy, limit = cover < 5 ? 0.0008 : 0.0034;
+    if (a * a + b * b < limit) return true;
+    return wy < 56 && cover > 6 && this.cheese.sample3(wx, wy * 1.6, wz, 0.009) > 0.27;
   }
 
   /** Fill a chunk with terrain, ores, surface material, and features. */
