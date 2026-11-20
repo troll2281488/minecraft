@@ -46,6 +46,7 @@ export const BlockActionsMixin = {
       if (this.inventory.held.item?.tool) this.inventory.damageHeld(1);
     }
 
+    this.entities?.spawnBlockParticles(x, y, z, state.block.id);
     this.sounds?.play('break', state.block.soundGroup || 'stone');
     this.world.setBlock(x, y, z, AIR.defaultState);
     this.multiplayer?.pushBlockChange(x, y, z, AIR.defaultState);
