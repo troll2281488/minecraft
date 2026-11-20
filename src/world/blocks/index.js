@@ -391,9 +391,9 @@ function button(id, texture, wood = false) {
     defaultValues: { face: 'wall', facing: 'north', powered: false },
   });
 }
-for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) button(wood, `${wood}_planks`, true);
-button('stone', 'stone');
-button('polished_blackstone', 'polished_blackstone');
+for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) button(wood, `${wood}_button`, true);
+button('stone', 'stone_button');
+button('polished_blackstone', 'polished_blackstone_button');
 
 define('mc:lever', {
   hardness: 0.5, resistance: 0.5, solid: false, opaqueCube: false, opacity: 0,
@@ -409,9 +409,9 @@ function pressurePlate(id, texture, wood = false) {
     properties: { powered: PROPS.powered }, defaultValues: { powered: false },
   });
 }
-for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) pressurePlate(wood, `${wood}_planks`, true);
-pressurePlate('stone', 'stone');
-pressurePlate('polished_blackstone', 'polished_blackstone');
+for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) pressurePlate(wood, `${wood}_pressure_plate`, true);
+pressurePlate('stone', 'stone_pressure_plate');
+pressurePlate('polished_blackstone', 'polished_blackstone_pressure_plate');
 
 define('mc:end_portal_frame', {
   hardness: -1, resistance: 3600000, soundGroup: 'stone',
