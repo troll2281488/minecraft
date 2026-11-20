@@ -444,7 +444,7 @@ export class TerrainGenerator {
       for (let y = MIN_Y; y < MAX_Y; y++) {
         let state = null;
         if (y <= MIN_Y + 1) state = bedrock;
-        else if (y >= 28 && y <= 31) state = lava;
+        else if (y >= 1 && y <= 31) state = lava;
         else if (island && y >= bottom && y <= top) {
           const hollow = y < top - 2 && cave > 0.42 && this.caveB.sample3(wx * 0.045, y * 0.045, wz * 0.045) > 0.1;
           if (!hollow) {
