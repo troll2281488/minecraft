@@ -527,8 +527,8 @@ export class TerrainGenerator {
   scatterVeins(chunk, baseX, baseZ, spec, salt, deepslateVariants) {
     const rng = positionalRandom(this.seed, chunk.cx, salt, chunk.cz, salt);
     const S = this.states;
-    // Keep coal and iron a few blocks below the natural surface, including on
-    // tall mountain peaks. This prevents exposed ore speckles on open terrain.
+    // Keep every ore vein well below the actual surface profile so it cannot
+    // show through on plains or steep mountain faces.
     const oreSurface = spec.block.endsWith('_ore') ? new Int16Array(CHUNK_SIZE * CHUNK_SIZE) : null;
     if (oreSurface) for (let z = 0; z < CHUNK_SIZE; z++) for (let x = 0; x < CHUNK_SIZE; x++) {
       const wx = baseX + x, wz = baseZ + z;
@@ -548,7 +548,7 @@ export class TerrainGenerator {
       for (let i = 0; i < count; i++) {
         if (y > MIN_Y && y < MAX_Y && x >= 0 && x < CHUNK_SIZE && z >= 0 && z < CHUNK_SIZE) {
           const existing = chunk.getBlock(x, y, z);
-          const belowSurface = !oreSurface || y < oreSurface[z * CHUNK_SIZE + x] - 3;
+          const belowSurface = !oreSurface || y < oreSurface[z * CHUNK_SIZE + x] - 8;
           if (belowSurface && (spec.block.endsWith('_ore') ? STONE_ORE_REPLACEABLE : STONE_REPLACEABLE).has(existing.block.id)) {
             let target = spec.block;
             const state = S.byId[target];
