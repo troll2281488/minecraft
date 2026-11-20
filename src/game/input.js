@@ -254,7 +254,9 @@ export const InputMixin = {
     };
     if (!command) return;
     if (this.worldMeta) {
-      this.multiplayer?.addChat(`[Команда] ${this.worldMeta.playerName || 'Игрок'}: /${(cleaned.startsWith('/') ? cleaned.slice(1) : cleaned)}`);
+      const announcement = `[Команда] ${this.worldMeta.playerName || 'Игрок'}: /${(cleaned.startsWith('/') ? cleaned.slice(1) : cleaned)}`;
+      if (this.multiplayer?.roomId) this.multiplayer.sendChat(announcement);
+      else this.multiplayer?.addChat(announcement);
     }
     if (this.worldMeta?.cheatsEnabled === false && !['help','?','save','seed','whereami','pos'].includes(command)) {
       reply('Команды отключены в настройках этого мира.', true);
