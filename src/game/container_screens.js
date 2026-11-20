@@ -69,8 +69,8 @@ function generatedChestKind(seed, x, y, z) {
 
   // Minecart-free mineshaft corridor chests are placed at the end of selected
   // dead-end branches by the same deterministic planner used by terrain gen.
-  for (let gx = Math.floor((x - 192) / 96); gx <= Math.floor(x / 96); gx++) {
-    for (let gz = Math.floor((z - 192) / 96); gz <= Math.floor(z / 96); gz++) {
+  for (let gx = Math.floor((x - 192) / 96); gx <= Math.floor((x + 192) / 96); gx++) {
+    for (let gz = Math.floor((z - 192) / 96); gz <= Math.floor((z + 192) / 96); gz++) {
       const shaft = mineshaftCandidateForCell(seed, gx, gz);
       if (!shaft) continue;
       const plan = mineshaftPlan(seed, shaft);
