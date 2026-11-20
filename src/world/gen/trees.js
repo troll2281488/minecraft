@@ -12,7 +12,7 @@
  */
 
 /** Largest horizontal distance a tree block can be from its origin column. */
-export const TREE_MARGIN = 4;
+export const TREE_MARGIN = 5;
 
 function layer(leaves, y, radius, rng, trimCorners) {
   for (let dx = -radius; dx <= radius; dx++) {
@@ -53,14 +53,28 @@ function spruceTree(rng) {
 }
 
 function jungleTree(rng) {
-  const h = 8 + rng.nextInt(6);
+  // Jungle canopy rises well above the forest floor and spreads in several
+  // irregular tiers; a minority are giant 2x2-trunk specimens.
+  const giant = rng.nextInt(4) === 0;
+  const h = giant ? 18 + rng.nextInt(7) : 13 + rng.nextInt(8);
   const logs = [], leaves = [];
-  for (let y = 0; y < h; y++) logs.push([0, y, 0]);
-  layer(leaves, h - 3, 2, rng, 'random');
-  layer(leaves, h - 2, 3, rng, 'random');
-  layer(leaves, h - 1, 3, rng, 'random');
-  layer(leaves, h, 2, rng, 'random');
-  layer(leaves, h + 1, 1, rng, 'always');
+  const trunk = giant ? [[0,0],[1,0],[0,1],[1,1]] : [[0,0]];
+  for (let y = 0; y < h; y++) for (const [tx,tz] of trunk) logs.push([tx,y,tz]);
+  const crown = (y, radius) => {
+    for (let dx = -radius; dx <= radius + (giant ? 1 : 0); dx++) {
+      for (let dz = -radius; dz <= radius + (giant ? 1 : 0); dz++) {
+        const ex = dx < 0 ? -dx : dx > (giant ? 1 : 0) ? dx - (giant ? 1 : 0) : 0;
+        const ez = dz < 0 ? -dz : dz > (giant ? 1 : 0) ? dz - (giant ? 1 : 0) : 0;
+        if (ex === radius && ez === radius && rng.nextInt(3) === 0) continue;
+        if (ex <= radius && ez <= radius) leaves.push([dx,y,dz]);
+      }
+    }
+  };
+  crown(h - 3, 3);
+  crown(h - 2, 4);
+  crown(h - 1, 4);
+  crown(h, 3);
+  crown(h + 1, 2);
   return { logs, leaves };
 }
 
