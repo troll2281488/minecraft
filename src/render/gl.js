@@ -211,6 +211,7 @@ uniform vec3 uWaterColor;
 out vec3 vTexCoord;           // xy within the tile, z is the array layer
 out vec4 vColor;
 out vec3 vGrassTint;
+flat out uint vTintKind;
 flat out uint vFace;
 out float vFogDistance;
 
@@ -272,6 +273,7 @@ void main() {
   else if (tintKind == 3u) tint = uWaterColor;
 
   vGrassTint = grassTint;
+  vTintKind = tintKind;
   vFace = face;
   vColor = vec4(tint * light * aoFactor * shade, 1.0);
   vFogDistance = length(worldPos - uCameraPos);
@@ -285,6 +287,7 @@ precision highp sampler2DArray;
 in vec3 vTexCoord;
 in vec4 vColor;
 in vec3 vGrassTint;
+flat in uint vTintKind;
 flat in uint vFace;
 in float vFogDistance;
 
@@ -304,17 +307,25 @@ void main() {
   // other without any per-face ordering.
   if (texel.a < uAlphaCutoff) discard;
 
-  // Grass block top and the green crown pixels on all four sides receive the
-  // biome tint. Brown dirt pixels are deliberately excluded by greenMask.
-  float greenMask = vFace == 4u ? 1.0 :
-    smoothstep(0.015, 0.10, texel.g - max(texel.r, texel.b) * 0.85);
-  // The top tile is grayscale, so colour it directly. Side tiles already have
-  // vanilla green pixels; scale those pixels relative to plains green only.
-  vec3 plainsGreen = vec3(0.34, 0.72, 0.22);
-  vec3 sideShift = vGrassTint / plainsGreen;
-  vec3 textureColor = vFace == 4u
-    ? texel.rgb * vGrassTint
-    : texel.rgb * mix(vec3(1.0), sideShift, greenMask);
+  // Biome tint belongs ONLY to grass blocks. Previously this mask was run
+  // against every block texture: neutral greys passed it and were multiplied
+  // by a green ratio, turning stone and other terrain purple/pink.
+  vec3 textureColor = texel.rgb;
+  if (vTintKind == 1u) {
+    // Face order is down=0, up=1, north=2, south=3, west=4, east=5.
+    // The grass top tile is grayscale; colour it with the biome green.
+    if (vFace == 1u) {
+      textureColor = texel.rgb * vGrassTint;
+    } else {
+      // Side tiles contain green crown pixels above brown dirt. Tint only the
+      // green pixels, leaving the brown soil pixels completely unchanged.
+      float greenMask = smoothstep(0.015, 0.10,
+        texel.g - max(texel.r, texel.b) * 0.85);
+      vec3 plainsGreen = vec3(0.34, 0.72, 0.22);
+      vec3 sideShift = vGrassTint / plainsGreen;
+      textureColor = texel.rgb * mix(vec3(1.0), sideShift, greenMask);
+    }
+  }
   vec4 color = vec4(textureColor * vColor.rgb, texel.a * vColor.a);
 
   float fog = clamp((vFogDistance - uFogStart) / max(uFogEnd - uFogStart, 0.001), 0.0, 1.0);
