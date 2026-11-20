@@ -58,6 +58,9 @@ under `minecraft_game/rooms/{code}/containers`. A joining client applies the
 current snapshot, local slot changes publish an updated serialized record, and
 breaking a container publishes a deletion marker. The live object is updated in
 place when a remote snapshot arrives so an open screen keeps its slot references.
+For online furnaces, only the elected room host advances the smelting timer and
+publishes periodic snapshots; this avoids every client simulating the same furnace
+and racing to write its progress.
 
 This is an initial replication layer only. It does not lock a container while a
 player edits it, queue changes during network loss, or provide server-side item
