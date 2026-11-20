@@ -60,6 +60,27 @@ describe('shapes: box geometry', () => {
     assertDeepEqual(collisionBoxes(IRON_BARS), boxes);
   });
 
+  it('door panels are thin, rotate when opened, and use both halves consistently', () => {
+    const door = BLOCKS.get('mc:oak_door').defaultState;
+    const closed = shapeBoxes(door);
+    assertEqual(closed.length, 1);
+    assertDeepEqual(closed[0], [0, 0, 0.8125, 1, 1, 1]);
+    const opened = shapeBoxes(door.with('open', true));
+    assertDeepEqual(opened[0], [0, 0, 0, 0.1875, 1, 1]);
+    assertDeepEqual(shapeBoxes(door.with('half', 'upper')), closed);
+    assert(isNonCube(door));
+    assertDeepEqual(collisionBoxes(door), closed);
+  });
+
+  it('all six wooden door variants and iron door are registered', () => {
+    for (const id of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak', 'iron']) {
+      const block = BLOCKS.get(`mc:${id}_door`);
+      assert(block, `${id} door missing`);
+      assertEqual(block.renderShape, 'door');
+      assertEqual(block.states.length, 4 * 2 * 2 * 2 * 2);
+    }
+  });
+
   it('isNonCube distinguishes slabs, stairs and panes from cubes', () => {
     assert(isNonCube(OAK_SLAB));
     assert(isNonCube(STONE_STAIRS));

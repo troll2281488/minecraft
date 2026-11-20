@@ -260,14 +260,17 @@ export function orientPlacement(block, player, hit) {
     // Stairs ascend AWAY from the player (the tall step is on the far side), so
     // they face the way the player is looking. Most other directional blocks
     // face TOWARD the player instead.
-    const facing = isStair ? yawToFacing(player.yaw) : yawToFacing(player.yaw + 180);
+    const facing = isStair || block.renderShape === 'door'
+      ? yawToFacing(player.yaw) : yawToFacing(player.yaw + 180);
     if (block.properties.facing.has(facing)) state = state.with('facing', facing);
   }
 
   if (block.properties.half) {
     // Bottom half unless you placed it against the underside of something (or
     // clicked the upper part of a side face -- approximated by the face for now).
-    state = state.with('half', hit.face.dy < 0 ? 'top' : 'bottom');
+    state = block.renderShape === 'door'
+      ? state.with('half', 'lower')
+      : state.with('half', hit.face.dy < 0 ? 'top' : 'bottom');
   }
 
   if (block.properties.type) {
