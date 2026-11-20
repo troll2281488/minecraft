@@ -1,6 +1,8 @@
 import { ItemStack } from '../world/item.js';
 import { TerrainGenerator, villageCandidateForCell } from '../world/gen/terrain.js';
 import { createVillagerProfile } from './villager_trades.js';
+import { drawPower, canFire } from '../game/bow.js';
+import { aimVector, createArrow, stepArrow } from './arrows.js';
 
 /**
  * Lightweight voxel creature simulation. Mobs use deterministic game ticks,
@@ -111,6 +113,8 @@ export class MobSystem {
   constructor(game) {
     this.game = game;
     this.mobs = [];
+    this.arrows = [];
+    this.bowDrawStart = null;
     this.droppedItems = [];
     this.spawnTicks = 0;
     this.nextId = 1;
@@ -123,6 +127,8 @@ export class MobSystem {
 
   reset() {
     this.mobs.length = 0;
+    this.arrows.length = 0;
+    this.bowDrawStart = null;
     this.droppedItems.length = 0;
     this.spawnTicks = 0;
     this.nextId = 1;
@@ -130,6 +136,60 @@ export class MobSystem {
     this.villageCheckTicks = 0;
     this.villageGenerator = null;
     this.populatedVillages.clear();
+  }
+
+  beginBowDraw() {
+    const held = this.game.inventory?.held;
+    if (held?.item?.id !== 'mc:bow' || this.game.player?.gamemode !== 'survival') return false;
+    this.bowDrawStart = this.game.tickCount || 0;
+    return true;
+  }
+
+  releaseBow() {
+    if (this.bowDrawStart === null) return false;
+    const held = this.game.inventory?.held;
+    const ticks = Math.max(0, (this.game.tickCount || 0) - this.bowDrawStart);
+    this.bowDrawStart = null;
+    if (held?.item?.id !== 'mc:bow' || !canFire(ticks)) return true;
+    const creative = this.game.player?.gamemode === 'creative';
+    const inventory = this.game.inventory;
+    if (!creative && inventory.remove('mc:arrow', 1) !== 1) {
+      this.game.ui?.toast('Нужны стрелы!', { error: true });
+      return true;
+    }
+    const player = this.game.player;
+    const direction = aimVector(player.yaw, player.pitch);
+    const power = drawPower(ticks);
+    this.arrows.push(createArrow(
+      player.x + direction[0] * 0.45,
+      player.eyeY + direction[1] * 0.45,
+      player.z + direction[2] * 0.45,
+      direction, power,
+    ));
+    if (!creative) inventory.damageHeld(1);
+    this.game.sounds?.play('bow');
+    return true;
+  }
+
+  _tickArrows() {
+    const world = this.game.world;
+    for (let i = this.arrows.length - 1; i >= 0; i--) {
+      const arrow = this.arrows[i];
+      const result = stepArrow(arrow,
+        (x, y, z) => world.getBlock(x, y, z).block.solid,
+        this.mobs,
+      );
+      if (result.hit === 'mob' && result.mob) {
+        const mob = result.mob;
+        mob.health = Math.max(0, mob.health - arrow.damage);
+        mob.hurtTicks = 10;
+        mob.anim.hurt = 1;
+        if (mob.health <= 0) {
+          for (const drop of rollMobDrops(mob.type)) this.game.inventory?.addItem(drop.id, drop.count);
+        }
+      }
+      if (arrow.done) this.arrows.splice(i, 1);
+    }
   }
 
   /** Toss a stack into the world with a small forward/upward impulse. */
@@ -708,6 +768,7 @@ export class MobSystem {
       }
     }
     if (this.attackCooldown > 0) this.attackCooldown--;
+    this._tickArrows();
     // Populate nearby loaded chunks quickly so a new world does not feel empty.
     if (this.spawnTicks >= 180 && this.mobs.length < 7) {
       this.spawnTicks = 0;
