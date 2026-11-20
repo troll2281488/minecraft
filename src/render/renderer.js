@@ -513,28 +513,30 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
 
     // Water tint is stable; grass and leaves follow the chunk's surface biome.
     gl.uniform3f(uniforms.uWaterColor, 0.25, 0.46, 0.9);
+    // Multipliers are applied only to green pixels of the grass texture.
+    // The brown dirt pixels on grass-block sides are left untouched in the shader.
     const tintByBiome = {
-      'mc:swampland': [[0.30, 0.39, 0.18], [0.34, 0.45, 0.19]],
-       'mc:jungle': [[0.094, 0.701, 0.098], [0.34, 0.63, 0.22]],
-      'mc:sparse_jungle': [[0.094, 0.701, 0.098], [0.38, 0.62, 0.24]],
-      'mc:bamboo_jungle': [[0.094, 0.701, 0.098], [0.32, 0.60, 0.20]],
-      'mc:savanna': [[0.955, 0.642, 0.735], [0.62, 0.64, 0.27]],
-      'mc:savanna_plateau': [[0.955, 0.642, 0.735], [0.60, 0.62, 0.26]],
-      'mc:shattered_savanna': [[0.955, 0.642, 0.735], [0.65, 0.62, 0.25]],
-      'mc:birch_forest': [[0.43, 0.60, 0.27], [0.49, 0.66, 0.30]],
-      'mc:tall_birch_forest': [[0.43, 0.60, 0.27], [0.49, 0.66, 0.30]],
-      'mc:birch_forest_hills': [[0.43, 0.60, 0.27], [0.49, 0.66, 0.30]],
-      'mc:taiga': [[0.447, 0.448, 0.908], [0.24, 0.39, 0.17]],
-      'mc:taiga_hills': [[0.447, 0.448, 0.908], [0.24, 0.39, 0.17]],
-      'mc:cold_taiga': [[0.40, 0.50, 0.30], [0.38, 0.49, 0.30]],
-      'mc:cold_taiga_hills': [[0.40, 0.50, 0.30], [0.38, 0.49, 0.30]],
-      'mc:snowy_taiga': [[0.48, 0.57, 0.37], [0.43, 0.54, 0.34]],
-      'mc:mega_taiga': [[0.447, 0.448, 0.908], [0.25, 0.36, 0.16]],
-      'mc:giant_spruce_taiga': [[0.447, 0.448, 0.908], [0.25, 0.36, 0.16]],
-      'mc:roofed_forest': [[0.637, 0.661, 0.788], [0.28, 0.39, 0.17]],
-      'mc:mesa': [[0.56, 0.48, 0.25], [0.53, 0.43, 0.22]],
+      'mc:swampland': [[0.80, 0.90, 0.72], [0.34, 0.45, 0.19]],
+      'mc:jungle': [[0.90, 1.08, 0.78], [0.34, 0.63, 0.22]],
+      'mc:sparse_jungle': [[0.94, 1.04, 0.84], [0.38, 0.62, 0.24]],
+      'mc:bamboo_jungle': [[0.90, 1.06, 0.80], [0.32, 0.60, 0.20]],
+      'mc:savanna': [[0.96, 0.94, 0.76], [0.62, 0.64, 0.27]],
+      'mc:savanna_plateau': [[0.96, 0.94, 0.76], [0.60, 0.62, 0.26]],
+      'mc:shattered_savanna': [[0.96, 0.94, 0.76], [0.65, 0.62, 0.25]],
+      'mc:birch_forest': [[0.96, 1.00, 0.86], [0.49, 0.66, 0.30]],
+      'mc:tall_birch_forest': [[0.96, 1.00, 0.86], [0.49, 0.66, 0.30]],
+      'mc:birch_forest_hills': [[0.96, 1.00, 0.86], [0.49, 0.66, 0.30]],
+      'mc:taiga': [[0.72, 0.86, 0.66], [0.24, 0.39, 0.17]],
+      'mc:taiga_hills': [[0.72, 0.86, 0.66], [0.24, 0.39, 0.17]],
+      'mc:cold_taiga': [[0.82, 0.92, 0.78], [0.38, 0.49, 0.30]],
+      'mc:cold_taiga_hills': [[0.82, 0.92, 0.78], [0.38, 0.49, 0.30]],
+      'mc:snowy_taiga': [[0.90, 0.96, 0.84], [0.43, 0.54, 0.34]],
+      'mc:mega_taiga': [[0.68, 0.82, 0.62], [0.25, 0.36, 0.16]],
+      'mc:giant_spruce_taiga': [[0.68, 0.82, 0.62], [0.25, 0.36, 0.16]],
+      'mc:roofed_forest': [[0.82, 0.92, 0.72], [0.28, 0.39, 0.17]],
+      'mc:mesa': [[0.92, 0.86, 0.66], [0.53, 0.43, 0.22]],
     };
-    const defaultTint = [[0.637, 0.661, 0.788], [0.43, 0.62, 0.28]];
+    const defaultTint = [[1.0, 1.0, 1.0], [0.43, 0.62, 0.28]];
     const grassColorFor = (biome) => (tintByBiome[biome] || defaultTint)[0];
     const setOrigin = (x, y, z, biome, grassBiomes = null) => {
       gl.uniform3f(uniforms.uChunkOrigin, x, y, z);

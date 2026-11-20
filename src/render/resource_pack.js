@@ -93,10 +93,10 @@ export async function loadItsBrianTextures(blocks, items) {
   }
 
   const blockEntries = await mapWithLimit([...blockNames], 24, async (name) => {
-    // Keep foliage and soil textures local: third-party packs may supply already-
-    // coloured leaves, which look pale or incorrect when multiplied by biome tint.
+    // Keep foliage and soil textures local. Grass top and side deliberately load
+    // from ItsBrian: the shader tints only green pixels, never the brown dirt.
     if (name.endsWith('_leaves') || name.endsWith('_sapling') || [
-      'grass_block_top', 'grass_block_side', 'dirt', 'coarse_dirt', 'podzol_top',
+      'dirt', 'coarse_dirt', 'podzol_top',
       'podzol_side', 'plains_soil', 'forest_floor', 'birch_soil', 'jungle_soil',
       'savanna_soil', 'taiga_soil', 'swamp_mud', 'alpine_gravel',
     ].includes(name)) return null;
