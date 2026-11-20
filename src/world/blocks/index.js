@@ -367,6 +367,21 @@ for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) {
 }
 door('iron', 'iron_door', true);
 
+// Trapdoors occupy one block and share their open state with collision geometry.
+function trapdoor(id, texture, iron = false) {
+  define(`mc:${id}_trapdoor`, {
+    hardness: iron ? 5 : 3, resistance: iron ? 5 : 3,
+    tool: iron ? 'pickaxe' : 'axe', soundGroup: iron ? 'metal' : 'wood',
+    renderShape: 'trapdoor', texture, opaqueCube: false,
+    properties: { facing: PROPS.facing, half: PROPS.half, open: PROPS.open, powered: PROPS.powered },
+    defaultValues: { facing: 'north', half: 'bottom', open: false, powered: false },
+  });
+}
+for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) {
+  trapdoor(wood, `${wood}_trapdoor`);
+}
+trapdoor('iron', 'iron_trapdoor', true);
+
 define('mc:end_portal_frame', {
   hardness: -1, resistance: 3600000, soundGroup: 'stone',
   texture: 'end_portal_frame',
