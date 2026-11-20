@@ -70,6 +70,9 @@ export function applyRemotePlayerState(current, snapshot) {
   current.name = safeName(snapshot.name);
   current.health = Number.isFinite(snapshot.health) ? Math.max(0, Math.min(20, snapshot.health)) : 20;
   current.food = Number.isFinite(snapshot.food) ? Math.max(0, Math.min(20, snapshot.food)) : 20;
+  current.experienceLevel = Number.isSafeInteger(snapshot.experienceLevel) ? Math.max(0, Math.min(21863, snapshot.experienceLevel)) : 0;
+  current.experienceProgress = Number.isFinite(snapshot.experienceProgress) ? Math.max(0, Math.min(0.999999, snapshot.experienceProgress)) : 0;
+  current.experienceTotal = Number.isSafeInteger(snapshot.experienceTotal) ? Math.max(0, Math.min(2147483647, snapshot.experienceTotal)) : 0;
   current.inWater = snapshot.inWater === true;
   current.sneaking = snapshot.sneaking === true;
   current.sprinting = snapshot.sprinting === true;
@@ -665,6 +668,9 @@ export class Multiplayer {
       gamemode: p.gamemode,
       health: p.health,
       food: p.vitals?.food ?? 20,
+      experienceLevel: p.experience?.level ?? 0,
+      experienceProgress: p.experience?.progress ?? 0,
+      experienceTotal: p.experience?.total ?? 0,
       inWater: !!p.inWater,
       onGround: !!p.onGround,
       sneaking: !!p.sneaking,
