@@ -16,6 +16,7 @@ function readSignal(world, x, y, z, targetX, targetY, targetZ) {
   if (state.block.renderShape === 'redstone_wire') return state.get('power') || 0;
   if (state.block.id === 'mc:redstone_torch') return 15;
   if ((state.block.renderShape === 'lever' || state.block.renderShape === 'button' || state.block.renderShape === 'pressure_plate') && state.get('powered')) return 15;
+  if (state.block.renderShape === 'weighted_pressure_plate') return state.get('power') || 0;
   if (state.block.renderShape === 'repeater' && state.get('powered')) {
     const [dx,dy,dz] = FACING_VECTOR[state.get('facing')] || [0,0,-1];
     if (x+dx === targetX && y+dy === targetY && z+dz === targetZ) return 15;
@@ -54,7 +55,7 @@ export const RedstoneDevicesMixin = {
       const x = supportX + dx, y = supportY + dy, z = supportZ + dz;
       const state = this.world.getBlock(x, y, z);
       const shape = state.block.renderShape;
-      if (!['button', 'lever', 'pressure_plate'].includes(shape)) continue;
+      if (!['button', 'lever', 'pressure_plate', 'weighted_pressure_plate'].includes(shape)) continue;
       let sx = x, sy = y - 1, sz = z;
       if (shape !== 'pressure_plate') {
         const face = state.get('face'), facing = state.get('facing');
@@ -68,7 +69,7 @@ export const RedstoneDevicesMixin = {
         }
       }
       if (sx !== supportX || sy !== supportY || sz !== supportZ) continue;
-      const wasPowered = state.get('powered') === true;
+      const wasPowered = state.get('powered') === true || state.get('power') > 0;
       writeState(this, x, y, z, AIR.defaultState);
       if (this.player?.gamemode === 'survival') this.inventory?.addItem(state.block.id, 1);
       if (wasPowered) this._applyAdjacentRedstonePower(x, y, z, false);
@@ -170,8 +171,42 @@ export const RedstoneDevicesMixin = {
       this._knownPressurePlates.delete(key);
     }
 
+    this._tickWeightedPressurePlates(baseX, baseY, baseZ, !!player);
     this._tickRepeaters(baseX, baseY, baseZ, !!player);
     this._tickRedstoneWireNetwork(baseX, baseY, baseZ, !!player);
+  },
+
+  _tickWeightedPressurePlates(baseX, baseY, baseZ, hasPlayer) {
+    if (!hasPlayer) return;
+    const world = this.world;
+    const minX = baseX - 4, maxX = baseX + 4;
+    const minY = baseY - 2, maxY = baseY + 1;
+    const minZ = baseZ - 4, maxZ = baseZ + 4;
+    const mobs = this.entities?.mobs || [];
+    const drops = this.entities?.droppedItems || [];
+    const playerBox = this.player?.boundingBox();
+    for (let y = minY; y <= maxY; y++) for (let x = minX; x <= maxX; x++) for (let z = minZ; z <= maxZ; z++) {
+      const state = world.getBlock(x, y, z);
+      if (state.block.renderShape !== 'weighted_pressure_plate') continue;
+      let count = 0;
+      if (playerBox && !this.player.flying && playerBox.minX < x + 1 && playerBox.maxX > x &&
+          playerBox.minZ < z + 1 && playerBox.maxZ > z && playerBox.minY <= y + 0.09 && playerBox.maxY > y) count++;
+      for (const mob of mobs) {
+        if (!mob || !Number.isFinite(mob.x) || !Number.isFinite(mob.y) || !Number.isFinite(mob.z)) continue;
+        if (mob.x + 0.3 > x && mob.x - 0.3 < x + 1 && mob.z + 0.3 > z && mob.z - 0.3 < z + 1 &&
+            mob.y <= y + 1.8 && mob.y + 1.8 > y) count++;
+      }
+      for (const drop of drops) {
+        if (!drop || !Number.isFinite(drop.x) || !Number.isFinite(drop.y) || !Number.isFinite(drop.z)) continue;
+        if (drop.x >= x && drop.x < x + 1 && drop.z >= z && drop.z < z + 1 && drop.y >= y && drop.y <= y + 0.25) count++;
+      }
+      const light = state.block.id === 'mc:light_weighted_pressure_plate';
+      const power = light ? Math.min(15, count) : Math.min(15, Math.ceil(count / 10));
+      if (state.get('power') === power) continue;
+      const next = state.with('power', power);
+      writeState(this, x, y, z, next);
+      if ((state.get('power') > 0) !== (power > 0)) this._applyAdjacentRedstonePower(x, y, z, power > 0);
+    }
   },
 
   _tickRepeaters(baseX, baseY, baseZ, hasPlayer) {
