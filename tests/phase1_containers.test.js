@@ -4,7 +4,8 @@ import { ItemStack } from '../src/world/item.js';
 import { Chest, Furnace, SMELT_TICKS, CHEST_SLOTS, serializeContainer, deserializeContainer, drainContainer } from '../src/game/containers.js';
 import { RECIPES } from '../src/game/recipes.js';
 import { ContainerScreensMixin } from '../src/game/container_screens.js';
-import { TerrainGenerator, dungeonCandidateForCell, villageCandidateForCell } from '../src/world/gen/terrain.js';
+import { TerrainGenerator, dungeonCandidateForCell, villageCandidateForCell, mineshaftCandidateForCell } from '../src/world/gen/terrain.js';
+import { mineshaftPlan } from '../src/world/gen/structures.js';
 
 /**
  * Chest and furnace rules from the 1.12.2 reference (docs/TARGET_1_12_2.md, sections 11 and 17).
@@ -161,6 +162,44 @@ describe('Generated structure chest loot', () => {
     );
     const ordinary = ContainerScreensMixin._chestAt.call(makeContext(), 100000, 120, 100000);
     assert(ordinary.slots.every((stack) => stack.isEmpty), 'player-placed chest should start empty');
+  });
+
+  it('fills generated mineshaft end chests with mining loot', () => {
+    const seed = 'generated-mineshaft-loot-regression';
+    let position = null;
+    for (let gz = -40; gz <= 40 && !position; gz++) {
+      for (let gx = -40; gx <= 40 && !position; gx++) {
+        const shaft = mineshaftCandidateForCell(seed, gx, gz);
+        if (!shaft) continue;
+        for (const piece of mineshaftPlan(seed, shaft).pieces) {
+          if (piece.kind !== 'corridor' || !piece.deadEnd || !piece.chest) continue;
+          const [dx, dz] = [[1, 0], [-1, 0], [0, 1], [0, -1]][piece.d];
+          position = [piece.sx + dx * (piece.length - 1), piece.y + 1,
+            piece.sz + dz * (piece.length - 1)];
+          break;
+        }
+      }
+    }
+    assert(position, 'test seed did not produce a mineshaft chest');
+    const context = {
+      world: { seed },
+      _containers: new Map(),
+      _containerKey: (x, y, z) => `${x},${y},${z}`,
+    };
+    const chest = ContainerScreensMixin._chestAt.call(context, ...position);
+    assert(chest.slots.some((stack) => !stack.isEmpty), 'mineshaft chest has no loot');
+  });
+
+  it('replaces stale mismatched block-entity data instead of crashing when opening a chest', () => {
+    const context = {
+      world: { seed: 'stale-container-regression' },
+      _containers: new Map([['4,70,9', { type: 'furnace', data: new Furnace() }]]),
+      _containerKey: (x, y, z) => `${x},${y},${z}`,
+    };
+    const chest = ContainerScreensMixin._chestAt.call(context, 4, 70, 9);
+    assertEqual(chest.slots.length, 27);
+    assert(context._containers.get('4,70,9').type === 'chest',
+      'stale furnace record should be replaced by a chest record');
   });
 
   it('fills the village pantry chest with food and supplies', () => {
