@@ -774,6 +774,23 @@ TEXTURES.lever = () => {
 
 // Piston textures are intentionally authored as pixel art fallbacks. A
 // matching Java 1.19 resource-pack tile overrides these at startup.
+function redstoneOreTile(lit = false) {
+  const tile = grainy(hex(0x777777), 0.2, lit ? 'redstone_ore_lit' : 'redstone_ore', { clumps: 8, clumpColor: hex(0x555555) });
+  const rng = new Random(lit ? 'redstone-ore-glow' : 'redstone-ore-dormant');
+  const dark = hex(lit ? 0x8f1515 : 0x651515);
+  const red = hex(lit ? 0xff4545 : 0xb52222);
+  const bright = hex(0xff8b70);
+  for (let i = 0; i < 34; i++) {
+    const x = 1 + rng.nextInt(14), y = 1 + rng.nextInt(14);
+    const c = lit && rng.nextDouble() < 0.22 ? bright : (rng.nextDouble() < 0.55 ? red : dark);
+    setPx(tile, x, y, c[0], c[1], c[2]);
+    if (lit && x < 15 && rng.nextDouble() < 0.25) setPx(tile, x + 1, y, c[0], c[1], c[2]);
+  }
+  return tile;
+}
+TEXTURES.redstone_ore = () => redstoneOreTile(false);
+TEXTURES.redstone_ore_lit = () => redstoneOreTile(true);
+
 TEXTURES.piston_side = () => {
   const tile = grainy(hex(0x777777), 0.12, 'piston_side');
   const stone = hex(0x777777), wood = hex(0x9b6a3b), dark = hex(0x4b3423), iron = hex(0xb8b8b8);
