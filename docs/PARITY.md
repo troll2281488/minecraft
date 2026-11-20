@@ -94,6 +94,7 @@ Reference target for this compatibility track is **Minecraft: Java Edition 1.19.
 | Crafting grid returns items on close | yes | ✅ |
 | Creative inventory — all blocks, click to grab, search | tabbed + search | 🟡 *scrollable list + search; tabs are a later polish* |
 | Furnace smelting XP | Fractional XP is banked per completed recipe and awarded only when output is manually collected; pending XP persists and drops as orbs when the furnace is broken | 🟡 *(supported recipe subset only; blast furnace, smoker, hoppers and the complete 1.19 recipe catalogue remain incomplete)* |
+| Player death XP | Drop 7 × current level, capped at 100; `keepInventory` preserves XP | 🟡 *(Overworld Survival deaths with `keepInventory=false`; death-orb restoration across dimensions is not yet supported)* |
 | Stonecutting / smithing / brewing | yes | ⬜ |
 
 ## World generation
@@ -160,7 +161,7 @@ Room-code joining, remote avatar rendering, chat, shared overworld block edits, 
 Survival is partial: health, hunger, player XP levels, XP orbs from player-credited mob kills, eligible ore mining, fishing, successful animal breeding, villager trades and manually claimed furnace smelting XP; furnace XP is fractionally banked, persisted and released when its block is broken. Same-value orb merging, water buoyancy, fire/lava/cactus destruction, XP attraction/pickup and the survival XP HUD are present, with food consumption and basic starvation/
 regeneration; mob spawning, wandering, simple fleeing/pursuit, melee combat with armour damage reduction/durability, sheep shearing,
 fishing, apple drops from oak leaves, wheat seed drops from grass, rare zombie carrot/potato drops, and drops for pigs, sheep, cows, chickens and zombies are implemented in simplified
-form. Basic wheat farming is now playable: hoes till soil, seeds plant crops, seven growth stages advance near the player, and mature wheat yields wheat/seeds; bread is craftable. Crop growth is a fixed 600-tick interval within a 6-block player radius, without vanilla light, hydration or neighbour checks. Still missing are full vanilla mob AI, breeding, chicken egg laying, armour enchantments and potion effects, and vanilla death/drop/respawn rules. Fluids and flow, redstone, enchanting and
+form. Basic wheat farming is now playable: hoes till soil, seeds plant crops, seven growth stages advance near the player, and mature wheat yields wheat/seeds; bread is craftable. Crop growth is a fixed 600-tick interval within a 6-block player radius, without vanilla light, hydration or neighbour checks. Still missing are full vanilla mob AI, breeding, chicken egg laying, armour enchantments and potion effects, and full vanilla item-drop and respawn rules. Fluids and flow, redstone, enchanting and
 brewing, dimensions, structures, villagers and audio are not implemented. See
 [`../PLAN.md`](../PLAN.md) for the phase each belongs to.
 

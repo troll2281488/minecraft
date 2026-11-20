@@ -272,6 +272,11 @@ export const SessionMixin = {
       spawn = savedSpawn;
     } else spawn = await this._findSafeSpawn();
     this.entities?.reset();
+    const pendingXP = this._pendingDeathExperience;
+    this._pendingDeathExperience = null;
+    if (pendingXP && pendingXP.dimension === this.world.dimension) {
+      this.entities?.spawnExperienceOrbs(pendingXP.points, pendingXP.x, pendingXP.y, pendingXP.z);
+    }
     if (this.worldMeta?.keepInventory === false) {
       for (let slot = 0; slot < this.inventory.slots.length; slot++) {
         const stack = this.inventory.get(slot);

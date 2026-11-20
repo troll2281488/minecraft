@@ -133,3 +133,10 @@ export function experienceForBreeding(random = Math.random) {
 export function experienceForVillagerTrade(random = Math.random) {
   return randomExperienceInRange(3, 6, random);
 }
+
+
+/** Java 1.19 XP released when a Survival player dies (before keepInventory). */
+export function experienceDroppedOnDeath(level) {
+  const currentLevel = Number.isFinite(level) ? Math.max(0, Math.floor(level)) : 0;
+  return Math.min(100, currentLevel * 7);
+}
