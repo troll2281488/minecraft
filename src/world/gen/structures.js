@@ -256,11 +256,10 @@ export function placeStrongholdRoomNetwork(w, S, site, seed) {
   const lx = x - (largeLibrary ? 32 : 28), lz = z - (largeLibrary ? 7 : 5);
   const size = largeLibrary ? 15 : 11, top = largeLibrary ? 10 : 5;
   const bookshelf = S['mc:bookshelf'], planks = S['mc:oak_planks'];
-  const fence = S['mc:oak_fence'];
+  const fence = S['mc:oak_fence'] || S['mc:fence'];
   const ladder = S['mc:ladder'];
   const cobweb = S['mc:cobweb'];
   const chest = S['mc:chest'];
-  const inside = (dx, dz) => dx > 0 && dx < size - 1 && dz > 0 && dz < size - 1;
   for (let dx = 0; dx < size; dx++) for (let dz = 0; dz < size; dz++) {
     const wx = lx + dx, wz = lz + dz;
     put(wx, y, wz, brick);
@@ -323,7 +322,7 @@ export function placeStrongholdRoomNetwork(w, S, site, seed) {
     } else put(lx + 2, y + 1, lz + 2, chest);
   }
   if (S['mc:torch']) {
-    put(lx + 1, y + 4, lz + 1, S['mc:torch']);
+    put(lx + size - 2, y + 4, lz + 1, S['mc:torch']);
     if (largeLibrary) put(lx + size - 2, y + 9, lz + size - 2, S['mc:torch']);
   }
   // Vanilla libraries replace eligible low-ceiling air with cobwebs at 7%.
