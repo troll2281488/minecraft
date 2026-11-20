@@ -873,13 +873,21 @@ export class TerrainGenerator {
 
         const site = this.validateVillageSite(candidate.x, candidate.z);
         if (!site) continue;
-        // Four small homes and a farm form a recognizable village cluster,
-        // rather than the old two-box outpost. All pieces are clipped per chunk.
-        this.placeVillageHouse(chunk, baseX, baseZ, candidate.x, candidate.z, site.y, site.biome, 0);
-        this.placeVillageHouse(chunk, baseX, baseZ, candidate.x + 10, candidate.z, site.y, site.biome, 1);
-        this.placeVillageHouse(chunk, baseX, baseZ, candidate.x, candidate.z + 10, site.y, site.biome, 2);
-        this.placeVillageHouse(chunk, baseX, baseZ, candidate.x + 10, candidate.z + 10, site.y, site.biome, 3);
-        this.placeVillageFarm(chunk, baseX, baseZ, candidate.x + 20, candidate.z + 10, site.y);
+        // Seeded village plans: each settlement chooses a different street pattern,
+        // building mix and farm position while retaining chunk-order determinism.
+        const planRng = positionalRandom(this.seed, gx, 7301, gz, 7301);
+        const plan = planRng.nextInt(5);
+        const layouts = [
+          [[0,0,0],[10,0,1],[0,10,2],[10,10,3],[20,10,4]],
+          [[0,0,1],[10,0,2],[20,0,3],[0,10,4],[20,10,0]],
+          [[0,0,2],[10,0,3],[20,0,4],[0,10,0],[10,20,1]],
+          [[0,0,3],[10,0,4],[20,0,0],[0,10,1],[20,10,2]],
+          [[0,0,4],[10,0,0],[20,0,1],[0,10,2],[10,20,3]],
+        ];
+        for (const [dx,dz,kind] of layouts[plan]) {
+          if (kind===4) this.placeVillageFarm(chunk,baseX,baseZ,candidate.x+dx,candidate.z+dz,site.y);
+          else this.placeVillageHouse(chunk,baseX,baseZ,candidate.x+dx,candidate.z+dz,site.y,site.biome,kind);
+        }
         const path = this.states.byId['mc:coarse_dirt'];
         // Main lane and two cross-lanes link the doors, farm and village centre.
         for (let dx = 3; dx <= 23; dx++) {
