@@ -29,7 +29,7 @@ const BLOCK_TEXTURE_ALIASES = Object.freeze({
   savanna_soil: 'dirt',
   taiga_soil: 'dirt',
   swamp_mud: 'dirt',
-  // The community pack's gravel tile is tinted purple; use our neutral grey tile.
+  // Mountain gravel uses the same vanilla gravel tile as ordinary gravel.
   alpine_gravel: 'gravel',
 });
 
@@ -57,6 +57,12 @@ const UI_TEXTURES = Object.freeze({
 });
 
 // Spawn eggs are generated from their mob's two vanilla colors by item_icons.js.
+export function shouldFetchExternalBlockTexture(name) {
+  // Keep only locally-authored variants local. Vanilla gravel is supplied by ItsBrian.
+  return Boolean(name && !name.endsWith('_leaves') && !name.endsWith('_sapling') &&
+    !['coarse_dirt', 'podzol_top', 'podzol_side'].includes(name));
+}
+
 export function shouldFetchExternalItemTexture(item) {
   return Boolean(item && !item.block && !item.spawnEggMob);
 }
@@ -104,9 +110,7 @@ export async function loadItsBrianTextures(blocks, items) {
   const blockEntries = await mapWithLimit([...blockNames], 24, async (name) => {
     // Keep foliage and soil textures local. Grass top and side deliberately load
     // from ItsBrian: the shader tints only green pixels, never the brown dirt.
-    if (name.endsWith('_leaves') || name.endsWith('_sapling') || [
-      'coarse_dirt', 'gravel', 'podzol_top', 'podzol_side',
-    ].includes(name)) return null;
+    if (!shouldFetchExternalBlockTexture(name)) return null;
     const sourceName = BLOCK_TEXTURE_ALIASES[name] ?? name;
     if (name === 'chest_side' || name === 'chest_top') {
       // Vanilla stores the chest as a 64x64 model skin rather than a block tile.

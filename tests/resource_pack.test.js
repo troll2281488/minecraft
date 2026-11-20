@@ -1,5 +1,5 @@
 import { describe, it, assert, assertEqual } from './framework.js';
-import { shouldFetchExternalItemTexture } from '../src/render/resource_pack.js';
+import { shouldFetchExternalItemTexture, shouldFetchExternalBlockTexture } from '../src/render/resource_pack.js';
 import '../src/world/blocks/index.js';
 import { BLOCKS } from '../src/world/block.js';
 import { buildTextures, buildBlockTextureTable } from '../src/render/atlas.js';
@@ -59,5 +59,22 @@ describe('Grass shader tint isolation', () => {
     assert(TERRAIN_FRAGMENT_SHADER.includes('if (vTintKind == 1u)'));
     assert(TERRAIN_FRAGMENT_SHADER.includes('if (vFace == 1u)'));
     assert(TERRAIN_FRAGMENT_SHADER.includes('vec3 textureColor = texel.rgb'));
+  });
+});
+
+describe('ItsBrian terrain and jungle vine textures', () => {
+  it('loads the original ItsBrian gravel texture for normal and alpine gravel', () => {
+    assert(shouldFetchExternalBlockTexture('gravel'));
+    assert(shouldFetchExternalBlockTexture('alpine_gravel'));
+  });
+
+  it('keeps only intentionally local soil and foliage variants out of the external pack', () => {
+    assert(!shouldFetchExternalBlockTexture('oak_leaves'));
+    assert(!shouldFetchExternalBlockTexture('coarse_dirt'));
+    assert(shouldFetchExternalBlockTexture('vine'));
+  });
+
+  it('tints jungle vines with the biome foliage colour instead of leaving them grey', () => {
+    assertEqual(BLOCKS.get('mc:vine').tint, 'foliage');
   });
 });
