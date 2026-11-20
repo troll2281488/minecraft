@@ -420,7 +420,7 @@ export class TerrainGenerator {
       const rng=positionalRandom(this.seed,gx,4101,gz,4101);
       if(rng.nextInt(3)!==0) continue;
       const x=gx*384+64+rng.nextInt(256), z=gz*384+64+rng.nextInt(256), y=48+rng.nextInt(20);
-      const put=(wx,wy,wz,state)=>{const lx=wx-baseX,lz=wz-baseZ;if(lx>=0&&lx<16&&lz>=0&&lz<16&&wy>=MIN_Y&&wy<MAX_Y)chunk.setBlock(lx,wy,lz,state);};
+      const put=(wx,wy,wz,state)=>{if(!state)return;const lx=wx-baseX,lz=wz-baseZ;if(lx>=0&&lx<16&&lz>=0&&lz<16&&wy>=MIN_Y&&wy<MAX_Y)chunk.setBlock(lx,wy,lz,state);};
       const length=38+rng.nextInt(24);
       for(let i=0;i<length;i++) for(let dx=-2;dx<=2;dx++) {
         put(x+i,y,z+dx,brick); put(x+i,y+5,z+dx,brick);
