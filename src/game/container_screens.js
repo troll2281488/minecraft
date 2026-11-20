@@ -351,6 +351,12 @@ export const ContainerScreensMixin = {
     const target = this._containerSlot(spec, kind, index);
     if (!target) return;
     const { get, set } = target;
+    if (shift) {
+      this._moveContainerSlotToInventory(target);
+      inv.version++;
+      this._renderContainer();
+      return;
+    }
     const cursor = inv.cursor;
     if (target.outputOnly) {
       const output = get();
@@ -396,6 +402,19 @@ export const ContainerScreensMixin = {
       };
     }
     return null;
+  },
+
+  /** Shift-transfer as much as possible from a container slot into player storage. */
+  _moveContainerSlotToInventory(target) {
+    const stack = target.get();
+    if (stack.isEmpty) return false;
+    const copy = stack.clone();
+    const remainder = this.inventory.add(copy);
+    const moved = stack.count - remainder;
+    if (moved <= 0) return false;
+    stack.count = remainder;
+    target.set(remainder > 0 ? stack : ItemStack.EMPTY.clone());
+    return true;
   },
 
   _swapWithCursor(slotStack, set, button) {
