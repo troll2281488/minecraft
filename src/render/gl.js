@@ -295,6 +295,7 @@ in float vFogDistance;
 
 uniform sampler2DArray uTexture;
 uniform vec3 uFogColor;
+uniform vec3 uLeavesColor;
 uniform float uFogStart;
 uniform float uFogEnd;
 uniform float uAlphaCutoff;
@@ -327,6 +328,11 @@ void main() {
       vec3 sideShift = vGrassTint / plainsGreen;
       textureColor = texel.rgb * mix(vec3(1.0), sideShift, greenMask);
     }
+  } else if (vTintKind == 4u && uLeavesColor.r > 0.9) {
+    // Snowy biomes bleach only leaf pixels; keep the texture's light/dark
+    // pattern so the canopy remains textured rather than becoming a flat tile.
+    float leafShade = dot(texel.rgb, vec3(0.299, 0.587, 0.114));
+    textureColor = vec3(0.91, 0.95, 1.0) * (0.84 + leafShade * 0.16);
   }
   vec4 color = vec4(textureColor * vColor.rgb, texel.a * vColor.a);
 
