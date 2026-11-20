@@ -90,6 +90,14 @@ describe('shapes: box geometry', () => {
     }
   });
 
+  it('redstone repeater has a low profile model and no player collision', () => {
+    const repeater = BLOCKS.get('mc:repeater').defaultState;
+    assertEqual(shapeBoxes(repeater).length, 3);
+    assertEqual(collisionBoxes(repeater).length, 0);
+    assertEqual(repeater.get('delay'), 1);
+    assertEqual(repeater.with('delay', 4).get('delay'), 4);
+  });
+
   it('redstone wire is a thin non-colliding surface', () => {
     const wire = BLOCKS.get('mc:redstone_wire').defaultState;
     assertDeepEqual(shapeBoxes(wire), [[0, 0, 0, 1, 0.0625, 1]]);
