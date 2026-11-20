@@ -69,11 +69,42 @@ export async function boot() {
   const canvas = document.getElementById('canvas');
   const gl = createContext(canvas);
 
-  // Load attributed community textures; unmatched files use the atlas fallback.
-  const [remoteTextures, entityModels] = await Promise.all([
-    loadItsBrianTextures(BLOCKS, ITEMS),
-    loadEntityModelPack(),
-  ]);
+  // Community textures and detailed mob models are optional. Never hold the
+  // title screen hostage while a slow connection downloads hundreds of files.
+  const emptyTextures = { blocks: new Map(), items: new Map(), hud: {}, ui: {} };
+  const emptyModels = {
+    source: null, commit: null, minecraftVersion: null,
+    models: new Map(), animations: new Map(),
+    getModel() { return null; },
+    toLegacyParts() { return null; },
+    getAnimations() { return null; },
+  };
+  const withDeadline = (promise, fallback, ms, onTimeout = () => {}) => {
+    let timer;
+    return Promise.race([
+      promise.catch((error) => {
+        console.warn('[boot] Optional assets unavailable; using built-in assets.', error);
+        return fallback;
+      }),
+      new Promise((resolve) => {
+        timer = setTimeout(() => {
+          onTimeout();
+          console.warn('[boot] Optional asset loading took too long; opening with built-in assets.');
+          resolve(fallback);
+        }, ms);
+      }),
+    ]).finally(() => clearTimeout(timer));
+  };
+  const connection = navigator.connection;
+  const slowConnection = !!(connection?.saveData || /(^|-)2g/.test(connection?.effectiveType || ''));
+  const textureAbort = new AbortController();
+  const texturePromise = slowConnection
+    ? Promise.resolve(emptyTextures)
+    : withDeadline(loadItsBrianTextures(BLOCKS, ITEMS, { signal: textureAbort.signal }), emptyTextures, 2500, () => textureAbort.abort());
+  const modelPromise = slowConnection
+    ? Promise.resolve(emptyModels)
+    : withDeadline(loadEntityModelPack(), emptyModels, 2500);
+  const [remoteTextures, entityModels] = await Promise.all([texturePromise, modelPromise]);
   setHudSprites(remoteTextures.hud);
   setMinecraftUiTextures(remoteTextures.ui);
   const textures = buildTextures(remoteTextures.blocks);

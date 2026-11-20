@@ -62,8 +62,8 @@ export function shouldFetchExternalItemTexture(item) {
   return Boolean(item && !item.block && !item.spawnEggMob);
 }
 
-async function fetchImage(path) {
-  const response = await fetch(ITSBRIAN_RAW + path, { signal: AbortSignal.timeout(4000) });
+async function fetchImage(path, signal) {
+  const response = await fetch(ITSBRIAN_RAW + path, { signal: signal || AbortSignal.timeout(4000) });
   if (!response.ok) return null;
   return createImageBitmap(await response.blob());
 }
@@ -91,7 +91,7 @@ async function mapWithLimit(values, limit, task) {
 }
 
 /** Load every matching block/item texture and the legacy HUD sprites used by this game. */
-export async function loadItsBrianTextures(blocks, items) {
+export async function loadItsBrianTextures(blocks, items, { signal } = {}) {
   const blockNames = new Set();
   for (const state of blocks.statesById) {
     const t = state.block.textures;
@@ -110,7 +110,7 @@ export async function loadItsBrianTextures(blocks, items) {
     if (name === 'chest_side' || name === 'chest_top') {
       // Vanilla stores the chest as a 64x64 model skin rather than a block tile.
       // Rebuild the two 16x16 face tiles from the front/top UV regions.
-      const skin = await fetchImage('entity/chest/normal.png');
+      const skin = await fetchImage('entity/chest/normal.png', signal);
       if (!skin) return null;
       const canvas = document.createElement('canvas');
       canvas.width = TILE_SIZE;
@@ -127,7 +127,7 @@ export async function loadItsBrianTextures(blocks, items) {
       skin.close();
       return [name, pixels];
     }
-    const bitmap = await fetchImage('block/' + encodeURIComponent(sourceName) + '.png');
+    const bitmap = await fetchImage('block/' + encodeURIComponent(sourceName) + '.png', signal);
     if (!bitmap) return null;
     const { ctx } = canvasFor(bitmap);
     const pixels = new Uint8Array(ctx.getImageData(0, 0, TILE_SIZE, TILE_SIZE).data);
@@ -138,7 +138,7 @@ export async function loadItsBrianTextures(blocks, items) {
   const itemEntries = await mapWithLimit([...items.items.values()].filter(shouldFetchExternalItemTexture), 12, async (item) => {
     const name = item.id.slice(item.id.indexOf(':') + 1);
     const sourceName = ITEM_TEXTURE_ALIASES[name] ?? name;
-    const bitmap = await fetchImage('item/' + encodeURIComponent(sourceName) + '.png');
+    const bitmap = await fetchImage('item/' + encodeURIComponent(sourceName) + '.png', signal);
     if (!bitmap) return null;
     const { canvas } = canvasFor(bitmap);
     bitmap.close();
@@ -147,7 +147,7 @@ export async function loadItsBrianTextures(blocks, items) {
 
   const uiEntries = await Promise.all(Object.entries(UI_TEXTURES).map(async ([key, path]) => {
     try {
-      const bitmap = await fetchImage(path);
+      const bitmap = await fetchImage(path, signal);
       if (!bitmap) return null;
       const canvas = document.createElement('canvas');
       canvas.width = bitmap.width;
@@ -162,7 +162,7 @@ export async function loadItsBrianTextures(blocks, items) {
 
   const hud = {};
   try {
-    const bitmap = await fetchImage('gui/icons.png');
+    const bitmap = await fetchImage('gui/icons.png', signal);
     if (bitmap) {
       const crop = (key, sx, sy) => {
         const canvas = document.createElement('canvas');
