@@ -3,7 +3,8 @@
  * Plans are world-space and chunk writers clip their output, so generation
  * order and worker scheduling cannot change a structure.
  */
-import { positionalRandom } from '../../core/rng.js';
+import { positionalRandom, normalizeSeed } from '../../core/rng.js';
+import { hash01, seedToInt } from './hash.js';
 import { CHUNK_SIZE, MIN_Y, MAX_Y } from '../../core/constants.js';
 
 export class ChunkWriter {
@@ -92,13 +93,13 @@ export function placeDungeonRoom(w,S,room,seed,heights) {
   if(!air||!cobble) return;
   const {ix,iz}=dungeonDims(room),x1=room.x+ix+1,z1=room.z+iz+1;
   if(!w.touches(room.x,room.z,x1,z1)) return;
-  const rng=positionalRandom(seed,room.x,7301,room.z,7301);
+  const rng=positionalRandom(seed,room.x,7301,room.z,7301), hs=seedToInt(normalizeSeed(seed));
   for(let z=room.z;z<=z1;z++) for(let x=room.x;x<=x1;x++) {
     const edge=x===room.x||x===x1||z===room.z||z===z1;
     for(let y=room.y;y<=room.y+4;y++) {
       const id=w.id(x,y,z);
-      if(y===room.y) w.set(x,y,z,(rng.nextInt(4)===0?moss:cobble));
-      else if(edge||y===room.y+4) { if(id&&id!=='mc:air'&&id!=='mc:water') w.set(x,y,z,rng.nextInt(5)===0?moss:cobble); }
+      if(y===room.y) w.set(x,y,z,(hash01(hs,x,y,z,7302)<0.25?moss:cobble));
+      else if(edge||y===room.y+4) { if(id&&id!=='mc:air'&&id!=='mc:water') w.set(x,y,z,hash01(hs,x,y,z,7303)<0.2?moss:cobble); }
       else w.set(x,y,z,air);
     }
   }
