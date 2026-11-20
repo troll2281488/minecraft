@@ -81,3 +81,34 @@ export class PlayerExperience {
     return this;
   }
 }
+
+
+/** Java 1.19 experience released by mining eligible ore blocks. */
+export function experienceForBlock(blockId, random = Math.random) {
+  const ranges = {
+    'mc:coal_ore': [0, 2], 'mc:deepslate_coal_ore': [0, 2],
+    'mc:lapis_ore': [2, 5], 'mc:deepslate_lapis_ore': [2, 5],
+    'mc:redstone_ore': [1, 5], 'mc:deepslate_redstone_ore': [1, 5],
+    'mc:diamond_ore': [3, 7], 'mc:deepslate_diamond_ore': [3, 7],
+    'mc:emerald_ore': [3, 7], 'mc:deepslate_emerald_ore': [3, 7],
+    'mc:nether_quartz_ore': [2, 5],
+  };
+  const range = ranges[blockId];
+  if (!range) return 0;
+  const roll = Math.max(0, Math.min(0.999999, Number(random()) || 0));
+  return range[0] + Math.floor(roll * (range[1] - range[0] + 1));
+}
+
+/** Merge only equal-value orbs, retaining the newest lifetime and total pickup count. */
+export function mergeExperienceOrbState(primary, other) {
+  if (!primary || !other || primary === other || primary.value !== other.value) return false;
+  primary.count = Math.min(32767, Math.max(1, primary.count || 1) + Math.max(1, other.count || 1));
+  primary.age = Math.min(Math.max(0, primary.age || 0), Math.max(0, other.age || 0));
+  return true;
+}
+
+/** XP orbs are destroyed by fire, lava and cactus contact in Java Edition. */
+export function isExperienceOrbHazard(blockId) {
+  return blockId === 'mc:fire' || blockId === 'mc:soul_fire' ||
+    blockId === 'mc:lava' || blockId === 'mc:cactus';
+}
