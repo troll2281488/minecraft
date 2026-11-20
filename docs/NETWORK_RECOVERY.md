@@ -30,15 +30,19 @@ Implementation branch: `feature/multiplayer-reconnect-stability`.
 - No browser game can guarantee zero lag when a participant has a poor network.
   These changes make room discovery and recovery more robust; they cannot repair
   packet loss, a disconnected device, or a completely unavailable service.
-- Only block edits are queued in this change. Chat, combat events, item drops,
-  and other transient operations are not durable offline messages.
+- Block edits and chest/furnace snapshots are coalesced and queued while Firebase
+  is offline. Container writes are bounded to 512 pending room/container records;
+  the newest snapshot or deletion marker for each container wins. Chat, combat
+  events, item drops, and other transient operations are not durable offline messages.
 - The shared world remains a deterministic seed plus room-level block and
   container-state overlays. Chest and furnace snapshots now replicate through
   the room's `containers` node, and breaking a container publishes a tombstone
   so stale contents are not restored by another client. This is best-effort
   client-side replication, not an authoritative inventory service: two players
   editing the same container at nearly the same time can still overwrite one
-  another. Container writes are not queued while offline. Full authoritative
+  another. Offline container edits are replayed after presence recovery, but they
+  remain best-effort snapshots and can still conflict with edits made by another
+  player while the client was disconnected. Full authoritative
   chunk storage, player inventory, mobs, dimensions, conflict resolution, and
   server-side anti-cheat remain future work.
 - Room records older than 30 days are hidden by the lobby helper. They are not
@@ -62,7 +66,7 @@ For online furnaces, only the elected room host advances the smelting timer and
 publishes periodic snapshots; this avoids every client simulating the same furnace
 and racing to write its progress.
 
-This is an initial replication layer only. It does not lock a container while a
-player edits it, queue changes during network loss, or provide server-side item
-validation. Avoid treating simultaneous edits as conflict-free until those
+This is an initial replication layer only. It does not lock a container while a player edits it or provide server-side item
+validation. Offline snapshots are queued, but a later replay can still overwrite
+newer changes made by another player while the client was disconnected. Avoid treating simultaneous edits as conflict-free until those
 protections and live two-browser tests are added.
