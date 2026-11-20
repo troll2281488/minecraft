@@ -500,6 +500,8 @@ for (const [id, nutrition, saturation] of FOODS) {
  */
 ITEMS.define('mc:shears', { stackSize: 1, maxDamage: 238, tool: 'shears', attackDamage: 1 });
 ITEMS.define('mc:fishing_rod', { stackSize: 1, maxDamage: 64, tool: 'fishing_rod' });
+ITEMS.define('mc:bow', { stackSize: 1, maxDamage: 384, weapon: 'bow' });
+ITEMS.define('mc:arrow', { stackSize: 64 });
 
 // Creative-only spawn eggs for the mobs currently supported by the renderer.
 for (const mobType of [
