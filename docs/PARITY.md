@@ -139,7 +139,7 @@ Reference target for this compatibility track is **Minecraft: Java Edition 1.19.
 | Buttons (wood, stone, polished blackstone), lever and pressure plates — placement, models and recipes | yes | 🟡 *(local toggles/pulses and player pressure plates; full dust propagation remains)* |
 | Fences (six wood types + Nether brick) — neighbour connections, rails and collision | yes | 🟡 *(connection state updates on nearby edits; exact 1.5-block collision and wall connections still need validation)* |
 | Fence gates — open/closed geometry, collision, hand toggle and redstone input | yes | 🟡 *(simplified axis rotation; exact hinge and wall insets remain)* |
-| Fence, gate, wall models | yes | ⬜ |
+| Walls and wall models | yes | ⬜ |
 | Cloud layer, weather, particles | yes | ⬜ |
 
 ## Saves
