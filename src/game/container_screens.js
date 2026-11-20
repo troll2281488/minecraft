@@ -519,6 +519,16 @@ export const ContainerScreensMixin = {
     const player = this.player;
     if (!player || (this.multiplayer?.roomId && !this.multiplayer.isHost)) return;
     const tick = this.tickCount || 0;
+    // Container contents are batched at 1 Hz in multiplayer; never publish
+    // every eight-tick transfer as a separate database write.
+    if (this.multiplayer?.roomId && this.multiplayer.isHost && tick % 20 === 0 &&
+        this._hopperDirtyKeys?.size) {
+      for (const dirtyKey of this._hopperDirtyKeys) {
+        const entry = this._containers?.get(dirtyKey);
+        if (entry) this.multiplayer.pushContainerState(dirtyKey, entry.type, entry.data);
+      }
+      this._hopperDirtyKeys.clear();
+    }
     if (tick % 8 !== 0) return;
     const world = this.world;
     const baseX = Math.floor(player.x), baseY = Math.floor(player.y), baseZ = Math.floor(player.z);
@@ -560,9 +570,9 @@ export const ContainerScreensMixin = {
         }
         if (destinationEntry) {
           moved = this._hopperTransferOne(hopperEntry, destinationEntry, dy < 0 ? 'top' : 'side');
-          if (moved && this.multiplayer?.roomId && tick % 20 === 0) {
-            const targetKey = this._containerKey(tx, ty, tz);
-            this.multiplayer.pushContainerState(targetKey, destinationEntry.type, destinationEntry.data);
+          if (moved && this.multiplayer?.roomId) {
+            this._hopperDirtyKeys ||= new Set();
+            this._hopperDirtyKeys.add(this._containerKey(tx, ty, tz));
           }
         }
 
@@ -579,13 +589,15 @@ export const ContainerScreensMixin = {
           }
           if (sourceEntry) {
             moved = this._hopperTransferOne(sourceEntry, hopperEntry, 'bottom');
-            if (moved && this.multiplayer?.roomId && tick % 20 === 0) {
-              this.multiplayer.pushContainerState(this._containerKey(x, y + 1, z), sourceEntry.type, sourceEntry.data);
+            if (moved && this.multiplayer?.roomId) {
+              this._hopperDirtyKeys ||= new Set();
+              this._hopperDirtyKeys.add(this._containerKey(x, y + 1, z));
             }
           }
         }
-        if (moved && this.multiplayer?.roomId && tick % 20 === 0) {
-          this.multiplayer.pushContainerState(key, 'hopper', hopper);
+        if (moved && this.multiplayer?.roomId) {
+          this._hopperDirtyKeys ||= new Set();
+          this._hopperDirtyKeys.add(key);
         }
       }
     }
