@@ -385,7 +385,7 @@ export class TerrainGenerator {
   generateNetherChunk(chunk) {
     const baseX = chunk.cx * CHUNK_SIZE, baseZ = chunk.cz * CHUNK_SIZE;
     const S = this.states.byId, netherrack = S['mc:netherrack'] || S['mc:stone'];
-    const bedrock = S['mc:bedrock'], lava = S['mc:lava'];
+    const bedrock = S['mc:bedrock'], lava = netherrack;
     const soul = S['mc:soul_sand'] || netherrack, gravel = S['mc:gravel'] || netherrack;
     const glowstone = S['mc:glowstone'] || netherrack;
     for (let z=0; z<CHUNK_SIZE; z++) for (let x=0; x<CHUNK_SIZE; x++) {
@@ -879,10 +879,10 @@ export class TerrainGenerator {
         const plan = planRng.nextInt(5);
         const layouts = [
           [[0,0,0],[10,0,1],[0,10,2],[10,10,3],[20,10,4]],
-          [[0,0,1],[10,0,2],[20,0,3],[0,10,4],[20,10,0]],
-          [[0,0,2],[10,0,3],[20,0,4],[0,10,0],[10,20,1]],
-          [[0,0,3],[10,0,4],[20,0,0],[0,10,1],[20,10,2]],
-          [[0,0,4],[10,0,0],[20,0,1],[0,10,2],[10,20,3]],
+          [[0,0,0],[10,0,2],[20,0,3],[0,10,4],[20,10,1]],
+          [[0,0,0],[10,0,3],[20,0,4],[0,10,2],[10,20,1]],
+          [[0,0,0],[10,0,4],[20,0,3],[0,10,1],[20,10,2]],
+          [[0,0,0],[10,0,1],[20,0,2],[0,10,3],[10,20,4]],
         ];
         for (const [dx,dz,kind] of layouts[plan]) {
           if (kind===4) this.placeVillageFarm(chunk,baseX,baseZ,candidate.x+dx,candidate.z+dz,site.y);
