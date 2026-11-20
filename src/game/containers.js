@@ -85,12 +85,54 @@ export class Chest {
   }
 }
 
+export const HOPPER_SLOTS = 5;
+
+/** Five-slot hopper inventory with the same stack rules as a chest. */
+export class Hopper extends Chest {
+  constructor() {
+    super();
+    this.slots = Array.from({ length: HOPPER_SLOTS }, () => ItemStack.EMPTY.clone());
+  }
+}
+
+/** Move exactly one item between two slot arrays; false when blocked or empty. */
+export function moveOneItem(sourceSlots, destinationSlots) {
+  if (!Array.isArray(sourceSlots) || !Array.isArray(destinationSlots)) return false;
+  for (let i = 0; i < sourceSlots.length; i++) {
+    const source = sourceSlots[i];
+    if (!source || source.isEmpty) continue;
+    const one = ItemStack.of(source.item.id, 1, source.damage, source.data);
+    let moved = false;
+    for (const target of destinationSlots) {
+      if (!target || target.isEmpty || !target.canStackWith(one) || target.count >= target.maxStackSize) continue;
+      target.count += 1;
+      moved = true;
+      break;
+    }
+    if (!moved) {
+      const empty = destinationSlots.findIndex((slot) => !slot || slot.isEmpty);
+      if (empty < 0) return false;
+      destinationSlots[empty] = one;
+      moved = true;
+    }
+    if (moved) {
+      source.count -= 1;
+      if (source.count <= 0) sourceSlots[i] = ItemStack.EMPTY.clone();
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * JSON-safe block-entity state for local world saves.
  * Slot stacks use the same stable namespaced item IDs as player inventories.
  */
 export function serializeContainer(type, data) {
   if (type === 'chest' && data instanceof Chest) {
+    return { type, slots: data.slots.map((stack) => stack.toJSON()) };
+  }
+  if (type === 'hopper' && data instanceof Hopper) {
     return { type, slots: data.slots.map((stack) => stack.toJSON()) };
   }
   if (type === 'furnace' && data instanceof Furnace) {
@@ -118,6 +160,12 @@ export function deserializeContainer(record) {
     chest.slots = record.slots.map((stack) => ItemStack.fromJSON(stack));
     return { type: 'chest', data: chest };
   }
+  if (record.type === 'hopper') {
+    if (!Array.isArray(record.slots) || record.slots.length !== HOPPER_SLOTS) return null;
+    const hopper = new Hopper();
+    hopper.slots = record.slots.map((stack) => ItemStack.fromJSON(stack));
+    return { type: 'hopper', data: hopper };
+  }
   if (record.type === 'furnace') {
     const furnace = new Furnace();
     furnace.input = ItemStack.fromJSON(record.input);
@@ -144,6 +192,11 @@ export function drainContainer(type, data) {
   if (type === 'chest' && data instanceof Chest) {
     const drops = data.slots.filter((stack) => !stack.isEmpty).map((stack) => stack.clone());
     data.slots = Array.from({ length: CHEST_SLOTS }, () => ItemStack.EMPTY.clone());
+    return drops;
+  }
+  if (type === 'hopper' && data instanceof Hopper) {
+    const drops = data.slots.filter((stack) => !stack.isEmpty).map((stack) => stack.clone());
+    data.slots = Array.from({ length: HOPPER_SLOTS }, () => ItemStack.EMPTY.clone());
     return drops;
   }
   if (type === 'furnace' && data instanceof Furnace) {
