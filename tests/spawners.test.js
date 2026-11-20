@@ -94,7 +94,7 @@ describe('Java monster spawner rules', () => {
 
   it('builds a connected multi-room stronghold branch network with a stocked store room', () => {
     const ids = ['mc:air','mc:stone_bricks','mc:mossy_stone_bricks','mc:oak_planks',
-      'mc:stone_bricks_slab','mc:water','mc:torch','mc:chest'];
+      'mc:stone_bricks_slab','mc:water','mc:torch','mc:chest','mc:iron_bars'];
     const states = Object.fromEntries(ids.map(id => [id, BLOCKS.get(id)?.defaultState]).filter(([, state]) => state));
     const placed = new Map();
     const key = (x,y,z) => `${x},${y},${z}`;
@@ -106,7 +106,7 @@ describe('Java monster spawner rules', () => {
     const crossingDecoration = at(site.x + 7, site.y + 1, site.z - 12)?.block.id;
     assert(crossingDecoration === 'mc:water' || crossingDecoration === 'mc:stone_bricks',
       'crossing room gets its seeded fountain or pillar decoration');
-    assertEqual(at(site.x + 19, site.y + 2, site.z - 13)?.block.id, 'mc:stone_bricks');
+    assertEqual(at(site.x + 19, site.y + 2, site.z - 13)?.block.id, 'mc:iron_bars');
     assertEqual(at(site.x + 7, site.y + 1, site.z - 17)?.block.id, 'mc:stone_bricks');
     assertEqual(at(site.x - 2, site.y, site.z + 7)?.block.id, 'mc:stone_bricks');
     assert(at(site.x + 4, site.y + 1, site.z - 12), 'crossing room interior is carved');
