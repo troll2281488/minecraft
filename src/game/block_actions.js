@@ -33,6 +33,7 @@ export const BlockActionsMixin = {
     const container = this._containers?.get(containerKey);
     if (container) {
       this._containers.delete(containerKey);
+      this.multiplayer?.removeContainerState(containerKey);
       if (this.player.gamemode === GAMEMODE.SURVIVAL) {
         for (const stack of drainContainer(container.type, container.data)) this.inventory.add(stack);
       }
