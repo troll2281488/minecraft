@@ -14,6 +14,12 @@ function makeWorld(entries) {
 }
 
 describe('redstone lamp and torch parity', () => {
+  it('uses state-dependent light emission for lamps and torches', () => {
+    assertEqual(blockEmissionForState(BLOCKS.get('mc:redstone_lamp').defaultState), 0);
+    assertEqual(blockEmissionForState(BLOCKS.get('mc:redstone_lamp').defaultState.with('lit', true)), 15);
+    assertEqual(blockEmissionForState(BLOCKS.get('mc:redstone_torch').defaultState), 7);
+    assertEqual(blockEmissionForState(BLOCKS.get('mc:redstone_torch').defaultState.with('lit', false)), 0);
+  });
   it('registers a lamp with an initially unlit state', () => {
     const lamp = BLOCKS.get('mc:redstone_lamp').defaultState;
     assertEqual(lamp.get('lit'), false);
