@@ -55,6 +55,8 @@ export class Multiplayer {
     this.worldSyncElapsed = 0;
     this.hudElapsed = 0;
     this.serverPingMs = null;
+    this.pvpCooldown = 0;
+    this.lastCombatEventId = null;
     this.isHost = false;
     this.applyingRemoteBlock = false;
     this.connected = false;
@@ -319,6 +321,20 @@ export class Multiplayer {
       }
       this._updateRoomHud();
     });
+    this._listen(onChildAdded, ref(this.db, `minecraft_game/rooms/${code}/combatEvents`), (snap) => {
+      const event = snap.val();
+      if (!event || event.to !== this.uid || !Number.isFinite(event.ts) ||
+          Date.now() - event.ts > 5000 || event.id === this.lastCombatEventId) return;
+      this.lastCombatEventId = event.id;
+      const player = this.game.player;
+      if (player && player.gamemode === 'survival') {
+        this.game.entities?._damagePlayer(Math.max(1, Math.min(8, event.damage || 1)));
+        player.vx += Math.max(-0.18, Math.min(0.18, event.knockX || 0));
+        player.vz += Math.max(-0.18, Math.min(0.18, event.knockZ || 0));
+        player.vy = Math.max(player.vy || 0, 0.035);
+      }
+      remove(snap.ref).catch(() => {});
+    });
     // One room-level value listener gives a joining client the complete edit
     // snapshot and keeps it current when any participant changes a block.
     this._listen(onValue, ref(this.db, `minecraft_game/rooms/${code}/blocks`), (snap) => {
@@ -453,6 +469,7 @@ export class Multiplayer {
   }
 
   tick(dt) {
+    this.pvpCooldown = Math.max(0, this.pvpCooldown - 1);
     this._applyPendingBlocks();
     for (const p of this.remotePlayers.values()) {
       const alpha = Math.min(1, dt * 12);
@@ -494,6 +511,37 @@ export class Multiplayer {
       update(ref(this.db, `minecraft_game/users/${this.uid}`), { online: true, room: this.roomId, name: this.nickname, ts: Date.now() })
         .catch((error) => console.warn('[multiplayer] presence sync:', error));
     }
+  }
+
+  attackFromPlayer() {
+    if (!this.db || !this.roomId || this.pvpCooldown > 0 || !this.game.player) return false;
+    const player = this.game.player;
+    const yaw = player.yaw * Math.PI / 180;
+    const pitch = player.pitch * Math.PI / 180;
+    const look = [-Math.sin(yaw) * Math.cos(pitch), -Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)];
+    let target = null, bestDistance = 4.25;
+    for (const remote of this.remotePlayers.values()) {
+      const dx = remote.x - player.x, dy = remote.y + 0.9 - player.eyeY, dz = remote.z - player.z;
+      const distance = Math.hypot(dx, dy, dz);
+      if (distance < 0.001 || distance > bestDistance) continue;
+      const dot = (dx * look[0] + dy * look[1] + dz * look[2]) / distance;
+      if (dot < 0.84) continue;
+      target = { remote, dx, dz, distance };
+      bestDistance = distance;
+    }
+    if (!target) return false;
+    this.pvpCooldown = 10;
+    const length = Math.max(0.01, Math.hypot(target.dx, target.dz));
+    const damage = Math.max(1, Math.min(8, this.game.inventory?.held?.item?.attackDamage || 1));
+    push(ref(this.db, `minecraft_game/rooms/${this.roomId}/combatEvents`), {
+      id: `${this.uid}_${Date.now()}_${Math.floor(Math.random()*100000)}`,
+      from: this.uid, to: target.remote.id, damage,
+      knockX: target.dx / length * 0.14,
+      knockZ: target.dz / length * 0.14,
+      ts: Date.now(),
+    }).catch((error) => console.warn('[multiplayer] PvP hit:', error));
+    this.game.sounds?.play('hit');
+    return true;
   }
 
   publishDroppedItem(drop) {
