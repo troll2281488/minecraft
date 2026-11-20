@@ -31,6 +31,18 @@ export function electRoomHost(room, players) {
   return Object.keys(players || {}).sort()[0] || null;
 }
 
+/** Keep valid room records discoverable even when every player temporarily disconnects. */
+export function listJoinableRooms(rooms, now = Date.now(), maxAgeMs = 30 * 24 * 60 * 60 * 1000) {
+  return Object.entries(rooms || {})
+    .filter(([code, room]) => {
+      if (!/^[A-Z0-9]{5,8}$/.test(code) || !room || room.archived === true) return false;
+      if (room.seed === undefined || room.seed === null) return false;
+      const createdAt = Number(room.createdAt) || 0;
+      return !createdAt || now - createdAt <= maxAgeMs;
+    })
+    .sort((a, b) => (Number(b[1].createdAt) || 0) - (Number(a[1].createdAt) || 0));
+}
+
 export class Multiplayer {
   constructor(game) {
     this.game = game;
@@ -49,6 +61,7 @@ export class Multiplayer {
     this.roomId = null;
     this.remotePlayers = new Map();
     this.pendingBlocks = new Map();
+    this.pendingBlockWrites = new Map();
     this.unsubscribers = [];
     this.syncElapsed = 0;
     this.syncInFlight = false;
@@ -79,8 +92,14 @@ export class Multiplayer {
       this.connected = true;
       this.connectionUnsubscribe?.();
       this.connectionUnsubscribe = onValue(ref(this.db, '.info/connected'), (snap) => {
+        const wasConnected = this.firebaseConnected;
         this.firebaseConnected = snap.val() === true;
-        if (this.firebaseConnected) this.firebaseError = '';
+        if (this.firebaseConnected) {
+          this.firebaseError = '';
+          // Firebase executes onDisconnect handlers server-side. Re-register
+          // presence and the room player node after every network restoration.
+          if (!wasConnected && this.roomId) void this._restoreRoomPresence();
+        }
         this._updateRoomHud();
       }, (error) => {
         this.firebaseError = error?.message || 'Firebase connection listener failed';
@@ -129,20 +148,31 @@ export class Multiplayer {
     }
     this._listen(onValue, ref(this.db, 'minecraft_game/rooms'), (snap) => {
       rooms.replaceChildren();
-      // Show only rooms that currently have at least one connected player.
-      // Each player's node is removed by Firebase onDisconnect when their tab
-      // loses its connection, so empty/stale rooms stay hidden from the lobby.
-      const entries = Object.entries(snap.val() || {}).filter(([, room]) =>
-        Object.keys(room?.players || {}).length > 0);
-      if (!entries.length) {
-        rooms.textContent = 'Активных комнат пока нет — создайте первую.';
+      // Rooms are durable sessions, not disposable presence lists. Keep an
+      // empty room visible so its owner and friends can rejoin after a router,
+      // tab, or browser disconnect.
+      const entries = listJoinableRooms(snap.val() || {});
+      const lastRoom = String(localStorage.getItem('mc_last_room') || '').toUpperCase();
+      if (lastRoom && /^[A-Z0-9]{5,8}$/.test(lastRoom)) {
+        const row = document.createElement('div');
+        row.className = 'mp-row';
+        const label = document.createElement('span');
+        label.textContent = `Последняя комната · ${lastRoom}`;
+        const join = document.createElement('button');
+        join.textContent = 'Переподключиться';
+        join.onclick = () => this.joinRoom(lastRoom);
+        row.append(label, join);
+        rooms.append(row);
+      }
+      if (!entries.length && !rooms.childElementCount) {
+        rooms.textContent = 'Комнат пока нет — создайте первую.';
         return;
       }
       for (const [code, room] of entries) {
         const row = document.createElement('div');
         row.className = 'mp-row';
         const label = document.createElement('span');
-        label.textContent = `Комната ${code} · ${room.hostName || 'Сервер'} · ${Object.keys(room.players || {}).length} игроков`;
+        label.textContent = `Комната ${code} · ${room.hostName || 'Сервер'} · ${Object.keys(room.players || {}).length} игроков · ${Object.keys(room.players || {}).length ? 'онлайн' : 'ожидает игроков'}`;
         const join = document.createElement('button');
         join.textContent = 'Войти';
         join.onclick = () => this.joinRoom(code);
@@ -192,12 +222,24 @@ export class Multiplayer {
 
   async _createRoom() {
     if (!this.db && !(await this.init())) return false;
-    const code = roomCode();
-    const seed = String(Math.floor(Math.random() * 2147483647));
-    await set(ref(this.db, `minecraft_game/rooms/${code}`), {
-      seed, hostName: this.nickname, hostUid: this.uid, worldTime: 0, createdAt: Date.now(), players: {},
-    });
-    await this.joinRoom(code, seed);
+    // A short room code can collide. Claim it atomically instead of overwriting
+    // an existing world (the old set() call could silently replace that room).
+    let code = null;
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const candidate = roomCode();
+      const roomRef = ref(this.db, `minecraft_game/rooms/${candidate}`);
+      const seed = String(Math.floor(Math.random() * 2147483647));
+      const result = await runTransaction(roomRef, (current) => current || {
+        seed, hostName: this.nickname, hostUid: this.uid,
+        worldTime: 0, createdAt: Date.now(), players: {},
+      }, { applyLocally: false });
+      if (result.committed && result.snapshot.val()?.hostUid === this.uid) {
+        code = candidate;
+        break;
+      }
+    }
+    if (!code) throw new Error('Не удалось подобрать свободный код комнаты. Попробуй ещё раз.');
+    return this.joinRoom(code);
   }
 
   async joinRoom(rawCode) {
@@ -267,8 +309,11 @@ export class Multiplayer {
     }
 
     const playerRef = ref(this.db, `minecraft_game/rooms/${code}/players/${this.uid}`);
+    // Register disconnect cleanup before publishing presence; this ordering
+    // also makes the first short-lived connection safe.
+    await onDisconnect(playerRef).remove();
     await set(playerRef, this._playerPayload());
-    onDisconnect(playerRef).remove().catch(() => {});
+    localStorage.setItem('mc_last_room', code);
     await update(ref(this.db, `minecraft_game/players/${this.uid}`), { room: code, name: this.nickname });
     await update(ref(this.db, `minecraft_game/users/${this.uid}`), { room: code, name: this.nickname, online: true, ts: Date.now() });
 
@@ -388,6 +433,32 @@ export class Multiplayer {
     document.getElementById('mp-screen').classList.add('hidden');
     this.game.ui.toast(`Подключено к комнате ${code}`);
     return true;
+  }
+
+  async _restoreRoomPresence() {
+    if (!this.db || !this.roomId || !this.game.player || this.presenceRestoreInFlight) return;
+    this.presenceRestoreInFlight = true;
+    const code = this.roomId;
+    try {
+      const playerRef = ref(this.db, `minecraft_game/rooms/${code}/players/${this.uid}`);
+      await onDisconnect(playerRef).remove();
+      await set(playerRef, this._playerPayload());
+      await update(ref(this.db, `minecraft_game/users/${this.uid}`), {
+        name: this.nickname, online: true, room: code, ts: Date.now(),
+      });
+      await update(ref(this.db, `minecraft_game/players/${this.uid}`), {
+        online: true, room: code, name: this.nickname,
+      });
+      this.firebaseError = '';
+      await this._flushPendingBlockWrites();
+      this._updateRoomHud();
+    } catch (error) {
+      this.firebaseError = error?.message || 'Не удалось восстановить сетевую сессию';
+      console.warn('[multiplayer] room presence restore:', error);
+      this._updateRoomHud();
+    } finally {
+      this.presenceRestoreInFlight = false;
+    }
   }
 
   _separateSpawn(players) {
@@ -585,12 +656,39 @@ export class Multiplayer {
   }
 
   pushBlockChange(x, y, z, state) {
-    if (!this.db || !this.roomId || this.applyingRemoteBlock) return;
+    if (!this.roomId || this.applyingRemoteBlock) return;
     const stateString = state?.toString?.();
     if (!stateString) return;
-    set(ref(this.db, `minecraft_game/rooms/${this.roomId}/blocks/overworld_${x}_${y}_${z}`), {
-      x, y, z, state: stateString, ts: Date.now(),
-    }).catch((error) => this.game.ui.toast(`Не удалось синхронизировать блок: ${error.message}`, { error: true }));
+    const key = `${this.roomId}:overworld_${x}_${y}_${z}`;
+    this.pendingBlockWrites.set(key, {
+      roomId: this.roomId, key: `overworld_${x}_${y}_${z}`,
+      payload: { x, y, z, state: stateString, ts: Date.now() },
+    });
+    // Bound memory use during long offline periods; latest edit per coordinate wins.
+    while (this.pendingBlockWrites.size > 4096) {
+      this.pendingBlockWrites.delete(this.pendingBlockWrites.keys().next().value);
+    }
+    if (this.firebaseConnected) void this._flushPendingBlockWrites();
+  }
+
+  async _flushPendingBlockWrites() {
+    if (!this.db || !this.roomId || !this.firebaseConnected || this.blockFlushInFlight) return;
+    this.blockFlushInFlight = true;
+    try {
+      for (const [queueKey, entry] of this.pendingBlockWrites) {
+        if (entry.roomId !== this.roomId) continue;
+        try {
+          await set(ref(this.db, `minecraft_game/rooms/${entry.roomId}/blocks/${entry.key}`), entry.payload);
+          // Do not erase a newer edit queued while this write was in flight.
+          if (this.pendingBlockWrites.get(queueKey) === entry) this.pendingBlockWrites.delete(queueKey);
+        } catch (error) {
+          console.warn('[multiplayer] queued block sync:', error);
+          break; // Keep this and later edits queued until the next reconnect.
+        }
+      }
+    } finally {
+      this.blockFlushInFlight = false;
+    }
   }
 
   sendChat(text) {
