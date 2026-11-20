@@ -99,6 +99,8 @@ describe('shapes: box geometry', () => {
     assertDeepEqual(shapeBoxes(plate.with('powered', true)), [[0, 0, 0, 1, 0.03125, 1]]);
     assertEqual(shapeBoxes(BLOCKS.get('mc:lever').defaultState).length, 2);
     assert(isNonCube(button));
+    assertEqual(collisionBoxes(button).length, 0, 'buttons are non-solid controls');
+    assertEqual(collisionBoxes(plate).length, 0, 'pressure plates are non-solid controls');
   });
 
   it('all Java 1.19 button, lever and pressure plate blocks are registered', () => {
