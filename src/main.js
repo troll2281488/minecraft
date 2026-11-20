@@ -69,7 +69,7 @@ export async function boot() {
   const canvas = document.getElementById('canvas');
   const gl = createContext(canvas);
 
-  // Load available ItsBrian textures; missing files fall back to the built-in art.
+  // Load attributed community textures; unmatched files use the atlas fallback.
   const [remoteTextures, entityModels] = await Promise.all([
     loadCommunityTextures(BLOCKS, ITEMS),
     loadEntityModelPack(),
