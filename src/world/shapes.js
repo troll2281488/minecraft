@@ -195,6 +195,11 @@ function pressurePlateBoxes(state) {
   return [[0, 0, 0, 1, h, 1]];
 }
 
+function weightedPressurePlateBoxes(state) {
+  const h = state.get('power') > 0 ? 0.03125 : 0.0625;
+  return [[0, 0, 0, 1, h, 1]];
+}
+
 function redstoneWireBoxes() {
   return [[0, 0, 0, 1, 0.0625, 1]];
 }
@@ -226,6 +231,7 @@ export function shapeBoxes(state) {
     case 'button': return buttonBoxes(state);
     case 'lever': return leverBoxes(state);
     case 'pressure_plate': return pressurePlateBoxes(state);
+    case 'weighted_pressure_plate': return weightedPressurePlateBoxes(state);
     case 'redstone_wire': return redstoneWireBoxes();
     case 'repeater': return repeaterBoxes();
     default: return FULL_LIST;
@@ -244,8 +250,8 @@ export function collisionBoxes(state) {
 /** True if this block is anything other than a plain full cube. */
 export function isNonCube(state) {
   const shape = state.block.renderShape;
-  return shape === 'slab' || shape === 'stair' || shape === 'pane' || shape === 'ladder' || shape === 'door' || shape === 'trapdoor' || shape === 'button' || shape === 'lever' || shape === 'pressure_plate' || shape === 'redstone_wire' || shape === 'repeater';
+  return shape === 'slab' || shape === 'stair' || shape === 'pane' || shape === 'ladder' || shape === 'door' || shape === 'trapdoor' || shape === 'button' || shape === 'lever' || shape === 'pressure_plate' || shape === 'weighted_pressure_plate' || shape === 'redstone_wire' || shape === 'repeater';
 }
 
 /** The shapes the mesher must render with the box emitter rather than as a cube. */
-export const BOX_SHAPES = Object.freeze(new Set(['slab', 'stair', 'pane', 'ladder', 'door', 'trapdoor', 'button', 'lever', 'pressure_plate', 'redstone_wire', 'repeater']));
+export const BOX_SHAPES = Object.freeze(new Set(['slab', 'stair', 'pane', 'ladder', 'door', 'trapdoor', 'button', 'lever', 'pressure_plate', 'weighted_pressure_plate', 'redstone_wire', 'repeater']));

@@ -66,6 +66,8 @@ recipes.push({ result: 'mc:polished_blackstone_pressure_plate', count: 1, patter
 recipes.push({ result: 'mc:lever', count: 1, pattern: ['T', 'S'], key: { T: 'mc:stick', S: 'mc:cobblestone' } });
 recipes.push({ result: 'mc:redstone_torch', count: 1, pattern: ['R', 'S'], key: { R: 'mc:redstone', S: 'mc:stick' } });
 recipes.push({ result: 'mc:repeater', count: 1, pattern: ['T T', ' R ', 'SSS'], key: { T: 'mc:redstone_torch', R: 'mc:redstone', S: 'mc:stone' } });
+recipes.push({ result: 'mc:light_weighted_pressure_plate', count: 1, pattern: ['GG'], key: { G: 'mc:gold_ingot' } });
+recipes.push({ result: 'mc:heavy_weighted_pressure_plate', count: 1, pattern: ['II'], key: { I: 'mc:iron_ingot' } });
 
 recipes.push({
   result: 'mc:stick', count: 4,

@@ -361,7 +361,7 @@ export const BlockActionsMixin = {
       const support = this.world.getBlock(target.x, target.y - 1, target.z);
       if (!support.block.solid || !support.block.opaqueCube) return;
     }
-    if (block.renderShape === 'pressure_plate') {
+    if (['pressure_plate', 'weighted_pressure_plate'].includes(block.renderShape)) {
       if (this.hit.face?.dy !== 1) return;
       const support = this.world.getBlock(target.x, target.y - 1, target.z);
       if (!support.block.solid || !support.block.opaqueCube) return;
