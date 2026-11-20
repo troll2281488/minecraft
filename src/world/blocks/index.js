@@ -341,7 +341,7 @@ define('mc:sticky_piston', {
 define('mc:piston_head', {
   hardness: 0, resistance: 0, soundGroup: 'wood', texture: 'piston_top',
   renderShape: 'piston_head', solid: true, opaqueCube: false, opacity: 0,
-  properties: { facing: PROPS.facingAll, sticky: PROPS.powered },
+  properties: { facing: PROPS.facingAll, sticky: PROPS.sticky },
   defaultValues: { facing: 'north', sticky: false },
   notInCreative: true,
 });
@@ -684,6 +684,7 @@ const MATERIALS = [
   ['mc:clay_ball', {}],
   ['mc:string', {}],
   ['mc:quartz', {}],
+  ['mc:slime_ball', {}],
   ['mc:glowstone_dust', {}],
   ['mc:bone', {}],
   ['mc:leather', {}],
