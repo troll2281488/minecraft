@@ -130,6 +130,6 @@ export function experienceForBreeding(random = Math.random) {
 }
 
 /** XP released for a completed villager trade (before any breeding bonus). */
-export function experienceForVillagerTrade(random = Math.random, leveledUp = false) {
-  return randomExperienceInRange(3, 6, random) + (leveledUp ? 5 : 0);
+export function experienceForVillagerTrade(random = Math.random) {
+  return randomExperienceInRange(3, 6, random);
 }
