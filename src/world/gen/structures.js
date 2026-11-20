@@ -36,7 +36,7 @@ export function mineshaftPlan(seed, site) {
     if(Math.max(Math.abs(box.x0-site.x),Math.abs(box.x1-site.x),Math.abs(box.z0-site.z),Math.abs(box.z1-site.z))>96||pieces.some(p=>overlap(box,p))) continue;
     const p={kind:'corridor',sx:job.x,sz:job.z,d:job.d,length,y,...box,deadEnd:true,chest:rng.nextInt(2)===0};
     pieces.push(p);
-    if(job.depth<5&&rng.nextInt(3)!==0 {
+    if(job.depth<5&&rng.nextInt(3)!==0) {
       const cx=ex+dx*2,cz=ez+dz*2,cross={kind:'crossing',cx,cz,y,x0:cx-2,x1:cx+2,z0:cz-2,z1:cz+2};
       if(!pieces.some(q=>overlap(cross,q))) {
         pieces.push(cross);
