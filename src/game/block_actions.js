@@ -72,6 +72,18 @@ export const BlockActionsMixin = {
     if (isDoor) {
       this.world.setBlock(x, pairedDoorY, z, AIR.defaultState);
       this.multiplayer?.pushBlockChange(x, pairedDoorY, z, AIR.defaultState);
+    } else {
+      // Removing the supporting block also removes the complete door above it.
+      // Only the lower half produces the single door item in Survival.
+      const doorLower = this.world.getBlock(x, y + 1, z);
+      if (doorLower.block.renderShape === 'door' && doorLower.get('half') === 'lower') {
+        const doorUpper = this.world.getBlock(x, y + 2, z);
+        this.world.setBlock(x, y + 1, z, AIR.defaultState);
+        this.world.setBlock(x, y + 2, z, AIR.defaultState);
+        this.multiplayer?.pushBlockChange(x, y + 1, z, AIR.defaultState);
+        this.multiplayer?.pushBlockChange(x, y + 2, z, AIR.defaultState);
+        if (this.player.gamemode === GAMEMODE.SURVIVAL) this.inventory.addItem(doorLower.block.id, 1);
+      }
     }
     this.mining.reset();
   },
