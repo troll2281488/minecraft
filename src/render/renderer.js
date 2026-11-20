@@ -412,7 +412,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     // A 0.05 plane wastes precision at normal block distances and can amplify z-fighting.
     mat4.perspective(this.projection, fov, aspect, 0.2, far);
     let cameraX = this.renderPosition.x;
-    let cameraY = this.renderPosition.y + player.eyeHeight;
+    let cameraY = this.renderPosition.y + player.eyeHeight + (player.ridingHorse ? 1.15 : 0);
     let cameraZ = this.renderPosition.z;
     let cameraYaw = player.yaw;
     let cameraPitch = player.pitch;
@@ -857,8 +857,8 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     }
     if (this.thirdPerson) {
       document.getElementById('held-item-view')?.classList.add('hidden');
-      draw(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, jumping: !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking, walking: this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035, attack: this.player.attackTime > 0, attackTime: this.player.attackTime }, true);
-      draw(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z, this.player.yaw * Math.PI / 180, outerHuman, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, sneaking: this.player.sneaking, skinLayer: true }, true);
+      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, jumping: !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking, walking: this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035, attack: this.player.attackTime > 0, attackTime: this.player.attackTime }, true);
+      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, outerHuman, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.onGround, sneaking: this.player.sneaking, skinLayer: true }, true);
       const armorColors = ['#b8b8b8','#8f8f9b','#b17a45','#6c778a'];
       const armorParts = [];
       for (let slot = 36; slot <= 39; slot++) {
@@ -937,6 +937,14 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         mobType: mob.type, mobTextureKey: mob.type === 'villager' ? 'villager_' + (mob.villagerCareer || 'farmer') : mob.type,
         idle: mob.anim?.idle ?? 0, walking: !!mob.anim?.walking,
       });
+      if (mob.type === 'horse' && mob.horseArmor) {
+        const armorColor = mob.horseArmor === 'diamond' ? [0.18,0.78,0.78,1]
+          : mob.horseArmor === 'golden' ? [0.92,0.70,0.18,1] : [0.68,0.72,0.76,1];
+        draw(mob.x, mob.y, mob.z, mob.yaw, [
+          [[0,0.92,0],[0.88,0.78,1.32],armorColor],
+          [[0,1.28,0.48],[0.48,0.62,0.48],armorColor],
+        ], mob.walkPhase, -1, -1, 1, {});
+      }
       if (mob.type === 'sheep' && !mob.sheared && vanillaModel?.layers?.fur) {
         const furParts = vanillaLayerParts(vanillaModel, 'fur');
         if (furParts) draw(mob.x, mob.y, mob.z, mob.yaw + Math.PI, furParts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
