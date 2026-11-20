@@ -1,4 +1,5 @@
 import { ItemStack } from '../world/item.js';
+import { experienceForMob, splitExperienceIntoOrbs } from './experience.js';
 import { TerrainGenerator, villageCandidateForCell } from '../world/gen/terrain.js';
 import { createVillagerProfile } from './villager_trades.js';
 import { drawPower, canFire } from '../game/bow.js';
@@ -138,6 +139,8 @@ export class MobSystem {
     this.blockParticles = [];
     this.bowDrawStart = null;
     this.droppedItems = [];
+    this.experienceOrbs = [];
+    this.experiencePickupCooldown = 0;
     this.spawnTicks = 0;
     this.nextId = 1;
     this.attackCooldown = 0;
@@ -154,6 +157,8 @@ export class MobSystem {
     this.blockParticles.length = 0;
     this.bowDrawStart = null;
     this.droppedItems.length = 0;
+    this.experienceOrbs.length = 0;
+    this.experiencePickupCooldown = 0;
     this.spawnTicks = 0;
     this.nextId = 1;
     this.fishing = null;
@@ -262,6 +267,7 @@ export class MobSystem {
         mob.health = Math.max(0, mob.health - (mob.type === 'horse' ? calculateHorseArmorDamage(arrow.damage, mob.horseArmor) : arrow.damage));
         mob.hurtTicks = 10;
         mob.anim.hurt = 1;
+        mob.playerDamageTicks = 100;
         arrow.stuckMobId = mob.id;
         arrow.offsetX = arrow.x - mob.x; arrow.offsetY = arrow.y - mob.y; arrow.offsetZ = arrow.z - mob.z;
         arrow.done = false;
@@ -366,18 +372,38 @@ export class MobSystem {
       villagerOfferUses: mob.villagerOfferUses ?? {},
     }));
     for (const villageKey of this.populatedVillages) entries.push({ type: 'village_marker', villageKey });
+    for (const orb of this.experienceOrbs) entries.push({
+      type: 'experience_orb', id: orb.id, value: orb.value,
+      x: orb.x, y: orb.y, z: orb.z, vx: orb.vx, vy: orb.vy, vz: orb.vz,
+      age: orb.age, pickupDelay: orb.pickupDelay,
+    });
     return entries;
   }
 
   /** Restore only known, finite mob state; malformed save entries are ignored. */
   loadFrom(entries) {
     this.mobs.length = 0;
+    this.experienceOrbs.length = 0;
     this.populatedVillages = new Set();
     if (!Array.isArray(entries)) {
       this.nextId = 1;
       return;
     }
     for (const entry of entries) {
+      if (entry?.type === 'experience_orb' &&
+          Number.isSafeInteger(entry.value) && entry.value > 0 && entry.value <= 32767 &&
+          ['x','y','z'].every((key) => Number.isFinite(entry[key])) &&
+          Number.isSafeInteger(entry.age) && entry.age >= 0 && entry.age < 6000 &&
+          this.experienceOrbs.length < 512) {
+        this.experienceOrbs.push({
+          id: Number.isSafeInteger(entry.id) && entry.id > 0 ? entry.id : this.experienceOrbs.length + 1,
+          value: entry.value, x: entry.x, y: entry.y, z: entry.z,
+          vx: Number.isFinite(entry.vx) ? entry.vx : 0,
+          vy: Number.isFinite(entry.vy) ? entry.vy : 0,
+          vz: Number.isFinite(entry.vz) ? entry.vz : 0,
+          age: entry.age, pickupDelay: Number.isFinite(entry.pickupDelay) ? Math.max(0, Math.min(100, entry.pickupDelay)) : 0,
+        });
+      }
       if (entry?.type === 'village_marker' && typeof entry.villageKey === 'string' && entry.villageKey.length <= 48) {
         this.populatedVillages.add(entry.villageKey);
       }
@@ -420,7 +446,7 @@ export class MobSystem {
         anim: { walk: 0, idle: 0, attack: 0, hurt: 0, fuse: 0 },
       });
     }
-    this.nextId = this.mobs.reduce((next, mob) => Math.max(next, mob.id + 1), 1);
+    this.nextId = [...this.mobs, ...this.experienceOrbs].reduce((next, entity) => Math.max(next, entity.id + 1), 1);
   }
 
   _spawn(type, x, z, extra = {}) {
@@ -807,6 +833,7 @@ export class MobSystem {
     this.game.sounds?.play('hit');
     mob.hurtTicks = 10;
     mob.anim.hurt = 1;
+    mob.playerDamageTicks = 100;
     this.attackCooldown = 10;
     const dx = mob.x - player.x;
     const dz = mob.z - player.z;
@@ -827,10 +854,76 @@ export class MobSystem {
         const leftover = this.game.inventory?.addItem(drop.id, drop.count) ?? drop.count;
         if (leftover > 0) this.game.ui?.toast('Inventory full: ' + leftover + ' ' + drop.id.replace('mc:', '') + ' not collected', { error: true });
       }
+      this._dropMobExperience(mob);
       this.mobs.splice(this.mobs.indexOf(mob), 1);
       this.game.ui?.toast(mob.type + ' defeated');
     }
     return true;
+  }
+
+  _dropMobExperience(mob) {
+    if (!mob || mob.experienceDropped || !(mob.playerDamageTicks > 0)) return 0;
+    mob.experienceDropped = true;
+    const amount = experienceForMob(mob.type, Math.random, mob);
+    if (amount > 0) this.spawnExperienceOrbs(amount, mob.x, mob.y + 0.45, mob.z);
+    return amount;
+  }
+
+  spawnExperienceOrbs(points, x, y, z) {
+    const values = splitExperienceIntoOrbs(points);
+    for (const value of values) {
+      const angle = Math.random() * Math.PI * 2;
+      this.experienceOrbs.push({
+        id: this.nextId++, value, x: x + (Math.random() - 0.5) * 0.35,
+        y: y + (Math.random() - 0.5) * 0.25, z: z + (Math.random() - 0.5) * 0.35,
+        vx: Math.cos(angle) * 0.045, vy: 0.08 + Math.random() * 0.05,
+        vz: Math.sin(angle) * 0.045, age: 0, pickupDelay: 0,
+      });
+    }
+    return values.length;
+  }
+
+  _tickExperienceOrbs() {
+    const player = this.game.player, world = this.game.world;
+    if (!player || !world) return;
+    if (this.experiencePickupCooldown > 0) this.experiencePickupCooldown--;
+    for (let i = this.experienceOrbs.length - 1; i >= 0; i--) {
+      const orb = this.experienceOrbs[i];
+      orb.age++;
+      if (orb.age >= 6000) { this.experienceOrbs.splice(i, 1); continue; }
+      if (orb.pickupDelay > 0) orb.pickupDelay--;
+      const dx = player.x - orb.x, dy = (player.y + 0.65) - orb.y, dz = player.z - orb.z;
+      const distance = Math.hypot(dx, dy, dz);
+      if (distance < 7.25 && distance > 0.001) {
+        const pull = 0.012 + (1 - Math.min(1, distance / 7.25)) * 0.045;
+        orb.vx += dx / distance * pull;
+        orb.vy += dy / distance * pull;
+        orb.vz += dz / distance * pull;
+        const speed = Math.hypot(orb.vx, orb.vy, orb.vz);
+        if (speed > 0.45) {
+          const scale = 0.45 / speed;
+          orb.vx *= scale; orb.vy *= scale; orb.vz *= scale;
+        }
+      }
+      orb.vy = Math.max(-0.18, orb.vy - 0.012);
+      const nx = orb.x + orb.vx, ny = orb.y + orb.vy, nz = orb.z + orb.vz;
+      const floor = world.getHeight(Math.floor(nx), Math.floor(nz)) + 1.04;
+      if (ny <= floor) {
+        orb.y = floor + 0.025;
+        orb.vy = Math.abs(orb.vy) * 0.18;
+        orb.vx *= 0.82; orb.vz *= 0.82;
+      } else orb.y = ny;
+      orb.x = nx; orb.z = nz;
+      orb.vx *= 0.985; orb.vy *= 0.985; orb.vz *= 0.985;
+      if (orb.pickupDelay <= 0 && distance < 0.78 && this.experiencePickupCooldown <= 0 &&
+          player.gamemode !== 'spectator' && player.health > 0) {
+        const oldLevel = player.experience?.level ?? 0;
+        player.addExperience?.(orb.value);
+        this.experienceOrbs.splice(i, 1);
+        this.experiencePickupCooldown = 2;
+        this.game.sounds?.play((player.experience?.level ?? 0) > oldLevel ? 'levelup' : 'xp');
+      }
+    }
   }
 
   tick() {
@@ -838,6 +931,7 @@ export class MobSystem {
     const player = this.game.player;
     if (!world || !player) return;
     this._tickDroppedItems();
+    this._tickExperienceOrbs();
     this.spawnTicks++;
     this.villageCheckTicks++;
     if (this.villageCheckTicks >= 200) {
@@ -933,6 +1027,7 @@ export class MobSystem {
     for (let i = this.mobs.length - 1; i >= 0; i--) {
       const mob = this.mobs[i];
       if (mob.ageTicks < 0) mob.ageTicks++;
+      if (mob.playerDamageTicks > 0) mob.playerDamageTicks--;
       if (mob.loveTicks > 0) mob.loveTicks--;
       if (mob.breedCooldown > 0) mob.breedCooldown--;
       mob.thinkTicks--;
@@ -1131,6 +1226,7 @@ export class MobSystem {
 
       if (mob.health <= 0) {
         for (const drop of rollMobDrops(mob.type)) this.game.inventory?.addItem(drop.id, drop.count);
+        this._dropMobExperience(mob);
         this.mobs.splice(i, 1);
         continue;
       }
