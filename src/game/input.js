@@ -132,6 +132,7 @@ export const InputMixin = {
     }
 
     if (this.player?.ridingHorse && (e.code === 'ShiftLeft' || e.code === 'ShiftRight')) {
+      this.keys.delete(e.code);
       this.player.ridingHorse = null;
       this.player.vy = 0;
       this.ui.toast('Ты слез с лошади');
