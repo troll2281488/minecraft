@@ -97,6 +97,9 @@ export class Multiplayer {
     this.pendingBlockWrites = new Map();
     this.pendingContainerWrites = new Map();
     this.activeContainerLocks = new Map();
+    this.containerFlushInFlight = false;
+    this.containerFlushRequested = false;
+    this.containerFlushPromise = null;
     this.remoteContainerLocks = new Map();
     this.unsubscribers = [];
     this.syncElapsed = 0;
