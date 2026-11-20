@@ -73,7 +73,10 @@ export const BlockActionsMixin = {
       this._openVillagerTrade(villager);
       return;
     }
-    const heldItem = this.inventory?.held?.item;\n    if (this.hit?.state?.block?.id === 'mc:oak_door') { this._toggleDoorAt(this.hit.x, this.hit.y, this.hit.z); return; }\n    if (this.hit?.state?.block?.id === 'mc:iron_door') return;\n    if (this.hit?.state?.block?.id === 'mc:stone_button') { this._pressStrongholdButton(this.hit.x, this.hit.y, this.hit.z); return; }
+    const heldItem = this.inventory?.held?.item;
+    if (this.hit?.state?.block?.id === 'mc:oak_door') { this._toggleDoorAt(this.hit.x, this.hit.y, this.hit.z); return; }
+    if (this.hit?.state?.block?.id === 'mc:iron_door') return;
+    if (this.hit?.state?.block?.id === 'mc:stone_button') { this._pressStrongholdButton(this.hit.x, this.hit.y, this.hit.z); return; }
     if (this.hit?.state?.block?.id === 'mc:bed') {
       if (this.world.dimension !== 'overworld') {
         this.ui.toast('В этом измерении нельзя спать.', { error: true });
