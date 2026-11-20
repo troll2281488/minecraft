@@ -279,7 +279,12 @@ export function scatterGeneratedChestLoot(seed, x, y, z, chest, kind = 'dungeon'
   if (!chest || !Array.isArray(chest.slots)) return;
   const stacks = chest.slots.filter((stack) => stack && !stack.isEmpty);
   const slotOrder = Array.from({ length: chest.slots.length }, (_, i) => i);
-  const salt = 0x534c4f54 + (kind === 'dungeon' ? 0 : kind === 'village' ? 1 : kind === 'stronghold' ? 2 : kind === 'mineshaft' ? 3 : 4);
+  const kindSalt = {
+    dungeon: 0, village: 1, stronghold: 2, mineshaft: 3,
+    desert_temple: 4, jungle_temple: 5,
+    stronghold_library: 6, stronghold_crossing: 7, stronghold_corridor: 8,
+  }[kind] ?? 9;
+  const salt = 0x534c4f54 + kindSalt;
   const rng = positionalRandom(seed, x, y, z, salt);
   for (let i = slotOrder.length - 1; i > 0; i--) {
     const j = rng.nextInt(i + 1);
