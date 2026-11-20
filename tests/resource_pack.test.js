@@ -51,3 +51,13 @@ describe('Grass biome tint and missing texture safety', () => {
     for (const layer of table) assert(layer !== missing, 'block face mapped to pink missing texture');
   });
 });
+
+describe('Grass shader tint isolation', () => {
+  it('applies biome colour only to grass blocks and recognizes the actual top face', async () => {
+    const { TERRAIN_VERTEX_SHADER, TERRAIN_FRAGMENT_SHADER } = await import('../src/render/gl.js');
+    assert(TERRAIN_VERTEX_SHADER.includes('vTintKind = tintKind'));
+    assert(TERRAIN_FRAGMENT_SHADER.includes('if (vTintKind == 1u)'));
+    assert(TERRAIN_FRAGMENT_SHADER.includes('if (vFace == 1u)'));
+    assert(TERRAIN_FRAGMENT_SHADER.includes('vec3 textureColor = texel.rgb'));
+  });
+});
