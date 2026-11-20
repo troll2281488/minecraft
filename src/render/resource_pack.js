@@ -17,7 +17,6 @@ const STORAGE_KEY = 'mc-resource-pack';
 
 // Community-authored texture sources. Floydicus Old Pack permits reuse with attribution;
  // SimpleRP's exported PNGs are covered by its GPL source licence.
-const FLOYDICUS_RAW = 'https://raw.githubusercontent.com/OverFloyd/floydicus-old-pack/master/src/assets/minecraft/textures/';
 const SIMPLE_RP_RAW = 'https://raw.githubusercontent.com/elhedran/SimpleRP/master/build/16/assets/minecraft/textures/blocks/';
 
 const BLOCK_TEXTURE_ALIASES = Object.freeze({
@@ -55,7 +54,7 @@ export function shouldFetchExternalItemTexture(item) {
   return Boolean(item && !item.block && !item.spawnEggMob);
 }
 
-async function fetchImage(path, base = FLOYDICUS_RAW + 'block/') {
+async function fetchImage(path, base = SIMPLE_RP_RAW) {
   const response = await fetch(base + path, { signal: AbortSignal.timeout(4000) });
   if (!response.ok) return null;
   return createImageBitmap(await response.blob());
@@ -99,22 +98,18 @@ export async function loadCommunityTextures(blocks, items) {
     ...BLOCK_TEXTURE_ALIASES,
     // Floydicus uses the modern singular "block" directory and mostly vanilla
     // 1.12-era names. These aliases bridge the game's descriptive texture keys.
-    grass_block_top: 'grass_block_top',
-    grass_block_side: 'grass_block_side',
-    podzol_top: 'soul_soil',
-    podzol_side: 'grass_block_side',
+    grass_block_top: 'grass_top',
+    grass_block_side: 'grass_side',
+    podzol_top: 'hardened_clay_stained_brown',
+    podzol_side: 'grass_side',
     coarse_dirt: 'dirt',
     plains_soil: 'dirt',
-    forest_floor: 'soul_soil',
+    forest_floor: 'hardened_clay_stained_brown',
     birch_soil: 'sand',
-    jungle_soil: 'dirt',
-    savanna_soil: 'sand',
-    taiga_soil: 'dirt',
+    taiga_soil: 'stone',
     swamp_mud: 'clay',
     alpine_gravel: 'gravel',
-    mossy_cobblestone: 'mossy_cobblestone',
-    chest_top: 'chest_front',
-    chest_side: 'chest_side',
+    mossy_cobblestone: 'cobblestone_mossy',
     
   };
   const simpleLeafNames = {
@@ -155,53 +150,11 @@ export async function loadCommunityTextures(blocks, items) {
     return [name, pixels];
   });
 
-  const itemEntries = await mapWithLimit([...items.items.values()].filter(shouldFetchExternalItemTexture), 12, async (item) => {
-    const name = item.id.slice(item.id.indexOf(':') + 1);
-    const sourceName = ITEM_TEXTURE_ALIASES[name] ?? name;
-    const bitmap = await fetchImage(encodeURIComponent(sourceName) + '.png', FLOYDICUS_RAW + 'item/');
-    if (!bitmap) return null;
-    const { canvas } = canvasFor(bitmap);
-    bitmap.close();
-    return [item.id, canvas.toDataURL('image/png')];
-  });
-
-  const uiEntries = await Promise.all(Object.entries(UI_TEXTURES).map(async ([key, path]) => {
-    try {
-      const bitmap = await fetchImage(path, FLOYDICUS_RAW);
-      if (!bitmap) return null;
-      const canvas = document.createElement('canvas');
-      canvas.width = bitmap.width;
-      canvas.height = bitmap.height;
-      canvas.getContext('2d').drawImage(bitmap, 0, 0);
-      bitmap.close();
-      return [key, canvas.toDataURL('image/png')];
-    } catch {
-      return null;
-    }
-  }));
-
-  const hud = {};
-  try {
-    const bitmap = await fetchImage('gui/icons.png', FLOYDICUS_RAW);
-    if (bitmap) {
-      const crop = (key, sx, sy) => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 9; canvas.height = 9;
-        canvas.getContext('2d').drawImage(bitmap, sx, sy, 9, 9, 0, 0, 9, 9);
-        hud[key] = canvas.toDataURL('image/png');
-      };
-      // Legacy Java HUD atlas: empty/full/half heart and food sprites.
-      crop('heart_empty', 16, 0); crop('heart_full', 52, 0); crop('heart_half', 61, 0);
-      crop('food_empty', 16, 27); crop('food_full', 52, 27); crop('food_half', 61, 27);
-      crop('bubble_empty', 16, 18); crop('bubble_full', 25, 18);
-      bitmap.close();
-    }
-  } catch { /* Keep the game's built-in HUD icons if the atlas cannot be read. */ }
-
   const blockTextures = new Map(blockEntries);
-  const itemIcons = new Map(itemEntries);
-  const ui = Object.fromEntries(uiEntries.filter(Boolean));
-  console.info('[textures] Floydicus + SimpleRP: ' + blockTextures.size + '/' + blockNames.size + ' block textures, ' + itemIcons.size + ' item icons, ' + Object.keys(hud).length + ' HUD sprites, ' + Object.keys(ui).length + ' GUI assets.');
+  const itemIcons = new Map();
+  const hud = {};
+  const ui = {};
+  console.info('[textures] SimpleRP: ' + blockTextures.size + '/' + blockNames.size + ' block textures. Item and UI icons use the game's local assets.');
   return { blocks: blockTextures, items: itemIcons, hud, ui };
 }
 
