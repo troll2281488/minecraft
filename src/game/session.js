@@ -218,6 +218,7 @@ export const SessionMixin = {
   async _respawnAfterDeath() {
     if (!this.world || !this.player) return;
     const spawn = await this._findSafeSpawn();
+    this.entities?.reset();
     if (this.worldMeta?.keepInventory === false) {
       for (let slot = 0; slot < this.inventory.slots.length; slot++) {
         const stack = this.inventory.get(slot);
@@ -229,7 +230,6 @@ export const SessionMixin = {
     this.player.vitals = new this.player.vitals.constructor();
     this.player.fallDistance = 0;
     this.player.input = { forward: 0, strafe: 0, jump: false, sneak: false, sprint: false };
-    this.entities?.reset();
     this.deathScreenOpen = false;
     this.paused = false;
     document.getElementById('death-screen')?.classList.add('hidden');
