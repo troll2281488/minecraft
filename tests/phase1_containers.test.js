@@ -252,6 +252,50 @@ describe('Generated structure chest loot', () => {
   });
 });
 
+describe('Furnace experience storage', () => {
+  it('banks fractional XP as each supported recipe completes', () => {
+    const f = new Furnace();
+    f.input = ItemStack.of('mc:oak_log', 10);
+    f.fuel = ItemStack.of('mc:coal', 2);
+    for (let i = 0; i < SMELT_TICKS * 10; i++) f.tick();
+    assertEqual(f.output.count, 10);
+    assertEqual(f.xpStored, 1);
+    assertEqual(f.xpOutputCount, 10);
+  });
+
+  it('awards XP only for output actually collected and preserves the remainder', () => {
+    const f = new Furnace();
+    f.xpStored = 3.5;
+    f.xpOutputCount = 10;
+    assertEqual(f.claimExperienceForOutput(4), 1.4);
+    assertEqual(f.xpStored, 2.1);
+    assertEqual(f.xpOutputCount, 6);
+    assertEqual(f.claimExperienceForOutput(99), 2.1);
+    assertEqual(f.xpStored, 0);
+    assertEqual(f.xpOutputCount, 0);
+  });
+
+  it('persists pending XP and resets it when the furnace is drained', () => {
+    const f = new Furnace();
+    f.input = ItemStack.of('mc:iron_ore', 1);
+    f.output = ItemStack.of('mc:iron_ingot', 2);
+    f.xpStored = 1.4;
+    f.xpOutputCount = 2;
+    const loaded = deserializeContainer(serializeContainer('furnace', f)).data;
+    assertEqual(loaded.xpStored, 1.4);
+    assertEqual(loaded.xpOutputCount, 2);
+    drainContainer('furnace', loaded);
+    assertEqual(loaded.xpStored, 0);
+    assertEqual(loaded.xpOutputCount, 0);
+  });
+
+  it('loads old furnace saves without XP fields safely', () => {
+    const loaded = deserializeContainer({ type: 'furnace' }).data;
+    assertEqual(loaded.xpStored, 0);
+    assertEqual(loaded.xpOutputCount, 0);
+  });
+});
+
 describe('Furnace', () => {
   it('smelts iron ore to an ingot after 200 ticks with coal', () => {
     const f = new Furnace();
