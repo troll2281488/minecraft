@@ -287,6 +287,15 @@ export class MobSystem {
     }
   }
 
+  /** Spawn a redstone-ejected item at a block face without borrowing player position. */
+  spawnItemStackAt(stack, x, y, z, vx = 0, vy = 0.12, vz = 0) {
+    if (!stack || stack.isEmpty) return false;
+    const drop = { id: this.nextId++, stack: stack.clone(), x, y, z, vx, vy, vz, age: 0, pickupDelay: 10 };
+    this.droppedItems.push(drop);
+    this.game.multiplayer?.publishDroppedItem(drop);
+    return true;
+  }
+
   /** Toss a stack into the world with a small forward/upward impulse. */
   dropStack(stack) {
     if (!stack || stack.isEmpty || !this.game.player) return false;
