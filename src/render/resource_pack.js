@@ -45,13 +45,8 @@ const ITEM_TEXTURE_ALIASES = Object.freeze({
 const UI_TEXTURES = Object.freeze({
   widgets: 'gui/widgets.png',
   icons: 'gui/icons.png',
-  inventory: 'gui/container/inventory.png',
-  genericContainer: 'gui/container/generic_54.png',
-  furnace: 'gui/container/furnace.png',
-  craftingTable: 'gui/container/crafting_table.png',
   titleLogo: 'gui/title/minecraft.png',
   optionsBackground: 'gui/options_background.png',
-  creativeInventory: 'gui/container/creative_inventory/tab_items.png',
   asciiFont: 'font/ascii.png',
   europeanFont: 'font/nonlatin_european.png',
 });
@@ -371,13 +366,8 @@ export function setMinecraftUiTextures(textures) {
   const variables = {
     widgets: '--mc-gui-widgets',
     icons: '--mc-gui-icons',
-    inventory: '--mc-gui-inventory',
-    genericContainer: '--mc-gui-generic-container',
-    furnace: '--mc-gui-furnace',
-    craftingTable: '--mc-gui-crafting-table',
     titleLogo: '--mc-gui-title-logo',
     optionsBackground: '--mc-gui-options-background',
-    creativeInventory: '--mc-gui-creative-inventory',
     asciiFont: '--mc-font-ascii-atlas',
     europeanFont: '--mc-font-european-atlas',
   };
