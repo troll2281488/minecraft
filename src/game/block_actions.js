@@ -79,7 +79,7 @@ export const BlockActionsMixin = {
       }
       return;
     }
-    if (heldItem?.spawnEggMob && this.player?.gamemode === GAMEMODE.CREATIVE && this.hit) {
+    if (heldItem?.spawnEggMob && this.hit) {
       const spawned = this.entities?.spawnFromEgg(heldItem.spawnEggMob, this.hit.x, this.hit.z);
       if (spawned) this.ui.toast(`Spawned ${heldItem.spawnEggMob}`);
       return;
