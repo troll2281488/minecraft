@@ -24,10 +24,12 @@ import { Chunk, GEN_STAGE } from '../chunk.js';
 import { BLOCKS } from '../block.js';
 import { CHUNK_SIZE, MIN_Y, MAX_Y, SEA_LEVEL } from '../../core/constants.js';
 import { clamp } from '../../core/math.js';
-import { buildTree } from './trees.js';
+import { buildTree, TREE_MARGIN } from './trees.js';
+import { hash01, seedToInt } from './hash.js';
+import { ChunkWriter, mineshaftPlan, placeMineshaftPlan, placeDungeonRoom, villagePlan, placeVillagePlan, villageStyleForBiome } from './structures.js';
 
 /** Bumped whenever generation output changes. Stored per world. */
-export const GENERATOR_VERSION = 11;
+export const GENERATOR_VERSION = 12;
 
 
 // ---------------------------------------------------------------------------
@@ -99,11 +101,11 @@ export const BIOME_SURFACE = {
   [BIOME.MOUNTAINS]: { top:'mc:stone', filler:'mc:stone', trees:0.004, grass:0.025, species:'oak' },
   [BIOME.WINDSWEPT_HILLS]: { top:'mc:stone', filler:'mc:stone', trees:0.012, grass:0.04, species:'oak' },
   [BIOME.SNOWY_PLAINS]: { top:'mc:snow_block', filler:'mc:dirt', trees:0.002, grass:0 },
-  [BIOME.ICE_SPIKES]: { top:'mc:packed_ice', filler:'mc:snow_block', trees:0, grass:0 },
+  [BIOME.ICE_SPIKES]: { top:'mc:snow_block', filler:'mc:dirt', trees:0.0035, grass:0, species:'ice_spike' },
   [BIOME.TAIGA]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.05, grass:0.12, species:'spruce' },
   [BIOME.SNOWY_TAIGA]: { top:'mc:snow_block', filler:'mc:dirt', trees:0.045, grass:0, species:'spruce' },
-  [BIOME.GIANT_TREE_TAIGA]: { top:'mc:podzol', filler:'mc:dirt', trees:0.062, grass:0.12, species:'spruce' },
-  [BIOME.GIANT_SPRUCE_TAIGA]: { top:'mc:podzol', filler:'mc:dirt', trees:0.072, grass:0.1, species:'spruce' },
+  [BIOME.GIANT_TREE_TAIGA]: { top:'mc:podzol', filler:'mc:dirt', trees:0.04, grass:0.08, ferns:0.25, mix:[['spruce',9],['boulder',1]] },
+  [BIOME.GIANT_SPRUCE_TAIGA]: { top:'mc:podzol', filler:'mc:dirt', trees:0.045, grass:0.06, ferns:0.25, mix:[['spruce',9],['boulder',1]] },
   [BIOME.SWAMP]: { top:'mc:clay', filler:'mc:dirt', trees:0.035, grass:0.12, species:'oak', ferns:0.06 },
   [BIOME.MUSHROOM_FIELDS]: { top:'mc:mycelium', filler:'mc:dirt', trees:0.002, grass:0.02, mushrooms:0.13 },
   [BIOME.DESERT_HILLS]: { top:'mc:sand', filler:'mc:sand', trees:0, grass:0, deadBush:0.025 },
@@ -120,6 +122,15 @@ export const BIOME_SURFACE = {
   [BIOME.MESA_PLATEAU]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0, grass:0, deadBush:0.01 },
   [BIOME.MESA_PLATEAU_F]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0.006, grass:0.01, species:'oak', deadBush:0.01 },
 };
+
+const smooth01 = (v, a, b) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const quant = (v) => 0.5 + 0.5 * Math.tanh(0.8 * v / 0.19);
+
+const COLD_BIOMES = new Set([
+  BIOME.SNOWY_PLAINS, BIOME.ICE_SPIKES, BIOME.SNOWY_TAIGA, BIOME.GIANT_SPRUCE_TAIGA,
+  BIOME.SNOWY_BEACH, BIOME.FROZEN_OCEAN, BIOME.DEEP_FROZEN_OCEAN, BIOME.FROZEN_RIVER,
+]);
+const BADLAND_BIOMES = new Set([BIOME.BADLANDS, BIOME.WOODED_BADLANDS, BIOME.ERODED_BADLANDS]);
 
 // ---------------------------------------------------------------------------
 // Ore distribution
@@ -163,142 +174,148 @@ export class TerrainGenerator {
     this.humidity = new OctaveNoise(root.fork('humidity'), 3, 0.5, 2.0);
     this.biomeDetail = new OctaveNoise(root.fork('biome_detail'), 2, 0.55, 2.0);
     this.biomeRarity = new OctaveNoise(root.fork('biome_rarity'), 2, 0.5, 2.0);
-    this.river = new OctaveNoise(root.fork('river'), 2, 0.5, 2.0);
+    this.river = new OctaveNoise(root.fork('river'), 3, 0.5, 2.0);
     this.density = new OctaveNoise(root.fork('density'), 3, 0.5, 2.0);
     this.caveA = new PerlinNoise(root.fork('cave_a'));
     this.caveB = new PerlinNoise(root.fork('cave_b'));
     this.cheese = new OctaveNoise(root.fork('cheese'), 3, 0.5, 2.0);
+    // Domain warp and climate fields from the user's worldgen archive.
+    this.relief = new OctaveNoise(root.fork('relief'), 3, 0.5, 2.0);
+    this.warp = new OctaveNoise(root.fork('warp'), 2, 0.5, 2.0);
+    this.mesa = new OctaveNoise(root.fork('mesa'), 2, 0.5, 2.0);
+    this.patch = new OctaveNoise(root.fork('patch'), 2, 0.5, 2.0);
+    this.ravine = new OctaveNoise(root.fork('ravine'), 2, 0.5, 2.0);
+    this.ravineMask = new OctaveNoise(root.fork('ravine_mask'), 2, 0.5, 2.0);
 
+    this.hseed = seedToInt(this.seed);
     this.states = resolveStates();
+    this.bands = this.buildTerracottaBands(root.fork('bands'));
   }
 
-  /** Surface height at a world column, in blocks. */
-  heightAt(wx, wz) {
-    // Continent noise sets the broad shape: oceans, lowlands, highlands.
-    const continent = this.continent.sample2(wx, wz, 0.0018);
-
-    // Ridged noise adds mountain ranges, but only where the continent is high.
-    // Multiplying by the continent value is what keeps mountains from erupting
-    // out of the ocean floor.
-    const mountainMask = clamp((continent - 0.15) * 2.5, 0, 1);
-    const ridge = this.ridge.ridged2(wx, wz, 0.0035) * mountainMask;
-
-    const detail = this.detail.sample2(wx, wz, 0.012);
-
-    let height = SEA_LEVEL
-      + continent * 42
-      + ridge * 58
-      + detail * 6;
-
-    // Flatten the sea floor so oceans read as basins rather than noisy sludge.
-    if (height < SEA_LEVEL - 4) {
-      height = SEA_LEVEL - 4 - (SEA_LEVEL - 4 - height) * 0.55;
+  buildTerracottaBands(rng) {
+    const S=this.states.byId;
+    const palette=['orange','orange','yellow','white','brown','red','light_gray','orange'];
+    const out=new Array(MAX_Y).fill(S['mc:orange_terracotta']||S['mc:red_sand']);
+    let y=0;
+    while(y<MAX_Y){const color=palette[rng.nextInt(palette.length)],thick=1+rng.nextInt(4);
+      const state=S[`mc:${color}_terracotta`]||S['mc:orange_terracotta']||S['mc:red_sand'];
+      for(let k=0;k<thick&&y<MAX_Y;k++,y++)out[y]=state;
     }
-
-    // A low-frequency river field carves connected, gently sloped channels
-    // down to the water table. The same field labels the channel biome below.
-    const riverDistance = Math.abs(this.river.sample2(wx, wz, 0.0017));
-    // Blend river valleys gradually into the surrounding terrain. The former
-    // hard height clamp made narrow, steep-sided water trenches that looked
-    // like giant artificial canyons.
-    const riverT = clamp(1 - riverDistance / 0.07, 0, 1);
-    const riverBlend = riverT * riverT * (3 - 2 * riverT);
-    height = height * (1 - riverBlend) + (SEA_LEVEL - 1.1) * riverBlend;
-    return height;
+    return out;
   }
 
-  biomeAt(wx, wz, height) {
-    const riverDistance = Math.abs(this.river.sample2(wx, wz, 0.0017));
-    const riverTemp = this.temperature.sample2(wx, wz, 0.0013);
-    if (riverDistance < 0.018 && height >= SEA_LEVEL - 2) {
-      return riverTemp < -0.48 ? BIOME.FROZEN_RIVER : BIOME.RIVER;
-    }
-    const temp = this.temperature.sample2(wx, wz, 0.0013);
-    const humid = this.humidity.sample2(wx, wz, 0.0017);
-    const detail = this.biomeDetail.sample2(wx, wz, 0.0022);
-    const rare = this.biomeRarity.sample2(wx, wz, 0.0010);
+  /** Warped, quantile-normalized climate fields shared by terrain and biome selection. */
+  _fields(wx, wz) {
+    const wxw = wx + this.warp.sample2(wx, wz, 0.004) * 24;
+    const wzw = wz + this.warp.sample2(wz + 913, wx - 421, 0.004) * 24;
+    const c = this.continent.sample2(wxw, wzw, 0.0021);
+    const T = quant(this.temperature.sample2(wxw, wzw, 0.0032));
+    const H = quant(this.humidity.sample2(wxw, wzw, 0.0036));
+    const R = quant(this.biomeRarity.sample2(wxw, wzw, 0.0045));
+    const D = quant(this.biomeDetail.sample2(wxw, wzw, 0.012));
+    const rel = quant(this.relief.sample2(wxw, wzw, 0.0042));
+    const rv = this.river.sample2(wxw, wzw, 0.0021);
+    const desertness = smooth01(T, 0.7, 0.8) * (1 - smooth01(H, 0.25, 0.4));
+    const mesaZ = smooth01(T, 0.8, 0.88) * (1 - smooth01(H, 0.15, 0.3)) * smooth01(R, 0.35, 0.55) * smooth01(c, -0.03, 0.04);
+    const mountM = smooth01(rel, 0.72, 0.9) * smooth01(c, -0.02, 0.2);
+    const swampZ = smooth01(H, 0.8, 0.88) * smooth01(T, 0.3, 0.4) * (1 - smooth01(T, 0.64, 0.72)) * smooth01(c, -0.06, -0.02) * (1 - mountM);
+    return { c, T, H, R, D, rel, rv, desertness, mesaZ, mountM, swampZ };
+  }
 
-    if (height < SEA_LEVEL - 2) {
-      const deep = height < SEA_LEVEL - 13;
-      if (temp < -0.48) return deep ? BIOME.DEEP_FROZEN_OCEAN : BIOME.FROZEN_OCEAN;
-      if (temp < -0.12) return deep ? BIOME.DEEP_COLD_OCEAN : BIOME.COLD_OCEAN;
-      if (temp > 0.48) return deep ? BIOME.DEEP_LUKEWARM_OCEAN : BIOME.WARM_OCEAN;
-      return deep ? BIOME.DEEP_OCEAN : BIOME.LUKEWARM_OCEAN;
+  _height(f, wx, wz) {
+    const detail = this.detail.sample2(wx, wz, 0.014);
+    const landMask = smooth01(f.c, -0.105, -0.085);
+    const depthT = smooth01(-f.c, 0.1, 0.3);
+    const floor = SEA_LEVEL - 4 - depthT * 30 + detail * 2.5;
+    let land = SEA_LEVEL + 2.4 + Math.max(0, f.c + 0.085) * 26 + detail * 2;
+    const hillM = smooth01(f.rel, 0.5, 0.85) * (1 - f.desertness * 0.7);
+    land += hillM * Math.max(0, this.detail.sample2(wx + 200, wz - 300, 0.03) + 0.06) * 45;
+    if (f.mountM > 0.001) land += f.mountM * (this.ridge.ridged2(wx, wz, 0.005) * 62 - 14);
+    if (f.mesaZ > 0.001) {
+      const m = quant(this.mesa.sample2(wx, wz, 0.007)) * 4;
+      const step = Math.floor(m) + smooth01(m - Math.floor(m), 0.82, 1);
+      land = land * (1 - f.mesaZ) + (SEA_LEVEL + 5 + step * 7) * f.mesaZ;
     }
-    if (height <= SEA_LEVEL + 1) {
-      if (temp < -0.48) return BIOME.SNOWY_BEACH;
-      return detail > 0.68 ? BIOME.STONE_SHORE : BIOME.BEACH;
+    if (f.swampZ > 0.001) land = land * (1 - f.swampZ) + (SEA_LEVEL - 0.6 + detail * 3.4) * f.swampZ;
+    let h = floor * (1 - landMask) + land * landMask;
+    const t = clamp(1 - Math.abs(f.rv) / 0.05, 0, 1);
+    if (t > 0) {
+      const blend = t * t * (3 - 2 * t) * landMask * (1 - f.mountM * 0.85);
+      h = h * (1 - blend) + (SEA_LEVEL - 1.7) * blend;
     }
-    if (height > SEA_LEVEL + 42) return detail > 0.2 ? BIOME.EXTREME_HILLS_PLUS : BIOME.MOUNTAINS;
-    if (height > SEA_LEVEL + 30 && detail > 0.48) return BIOME.EXTREME_HILLS_EDGE;
+    return h;
+  }
 
-    // Mushroom islands are deliberately scarce, isolated climate pockets.
-    if (humid > 0.12 && rare > 0.79 && detail > -0.15) return BIOME.MUSHROOM_FIELDS;
-
-    // Cold climates: snowy plains are common; ice spikes and snowy taiga are
-    // uncommon variants, while giant conifer forests remain a rarer subregion.
-    if (temp < -0.48) {
-      if (rare > 0.72 && detail > 0.2) return BIOME.ICE_SPIKES;
-      if (humid > 0.12 && rare < -0.42) return detail > 0.35 ? BIOME.MEGA_TAIGA_HILLS : BIOME.GIANT_SPRUCE_TAIGA;
-      if (humid > -0.05) return rare > 0.38 ? BIOME.COLD_TAIGA_HILLS : BIOME.COLD_TAIGA;
+  _biome(f, height) {
+    const { c, T, H, R, D, rel } = f, riverD = Math.abs(f.rv);
+    const landish = smooth01(c, -0.105, -0.085) > 0.5, wet = height < SEA_LEVEL;
+    if (wet) {
+      if (!landish) {
+        const deep = height < SEA_LEVEL - 14;
+        if (T < 0.14) return deep ? BIOME.DEEP_FROZEN_OCEAN : BIOME.FROZEN_OCEAN;
+        if (T < 0.34) return deep ? BIOME.DEEP_COLD_OCEAN : BIOME.COLD_OCEAN;
+        if (T > 0.82) return deep ? BIOME.DEEP_LUKEWARM_OCEAN : BIOME.WARM_OCEAN;
+        if (T > 0.64) return deep ? BIOME.DEEP_LUKEWARM_OCEAN : BIOME.LUKEWARM_OCEAN;
+        return deep ? BIOME.DEEP_OCEAN : BIOME.OCEAN;
+      }
+      if (f.swampZ > 0.5) return BIOME.SWAMP;
+      return T < 0.14 ? BIOME.FROZEN_RIVER : BIOME.RIVER;
+    }
+    if (c < -0.03 && height < SEA_LEVEL + 3) return T < 0.14 ? BIOME.SNOWY_BEACH : (rel > 0.72 ? BIOME.STONE_SHORE : BIOME.BEACH);
+    if (riverD < 0.012 && height < SEA_LEVEL + 1) return T < 0.14 ? BIOME.FROZEN_RIVER : BIOME.RIVER;
+    if (height > SEA_LEVEL + 34) return D > 0.55 ? BIOME.WINDSWEPT_HILLS : BIOME.MOUNTAINS;
+    if (f.mesaZ > 0.5) return R > 0.85 ? BIOME.ERODED_BADLANDS : (D > 0.7 ? BIOME.WOODED_BADLANDS : BIOME.BADLANDS);
+    if (f.swampZ > 0.5) return BIOME.SWAMP;
+    if (R > 0.985 && H > 0.5 && c < 0.12) return BIOME.MUSHROOM_FIELDS;
+    if (T < 0.17) {
+      if (R > 0.9 && rel < 0.55 && H < 0.6) return BIOME.ICE_SPIKES;
+      if (H > 0.62) return R > 0.78 ? BIOME.GIANT_SPRUCE_TAIGA : BIOME.SNOWY_TAIGA;
+      if (H > 0.45 && D > 0.55) return BIOME.SNOWY_TAIGA;
       return BIOME.SNOWY_PLAINS;
     }
-
-    // Hot and dry lowlands are primarily savanna. True deserts and
-    // badlands are reserved for the driest climate pockets.
-    if (temp > 0.12 && humid < 0.2) {
-      if (humid < -0.48 && rare > 0.78) return detail > 0.35 ? BIOME.ERODED_BADLANDS : (detail < -0.35 ? BIOME.MESA_PLATEAU : BIOME.MESA_PLATEAU_F);
-      if (humid < -0.14 && rare > 0.22) return detail > 0.55 ? BIOME.DESERT_HILLS : BIOME.DESERT;
-      return detail > 0.58 && rare > 0.55 ? BIOME.SAVANNA_PLATEAU : BIOME.SAVANNA;
+    if (T < 0.36) {
+      if (H > 0.55) return R > 0.75 ? BIOME.GIANT_TREE_TAIGA : BIOME.TAIGA;
+      if (H > 0.35) return D > 0.5 ? BIOME.TAIGA : BIOME.FOREST;
+      return rel > 0.7 ? BIOME.WINDSWEPT_HILLS : BIOME.PLAINS;
     }
-
-    // Warm, wet climates: jungle remains a distinct large region, with bamboo
-    // as a less common sub-biome.
-    if (temp > 0.48 && humid > 0.2) {
-      if (rare > 0.72) return BIOME.BAMBOO_JUNGLE;
-      if (detail > 0.62) return BIOME.JUNGLE_HILLS;
-      if (rare < -0.25) return BIOME.JUNGLE_EDGE;
-      return detail > 0.42 ? BIOME.SPARSE_JUNGLE : BIOME.JUNGLE;
+    if (T < 0.64) {
+      if (H > 0.78) return D > 0.4 ? BIOME.DARK_FOREST : BIOME.TALL_BIRCH_FOREST;
+      if (H > 0.45 && R > 0.66) return BIOME.FLOWER_FOREST;
+      if (H > 0.6) return D > 0.45 ? BIOME.BIRCH_FOREST : BIOME.FOREST;
+      if (H > 0.4) return D > 0.5 ? BIOME.FOREST : BIOME.PLAINS;
+      return R > 0.9 ? BIOME.SUNFLOWER_PLAINS : BIOME.PLAINS;
     }
-    if (humid > 0.42 && temp > -0.08 && temp < 0.46) return BIOME.SWAMP;
-    if (temp < -0.28 && temp > -0.48 && humid > 0.08) return detail > 0.55 ? BIOME.TAIGA_HILLS : BIOME.TAIGA;
-
-    // The four intended everyday biomes dominate temperate land:
-    // birch forest, flower forest, plains and a smaller share of oak forest.
-    if (temp > -0.42 && temp < 0.58) {
-      if (humid > 0.08) {
-        if (rare < -0.08) return detail > 0.25 ? BIOME.BIRCH_FOREST_HILLS : BIOME.BIRCH_FOREST;
-        if (detail > 0.7 && rare < 0.16) return BIOME.FOREST_HILLS;
-        return BIOME.FLOWER_FOREST;
-      }
-      if (rare > 0.72) return BIOME.SUNFLOWER_PLAINS;
-      return BIOME.PLAINS;
+    if (T < 0.8) {
+      if (H > 0.75) return D > 0.5 ? BIOME.FOREST : BIOME.BIRCH_FOREST;
+      if (H > 0.45) return rel > 0.7 && D > 0.5 ? BIOME.SAVANNA_PLATEAU : BIOME.SAVANNA;
+      if (H > 0.28) return R > 0.9 ? BIOME.SHATTERED_SAVANNA : BIOME.SAVANNA;
+      return BIOME.DESERT;
     }
-    if (humid > 0.28 && detail > 0.62) return BIOME.BIRCH_FOREST;
-    if (humid > 0.12) return BIOME.FLOWER_FOREST;
-    return BIOME.PLAINS;
+    if (H > 0.66) return R > 0.8 ? BIOME.BAMBOO_JUNGLE : (D > 0.6 ? BIOME.SPARSE_JUNGLE : BIOME.JUNGLE);
+    return H > 0.4 ? BIOME.SAVANNA : BIOME.DESERT;
   }
 
-  /**
-   * True where a cave should carve away solid ground.
-   *
-   * Two systems, as in vanilla: thin winding tunnels from the intersection of
-   * two noise fields (each near zero only along a surface; both near zero only
-   * along a line), plus large "cheese" cavities from a single low-frequency
-   * field.
-   */
-  isCave(wx, wy, wz) {
-    // Fade caves out near the surface so the world is not visibly full of holes.
-    if (wy > SEA_LEVEL + 8) return false;
+  heightAt(wx, wz) { return this._height(this._fields(wx, wz), wx, wz); }
+  biomeAt(wx, wz, height) {
+    const f = this._fields(wx, wz);
+    return this._biome(f, height === undefined ? this._height(f, wx, wz) : height);
+  }
+  column(wx, wz) {
+    const f = this._fields(wx, wz), h = Math.floor(this._height(f, wx, wz));
+    return { h, biome: this._biome(f, h), fields: f };
+  }
 
+  isCave(wx, wy, wz, height = 255, ravineR = -1) {
+    if (wy <= MIN_Y + 4 || (height < SEA_LEVEL && wy > height - 5) || wy > 110) return false;
+    if (ravineR >= 0 && wy >= 9 && wy <= height) {
+      const profile = clamp(1 - Math.pow((wy - 42) / 40, 2), 0, 1);
+      if (ravineR < 0.0026 * (0.35 + 2.2 * profile)) return true;
+    }
     const a = this.caveA.sample3(wx * 0.014, wy * 0.022, wz * 0.014);
     const b = this.caveB.sample3(wx * 0.014, wy * 0.022, wz * 0.014);
-    if (a * a + b * b < 0.0016) return true;
-
-    const cheese = this.cheese.sample3(wx, wy * 1.6, wz, 0.008);
-    if (cheese > 0.62) return true;
-
-    return false;
+    const cover = height - wy, limit = cover < 5 ? 0.0008 : 0.0034;
+    if (a * a + b * b < limit) return true;
+    return wy < 56 && cover > 6 && this.cheese.sample3(wx, wy * 1.6, wz, 0.009) > 0.27;
   }
 
   /** Fill a chunk with terrain, ores, surface material, and features. */
@@ -309,54 +326,41 @@ export class TerrainGenerator {
     const baseZ = chunk.cz * CHUNK_SIZE;
     const S = this.states;
 
-    // Column heights, computed once and reused by every later stage.
+    // Sample each climate column once. The same fields drive height, biome and ravine placement.
     const heights = new Int32Array(CHUNK_SIZE * CHUNK_SIZE);
     const biomes = new Array(CHUNK_SIZE * CHUNK_SIZE);
-
-    for (let z = 0; z < CHUNK_SIZE; z++) {
-      for (let x = 0; x < CHUNK_SIZE; x++) {
-        const wx = baseX + x;
-        const wz = baseZ + z;
-        const h = Math.floor(this.heightAt(wx, wz));
-        const i = z * CHUNK_SIZE + x;
-        heights[i] = h;
-        biomes[i] = this.biomeAt(wx, wz, h);
-        chunk.setBiome(x, h, z, biomes[i]);
+    const ravines = new Float32Array(CHUNK_SIZE * CHUNK_SIZE).fill(-1);
+    for (let z = 0; z < CHUNK_SIZE; z++) for (let x = 0; x < CHUNK_SIZE; x++) {
+      const wx = baseX + x, wz = baseZ + z, col = this.column(wx, wz);
+      const i = z * CHUNK_SIZE + x;
+      heights[i] = col.h;
+      biomes[i] = col.biome;
+      if (col.h >= SEA_LEVEL + 2 && col.h > 36 && col.fields.mountM < 0.6 &&
+          this.ravineMask.sample2(wx, wz, 0.0018) > 0.24) {
+        ravines[i] = Math.abs(this.ravine.sample2(wx, wz, 0.0035));
       }
     }
 
-    // --- Stone shell, caves, water ---------------------------------------
-    for (let z = 0; z < CHUNK_SIZE; z++) {
-      for (let x = 0; x < CHUNK_SIZE; x++) {
-        const wx = baseX + x;
-        const wz = baseZ + z;
-        const height = heights[z * CHUNK_SIZE + x];
+    // Biome storage is 4x4x4; fill all vertical samples, not just the surface.
+    for (let bz = 0; bz < 4; bz++) for (let bx = 0; bx < 4; bx++) {
+      const biome = biomes[(bz * 4 + 2) * CHUNK_SIZE + bx * 4 + 2];
+      for (let y = MIN_Y; y < MAX_Y; y += 4) chunk.setBiome(bx * 4, y, bz * 4, biome);
+    }
 
-        for (let y = MIN_Y; y <= Math.max(height, SEA_LEVEL); y++) {
-          if (y === MIN_Y) {
-            chunk.setBlock(x, y, z, S.bedrock);
-            continue;
-          }
-          // A ragged bedrock floor rather than a flat slab, as in vanilla.
-          if (y < MIN_Y + 5) {
-            const r = positionalRandom(this.seed, wx, y, wz, 7);
-            if (r.nextInt(5) >= y - MIN_Y) {
-              chunk.setBlock(x, y, z, S.bedrock);
-              continue;
-            }
-          }
-
-          if (y <= height) {
-            if (this.isCave(wx, y, wz)) {
-              // Caves below sea level would otherwise flood the whole system.
-              if (y < 8) chunk.setBlock(x, y, z, S.air);
-              else chunk.setBlock(x, y, z, S.air);
-              continue;
-            }
-            chunk.setBlock(x, y, z, this.stoneFor(wx, y, wz));
-          } else if (y <= SEA_LEVEL) {
-            chunk.setBlock(x, y, z, S.water);
-          }
+    // --- Stone shell, caves, ravines, water and sea ice -------------------
+    for (let z = 0; z < CHUNK_SIZE; z++) for (let x = 0; x < CHUNK_SIZE; x++) {
+      const wx = baseX + x, wz = baseZ + z, i = z * CHUNK_SIZE + x;
+      const height = heights[i], frozen = COLD_BIOMES.has(biomes[i]) && height < SEA_LEVEL;
+      for (let y = MIN_Y; y <= Math.max(height, SEA_LEVEL); y++) {
+        if (y === MIN_Y) { chunk.setBlock(x, y, z, S.bedrock); continue; }
+        if (y < MIN_Y + 5) {
+          const r = positionalRandom(this.seed, wx, y, wz, 7);
+          if (r.nextInt(5) >= y - MIN_Y) { chunk.setBlock(x, y, z, S.bedrock); continue; }
+        }
+        if (y <= height) {
+          if (!this.isCave(wx, y, wz, height, ravines[i])) chunk.setBlock(x, y, z, this.stoneFor(wx, y, wz));
+        } else if (y <= SEA_LEVEL) {
+          chunk.setBlock(x, y, z, frozen && y === SEA_LEVEL ? (S.byId['mc:ice'] || S.water) : S.water);
         }
       }
     }
@@ -365,13 +369,15 @@ export class TerrainGenerator {
 
     this.placePatches(chunk, baseX, baseZ);
     this.placeOres(chunk, baseX, baseZ);
+    this.placeEmeralds(chunk, baseX, baseZ, biomes);
     this.applySurface(chunk, baseX, baseZ, heights, biomes);
     this.placeFeatures(chunk, baseX, baseZ, heights, biomes);
+    this.placeTrees(chunk, baseX, baseZ);
     this.placeCaveLakes(chunk, baseX, baseZ);
     this.placeFossils(chunk, baseX, baseZ);
     this.placeVillages(chunk, baseX, baseZ);
     this.placeSurfaceStructures(chunk, baseX, baseZ);
-    this.placeUndergroundStructures(chunk, baseX, baseZ);
+    this.placeUndergroundStructures(chunk, baseX, baseZ, heights);
 
     chunk.rebuildHeightmap();
     chunk.generatedStage = GEN_STAGE.FEATURES;
@@ -539,6 +545,18 @@ export class TerrainGenerator {
     }
   }
 
+  /** Emeralds are rare and restricted to mountain biomes. */
+  placeEmeralds(chunk, baseX, baseZ, biomes) {
+    if(![BIOME.MOUNTAINS,BIOME.WINDSWEPT_HILLS].includes(biomes[8*CHUNK_SIZE+8])) return;
+    const state=this.states.byId['mc:emerald_ore']; if(!state) return;
+    const rng=positionalRandom(this.seed,chunk.cx,9200,chunk.cz,9200);
+    const n=3+rng.nextInt(6);
+    for(let i=0;i<n;i++){
+      const x=rng.nextInt(CHUNK_SIZE),z=rng.nextInt(CHUNK_SIZE),y=4+rng.nextInt(29);
+      if(['mc:stone','mc:granite','mc:diorite','mc:andesite'].includes(chunk.getBlock(x,y,z).block.id)) chunk.setBlock(x,y,z,state);
+    }
+  }
+
   /** Replace the topmost stone with the biome's surface and filler material. */
   applySurface(chunk, baseX, baseZ, heights, biomes) {
     const S = this.states;
@@ -564,6 +582,15 @@ export class TerrainGenerator {
         const topId = submerged && biome !== BIOME.OCEAN ? 'mc:sand' : surface.top;
 
         const topState = S.byId[topId];
+        const badlands = biome === BIOME.BADLANDS || biome === BIOME.WOODED_BADLANDS || biome === BIOME.ERODED_BADLANDS;
+        if (badlands && !submerged) {
+          if (S.byId['mc:red_sand'] && STONE_REPLACEABLE.has(chunk.getBlock(x,top,z).block.id)) chunk.setBlock(x,top,z,S.byId['mc:red_sand']);
+          for(let y=top-1;y>=Math.max(MIN_Y+1,SEA_LEVEL-6);y--){
+            if(!STONE_REPLACEABLE.has(chunk.getBlock(x,y,z).block.id)) break;
+            if(this.bands[y]) chunk.setBlock(x,y,z,this.bands[y]);
+          }
+          continue;
+        }
         if (topState && STONE_REPLACEABLE.has(chunk.getBlock(x, top, z).block.id)) {
           chunk.setBlock(x, top, z, topState);
         }
@@ -575,6 +602,70 @@ export class TerrainGenerator {
           if (!STONE_REPLACEABLE.has(chunk.getBlock(x, y, z).block.id)) break;
           if (fillerState) chunk.setBlock(x, y, z, fillerState);
         }
+      }
+    }
+  }
+
+  /** Biome-aware surface block used by cross-chunk tree placement. */
+  surfaceTop(biome, height, wx, wz) {
+    const rule = BIOME_SURFACE[biome];
+    if (!rule || height < SEA_LEVEL) return null;
+    if (biome === BIOME.MOUNTAINS || biome === BIOME.WINDSWEPT_HILLS) {
+      if (height >= 108) return 'mc:snow_block';
+      if (height >= 90) return this.patch.sample2(wx, wz, 0.06) > 0.2 ? 'mc:gravel' : 'mc:stone';
+    }
+    return rule.top;
+  }
+
+  /** Deterministic tree origin, evaluated from world coordinates rather than chunk-local RNG. */
+  treeAt(wx, wz) {
+    const u = hash01(this.hseed, wx, 0, wz, 31337);
+    if (u > 0.1) return null;
+    const col = this.column(wx, wz);
+    if (col.h < SEA_LEVEL) return null;
+    const rule = BIOME_SURFACE[col.biome];
+    if (!rule || !rule.trees || u >= rule.trees) return null;
+    const ground = this.surfaceTop(col.biome, col.h, wx, wz);
+    if (!ground || !['mc:grass_block','mc:podzol','mc:coarse_dirt','mc:snow_block','mc:dirt','mc:red_sand','mc:mycelium'].includes(ground)) return null;
+    if (this.isCave(wx, col.h, wz, col.h + 6)) return null;
+    for (let dz=-2; dz<=2; dz++) for (let dx=-2; dx<=2; dx++) {
+      if (!dx && !dz) continue;
+      const nu=hash01(this.hseed,wx+dx,0,wz+dz,31337);
+      if (nu<u && nu<rule.trees) return null;
+    }
+    const rng=positionalRandom(this.seed,wx,777,wz,777);
+    let species=rule.species || 'oak';
+    if (rule.mix) {
+      let total=0; for (const [,weight] of rule.mix) total+=weight;
+      let roll=rng.nextInt(total);
+      for (const [name,weight] of rule.mix) { roll-=weight; if (roll<0) { species=name; break; } }
+    }
+    const shape=buildTree(species,rng);
+    shape.species=species; shape.y=col.h+1;
+    return shape;
+  }
+
+  /** Write tree pieces crossing chunk edges identically in every generation order. */
+  placeTrees(chunk, baseX, baseZ) {
+    const S=this.states.byId;
+    const passable=(id)=>id==='mc:air'||id==='mc:short_grass'||id==='mc:fern'||id==='mc:dandelion'||
+      id==='mc:poppy'||id==='mc:dead_bush'||id==='mc:red_mushroom'||id==='mc:brown_mushroom';
+    const margin=TREE_MARGIN+1;
+    for(let wz=baseZ-margin;wz<baseZ+CHUNK_SIZE+margin;wz++) for(let wx=baseX-margin;wx<baseX+CHUNK_SIZE+margin;wx++) {
+      const tree=this.treeAt(wx,wz); if(!tree) continue;
+      const log=tree.material ? S[tree.material] : S[`mc:${tree.species}_log`], leaves=S[`mc:${tree.species}_leaves`];
+      if(!log) continue;
+      for(const [dx,dy,dz] of tree.leaves) {
+        const x=wx+dx-baseX,z=wz+dz-baseZ;
+        if(x<0||x>=CHUNK_SIZE||z<0||z>=CHUNK_SIZE||!leaves) continue;
+        const id=chunk.getBlock(x,tree.y+dy,z).block.id;
+        if(passable(id)) chunk.setBlock(x,tree.y+dy,z,leaves);
+      }
+      for(const [dx,dy,dz] of tree.logs) {
+        const x=wx+dx-baseX,z=wz+dz-baseZ;
+        if(x<0||x>=CHUNK_SIZE||z<0||z>=CHUNK_SIZE) continue;
+        const id=chunk.getBlock(x,tree.y+dy,z).block.id;
+        if(passable(id)||/_leaves$/.test(id)) chunk.setBlock(x,tree.y+dy,z,log);
       }
     }
   }
@@ -599,16 +690,6 @@ export class TerrainGenerator {
         }
         if (top < 0) continue;
         const groundId = chunk.getBlock(x, top, z).block.id;
-
-        if (surface.trees > 0 && ['mc:grass_block', 'mc:podzol', 'mc:coarse_dirt', 'mc:snow_block'].includes(groundId) && rng.nextDouble() < surface.trees) {
-          // Keep trunks away from the chunk edge: this generator writes only
-          // into its own chunk, so a canopy crossing the border would be
-          // clipped. Cross-chunk feature placement arrives in Phase 2.
-          if (x >= 2 && x <= 13 && z >= 2 && z <= 13) {
-            this.placeTree(chunk, x, top + 1, z, surface.species ?? 'oak', rng);
-            continue;
-          }
-        }
 
         if (biomes[i] === BIOME.MUSHROOM_FIELDS && groundId === 'mc:mycelium' && rng.nextDouble() < (surface.mushrooms ?? 0)) {
           const mushroom = rng.nextBoolean() ? S.byId['mc:red_mushroom'] : S.byId['mc:brown_mushroom'];
@@ -862,44 +943,17 @@ export class TerrainGenerator {
    * regardless of worker completion order.
    */
   placeVillages(chunk, baseX, baseZ) {
-    const minGridX = Math.floor((baseX - 30) / 128);
-    const maxGridX = Math.floor((baseX + CHUNK_SIZE + 30) / 128);
-    const minGridZ = Math.floor((baseZ - 30) / 128);
-    const maxGridZ = Math.floor((baseZ + CHUNK_SIZE + 30) / 128);
-
-    for (let gz = minGridZ; gz <= maxGridZ; gz++) {
-      for (let gx = minGridX; gx <= maxGridX; gx++) {
-        const candidate = villageCandidateForCell(this.seed, gx, gz);
-        if (!candidate) continue;
-
-        const site = this.validateVillageSite(candidate.x, candidate.z);
-        if (!site) continue;
-        // Seeded village plans: each settlement chooses a different street pattern,
-        // building mix and farm position while retaining chunk-order determinism.
-        const planRng = positionalRandom(this.seed, gx, 7301, gz, 7301);
-        const plan = planRng.nextInt(5);
-        const layouts = [
-          [[0,0,0],[10,0,1],[0,10,2],[10,10,3],[20,10,4]],
-          [[0,0,0],[10,0,2],[20,0,3],[0,10,4],[20,10,1]],
-          [[0,0,0],[10,0,3],[20,0,4],[0,10,2],[10,20,1]],
-          [[0,0,0],[10,0,4],[20,0,3],[0,10,1],[20,10,2]],
-          [[0,0,0],[10,0,1],[20,0,2],[0,10,3],[10,20,4]],
-        ];
-        for (const [dx,dz,kind] of layouts[plan]) {
-          if (kind===4) this.placeVillageFarm(chunk,baseX,baseZ,candidate.x+dx,candidate.z+dz,site.y);
-          else this.placeVillageHouse(chunk,baseX,baseZ,candidate.x+dx,candidate.z+dz,site.y,site.biome,kind);
-        }
-        const path = this.states.byId['mc:coarse_dirt'];
-        // Main lane and two cross-lanes link the doors, farm and village centre.
-        for (let dx = 3; dx <= 23; dx++) {
-          this.setVillageBlock(chunk, baseX, baseZ, candidate.x + dx, site.y, candidate.z + 8, path);
-          this.setVillageBlock(chunk, baseX, baseZ, candidate.x + dx, site.y, candidate.z + 18, path);
-        }
-        for (let dz = 3; dz <= 18; dz++) {
-          this.setVillageBlock(chunk, baseX, baseZ, candidate.x + 8, site.y, candidate.z + dz, path);
-          this.setVillageBlock(chunk, baseX, baseZ, candidate.x + 18, site.y, candidate.z + dz, path);
-        }
-      }
+    const w = new ChunkWriter(chunk, baseX, baseZ), S = this.states.byId;
+    const minX = Math.floor((baseX - 48) / 128), maxX = Math.floor((baseX + CHUNK_SIZE + 48) / 128);
+    const minZ = Math.floor((baseZ - 48) / 128), maxZ = Math.floor((baseZ + CHUNK_SIZE + 48) / 128);
+    for (let gz = minZ; gz <= maxZ; gz++) for (let gx = minX; gx <= maxX; gx++) {
+      const candidate = villageCandidateForCell(this.seed, gx, gz);
+      if (!candidate) continue;
+      const site = this.validateVillageSite(candidate.x, candidate.z);
+      if (!site) continue;
+      const style = villageStyleForBiome(site.biome) || 'plains';
+      const plan = villagePlan(this.seed, candidate.x, candidate.z, site.y, style);
+      placeVillagePlan(w, S, plan);
     }
   }
 
@@ -1011,38 +1065,26 @@ export class TerrainGenerator {
     put(fossil.x + 4, fossil.y + 2, fossil.z + 1, bone);
   }
 
-  placeUndergroundStructures(chunk, baseX, baseZ) {
-    const minX = Math.floor((baseX - 36) / 96);
-    const maxX = Math.floor((baseX + CHUNK_SIZE + 36) / 96);
-    const minZ = Math.floor((baseZ - 36) / 96);
-    const maxZ = Math.floor((baseZ + CHUNK_SIZE + 36) / 96);
-    for (let gz = minZ; gz <= maxZ; gz++) {
-      for (let gx = minX; gx <= maxX; gx++) {
-        const shaft = mineshaftCandidateForCell(this.seed, gx, gz);
-        if (shaft) this.placeMineshaft(chunk, baseX, baseZ, shaft);
-      }
+  placeUndergroundStructures(chunk, baseX, baseZ, heights) {
+    const w = new ChunkWriter(chunk, baseX, baseZ), S = this.states.byId;
+    const minX = Math.floor((baseX - 64) / 96), maxX = Math.floor((baseX + CHUNK_SIZE + 64) / 96);
+    const minZ = Math.floor((baseZ - 64) / 96), maxZ = Math.floor((baseZ + CHUNK_SIZE + 64) / 96);
+    for (let gz = minZ; gz <= maxZ; gz++) for (let gx = minX; gx <= maxX; gx++) {
+      const shaft = mineshaftCandidateForCell(this.seed, gx, gz);
+      if (shaft) placeMineshaftPlan(w, S, mineshaftPlan(this.seed, shaft), heights);
     }
-
-    const dungeonMinX = Math.floor((baseX - 20) / 80);
-    const dungeonMaxX = Math.floor((baseX + CHUNK_SIZE + 20) / 80);
-    const dungeonMinZ = Math.floor((baseZ - 20) / 80);
-    const dungeonMaxZ = Math.floor((baseZ + CHUNK_SIZE + 20) / 80);
-    for (let gz = dungeonMinZ; gz <= dungeonMaxZ; gz++) {
-      for (let gx = dungeonMinX; gx <= dungeonMaxX; gx++) {
-        const room = dungeonCandidateForCell(this.seed, gx, gz);
-        if (room) this.placeDungeon(chunk, baseX, baseZ, room);
-      }
+    const dMinX = Math.floor((baseX - 20) / 80), dMaxX = Math.floor((baseX + CHUNK_SIZE + 20) / 80);
+    const dMinZ = Math.floor((baseZ - 20) / 80), dMaxZ = Math.floor((baseZ + CHUNK_SIZE + 20) / 80);
+    for (let gz = dMinZ; gz <= dMaxZ; gz++) for (let gx = dMinX; gx <= dMaxX; gx++) {
+      const room = dungeonCandidateForCell(this.seed, gx, gz);
+      if (room) placeDungeonRoom(w, S, room, this.seed, heights);
     }
-
-    const strongholdMinX = Math.floor((baseX - 32) / 512);
-    const strongholdMaxX = Math.floor((baseX + CHUNK_SIZE + 32) / 512);
-    const strongholdMinZ = Math.floor((baseZ - 32) / 512);
-    const strongholdMaxZ = Math.floor((baseZ + CHUNK_SIZE + 32) / 512);
-    for (let gz = strongholdMinZ; gz <= strongholdMaxZ; gz++) {
-      for (let gx = strongholdMinX; gx <= strongholdMaxX; gx++) {
-        const stronghold = strongholdCandidateForCell(this.seed, gx, gz);
-        if (stronghold) this.placeStronghold(chunk, baseX, baseZ, stronghold);
-      }
+    // Keep the newer stronghold system from main intact.
+    const strongholdMinX = Math.floor((baseX - 32) / 512), strongholdMaxX = Math.floor((baseX + CHUNK_SIZE + 32) / 512);
+    const strongholdMinZ = Math.floor((baseZ - 32) / 512), strongholdMaxZ = Math.floor((baseZ + CHUNK_SIZE + 32) / 512);
+    for (let gz = strongholdMinZ; gz <= strongholdMaxZ; gz++) for (let gx = strongholdMinX; gx <= strongholdMaxX; gx++) {
+      const stronghold = strongholdCandidateForCell(this.seed, gx, gz);
+      if (stronghold) this.placeStronghold(chunk, baseX, baseZ, stronghold);
     }
   }
 
