@@ -7,8 +7,8 @@ import { placeDungeonRoom, dungeonDims } from '../src/world/gen/structures.js';
 import { dungeonCandidateForCell } from '../src/world/gen/terrain.js';
 import { positionalRandom } from '../src/core/rng.js';
 import { Chest } from '../src/game/containers.js';
-import { generatedChestKind, fillGeneratedChest, DUNGEON_LOOT_POOLS, chooseWeightedLootEntry } from '../src/game/container_screens.js';
-import { ITEMS } from '../src/world/item.js';
+import { generatedChestKind, fillGeneratedChest, DUNGEON_LOOT_POOLS, chooseWeightedLootEntry, scatterGeneratedChestLoot } from '../src/game/container_screens.js';
+import { ITEMS, ItemStack } from '../src/world/item.js';
 import '../src/world/blocks/index.js';
 import { BLOCKS } from '../src/world/block.js';
 
@@ -102,6 +102,21 @@ describe('generated dungeon chest loot', () => {
     const entries = DUNGEON_LOOT_POOLS[0].entries;
     assertEqual(chooseWeightedLootEntry(entries, { nextInt: () => 0 })[0], 'mc:saddle');
     assertEqual(chooseWeightedLootEntry(entries, { nextInt: () => 20 })[0], 'mc:golden_apple');
+  });
+
+  it('scatters loot into deterministic non-packed chest slots', () => {
+    const a = new Chest();
+    const b = new Chest();
+    for (const chest of [a, b]) {
+      chest.insert(ItemStack.of('mc:iron_ingot', 3));
+      chest.insert(ItemStack.of('mc:gold_ingot', 2));
+      chest.insert(ItemStack.of('mc:bread', 1));
+      scatterGeneratedChestLoot('slot-scatter-seed', 17, 31, -9, chest, 'dungeon');
+    }
+    const occupied = (chest) => chest.slots.map((stack, i) => stack.isEmpty ? -1 : i).filter((i) => i >= 0);
+    assertEqual(JSON.stringify(occupied(a)), JSON.stringify(occupied(b)));
+    assertEqual(occupied(a).length, 3);
+    assertEqual(a.slots.reduce((sum, stack) => sum + (stack.isEmpty ? 0 : stack.count), 0), 6);
   });
 
   it('generates repeatable loot for a generated dungeon chest', () => {
