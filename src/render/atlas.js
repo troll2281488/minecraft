@@ -772,6 +772,41 @@ TEXTURES.lever = () => {
   return tile;
 };
 
+// Piston textures are intentionally authored as pixel art fallbacks. A
+// matching Java 1.19 resource-pack tile overrides these at startup.
+TEXTURES.piston_side = () => {
+  const tile = grainy(hex(0x777777), 0.12, 'piston_side');
+  const stone = hex(0x777777), wood = hex(0x9b6a3b), dark = hex(0x4b3423), iron = hex(0xb8b8b8);
+  for (let y = 1; y < 15; y++) for (let x = 1; x < 15; x++) {
+    let c = stone;
+    if (x >= 4 && x <= 11 && y >= 4 && y <= 11) c = wood;
+    if ((x === 3 || x === 12 || y === 3 || y === 12)) c = dark;
+    if (x >= 6 && x <= 9 && (y === 2 || y === 13)) c = iron;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+TEXTURES.piston_top = () => {
+  const tile = planks(hex(0xa47743), 'piston_top');
+  const rim = hex(0x5b3d24), center = hex(0x9a6939);
+  for (let i = 0; i < 16; i++) {
+    for (const [x, y] of [[i, 0], [i, 15], [0, i], [15, i]]) setPx(tile, x, y, rim[0], rim[1], rim[2]);
+  }
+  for (let y = 5; y < 11; y++) for (let x = 5; x < 11; x++) setPx(tile, x, y, center[0], center[1], center[2]);
+  return tile;
+};
+TEXTURES.sticky_piston_top = () => {
+  const tile = TEXTURES.piston_top();
+  const green = hex(0x75a83b), dark = hex(0x426b24), light = hex(0x9bc95a);
+  for (let y = 4; y < 12; y++) for (let x = 4; x < 12; x++) {
+    const c = (x === 4 || x === 11 || y === 4 || y === 11) ? dark
+      : ((x + y) % 3 === 0 ? light : green);
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+TEXTURES.piston_bottom = () => grainy(hex(0x777777), 0.12, 'piston_bottom');
+
 /** Visible checkerboard fallback for a missing texture key. */
 function missingTexture() {
   const out = new Uint8Array(TILE_SIZE * TILE_SIZE * 4);
