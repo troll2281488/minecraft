@@ -382,6 +382,37 @@ for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) {
 }
 trapdoor('iron', 'iron_trapdoor', true);
 
+// Redstone power sources from the Java 1.19 block set.
+function button(id, texture, wood = false) {
+  define(`mc:${id}_button`, {
+    hardness: 0.5, resistance: 0.5, solid: false, opaqueCube: false, opacity: 0,
+    soundGroup: wood ? 'wood' : 'stone', renderShape: 'button', texture,
+    properties: { face: PROPS.face, facing: PROPS.facing, powered: PROPS.powered },
+    defaultValues: { face: 'wall', facing: 'north', powered: false },
+  });
+}
+for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) button(wood, `${wood}_planks`, true);
+button('stone', 'stone');
+button('polished_blackstone', 'polished_blackstone');
+
+define('mc:lever', {
+  hardness: 0.5, resistance: 0.5, solid: false, opaqueCube: false, opacity: 0,
+  soundGroup: 'stone', renderShape: 'lever', texture: 'lever',
+  properties: { face: PROPS.face, facing: PROPS.facing, powered: PROPS.powered },
+  defaultValues: { face: 'wall', facing: 'north', powered: false },
+});
+
+function pressurePlate(id, texture, wood = false) {
+  define(`mc:${id}_pressure_plate`, {
+    hardness: 0.5, resistance: 0.5, solid: false, opaqueCube: false, opacity: 0,
+    soundGroup: wood ? 'wood' : 'stone', renderShape: 'pressure_plate', texture,
+    properties: { powered: PROPS.powered }, defaultValues: { powered: false },
+  });
+}
+for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) pressurePlate(wood, `${wood}_planks`, true);
+pressurePlate('stone', 'stone');
+pressurePlate('polished_blackstone', 'polished_blackstone');
+
 define('mc:end_portal_frame', {
   hardness: -1, resistance: 3600000, soundGroup: 'stone',
   texture: 'end_portal_frame',
