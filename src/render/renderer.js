@@ -516,29 +516,29 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     // Multipliers are applied only to green pixels of the grass texture.
     // The brown dirt pixels on grass-block sides are left untouched in the shader.
     const tintByBiome = {
-      'mc:swampland': [[0.40, 0.58, 0.26], [0.34, 0.45, 0.19]],
-      'mc:jungle': [[0.35, 0.68, 0.22], [0.34, 0.63, 0.22]],
-      'mc:sparse_jungle': [[0.38, 0.66, 0.24], [0.38, 0.62, 0.24]],
-      'mc:bamboo_jungle': [[0.36, 0.67, 0.22], [0.32, 0.60, 0.20]],
-      // Only savanna gets a restrained yellow/olive shift; it stays green.
-      'mc:savanna': [[0.48, 0.60, 0.25], [0.62, 0.64, 0.27]],
-      'mc:savanna_plateau': [[0.48, 0.60, 0.25], [0.60, 0.62, 0.26]],
-      'mc:shattered_savanna': [[0.49, 0.59, 0.24], [0.65, 0.62, 0.25]],
-      'mc:birch_forest': [[0.44, 0.63, 0.29], [0.49, 0.66, 0.30]],
-      'mc:tall_birch_forest': [[0.44, 0.63, 0.29], [0.49, 0.66, 0.30]],
-      'mc:birch_forest_hills': [[0.44, 0.63, 0.29], [0.49, 0.66, 0.30]],
-      'mc:taiga': [[0.34, 0.50, 0.22], [0.24, 0.39, 0.17]],
-      'mc:taiga_hills': [[0.34, 0.50, 0.22], [0.24, 0.39, 0.17]],
-      'mc:cold_taiga': [[0.39, 0.55, 0.25], [0.38, 0.49, 0.30]],
-      'mc:cold_taiga_hills': [[0.39, 0.55, 0.25], [0.38, 0.49, 0.30]],
-      'mc:snowy_taiga': [[0.42, 0.58, 0.28], [0.43, 0.54, 0.34]],
-      'mc:mega_taiga': [[0.32, 0.47, 0.20], [0.25, 0.36, 0.16]],
-      'mc:giant_spruce_taiga': [[0.32, 0.47, 0.20], [0.25, 0.36, 0.16]],
-      'mc:roofed_forest': [[0.39, 0.56, 0.24], [0.28, 0.39, 0.17]],
+      'mc:swampland': [[0.32, 0.60, 0.22], [0.34, 0.45, 0.19]],
+      'mc:jungle': [[0.30, 0.74, 0.22], [0.34, 0.63, 0.22]],
+      'mc:sparse_jungle': [[0.34, 0.72, 0.24], [0.38, 0.62, 0.24]],
+      'mc:bamboo_jungle': [[0.30, 0.72, 0.20], [0.32, 0.60, 0.20]],
+      // Savanna alone gets a subtle warm yellow-green, never pale or grey.
+      'mc:savanna': [[0.48, 0.70, 0.25], [0.62, 0.64, 0.27]],
+      'mc:savanna_plateau': [[0.48, 0.70, 0.25], [0.60, 0.62, 0.26]],
+      'mc:shattered_savanna': [[0.50, 0.68, 0.24], [0.65, 0.62, 0.25]],
+      'mc:birch_forest': [[0.38, 0.70, 0.26], [0.49, 0.66, 0.30]],
+      'mc:tall_birch_forest': [[0.38, 0.70, 0.26], [0.49, 0.66, 0.30]],
+      'mc:birch_forest_hills': [[0.38, 0.70, 0.26], [0.49, 0.66, 0.30]],
+      'mc:taiga': [[0.28, 0.54, 0.19], [0.24, 0.39, 0.17]],
+      'mc:taiga_hills': [[0.28, 0.54, 0.19], [0.24, 0.39, 0.17]],
+      'mc:cold_taiga': [[0.32, 0.59, 0.22], [0.38, 0.49, 0.30]],
+      'mc:cold_taiga_hills': [[0.32, 0.59, 0.22], [0.38, 0.49, 0.30]],
+      'mc:snowy_taiga': [[0.35, 0.61, 0.24], [0.43, 0.54, 0.34]],
+      'mc:mega_taiga': [[0.26, 0.50, 0.18], [0.25, 0.36, 0.16]],
+      'mc:giant_spruce_taiga': [[0.26, 0.50, 0.18], [0.25, 0.36, 0.16]],
+      'mc:roofed_forest': [[0.30, 0.58, 0.20], [0.28, 0.39, 0.17]],
     };
-    // The external grass-top tile is neutral grayscale; colour it with a
-    // proper Minecraft green in plains, not white/grey.
-    const defaultTint = [[0.43, 0.62, 0.28], [0.43, 0.62, 0.28]];
+    // Plains and all ordinary biomes use a full, natural Minecraft grass green.
+    // Only savanna receives a slight warm/yellow shift.
+    const defaultTint = [[0.34, 0.72, 0.22], [0.34, 0.72, 0.22]];
     const grassColorFor = (biome) => (tintByBiome[biome] || defaultTint)[0];
     const setOrigin = (x, y, z, biome, grassBiomes = null) => {
       gl.uniform3f(uniforms.uChunkOrigin, x, y, z);

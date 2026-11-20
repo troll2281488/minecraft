@@ -138,7 +138,7 @@ define('mc:grass_block', {
   textures: { top: 'grass_block_top', bottom: 'dirt', side: 'grass_block_side' },
   // Only the top face takes the biome grass colour; the side has a pre-tinted
   // overlay baked into its texture, matching how vanilla handles it.
-  tint: 'grass', tintFaces: ['up'],
+  tint: 'grass', tintFaces: ['up', 'north', 'south', 'west', 'east'],
 });
 
 define('mc:podzol', {
