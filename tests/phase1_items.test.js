@@ -33,6 +33,10 @@ describe('1.12.2 Phase 1 items', () => {
     assert(ITEMS.get('mc:redstone_lamp') !== undefined, 'redstone lamp item missing');
     assert(ITEMS.get('mc:hopper') !== undefined, 'hopper item missing');
     assert(RECIPES.recipes.some((recipe) => recipe.result === 'mc:hopper'), 'hopper recipe missing');
+    for (const id of ['mc:dropper', 'mc:observer', 'mc:target']) {
+      assert(ITEMS.get(id) !== undefined, `${id} item missing`);
+      assert(RECIPES.recipes.some((recipe) => recipe.result === id), `${id} recipe missing`);
+    }
     assert(ITEMS.get('mc:glowstone') !== undefined, 'glowstone block item missing');
     assert(ITEMS.get('mc:glowstone_dust') !== undefined, 'glowstone dust item missing');
     assert(RECIPES.recipes.some((recipe) => recipe.result === 'mc:redstone_lamp'), 'redstone lamp recipe missing');
