@@ -214,6 +214,15 @@ export const InputMixin = {
       return;
     }
 
+    if (isAction(e.code, 'swapOffhand')) {
+      e.preventDefault();
+      if (this.inventory.swapHeldWithOffhand()) {
+        this.ui.updateHotbar(this.inventory);
+        this.ui.toast('Предметы в руках поменяны местами', { duration: 1200 });
+      }
+      return;
+    }
+
     if (isAction(e.code, 'fly') && this.player.gamemode === GAMEMODE.CREATIVE) {
       this.player.flying = !this.player.flying;
       this.ui.toast(this.player.flying ? 'Flying enabled' : 'Flying disabled', { duration: 1500 });
