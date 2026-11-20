@@ -26,7 +26,7 @@ import { CHUNK_SIZE, MIN_Y, MAX_Y, SEA_LEVEL } from '../../core/constants.js';
 import { clamp } from '../../core/math.js';
 import { buildTree, TREE_MARGIN } from './trees.js';
 import { hash01, seedToInt } from './hash.js';
-import { ChunkWriter, mineshaftPlan, placeMineshaftPlan, placeDungeonRoom, villagePlan, placeVillagePlan, villageStyleForBiome } from './structures.js';
+import { ChunkWriter, mineshaftPlan, placeMineshaftPlan, placeDungeonRoom, placeStrongholdPortalRoom, villagePlan, placeVillagePlan, villageStyleForBiome } from './structures.js';
 
 /** Bumped whenever generation output changes. Stored per world. */
 export const GENERATOR_VERSION = 19;
@@ -1191,40 +1191,9 @@ export class TerrainGenerator {
         }
       }
     }
-    // Portal chamber with a recessed lava well and the classic 3x3 frame ring.
-    const px = x0 + 18, pz = z0 + 5;
-    const frame = S['mc:end_portal_frame'];
-    const lava = S['mc:lava'];
-    for (let dx = 0; dx < 11; dx++) for (let dz = 0; dz < 11; dz++) {
-      put(px + dx, y0, pz + dz, brick);
-      if (dx === 0 || dx === 10 || dz === 0 || dz === 10) {
-        for (let dy = 1; dy <= 5; dy++) put(px + dx, y0 + dy, pz + dz, brick);
-      }
-    }
-    if (lava) for (let dx = 3; dx <= 7; dx++) for (let dz = 3; dz <= 7; dz++) put(px + dx, y0, pz + dz, lava);
-    if (frame) {
-      for (let i = 0; i < 3; i++) {
-        put(px + 4 + i, y0 + 1, pz + 2, frame);
-        put(px + 4 + i, y0 + 1, pz + 8, frame);
-        put(px + 2, y0 + 1, pz + 4 + i, frame);
-        put(px + 8, y0 + 1, pz + 4 + i, frame);
-      }
-    }
-    if (S['mc:bookshelf']) {
-      for (let dx = 1; dx < 8; dx++) {
-        put(x0 - 11 + dx, y0 + 1, z0 + 4, S['mc:bookshelf']);
-        put(x0 - 11 + dx, y0 + 2, z0 + 4, S['mc:bookshelf']);
-      }
-    }
-    if (S['mc:chest']) {
-      // Storeroom / crossing chest.
-      put(x0 + 2, y0 + 1, z0 + 2, S['mc:chest']);
-      // Two library chests beside the bookshelf wall (large-library layout).
-      put(x0 - 10, y0 + 1, z0 + 8, S['mc:chest']);
-      put(x0 - 6, y0 + 1, z0 + 8, S['mc:chest']);
-      // Portal-room chest, separate from the lava recess and frame ring.
-      put(x0 + 20, y0 + 1, z0 + 10, S['mc:chest']);
-    }
+    // Portal room is kept in a shared structure helper so its frame states,
+    // deterministic eye prefill, lava layout, and silverfish spawner are tested.
+    placeStrongholdPortalRoom(new ChunkWriter(chunk, baseX, baseZ), S, site, this.seed);
   }
 
   placeMineshaft(chunk, baseX, baseZ, site) {

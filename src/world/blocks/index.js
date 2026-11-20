@@ -315,6 +315,18 @@ define('mc:furnace', {
 define('mc:mob_spawner', {
   hardness: 5, resistance: 5, tool: 'pickaxe', harvestLevel: -1,
   requiresTool: true, soundGroup: 'stone', texture: 'mob_spawner',
+  properties: { spawner_type: PROPS.spawnerType },
+  defaultValues: { spawner_type: 'dungeon' },
+  notInCreative: true,
+});
+
+// Stronghold portal frames retain their inward-facing orientation and the
+// per-frame eye-of-ender state in the saved blockstate palette.
+define('mc:end_portal_frame', {
+  hardness: -1, resistance: 3600000, soundGroup: 'stone',
+  texture: 'end_portal_frame',
+  properties: { facing: PROPS.facing, eye: PROPS.eye },
+  defaultValues: { facing: 'south', eye: false },
   notInCreative: true,
 });
 
