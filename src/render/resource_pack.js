@@ -15,7 +15,10 @@ import { TILE_SIZE, TEXTURES } from './atlas.js';
 const STORAGE_KEY = 'mc-resource-pack';
 
 
-const ITSBRIAN_RAW = 'https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/';
+// Community-authored texture sources. Floydicus Old Pack permits reuse with attribution;
+ // SimpleRP's exported PNGs are covered by its GPL source licence.
+const FLOYDICUS_RAW = 'https://raw.githubusercontent.com/OverFloyd/floydicus-old-pack/master/src/assets/minecraft/textures/';
+const SIMPLE_RP_RAW = 'https://raw.githubusercontent.com/elhedran/SimpleRP/master/build/16/assets/minecraft/textures/blocks/';
 
 const BLOCK_TEXTURE_ALIASES = Object.freeze({
   // The game uses a few descriptive keys that differ from vanilla asset names.
@@ -52,8 +55,8 @@ export function shouldFetchExternalItemTexture(item) {
   return Boolean(item && !item.block && !item.spawnEggMob);
 }
 
-async function fetchImage(path) {
-  const response = await fetch(ITSBRIAN_RAW + path, { signal: AbortSignal.timeout(4000) });
+async function fetchImage(path, base = FLOYDICUS_RAW + 'block/') {
+  const response = await fetch(base + path, { signal: AbortSignal.timeout(4000) });
   if (!response.ok) return null;
   return createImageBitmap(await response.blob());
 }
@@ -92,36 +95,53 @@ export async function loadItsBrianTextures(blocks, items) {
     } else if (state.block.texture) blockNames.add(state.block.texture);
   }
 
+  const blockAliases = {
+    ...BLOCK_TEXTURE_ALIASES,
+    // Floydicus uses the modern singular "block" directory and mostly vanilla
+    // 1.12-era names. These aliases bridge the game's descriptive texture keys.
+    grass_block_top: 'grass_block_top',
+    grass_block_side: 'grass_block_side',
+    podzol_top: 'soul_soil',
+    podzol_side: 'grass_block_side',
+    coarse_dirt: 'dirt',
+    plains_soil: 'dirt',
+    forest_floor: 'soul_soil',
+    birch_soil: 'sand',
+    jungle_soil: 'dirt',
+    savanna_soil: 'sand',
+    taiga_soil: 'soul_soil',
+    swamp_mud: 'soul_soil',
+    alpine_gravel: 'gravel',
+    mossy_cobblestone: 'mossy_cobblestone',
+    chest_top: 'chest_front',
+    chest_side: 'chest_side',
+    oak_log: 'acacia_log',
+    oak_log_top: 'acacia_log',
+    birch_log: 'acacia_log',
+    birch_log_top: 'acacia_log',
+    spruce_log: 'acacia_log',
+    spruce_log_top: 'acacia_log',
+    jungle_log: 'acacia_log',
+    jungle_log_top: 'acacia_log',
+    dark_oak_log: 'acacia_log',
+    dark_oak_log_top: 'acacia_log',
+  };
+  const simpleLeafNames = {
+    oak_leaves: 'leaves_oak',
+    spruce_leaves: 'leaves_spruce',
+    birch_leaves: 'leaves_birch',
+    jungle_leaves: 'leaves_jungle',
+    acacia_leaves: 'leaves_acacia',
+    dark_oak_leaves: 'leaves_big_oak',
+  };
   const blockEntries = await mapWithLimit([...blockNames], 24, async (name) => {
-    // Keep foliage and soil textures local: third-party packs may supply already-
-    // coloured leaves, which look pale or incorrect when multiplied by biome tint.
-    if (name.endsWith('_leaves') || name.endsWith('_sapling') || [
-      'grass_block_top', 'grass_block_side', 'dirt', 'coarse_dirt', 'podzol_top',
-      'podzol_side', 'plains_soil', 'forest_floor', 'birch_soil', 'jungle_soil',
-      'savanna_soil', 'taiga_soil', 'swamp_mud', 'alpine_gravel',
-    ].includes(name)) return null;
-    const sourceName = BLOCK_TEXTURE_ALIASES[name] ?? name;
-    if (name === 'chest_side' || name === 'chest_top') {
-      // Vanilla stores the chest as a 64x64 model skin rather than a block tile.
-      // Rebuild the two 16x16 face tiles from the front/top UV regions.
-      const skin = await fetchImage('entity/chest/normal.png');
-      if (!skin) return null;
-      const canvas = document.createElement('canvas');
-      canvas.width = TILE_SIZE;
-      canvas.height = TILE_SIZE;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      ctx.imageSmoothingEnabled = false;
-      if (name === 'chest_top') {
-        ctx.drawImage(skin, 14, 0, 14, 14, 0, 0, TILE_SIZE, TILE_SIZE);
-      } else {
-        ctx.drawImage(skin, 0, 14, 14, 5, 0, 0, TILE_SIZE, 5);
-        ctx.drawImage(skin, 0, 33, 14, 10, 0, 5, TILE_SIZE, 11);
-      }
-      const pixels = new Uint8Array(ctx.getImageData(0, 0, TILE_SIZE, TILE_SIZE).data);
-      skin.close();
-      return [name, pixels];
-    }
-    const bitmap = await fetchImage('block/' + encodeURIComponent(sourceName) + '.png');
+    const leafName = simpleLeafNames[name];
+    const sourceName = blockAliases[name] ?? name;
+    let bitmap = leafName
+      ? await fetchImage(encodeURIComponent(leafName) + '.png', SIMPLE_RP_RAW)
+      : await fetchImage(encodeURIComponent(sourceName) + '.png');
+    // A few files in older resource packs use legacy names. Missing textures are
+    // left to the atlas fallback instead of requesting ItsBrian or painting pixels.
     if (!bitmap) return null;
     const { ctx } = canvasFor(bitmap);
     const pixels = new Uint8Array(ctx.getImageData(0, 0, TILE_SIZE, TILE_SIZE).data);
@@ -175,7 +195,7 @@ export async function loadItsBrianTextures(blocks, items) {
   const blockTextures = new Map(blockEntries);
   const itemIcons = new Map(itemEntries);
   const ui = Object.fromEntries(uiEntries.filter(Boolean));
-  console.info('[textures] ItsBrian: ' + blockTextures.size + '/' + blockNames.size + ' block textures, ' + itemIcons.size + ' item icons, ' + Object.keys(hud).length + ' HUD sprites, ' + Object.keys(ui).length + ' GUI assets.');
+  console.info('[textures] community packs: ' + blockTextures.size + '/' + blockNames.size + ' block textures, ' + itemIcons.size + ' item icons, ' + Object.keys(hud).length + ' HUD sprites, ' + Object.keys(ui).length + ' GUI assets.');
   return { blocks: blockTextures, items: itemIcons, hud, ui };
 }
 
