@@ -1,0 +1,84 @@
+import '../src/world/blocks/index.js';
+import { describe, it, assert, assertEqual } from './framework.js';
+import { BLOCKS } from '../src/world/block.js';
+import { shapeBoxes, collisionBoxes } from '../src/world/shapes.js';
+import { BlockActionsMixin } from '../src/game/block_actions.js';
+import { Player, GAMEMODE } from '../src/entity/player.js';
+
+const AIR = BLOCKS.get('mc:air').defaultState;
+const STONE = BLOCKS.get('mc:stone').defaultState;
+
+function mockWorld(entries = []) {
+  const map = new Map(entries);
+  return {
+    map,
+    getBlock(x, y, z) { return map.get(`${x},${y},${z}`) || AIR; },
+    setBlock(x, y, z, state) { map.set(`${x},${y},${z}`, state); return true; },
+  };
+}
+
+describe('Java stronghold doors and buttons', () => {
+  it('registers two-part doors and a wall button with non-cube geometry', () => {
+    const oak = BLOCKS.get('mc:oak_door').defaultState;
+    const iron = BLOCKS.get('mc:iron_door').defaultState;
+    const button = BLOCKS.get('mc:stone_button').defaultState;
+    assertEqual(shapeBoxes(oak).length, 1);
+    assertEqual(shapeBoxes(iron).length, 1);
+    assertEqual(shapeBoxes(button).length, 1);
+    assert(collisionBoxes(oak).length > 0, 'door should block movement');
+    assertEqual(collisionBoxes(button).length, 0, 'button should not block movement');
+  });
+
+  it('toggles both halves of a wooden door together', () => {
+    const door = BLOCKS.get('mc:oak_door').defaultState;
+    const world = mockWorld([
+      ['4,10,7', door.with('half', 'bottom')],
+      ['4,11,7', door.with('half', 'top')],
+    ]);
+    const game = { world, multiplayer: { pushBlockChange() {} }, sounds: { play() {} } };
+    BlockActionsMixin._toggleDoorAt.call(game, 4, 11, 7);
+    assertEqual(world.getBlock(4, 10, 7).get('open'), true);
+    assertEqual(world.getBlock(4, 11, 7).get('open'), true);
+    BlockActionsMixin._toggleDoorAt.call(game, 4, 10, 7);
+    assertEqual(world.getBlock(4, 10, 7).get('open'), false);
+    assertEqual(world.getBlock(4, 11, 7).get('open'), false);
+  });
+
+  it('iron door is controlled by a stone button and both door halves stay in sync', () => {
+    const door = BLOCKS.get('mc:iron_door').defaultState;
+    const button = BLOCKS.get('mc:stone_button').defaultState;
+    const world = mockWorld([
+      ['1,5,0', button],
+      ['2,5,0', door.with('half', 'bottom')],
+      ['2,6,0', door.with('half', 'top')],
+    ]);
+    const game = { world, multiplayer: { pushBlockChange() {} }, sounds: { play() {} } };
+    BlockActionsMixin._pressStrongholdButton.call(game, 1, 5, 0);
+    assertEqual(world.getBlock(2, 5, 0).get('open'), true);
+    assertEqual(world.getBlock(2, 6, 0).get('open'), true);
+    assertEqual(world.getBlock(1, 5, 0).get('powered'), true);
+    BlockActionsMixin._pressStrongholdButton.call(game, 1, 5, 0);
+    assertEqual(world.getBlock(2, 5, 0).get('open'), false);
+    assertEqual(world.getBlock(1, 5, 0).get('powered'), false);
+  });
+
+  it('cobwebs strongly reduce player movement speed', () => {
+    const web = BLOCKS.get('mc:cobweb').defaultState;
+    const makeWorld = (withWeb) => ({
+      getBlock(x, y, z) {
+        if (y <= 0) return STONE;
+        if (withWeb && x === 0 && z === 0 && y === 2) return web;
+        return AIR;
+      },
+    });
+    const move = (withWeb) => {
+      const player = new Player(0.5, 1, 0.5);
+      player.gamemode = GAMEMODE.SURVIVAL;
+      player.onGround = true;
+      player.input.forward = 1;
+      player.tick(makeWorld(withWeb));
+      return Math.abs(player.z - 0.5);
+    };
+    assert(move(true) < move(false) * 0.5, 'web movement should be less than half normal movement');
+  });
+});
