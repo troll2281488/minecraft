@@ -479,7 +479,6 @@ const MATERIALS = [
   ['mc:music_disc_otherside', { stackSize: 1 }],
   ['mc:golden_apple', { food: { nutrition: 4, saturation: 9.6 } }],
   ['mc:enchanted_golden_apple', { stackSize: 1, food: { nutrition: 4, saturation: 9.6 } }],
-  ['mc:gunpowder', {}],
   ['mc:bucket', { stackSize: 16 }],
   ['mc:melon_seeds', {}],
   ['mc:pumpkin_seeds', {}],
