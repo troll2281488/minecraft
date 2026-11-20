@@ -68,6 +68,7 @@ export const enumProp = (name, values) => new Property(name, values);
 // every stair block agrees on what "facing" means and its value ordering.
 export const PROPS = {
   facing: enumProp('facing', ['north', 'south', 'west', 'east']),
+  face: enumProp('face', ['floor', 'wall', 'ceiling']),
   doorHalf: enumProp('half', ['lower', 'upper']),
   hinge: enumProp('hinge', ['left', 'right']),
   eye: boolProp('eye'),

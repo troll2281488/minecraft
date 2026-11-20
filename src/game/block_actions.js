@@ -69,6 +69,7 @@ export const BlockActionsMixin = {
     this.sounds?.play('break', state.block.soundGroup || 'stone');
     this.world.setBlock(x, y, z, AIR.defaultState);
     this.multiplayer?.pushBlockChange(x, y, z, AIR.defaultState);
+    this._removeAttachedRedstoneDevices?.(x, y, z);
     if (isDoor) {
       this.world.setBlock(x, pairedDoorY, z, AIR.defaultState);
       this.multiplayer?.pushBlockChange(x, pairedDoorY, z, AIR.defaultState);
@@ -163,6 +164,20 @@ export const BlockActionsMixin = {
     if (this.entities?.feedAnimalFromPlayer()) return;
     if (this._farmInteraction()) return;
     const sneaking = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
+    if (this.hit && !sneaking && ['button', 'lever'].includes(this.hit.state.block.renderShape)) {
+      const state = this.hit.state;
+      const powered = state.block.renderShape === 'lever' ? !state.get('powered') : true;
+      const next = state.with('powered', powered);
+      this.world.setBlock(this.hit.x, this.hit.y, this.hit.z, next);
+      this.multiplayer?.pushBlockChange(this.hit.x, this.hit.y, this.hit.z, next);
+      if (state.block.renderShape === 'button') {
+        this._redstoneDeviceTimers ||= new Map();
+        const wooden = !['mc:stone_button', 'mc:polished_blackstone_button'].includes(state.block.id);
+        this._redstoneDeviceTimers.set(`${this.hit.x},${this.hit.y},${this.hit.z}`, { due: this.tickCount + (wooden ? 30 : 20) });
+      }
+      this._applyAdjacentRedstonePower?.(this.hit.x, this.hit.y, this.hit.z, powered);
+      return true;
+    }
     if (this.hit && !sneaking && this.hit.state.block.renderShape === 'trapdoor') {
       const trapdoor = this.hit.state;
       // Iron trapdoors require redstone; wooden variants can be used by hand.
@@ -320,6 +335,21 @@ export const BlockActionsMixin = {
     if (block.solid && wouldTrapPlayer(this.player, target.x, target.y, target.z)) return;
 
     let state = orientPlacement(block, this.player, this.hit);
+    if (['button', 'lever'].includes(block.renderShape)) {
+      const face = state.get('face'), facing = state.get('facing');
+      const support = face === 'floor' ? this.world.getBlock(target.x, target.y - 1, target.z)
+        : face === 'ceiling' ? this.world.getBlock(target.x, target.y + 1, target.z)
+        : facing === 'north' ? this.world.getBlock(target.x, target.y, target.z + 1)
+        : facing === 'south' ? this.world.getBlock(target.x, target.y, target.z - 1)
+        : facing === 'east' ? this.world.getBlock(target.x - 1, target.y, target.z)
+        : this.world.getBlock(target.x + 1, target.y, target.z);
+      if (!support.block.solid || !support.block.opaqueCube) return;
+    }
+    if (block.renderShape === 'pressure_plate') {
+      if (this.hit.face?.dy !== 1) return;
+      const support = this.world.getBlock(target.x, target.y - 1, target.z);
+      if (!support.block.solid || !support.block.opaqueCube) return;
+    }
     if (block.renderShape === 'door') {
       const above = this.world.getBlock(target.x, target.y + 1, target.z);
       const support = this.world.getBlock(target.x, target.y - 1, target.z);

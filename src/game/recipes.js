@@ -54,6 +54,17 @@ recipes.push({
   key: { I: 'mc:iron_ingot' },
 });
 
+// Buttons, levers and pressure plates.
+for (const wood of WOODS) {
+  recipes.push({ result: `mc:${wood}_button`, count: 1, ingredients: [`mc:${wood}_planks`] });
+  recipes.push({ result: `mc:${wood}_pressure_plate`, count: 1, pattern: ['PP'], key: { P: `mc:${wood}_planks` } });
+}
+recipes.push({ result: 'mc:stone_button', count: 1, ingredients: ['mc:stone'] });
+recipes.push({ result: 'mc:polished_blackstone_button', count: 1, ingredients: ['mc:polished_blackstone'] });
+recipes.push({ result: 'mc:stone_pressure_plate', count: 1, pattern: ['SS'], key: { S: 'mc:stone' } });
+recipes.push({ result: 'mc:polished_blackstone_pressure_plate', count: 1, pattern: ['SS'], key: { S: 'mc:polished_blackstone' } });
+recipes.push({ result: 'mc:lever', count: 1, pattern: ['T', 'S'], key: { T: 'mc:stick', S: 'mc:cobblestone' } });
+
 recipes.push({
   result: 'mc:stick', count: 4,
   pattern: ['P', 'P'],

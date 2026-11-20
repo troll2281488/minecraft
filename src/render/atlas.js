@@ -433,6 +433,23 @@ const WOOD = {
   dark_oak: { bark: hex(0x30251b), inner: hex(0x49331f), planks: hex(0x49331f), leaves: hex(0x3e6530), sapling: hex(0x3e6530) },
 };
 
+function buttonTile(base, seed) {
+  const tile = planks(base, seed), edge = shade(base, 0.5), center = shade(base, 0.82);
+  for (let y = 4; y <= 11; y++) for (let x = 4; x <= 11; x++) {
+    const c = (x === 4 || x === 11 || y === 4 || y === 11) ? edge : center;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+}
+
+function pressurePlateTile(base, seed) {
+  const tile = planks(base, seed), edge = shade(base, 0.55);
+  for (let i = 1; i < TILE_SIZE - 1; i++) {
+    for (const [x, y] of [[i, 1], [i, 14], [1, i], [14, i]]) setPx(tile, x, y, edge[0], edge[1], edge[2]);
+  }
+  return tile;
+}
+
 /** Simple procedural door fallback; the community Java 1.19 tiles override it. */
 function doorPanelTile(base, seed, upper) {
   const tile = planks(base, seed);
@@ -616,11 +633,26 @@ for (const [species, c] of Object.entries(WOOD)) {
   TEXTURES[`${species}_door_bottom`] = () => doorPanelTile(c.planks, `${species}_door_bottom`, false);
   TEXTURES[`${species}_door_top`] = () => doorPanelTile(c.planks, `${species}_door_top`, true);
   TEXTURES[`${species}_trapdoor`] = () => trapdoorPanelTile(c.planks, `${species}_trapdoor`);
+  TEXTURES[`${species}_button`] = () => buttonTile(c.planks, `${species}_button`);
+  TEXTURES[`${species}_pressure_plate`] = () => pressurePlateTile(c.planks, `${species}_pressure_plate`);
 }
 
 TEXTURES.iron_door_bottom = () => ironDoorPanelTile(false);
 TEXTURES.iron_door_top = () => ironDoorPanelTile(true);
 TEXTURES.iron_trapdoor = () => ironDoorPanelTile(false);
+TEXTURES.stone_button = () => buttonTile(hex(0x858585), 'stone_button');
+TEXTURES.polished_blackstone_button = () => buttonTile(hex(0x38333a), 'polished_blackstone_button');
+TEXTURES.stone_pressure_plate = () => pressurePlateTile(hex(0x858585), 'stone_pressure_plate');
+TEXTURES.polished_blackstone_pressure_plate = () => pressurePlateTile(hex(0x38333a), 'polished_blackstone_pressure_plate');
+TEXTURES.lever = () => {
+  const tile = grainy(hex(0x777777), 0.12, 'lever');
+  const light = hex(0xb0b0b0), dark = hex(0x454545);
+  for (let y = 3; y < 13; y++) for (let x = 3; x < 13; x++) {
+    const c = (x + y) % 3 === 0 ? dark : light;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
 
 /** Visible checkerboard fallback for a missing texture key. */
 function missingTexture() {

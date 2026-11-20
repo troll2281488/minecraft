@@ -53,6 +53,7 @@ import { Multiplayer } from './game/multiplayer.js';
 import { MobSystem } from './entity/mobs.js';
 import { GameSounds } from './game/sounds.js';
 import { growNearbyWheat } from './game/farming.js';
+import { RedstoneDevicesMixin } from './game/redstone_devices.js';
 import { isDown } from './game/keybinds.js';
 
 const AUTOSAVE_TICKS = SAVE.AUTOSAVE_INTERVAL_TICKS;
@@ -330,6 +331,7 @@ class Game {
     if (!world || !player) return;
 
     world.time = (world.time + 1) % (TICKS_PER_DAY * 8);
+    this._tickRedstoneDevices?.();
     this._tickFurnaces?.();
 
     if (!this.inventoryOpen && !this.tradeOpen) {
@@ -503,6 +505,7 @@ Object.assign(
   ContainerScreensMixin,
   RendererMixin,
   DebugOverlayMixin,
+  RedstoneDevicesMixin,
 );
 
 // Exported so the class and its methods can be exercised without booting a real
