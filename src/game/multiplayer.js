@@ -396,13 +396,16 @@ export class Multiplayer {
         const restored = deserializeContainer(record);
         if (!restored) continue;
         const current = this.game._containers.get(key);
-        if (current?.type === restored.type && JSON.stringify(serializeContainer(current.type, current.data)) === JSON.stringify(record)) continue;
-        this.game._containers.set(key, restored);
-        const active = this.game._activeContainer;
-        if (active?.key === key && active.kind === 'chest' && restored.type === 'chest') {
-          active.slots.splice(0, active.slots.length, ...restored.data.slots);
-        } else if (active?.key === key && active.kind === 'furnace' && restored.type === 'furnace') {
-          Object.assign(active.furnace, restored.data);
+        if (current?.type === restored.type) {
+          if (JSON.stringify(serializeContainer(current.type, current.data)) === JSON.stringify(record)) continue;
+          // Preserve the live object/slot-array references held by an open UI.
+          if (restored.type === 'chest') {
+            current.data.slots.splice(0, current.data.slots.length, ...restored.data.slots);
+          } else {
+            Object.assign(current.data, restored.data);
+          }
+        } else {
+          this.game._containers.set(key, restored);
         }
         this.game._renderContainer?.();
       }
