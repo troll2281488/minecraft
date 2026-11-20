@@ -998,16 +998,8 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       // block items are rendered as volumetric cubes using that same source art.
       const held = this.inventory?.held;
       const itemView = document.getElementById('held-item-view');
-      if (itemView) {
-        const heldIcon = held && !held.isEmpty && held.item ? this.ui.icons.get(held.item.id) : null;
-        if (heldIcon) {
-          if (itemView.src !== new URL(heldIcon, document.baseURI).href) itemView.src = heldIcon;
-          itemView.classList.remove('hidden');
-        } else {
-          itemView.classList.add('hidden');
-          itemView.removeAttribute('src');
-        }
-      }
+      // The hotbar icon is not the held object. Keep the DOM overlay hidden;
+      // the item is drawn below as a camera-space 3D sprite/cube.
       if (held && !held.isEmpty && held.item) {
         const id = held.item.id;
         const icon = this.ui.icons.get(id);
@@ -1024,7 +1016,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           };
           image.src = icon;
         }
-        if (false && this.heldItemTextureReady) {
+        if (this.heldItemTextureReady) {
           const isBlock = !!held.item.block;
           const size = isBlock ? [0.135, 0.135, 0.135] : [0.16, 0.27, 0.025];
           const itemParts = [[[0, 0, 0], size, [1, 1, 1, 1], null, null, [0.22, 0, -0.42]]];
