@@ -26,10 +26,10 @@ import { CHUNK_SIZE, MIN_Y, MAX_Y, SEA_LEVEL } from '../../core/constants.js';
 import { clamp } from '../../core/math.js';
 import { buildTree, TREE_MARGIN } from './trees.js';
 import { hash01, seedToInt } from './hash.js';
-import { ChunkWriter, mineshaftPlan, placeMineshaftPlan, placeDungeonRoom, placeStrongholdPortalRoom, villagePlan, placeVillagePlan, villageStyleForBiome } from './structures.js';
+import { ChunkWriter, mineshaftPlan, placeMineshaftPlan, placeDungeonRoom, placeStrongholdPortalRoom, placeStrongholdRoomNetwork, villagePlan, placeVillagePlan, villageStyleForBiome } from './structures.js';
 
 /** Bumped whenever generation output changes. Stored per world. */
-export const GENERATOR_VERSION = 19;
+export const GENERATOR_VERSION = 20;
 
 
 // ---------------------------------------------------------------------------
@@ -1193,7 +1193,9 @@ export class TerrainGenerator {
     }
     // Portal room is kept in a shared structure helper so its frame states,
     // deterministic eye prefill, lava layout, and silverfish spawner are tested.
-    placeStrongholdPortalRoom(new ChunkWriter(chunk, baseX, baseZ), S, site, this.seed);
+    const writer = new ChunkWriter(chunk, baseX, baseZ);
+    placeStrongholdRoomNetwork(writer, S, site, this.seed);
+    placeStrongholdPortalRoom(writer, S, site, this.seed);
   }
 
   placeMineshaft(chunk, baseX, baseZ, site) {
