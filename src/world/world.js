@@ -41,8 +41,9 @@ export class World {
    * @param {string|number|bigint} options.seed
    * @param {Uint16Array} options.textureTable  6 texture layers per blockstate
    */
-  constructor({ seed, textureTable }) {
+  constructor({ seed, textureTable, dimension = 'overworld' }) {
     this.seed = seed;
+    this.dimension = dimension;
     this.textureTable = textureTable;
 
     /** @type {Map<string, Chunk>} */
@@ -75,7 +76,7 @@ export class World {
       worker.onerror = (e) => {
         console.error('[world] terrain worker failed:', e.message);
       };
-      worker.postMessage({ type: 'init', seed: String(this.seed) });
+      worker.postMessage({ type: 'init', seed: String(this.seed), dimension: this.dimension });
       this._workers.push(worker);
     }
   }

@@ -26,7 +26,7 @@ import { CHUNK_SIZE, MIN_Y, MAX_Y, SEA_LEVEL } from '../../core/constants.js';
 import { clamp } from '../../core/math.js';
 
 /** Bumped whenever generation output changes. Stored per world. */
-export const GENERATOR_VERSION = 9;
+export const GENERATOR_VERSION = 10;
 
 
 // ---------------------------------------------------------------------------
@@ -147,8 +147,9 @@ const DIRT_PATCHES = [
 // ---------------------------------------------------------------------------
 
 export class TerrainGenerator {
-  constructor(seed) {
+  constructor(seed, dimension = 'overworld') {
     this.seed = normalizeSeed(seed);
+    this.dimension = ['overworld', 'nether', 'end'].includes(dimension) ? dimension : 'overworld';
     const root = new Random(this.seed);
 
     // Each noise field forks its own stream from a labelled sub-seed. Adding a
@@ -301,6 +302,8 @@ export class TerrainGenerator {
 
   /** Fill a chunk with terrain, ores, surface material, and features. */
   generate(chunk) {
+    if (this.dimension === 'nether') return this.generateNetherChunk(chunk);
+    if (this.dimension === 'end') return this.generateEndChunk(chunk);
     const baseX = chunk.cx * CHUNK_SIZE;
     const baseZ = chunk.cz * CHUNK_SIZE;
     const S = this.states;
@@ -375,6 +378,112 @@ export class TerrainGenerator {
     // DATA_VERSION on write, and a freshly generated chunk has no older version
     // to record. Assigning undefined here was meaningless and misleading.
     return chunk;
+  }
+
+
+  /** Classic Nether terrain, generated independently from the Overworld. */
+  generateNetherChunk(chunk) {
+    const baseX = chunk.cx * CHUNK_SIZE, baseZ = chunk.cz * CHUNK_SIZE;
+    const S = this.states.byId, netherrack = S['mc:netherrack'] || S['mc:stone'];
+    const bedrock = S['mc:bedrock'], lava = netherrack;
+    const soul = S['mc:soul_sand'] || netherrack, gravel = S['mc:gravel'] || netherrack;
+    const glowstone = S['mc:glowstone'] || netherrack;
+    for (let z=0; z<CHUNK_SIZE; z++) for (let x=0; x<CHUNK_SIZE; x++) {
+      const wx=baseX+x, wz=baseZ+z;
+      const cave=this.caveA.sample3(wx*0.035, 62*0.035, wz*0.035);
+      const ceiling=112+Math.floor(this.detail.sample2(wx,wz,0.018)*9);
+      const floor=28+Math.floor(this.detail.sample2(wx+91,wz-37,0.02)*8);
+      for(let y=MIN_Y;y<MAX_Y;y++) {
+        let state=null;
+        if(y<=MIN_Y+1 || y>=ceiling-1) state=bedrock;
+        else if(y<floor) state=netherrack;
+        else if(y<=31) state=lava;
+        else if(y<ceiling && cave>0.16) state=netherrack;
+        if(state) chunk.setBlock(x,y,z,state);
+        if(y===floor && state===netherrack && ((wx*31+wz*17)&31)===0) chunk.setBlock(x,y,z,soul);
+        if(y===ceiling-2 && state===netherrack && ((wx*13+wz*7)&63)===0) chunk.setBlock(x,y,z,glowstone);
+        if(y===floor+1 && state===netherrack && ((wx*11+wz*19)&47)===0) chunk.setBlock(x,y,z,gravel);
+      }
+      chunk.setBiome(x,64,z,'mc:nether_wastes');
+    }
+    this.placeNetherFortress(chunk,baseX,baseZ);
+    chunk.rebuildHeightmap();
+    chunk.generatedStage=GEN_STAGE.FEATURES;
+    return chunk;
+  }
+
+  placeNetherFortress(chunk, baseX, baseZ) {
+    const S=this.states.byId, brick=S['mc:nether_bricks']||S['mc:netherrack'], fence=S['mc:nether_brick_fence']||brick;
+    const minX=Math.floor((baseX-48)/384), maxX=Math.floor((baseX+CHUNK_SIZE+48)/384);
+    const minZ=Math.floor((baseZ-48)/384), maxZ=Math.floor((baseZ+CHUNK_SIZE+48)/384);
+    for(let gz=minZ;gz<=maxZ;gz++) for(let gx=minX;gx<=maxX;gx++) {
+      const rng=positionalRandom(this.seed,gx,4101,gz,4101);
+      if(rng.nextInt(3)!==0) continue;
+      const x=gx*384+64+rng.nextInt(256), z=gz*384+64+rng.nextInt(256), y=48+rng.nextInt(20);
+      const put=(wx,wy,wz,state)=>{if(!state)return;const lx=wx-baseX,lz=wz-baseZ;if(lx>=0&&lx<16&&lz>=0&&lz<16&&wy>=MIN_Y&&wy<MAX_Y)chunk.setBlock(lx,wy,lz,state);};
+      const length=38+rng.nextInt(24);
+      for(let i=0;i<length;i++) for(let dx=-2;dx<=2;dx++) {
+        put(x+i,y,z+dx,brick); put(x+i,y+5,z+dx,brick);
+        for(let dy=1;dy<5;dy++) put(x+i,y+dy,z+dx,(dx===-2||dx===2)?brick:null);
+      }
+      for(const offset of [8,24]) {
+        for(let dx=-4;dx<=4;dx++) for(let dz=-4;dz<=4;dz++) {
+          put(x+offset+dx,y+6,z+dz,brick);
+          if(Math.abs(dx)===4||Math.abs(dz)===4) for(let dy=1;dy<=5;dy++) put(x+offset+dx,y+6+dy,z+dz,brick);
+        }
+      }
+      for(let i=0;i<length;i+=5) put(x+i,y+6,z-3,fence);
+    }
+  }
+
+  /** The End is a void dimension with a central island and outer island clusters. */
+  generateEndChunk(chunk) {
+    const baseX=chunk.cx*CHUNK_SIZE, baseZ=chunk.cz*CHUNK_SIZE;
+    const S=this.states.byId, endStone=S['mc:end_stone']||S['mc:stone'], obsidian=S['mc:obsidian'];
+    const bedrock=S['mc:bedrock'];
+    for(let z=0;z<16;z++) for(let x=0;x<16;x++) {
+      const wx=baseX+x,wz=baseZ+z,dist=Math.hypot(wx,wz);
+      let radius=dist<120?92:dist>700?34:0;
+      if(radius && dist>120) radius=34+Math.floor(this.detail.sample2(wx,wz,0.012)*18);
+      const edge=this.density.sample2(wx,wz,0.025);
+      const island=radius>0 && dist<120 ? (dist<radius+edge*18) : radius>0 && edge>0.15;
+      if(island) {
+        const top=64+Math.floor(this.detail.sample2(wx,wz,0.018)*8);
+        for(let y=MIN_Y;y<=top;y++) {
+          if(y<top-4 || edge>0.05) chunk.setBlock(x,y,z,endStone);
+        }
+        chunk.setBlock(x,top,z,endStone);
+        if(wx===0&&wz===0&&obsidian) chunk.setBlock(x,top+1,z,obsidian);
+      }
+      chunk.setBiome(x,64,z,'mc:the_end');
+    }
+    this.placeEndCity(chunk,baseX,baseZ);
+    chunk.rebuildHeightmap();
+    chunk.generatedStage=GEN_STAGE.FEATURES;
+    return chunk;
+  }
+
+  placeEndCity(chunk,baseX,baseZ) {
+    const S=this.states.byId, endStone=S['mc:end_stone']||S['mc:stone'];
+    const purpur=S['mc:purpur_block']||endStone, pillar=S['mc:purpur_pillar']||purpur;
+    const minX=Math.floor((baseX-40)/512),maxX=Math.floor((baseX+56)/512);
+    const minZ=Math.floor((baseZ-40)/512),maxZ=Math.floor((baseZ+56)/512);
+    for(let gz=minZ;gz<=maxZ;gz++) for(let gx=minX;gx<=maxX;gx++) {
+      const rng=positionalRandom(this.seed,gx,4201,gz,4201);
+      if(rng.nextInt(5)!==0) continue;
+      const x=gx*512+80+rng.nextInt(352),z=gz*512+80+rng.nextInt(352),y=68;
+      const put=(wx,wy,wz,state)=>{const lx=wx-baseX,lz=wz-baseZ;if(lx>=0&&lx<16&&lz>=0&&lz<16&&wy>=MIN_Y&&wy<MAX_Y)chunk.setBlock(lx,wy,lz,state);};
+      for(let level=0;level<4;level++) {
+        const width=Math.max(5,13-level*2), height=5+level*2, ox=level*2;
+        for(let dx=0;dx<width;dx++) for(let dz=0;dz<width;dz++) {
+          put(x+ox+dx,y+level*height,z+dz,purpur);
+          if(dx===0||dx===width-1||dz===0||dz===width-1)
+            for(let dy=1;dy<height;dy++) put(x+ox+dx,y+level*height+dy,z+dz,purpur);
+        }
+        for(let dx=2;dx<width-2;dx++) for(let dz=2;dz<width-2;dz++) put(x+ox+dx,y+level*height+height-1,z+dz,pillar);
+      }
+      for(let dy=1;dy<28;dy++) put(x+6,y+dy,z+6,pillar);
+    }
   }
 
   /** The 1.12.2 Overworld has stone throughout its underground layers. */
@@ -764,13 +873,21 @@ export class TerrainGenerator {
 
         const site = this.validateVillageSite(candidate.x, candidate.z);
         if (!site) continue;
-        // Four small homes and a farm form a recognizable village cluster,
-        // rather than the old two-box outpost. All pieces are clipped per chunk.
-        this.placeVillageHouse(chunk, baseX, baseZ, candidate.x, candidate.z, site.y, site.biome, 0);
-        this.placeVillageHouse(chunk, baseX, baseZ, candidate.x + 10, candidate.z, site.y, site.biome, 1);
-        this.placeVillageHouse(chunk, baseX, baseZ, candidate.x, candidate.z + 10, site.y, site.biome, 2);
-        this.placeVillageHouse(chunk, baseX, baseZ, candidate.x + 10, candidate.z + 10, site.y, site.biome, 3);
-        this.placeVillageFarm(chunk, baseX, baseZ, candidate.x + 20, candidate.z + 10, site.y);
+        // Seeded village plans: each settlement chooses a different street pattern,
+        // building mix and farm position while retaining chunk-order determinism.
+        const planRng = positionalRandom(this.seed, gx, 7301, gz, 7301);
+        const plan = planRng.nextInt(5);
+        const layouts = [
+          [[0,0,0],[10,0,1],[0,10,2],[10,10,3],[20,10,4]],
+          [[0,0,0],[10,0,2],[20,0,3],[0,10,4],[20,10,1]],
+          [[0,0,0],[10,0,3],[20,0,4],[0,10,2],[10,20,1]],
+          [[0,0,0],[10,0,4],[20,0,3],[0,10,1],[20,10,2]],
+          [[0,0,0],[10,0,1],[20,0,2],[0,10,3],[10,20,4]],
+        ];
+        for (const [dx,dz,kind] of layouts[plan]) {
+          if (kind===4) this.placeVillageFarm(chunk,baseX,baseZ,candidate.x+dx,candidate.z+dz,site.y);
+          else this.placeVillageHouse(chunk,baseX,baseZ,candidate.x+dx,candidate.z+dz,site.y,site.biome,kind);
+        }
         const path = this.states.byId['mc:coarse_dirt'];
         // Main lane and two cross-lanes link the doors, farm and village centre.
         for (let dx = 3; dx <= 23; dx++) {
@@ -1372,6 +1489,70 @@ function resolveStates() {
     bedrock: byId['mc:bedrock'],
     water: byId['mc:water'],
   };
+}
+
+
+/** Find the nearest deterministic structure candidate in the requested dimension. */
+export function findNearestStructure(seed, dimension, name, originX=0, originZ=0, maxRadius=16000) {
+  const id=String(name||'').toLowerCase().replace(/^minecraft:/,'');
+  const dim=dimension||'overworld';
+  const definitions={
+    village:{step:128,fn:villageCandidateForCell},
+    mineshaft:{step:96,fn:mineshaftCandidateForCell},
+    dungeon:{step:80,fn:dungeonCandidateForCell},
+    stronghold:{step:512,fn:strongholdCandidateForCell},
+    desert_temple:{step:256,fn:desertTempleCandidateForCell},
+    desert_pyramid:{step:256,fn:desertTempleCandidateForCell},
+    jungle_temple:{step:256,fn:jungleTempleCandidateForCell},
+    swamp_hut:{step:256,fn:swampHutCandidateForCell},
+    igloo:{step:256,fn:iglooCandidateForCell},
+    mansion:{step:512,fn:mansionCandidateForCell},
+    monument:{step:512,fn:oceanMonumentCandidateForCell},
+    fossil:{step:144,fn:fossilCandidateForCell},
+  };
+  if(dim==='nether' && id==='fortress') {
+    const step=384; let best=null;
+    const gx0=Math.floor(originX/step),gz0=Math.floor(originZ/step),span=Math.ceil(maxRadius/step)+1;
+    for(let gz=gz0-span;gz<=gz0+span;gz++) for(let gx=gx0-span;gx<=gx0+span;gx++) {
+      const rng=positionalRandom(seed,gx,4101,gz,4101); if(rng.nextInt(3)!==0) continue;
+      const p={x:gx*step+64+rng.nextInt(256),z:gz*step+64+rng.nextInt(256)};
+      const d=Math.hypot(p.x-originX,p.z-originZ); if(d<=maxRadius&&(!best||d<best.distance)) best={...p,distance:d};
+    }
+    return best;
+  }
+  if(dim==='end' && id==='end_city') {
+    const step=512; let best=null;
+    const gx0=Math.floor(originX/step),gz0=Math.floor(originZ/step),span=Math.ceil(maxRadius/step)+1;
+    for(let gz=gz0-span;gz<=gz0+span;gz++) for(let gx=gx0-span;gx<=gx0+span;gx++) {
+      const rng=positionalRandom(seed,gx,4201,gz,4201); if(rng.nextInt(5)!==0) continue;
+      const p={x:gx*step+80+rng.nextInt(352),z:gz*step+80+rng.nextInt(352)};
+      const d=Math.hypot(p.x-originX,p.z-originZ); if(d<=maxRadius&&(!best||d<best.distance)) best={...p,distance:d};
+    }
+    return best;
+  }
+  if(dim!=='overworld') return null;
+  const def=definitions[id]; if(!def) return null;
+  const gx0=Math.floor(originX/def.step),gz0=Math.floor(originZ/def.step),span=Math.ceil(maxRadius/def.step)+1;
+  const generator=new TerrainGenerator(seed,'overworld');
+  let best=null;
+  for(let gz=gz0-span;gz<=gz0+span;gz++) for(let gx=gx0-span;gx<=gx0+span;gx++) {
+    const p=def.fn(seed,gx,gz); if(!p) continue;
+    const d=Math.hypot(p.x-originX,p.z-originZ); if(d>maxRadius||best&&d>=best.distance) continue;
+    const y=generator.heightAt(p.x,p.z), biome=generator.biomeAt(p.x,p.z,y);
+    const valid={
+      desert_temple:[BIOME.DESERT,BIOME.DESERT_HILLS],
+      desert_pyramid:[BIOME.DESERT,BIOME.DESERT_HILLS],
+      jungle_temple:[BIOME.JUNGLE,BIOME.JUNGLE_HILLS,BIOME.JUNGLE_EDGE,BIOME.BAMBOO_JUNGLE],
+      swamp_hut:[BIOME.SWAMP],
+      igloo:[BIOME.SNOWY_PLAINS,BIOME.SNOWY_TAIGA,BIOME.COLD_TAIGA],
+      mansion:[BIOME.DARK_FOREST],
+      monument:[BIOME.DEEP_OCEAN,BIOME.DEEP_COLD_OCEAN,BIOME.DEEP_FROZEN_OCEAN,BIOME.DEEP_LUKEWARM_OCEAN],
+      village:[BIOME.PLAINS,BIOME.SUNFLOWER_PLAINS,BIOME.DESERT,BIOME.DESERT_HILLS,BIOME.SAVANNA,BIOME.SAVANNA_PLATEAU,BIOME.TAIGA,BIOME.TAIGA_HILLS,BIOME.COLD_TAIGA,BIOME.COLD_TAIGA_HILLS,BIOME.SNOWY_PLAINS],
+    }[id];
+    if(valid&&!valid.includes(biome)) continue;
+    best={x:p.x,y:Number.isFinite(p.y)?p.y:Math.floor(y),z:p.z,distance:d};
+  }
+  return best;
 }
 
 /** Convenience for callers that just want a finished chunk. */
