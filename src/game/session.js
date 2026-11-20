@@ -34,6 +34,7 @@ export const SessionMixin = {
     if (this.world.dimension === 'nether' && meta.netherGeneratorVersion !== GENERATOR_VERSION) {
       if (!this.multiplayer?.roomId) await storage.clearDimensionChunks(meta.id, SAVE_DIMENSION.nether);
       meta.netherGeneratorVersion = GENERATOR_VERSION;
+      meta.netherFortressLootPlaced = false;
       await storage.putWorld(meta);
       this.ui.toast('Нижний мир обновлён: старая генерация Незера заменена новой.', { duration: 6000 });
     }
@@ -139,6 +140,7 @@ export const SessionMixin = {
     if (next === 'nether' && this.worldMeta.netherGeneratorVersion !== GENERATOR_VERSION) {
       if (!this.multiplayer?.roomId) await storage.clearDimensionChunks(this.worldMeta.id, SAVE_DIMENSION.nether);
       this.worldMeta.netherGeneratorVersion = GENERATOR_VERSION;
+      this.worldMeta.netherFortressLootPlaced = false;
       await storage.putWorld(this.worldMeta);
       this.ui.toast('Нижний мир обновлён: старая генерация Незера заменена новой.', { duration: 6000 });
     }
@@ -162,9 +164,10 @@ export const SessionMixin = {
     if (safe) this.player.teleport(safe.x,safe.y,safe.z);
     if (next === 'nether') {
       const obsidian=BLOCKS.get('mc:obsidian')?.defaultState;
+      const netherrack=BLOCKS.get('mc:netherrack')?.defaultState;
       const landingX=Math.floor(this.player.x), landingZ=Math.floor(this.player.z);
       if(obsidian) for(let dz=-2;dz<=2;dz++) for(let dx=-2;dx<=2;dx++) {
-        this.world.setBlock(landingX+dx,63,landingZ+dz,obsidian);
+        this.world.setBlock(landingX+dx,63,landingZ+dz,netherrack || obsidian);
         this.world.setBlock(landingX+dx,64,landingZ+dz,BLOCKS.get('mc:air').defaultState);
         this.world.setBlock(landingX+dx,65,landingZ+dz,BLOCKS.get('mc:air').defaultState);
         this.world.setBlock(landingX+dx,66,landingZ+dz,BLOCKS.get('mc:air').defaultState);
