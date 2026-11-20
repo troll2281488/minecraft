@@ -7,6 +7,7 @@ let initializeApp, getApps, getDatabase, ref, set, get, update, push, remove;
 let onValue, onChildAdded, onChildChanged, onDisconnect, runTransaction;
 import { BLOCKS, parseStateString } from '../world/block.js';
 import { ItemStack } from '../world/item.js';
+import { serializeContainer, deserializeContainer } from './containers.js';
 import * as storage from '../save/storage.js';
 import { GENERATOR_VERSION } from '../world/gen/terrain.js';
 import { DATA_VERSION } from '../save/migrate.js';
@@ -383,6 +384,29 @@ export class Multiplayer {
     });
     // One room-level value listener gives a joining client the complete edit
     // snapshot and keeps it current when any participant changes a block.
+    this._listen(onValue, ref(this.db, `minecraft_game/rooms/${code}/containers`), (snap) => {
+      const shared = snap.val() || {};
+      this.game._containers ??= new Map();
+      for (const [key, record] of Object.entries(shared)) {
+        if (record?.deleted === true) {
+          this.game._containers.delete(key);
+          if (this.game._activeContainer?.key === key) this.game._closeContainer?.();
+          continue;
+        }
+        const restored = deserializeContainer(record);
+        if (!restored) continue;
+        const current = this.game._containers.get(key);
+        if (current?.type === restored.type && JSON.stringify(serializeContainer(current.type, current.data)) === JSON.stringify(record)) continue;
+        this.game._containers.set(key, restored);
+        const active = this.game._activeContainer;
+        if (active?.key === key && active.kind === 'chest' && restored.type === 'chest') {
+          active.slots.splice(0, active.slots.length, ...restored.data.slots);
+        } else if (active?.key === key && active.kind === 'furnace' && restored.type === 'furnace') {
+          Object.assign(active.furnace, restored.data);
+        }
+        this.game._renderContainer?.();
+      }
+    });
     this._listen(onValue, ref(this.db, `minecraft_game/rooms/${code}/blocks`), (snap) => {
       const blocks = snap.val() || {};
       for (const block of Object.values(blocks)) {
@@ -689,6 +713,23 @@ export class Multiplayer {
     } finally {
       this.blockFlushInFlight = false;
     }
+  }
+
+
+  /** Publish a container snapshot to the shared room state. */
+  pushContainerState(key, type, data) {
+    if (!this.roomId || !this.db || !this.firebaseConnected || !key) return;
+    const record = serializeContainer(type, data);
+    if (!record) return;
+    set(ref(this.db, `minecraft_game/rooms/${this.roomId}/containers/${key}`), record)
+      .catch((error) => console.warn('[multiplayer] container sync:', error));
+  }
+
+  /** Mark a broken container as deleted so peers cannot restore stale contents. */
+  removeContainerState(key) {
+    if (!this.roomId || !this.db || !this.firebaseConnected || !key) return;
+    set(ref(this.db, `minecraft_game/rooms/${this.roomId}/containers/${key}`), { deleted: true, ts: Date.now() })
+      .catch((error) => console.warn('[multiplayer] container removal sync:', error));
   }
 
   sendChat(text) {
