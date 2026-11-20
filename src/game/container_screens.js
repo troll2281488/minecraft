@@ -242,6 +242,9 @@ export const ContainerScreensMixin = {
     if (this.multiplayer?.roomId && !this.multiplayer.isHost) return;
     for (const [key, { type, data }] of this._containers) {
       if (type !== 'furnace') continue;
+      // If a non-host player owns the advisory edit lease, pause host writes
+      // until that screen closes so the furnace snapshot cannot overwrite it.
+      if (this.multiplayer?.isContainerLockedByOther?.(key)) continue;
       data.tick();
       if (this.multiplayer?.roomId && this.tickCount % 20 === 0) {
         this.multiplayer.pushContainerState(key, type, data);
