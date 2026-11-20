@@ -132,6 +132,12 @@ export function generatedChestKind(seed, x, y, z) {
       if (x === stronghold.x + 7 && z === stronghold.z - 24) return 'stronghold_crossing';
       if ((x === stronghold.x - 10 && z === stronghold.z + 8) ||
           (x === stronghold.x - 6 && z === stronghold.z + 8)) return 'stronghold_library';
+      const largeLibrary = hash01(Number.parseInt(String(seed), 10) || 0, stronghold.x, stronghold.y, stronghold.z, 7419) >= 0.22;
+      const libraryX = stronghold.x - (largeLibrary ? 32 : 28);
+      const libraryZ = stronghold.z - (largeLibrary ? 7 : 5);
+      if (y === stronghold.y + (largeLibrary && x === libraryX + 2 && z === libraryZ + 12 ? 6 : 1) &&
+          x === libraryX + 2 && z === libraryZ + 2) return 'stronghold_library';
+      if (largeLibrary && x === libraryX + 2 && z === libraryZ + 12 && y === stronghold.y + 6) return 'stronghold_library';
       if (x === stronghold.x + 20 && z === stronghold.z + 10) return 'stronghold_corridor';
     }
   }
