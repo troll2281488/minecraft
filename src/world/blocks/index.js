@@ -329,7 +329,7 @@ define('mc:iron_bars', {
 });
 
 // Stronghold library and passage blocks. The ladder is a non-colliding
-// wall-mounted model; cobweb slowdown is a later movement-physics refinement.
+// wall-mounted model; player movement applies the cobweb slowdown.
 define('mc:bookshelf', {
   hardness: 1.5, resistance: 1.5, tool: 'axe', soundGroup: 'wood', flammability: 5,
   texture: 'bookshelf',
