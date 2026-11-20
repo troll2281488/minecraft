@@ -271,13 +271,46 @@ export const InputMixin = {
       reply('Команды отключены в настройках этого мира.', true);
       return;
     }
+    if (command === 'xp' || command === 'experience') {
+      const action = (args[0] || 'query').toLowerCase();
+      if (action === 'query') {
+        const target = (args[1] || 'levels').toLowerCase();
+        if (target === 'points' || target === 'point') {
+          reply(`Всего получено опыта: ${this.player.experience?.total ?? 0}`);
+        } else if (target === 'levels' || target === 'level') {
+          const xp = this.player.experience;
+          reply(`Уровень: ${xp?.level ?? 0} · заполнение полосы: ${Math.floor((xp?.progress ?? 0) * 100)}%`);
+        } else {
+          reply('Использование: /xp query points|levels', true);
+        }
+        return;
+      }
+      if (action === 'add') {
+        const points = Number(args[1]);
+        if (!Number.isSafeInteger(points) || points <= 0) {
+          reply('Использование: /xp add <положительное число очков>', true);
+          return;
+        }
+        const oldLevel = this.player.experience?.level ?? 0;
+        const awarded = this.player.addExperience(points);
+        if (!awarded) {
+          reply('Не удалось добавить опыт: достигнут предел или значение некорректно.', true);
+          return;
+        }
+        this.sounds?.play((this.player.experience?.level ?? 0) > oldLevel ? 'levelup' : 'xp');
+        reply(`Добавлено ${awarded} очков опыта.`);
+        return;
+      }
+      reply('Использование: /xp query points|levels · /xp add <очки>', true);
+      return;
+    }
     if (command === 'kill') {
       this.player.health = 0;
       reply('Команда /kill выполнена.');
       return;
     }
     if (command === 'help' || command === '?') {
-      reply('Команды: /kill · /locate <структура> · /dimension overworld|nether|end · /gamemode creative|survival|spectator · /give <предмет> [кол-во] · /tp <игрок> или /tp <x> <y> <z> · /setblock <x> <y> <z> <блок> · /time set day|night · /time add <тики> · /heal · /fly · /spawn · /save · /seed · /whereami');
+      reply('Команды: /kill · /locate <структура> · /dimension overworld|nether|end · /gamemode creative|survival|spectator · /give <предмет> [кол-во] · /tp <игрок> или /tp <x> <y> <z> · /setblock <x> <y> <z> <блок> · /time set day|night · /time add <тики> · /xp query points|levels · /xp add <очки> · /heal · /fly · /spawn · /save · /seed · /whereami');
       return;
     }
 
