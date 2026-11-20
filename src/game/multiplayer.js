@@ -52,6 +52,11 @@ export function ownsContainerLease(current, uid, token) {
   return !!current && current.owner === uid && !!token && current.token === token;
 }
 
+export function isContainerLeaseHeldByOther(current, uid, now = Date.now()) {
+  return !!current && !!current.owner && current.owner !== uid &&
+    Number.isFinite(Number(current.expiresAt)) && Number(current.expiresAt) > now;
+}
+
 export function queueContainerWrite(queue, roomId, key, record, limit = 512) {
   if (!(queue instanceof Map) || !roomId || !isValidContainerKey(key) || !record) return false;
   const queueKey = `${roomId}:${key}`;
@@ -92,6 +97,7 @@ export class Multiplayer {
     this.pendingBlockWrites = new Map();
     this.pendingContainerWrites = new Map();
     this.activeContainerLocks = new Map();
+    this.remoteContainerLocks = new Map();
     this.unsubscribers = [];
     this.syncElapsed = 0;
     this.syncInFlight = false;
@@ -444,6 +450,12 @@ export class Multiplayer {
         }
         this.game._renderContainer?.();
       }
+    });
+    this._listen(onValue, ref(this.db, `minecraft_game/rooms/${code}/containerLocks`), (snap) => {
+      const locks = snap.val() || {};
+      this.remoteContainerLocks = new Map(
+        Object.entries(locks).filter(([key]) => isValidContainerKey(key)),
+      );
     });
     this._listen(onValue, ref(this.db, `minecraft_game/rooms/${code}/blocks`), (snap) => {
       const blocks = snap.val() || {};
@@ -837,6 +849,10 @@ export class Multiplayer {
     await Promise.all(held.map(([key, value]) => this.releaseContainerLock(key, value.token)));
   }
 
+  isContainerLockedByOther(key) {
+    return isContainerLeaseHeldByOther(this.remoteContainerLocks.get(key), this.uid);
+  }
+
   /** Queue the newest snapshot per room/container, including while offline. */
   pushContainerState(key, type, data) {
     if (!this.roomId || !isValidContainerKey(key)) return;
@@ -920,6 +936,7 @@ export class Multiplayer {
     this.roomId = null;
     this.isHost = false;
     this.remotePlayers.clear();
+    this.remoteContainerLocks.clear();
     this.pendingBlocks.clear();
     for (let i = (this.game.entities?.droppedItems?.length ?? 0) - 1; i >= 0; i--) {
       if (this.game.entities.droppedItems[i].networkOwner && this.game.entities.droppedItems[i].networkOwner !== this.uid) this.game.entities.droppedItems.splice(i, 1);
