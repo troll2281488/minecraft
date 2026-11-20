@@ -676,6 +676,26 @@ TEXTURES.redstone_wire = () => {
   }
   return tile;
 };
+TEXTURES.redstone_lamp = () => {
+  const tile = grainy(hex(0x8d7856), 0.1, 'redstone_lamp');
+  const gold = hex(0xe4b94e), pale = hex(0xffe8a0), dark = hex(0x5d4932);
+  for (let y = 2; y < 14; y++) for (let x = 2; x < 14; x++) {
+    const edge = x < 4 || x > 11 || y < 4 || y > 11;
+    const c = edge ? dark : ((x + y) % 3 === 0 ? gold : pale);
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+TEXTURES.glowstone = () => {
+  const tile = grainy(hex(0xb98b45), 0.22, 'glowstone');
+  const bright = hex(0xf6d78b), pale = hex(0xffedb0), dark = hex(0x8c5f2d);
+  for (let y = 1; y < 15; y++) for (let x = 1; x < 15; x++) {
+    const n = (x * 7 + y * 11) % 9;
+    const c = n < 2 ? dark : n < 6 ? bright : pale;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
 TEXTURES.comparator = () => {
   const tile = grainy(hex(0x777777), 0.1, 'comparator');
   const stone = hex(0x9b9b9b), red = hex(0xb72b2b), dark = hex(0x4b2424), quartz = hex(0xd9c9a8);
