@@ -970,12 +970,16 @@ export class MobSystem {
       }
 
       if (mob.fleeTicks > 0) mob.fleeTicks--;
-      const fleeing = mob.type !== 'villager' && !hostileType && (distance < 4 || mob.fleeTicks > 0);
+      const tamedWolf = mob.type === 'wolf' && mob.tamed;
+      const fleeing = mob.type !== 'villager' && mob.type !== 'horse' && !tamedWolf &&
+        !hostileType && (distance < 4 || mob.fleeTicks > 0);
+      const followingOwner = tamedWolf && distance > 2.5;
       if (fleeing) mob.targetYaw = Math.atan2(mob.x - player.x, mob.z - player.z);
+      else if (followingOwner) mob.targetYaw = Math.atan2(player.x - mob.x, player.z - mob.z);
 
       // Passive mobs now pause between short wandering bursts instead of
       // sliding and cycling their legs continuously while apparently idle.
-      if (hostile || fleeing) {
+      if (hostile || fleeing || followingOwner) {
         mob.moveTicks = 2;
         mob.pauseTicks = 0;
       } else {
@@ -990,8 +994,8 @@ export class MobSystem {
           }
         }
       }
-      const moving = hostile || fleeing || mob.moveTicks > 0;
-      const speed = moving ? (hostile ? mob.speed * profile.speedMultiplier : fleeing ? 0.105 : mob.speed) : 0;
+      const moving = hostile || fleeing || followingOwner || mob.moveTicks > 0;
+      const speed = moving ? (hostile ? mob.speed * profile.speedMultiplier : fleeing ? 0.105 : followingOwner ? 0.045 : mob.speed) : 0;
       if (moving || Math.abs(mob.knockbackX || 0) + Math.abs(mob.knockbackZ || 0) > 0.005) {
         mob.yaw += Math.atan2(Math.sin(mob.targetYaw - mob.yaw), Math.cos(mob.targetYaw - mob.yaw)) * (fleeing ? 0.38 : 0.12);
       }
