@@ -109,8 +109,8 @@ export async function loadCommunityTextures(blocks, items) {
     birch_soil: 'sand',
     jungle_soil: 'dirt',
     savanna_soil: 'sand',
-    taiga_soil: 'soul_soil',
-    swamp_mud: 'soul_soil',
+    taiga_soil: 'dirt',
+    swamp_mud: 'clay',
     alpine_gravel: 'gravel',
     mossy_cobblestone: 'mossy_cobblestone',
     chest_top: 'chest_front',
@@ -137,6 +137,8 @@ export async function loadCommunityTextures(blocks, items) {
     birch_sapling: 'sapling_birch', jungle_sapling: 'sapling_jungle',
     acacia_sapling: 'sapling_acacia', dark_oak_sapling: 'sapling_roofed_oak',
     short_grass: 'tallgrass',
+    jungle_soil: 'hardened_clay',
+    savanna_soil: 'sandstone_normal',
   };
   const blockEntries = await mapWithLimit([...blockNames], 24, async (name) => {
     const communityName = simpleTextureNames[name];
@@ -199,7 +201,7 @@ export async function loadCommunityTextures(blocks, items) {
   const blockTextures = new Map(blockEntries);
   const itemIcons = new Map(itemEntries);
   const ui = Object.fromEntries(uiEntries.filter(Boolean));
-  console.info('[textures] community packs: ' + blockTextures.size + '/' + blockNames.size + ' block textures, ' + itemIcons.size + ' item icons, ' + Object.keys(hud).length + ' HUD sprites, ' + Object.keys(ui).length + ' GUI assets.');
+  console.info('[textures] Floydicus + SimpleRP: ' + blockTextures.size + '/' + blockNames.size + ' block textures, ' + itemIcons.size + ' item icons, ' + Object.keys(hud).length + ' HUD sprites, ' + Object.keys(ui).length + ' GUI assets.');
   return { blocks: blockTextures, items: itemIcons, hud, ui };
 }
 
