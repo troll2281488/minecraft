@@ -5,6 +5,8 @@ describe('configurable key bindings', () => {
   it('uses the default movement and action keys', () => {
     resetKeys();
     assert(isAction('KeyE', 'inventory'), 'E should open inventory by default');
+    assert(isAction('KeyF', 'swapOffhand'), 'F should swap hands by default');
+    assert(!isAction('KeyF', 'fly'), 'creative flight must not conflict with hand swap');
     assert(isDown(new Set(['KeyW']), 'forward'), 'W should move forward by default');
   });
   it('rebinds an action and removes the key from its previous action', () => {

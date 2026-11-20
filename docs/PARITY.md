@@ -71,7 +71,7 @@ Reference target for this compatibility track is **Minecraft: Java Edition 1.19.
 
 | Item | Vanilla behavior | Status |
 |---|---|---|
-| Slot layout | 27 + 9 hotbar + 4 armor + offhand | ✅ |
+| Slot layout | 27 + 9 hotbar + 4 armor + offhand | ✅ |\n| Swap selected hotbar item with offhand (F) | yes | 🟡 *(inventory operation + default key + toast; offhand HUD rendering still needs verification)* |
 | Stack sizes | 64 / 16 / 1 | ✅ |
 | Damaged tools do not stack | yes | ✅ |
 | Fill partial stacks before empty slots | yes | ✅ |
