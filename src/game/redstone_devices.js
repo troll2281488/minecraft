@@ -278,6 +278,10 @@ export const RedstoneDevicesMixin = {
           for (let z = baseZ - 2; z <= baseZ + 2; z++) {
             const state = world.getBlock(x, y, z);
             if (state.block.id !== 'mc:redstone_ore') continue;
+            const key = `${x},${y},${z}`;
+            if (state.get('lit') && !this._redstoneOreTimers.has(key)) {
+              this._redstoneOreTimers.set(key, tick + 30);
+            }
             const overlaps = box.minX < x + 1 && box.maxX > x
               && box.minZ < z + 1 && box.maxZ > z
               && box.minY <= y + 1.05 && box.maxY > y + 0.5;
