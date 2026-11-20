@@ -377,7 +377,7 @@ for (const base of ['mc:stone', 'mc:cobblestone', 'mc:sandstone']) {
   slab(base, STONE_LIKE);
   stairs(base, STONE_LIKE);
 }
-for (const wood of ['oak', 'birch', 'spruce']) {
+for (const wood of ['oak', 'birch', 'spruce', 'acacia', 'dark_oak']) {
   slab(`mc:${wood}_planks`, WOOD_LIKE);
   stairs(`mc:${wood}_planks`, WOOD_LIKE);
 }
