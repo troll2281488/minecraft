@@ -1483,6 +1483,70 @@ function resolveStates() {
   };
 }
 
+
+/** Find the nearest deterministic structure candidate in the requested dimension. */
+export function findNearestStructure(seed, dimension, name, originX=0, originZ=0, maxRadius=16000) {
+  const id=String(name||'').toLowerCase().replace(/^minecraft:/,'');
+  const dim=dimension||'overworld';
+  const definitions={
+    village:{step:128,fn:villageCandidateForCell},
+    mineshaft:{step:96,fn:mineshaftCandidateForCell},
+    dungeon:{step:80,fn:dungeonCandidateForCell},
+    stronghold:{step:512,fn:strongholdCandidateForCell},
+    desert_temple:{step:256,fn:desertTempleCandidateForCell},
+    desert_pyramid:{step:256,fn:desertTempleCandidateForCell},
+    jungle_temple:{step:256,fn:jungleTempleCandidateForCell},
+    swamp_hut:{step:256,fn:swampHutCandidateForCell},
+    igloo:{step:256,fn:iglooCandidateForCell},
+    mansion:{step:512,fn:mansionCandidateForCell},
+    monument:{step:512,fn:oceanMonumentCandidateForCell},
+    fossil:{step:144,fn:fossilCandidateForCell},
+  };
+  if(dim==='nether' && id==='fortress') {
+    const step=384; let best=null;
+    const gx0=Math.floor(originX/step),gz0=Math.floor(originZ/step),span=Math.ceil(maxRadius/step)+1;
+    for(let gz=gz0-span;gz<=gz0+span;gz++) for(let gx=gx0-span;gx<=gx0+span;gx++) {
+      const rng=positionalRandom(seed,gx,4101,gz,4101); if(rng.nextInt(3)!==0) continue;
+      const p={x:gx*step+64+rng.nextInt(256),z:gz*step+64+rng.nextInt(256)};
+      const d=Math.hypot(p.x-originX,p.z-originZ); if(d<=maxRadius&&(!best||d<best.distance)) best={...p,distance:d};
+    }
+    return best;
+  }
+  if(dim==='end' && id==='end_city') {
+    const step=512; let best=null;
+    const gx0=Math.floor(originX/step),gz0=Math.floor(originZ/step),span=Math.ceil(maxRadius/step)+1;
+    for(let gz=gz0-span;gz<=gz0+span;gz++) for(let gx=gx0-span;gx<=gx0+span;gx++) {
+      const rng=positionalRandom(seed,gx,4201,gz,4201); if(rng.nextInt(5)!==0) continue;
+      const p={x:gx*step+80+rng.nextInt(352),z:gz*step+80+rng.nextInt(352)};
+      const d=Math.hypot(p.x-originX,p.z-originZ); if(d<=maxRadius&&(!best||d<best.distance)) best={...p,distance:d};
+    }
+    return best;
+  }
+  if(dim!=='overworld') return null;
+  const def=definitions[id]; if(!def) return null;
+  const gx0=Math.floor(originX/def.step),gz0=Math.floor(originZ/def.step),span=Math.ceil(maxRadius/def.step)+1;
+  const generator=new TerrainGenerator(seed,'overworld');
+  let best=null;
+  for(let gz=gz0-span;gz<=gz0+span;gz++) for(let gx=gx0-span;gx<=gx0+span;gx++) {
+    const p=def.fn(seed,gx,gz); if(!p) continue;
+    const d=Math.hypot(p.x-originX,p.z-originZ); if(d>maxRadius||best&&d>=best.distance) continue;
+    const y=generator.heightAt(p.x,p.z), biome=generator.biomeAt(p.x,p.z,y);
+    const valid={
+      desert_temple:[BIOME.DESERT,BIOME.DESERT_HILLS],
+      desert_pyramid:[BIOME.DESERT,BIOME.DESERT_HILLS],
+      jungle_temple:[BIOME.JUNGLE,BIOME.JUNGLE_HILLS,BIOME.JUNGLE_EDGE,BIOME.BAMBOO_JUNGLE],
+      swamp_hut:[BIOME.SWAMP],
+      igloo:[BIOME.SNOWY_PLAINS,BIOME.SNOWY_TAIGA,BIOME.COLD_TAIGA],
+      mansion:[BIOME.DARK_FOREST],
+      monument:[BIOME.DEEP_OCEAN,BIOME.DEEP_COLD_OCEAN,BIOME.DEEP_FROZEN_OCEAN,BIOME.DEEP_LUKEWARM_OCEAN],
+      village:[BIOME.PLAINS,BIOME.SUNFLOWER_PLAINS,BIOME.DESERT,BIOME.DESERT_HILLS,BIOME.SAVANNA,BIOME.SAVANNA_PLATEAU,BIOME.TAIGA,BIOME.TAIGA_HILLS,BIOME.COLD_TAIGA,BIOME.COLD_TAIGA_HILLS,BIOME.SNOWY_PLAINS],
+    }[id];
+    if(valid&&!valid.includes(biome)) continue;
+    best={x:p.x,y:Number.isFinite(p.y)?p.y:Math.floor(y),z:p.z,distance:d};
+  }
+  return best;
+}
+
 /** Convenience for callers that just want a finished chunk. */
 export function generateChunk(generator, cx, cz) {
   return generator.generate(new Chunk(cx, cz));
