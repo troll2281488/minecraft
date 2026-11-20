@@ -104,6 +104,18 @@ export const RedstoneDevicesMixin = {
     }
 
     const activeNow = new Set();
+    // Pick up previously powered plates in the nearby loaded area as well, so
+    // a save/reconnect cannot leave one latched after the player has moved off.
+    if (player) {
+      for (let y = baseY - 1; y <= baseY; y++) {
+        for (let x = baseX - 4; x <= baseX + 4; x++) for (let z = baseZ - 4; z <= baseZ + 4; z++) {
+          const state = world.getBlock(x, y, z);
+          if (state.block.renderShape === 'pressure_plate' && state.get('powered')) {
+            this._knownPressurePlates.add(`${x},${y},${z}`);
+          }
+        }
+      }
+    }
     if (player && !player.flying && box) {
       const minX = Math.floor(box.minX), maxX = Math.floor(box.maxX);
       const minZ = Math.floor(box.minZ), maxZ = Math.floor(box.maxZ);
