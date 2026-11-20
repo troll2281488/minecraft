@@ -312,6 +312,12 @@ define('mc:furnace', {
   textures: { top: 'furnace_top', bottom: 'furnace_side', side: 'furnace_front' },
 });
 
+define('mc:mob_spawner', {
+  hardness: 5, resistance: 5, tool: 'pickaxe', harvestLevel: -1,
+  requiresTool: true, soundGroup: 'stone', texture: 'mob_spawner',
+  notInCreative: true,
+});
+
 define('mc:farmland', {
   hardness: 0.6, resistance: 0.6, tool: 'shovel', soundGroup: 'grass',
   texture: 'farmland',
