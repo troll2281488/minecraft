@@ -12,6 +12,18 @@ import { ItemStack } from '../world/item.js';
 
 export const CHEST_SLOTS = 27;
 export const SMELT_TICKS = 200;
+
+/** Java Edition furnace XP per smelted output item for supported recipes. */
+export const SMELTING_XP = new Map([
+  ['mc:oak_log', 0.1], ['mc:birch_log', 0.1], ['mc:spruce_log', 0.1],
+  ['mc:jungle_log', 0.1], ['mc:acacia_log', 0.1], ['mc:dark_oak_log', 0.1],
+  ['mc:iron_ore', 0.7], ['mc:gold_ore', 1.0],
+  ['mc:sand', 0.1], ['mc:cobblestone', 0.1],
+  ['mc:raw_beef', 0.35], ['mc:raw_porkchop', 0.35],
+  ['mc:raw_chicken', 0.35], ['mc:raw_mutton', 0.35],
+  ['mc:potato', 0.35], ['mc:raw_cod', 0.35],
+  ['mc:raw_salmon', 0.35], ['mc:raw_rabbit', 0.35],
+]);
 /** Progress lost per tick while the furnace is not smelting (vanilla behaviour). */
 const COOL_PER_TICK = 2;
 
@@ -90,6 +102,8 @@ export function serializeContainer(type, data) {
       burnLeft: data.burnLeft,
       burnTotal: data.burnTotal,
       cookProgress: data.cookProgress,
+      xpStored: data.xpStored,
+      xpOutputCount: data.xpOutputCount,
     };
   }
   return null;
@@ -114,6 +128,8 @@ export function deserializeContainer(record) {
     furnace.burnTotal = finiteInt(record.burnTotal, 1_000_000);
     furnace.burnLeft = Math.min(finiteInt(record.burnLeft, 1_000_000), furnace.burnTotal);
     furnace.cookProgress = finiteInt(record.cookProgress, SMELT_TICKS - 1);
+    furnace.xpStored = Number.isFinite(record.xpStored) ? Math.max(0, Math.min(1_000_000, record.xpStored)) : 0;
+    furnace.xpOutputCount = finiteInt(record.xpOutputCount, 1_000_000);
     return { type: 'furnace', data: furnace };
   }
   return null;
@@ -140,6 +156,8 @@ export function drainContainer(type, data) {
     data.burnLeft = 0;
     data.burnTotal = 0;
     data.cookProgress = 0;
+    data.xpStored = 0;
+    data.xpOutputCount = 0;
     return drops;
   }
   return [];
@@ -156,6 +174,19 @@ export class Furnace {
     this.burnTotal = 0;
     /** Ticks of smelting completed toward SMELT_TICKS. */
     this.cookProgress = 0;
+    /** Fractional XP banked until output is manually collected. */
+    this.xpStored = 0;
+    this.xpOutputCount = 0;
+  }
+
+  /** Claim the proportional XP for output items removed by a player. */
+  claimExperienceForOutput(count) {
+    const removed = Math.max(0, Math.min(this.xpOutputCount, Math.floor(Number(count) || 0)));
+    if (!removed || this.xpOutputCount <= 0) return 0;
+    const share = this.xpStored * removed / this.xpOutputCount;
+    this.xpStored = Math.max(0, this.xpStored - share);
+    this.xpOutputCount -= removed;
+    return share;
   }
 
   /** The smelting result for the current input, or null. */
@@ -200,6 +231,9 @@ export class Furnace {
 
   _finishSmelt() {
     const recipe = this.recipe;
+    const xpPerItem = SMELTING_XP.get(this.input.item.id) ?? 0;
+    this.xpStored += xpPerItem * recipe.count;
+    this.xpOutputCount += recipe.count;
     this.input = takeOne(this.input);
     if (this.output.isEmpty) {
       this.output = ItemStack.of(recipe.result, recipe.count);
