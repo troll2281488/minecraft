@@ -382,6 +382,13 @@ for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) {
 }
 trapdoor('iron', 'iron_trapdoor', true);
 
+// Note block: 25 semitone pitches, tuned by right-click and triggered by redstone.
+define('mc:note_block', {
+  hardness: 0.8, resistance: 0.8, tool: 'axe', soundGroup: 'wood', texture: 'note_block',
+  properties: { note: PROPS.note, powered: PROPS.powered },
+  defaultValues: { note: 0, powered: false },
+});
+
 // Daylight detector: analogue output follows the world's 24,000-tick day clock.
 define('mc:daylight_detector', {
   hardness: 0.2, resistance: 0.2, tool: 'axe', soundGroup: 'wood',

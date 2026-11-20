@@ -178,6 +178,15 @@ export const BlockActionsMixin = {
       this._applyAdjacentRedstonePower?.(this.hit.x, this.hit.y, this.hit.z, powered);
       return true;
     }
+    if (this.hit && !sneaking && this.hit.state.block.id === 'mc:note_block') {
+      const state = this.hit.state;
+      const next = state.with('note', (state.get('note') + 1) % 25);
+      this.world.setBlock(this.hit.x, this.hit.y, this.hit.z, next);
+      this.multiplayer?.pushBlockChange(this.hit.x, this.hit.y, this.hit.z, next);
+      const support = this.world.getBlock(this.hit.x, this.hit.y - 1, this.hit.z);
+      this.sounds?.playNote(next.get('note'), support.block.soundGroup || 'wood');
+      return true;
+    }
     if (this.hit && !sneaking && this.hit.state.block.id === 'mc:daylight_detector') {
       const state = this.hit.state;
       const next = state.with('inverted', !state.get('inverted'));

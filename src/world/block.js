@@ -89,6 +89,7 @@ export const PROPS = {
   distance: intProp('distance', 1, 7),
   age7: intProp('age', 0, 7),
   age15: intProp('age', 0, 15),
+  note: intProp('note', 0, 24),
   level: intProp('level', 0, 15),
   power: intProp('power', 0, 15),
   repeaterDelay: intProp('delay', 1, 4),

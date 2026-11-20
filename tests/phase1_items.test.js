@@ -36,6 +36,8 @@ describe('1.12.2 Phase 1 items', () => {
     assert(ITEMS.get('mc:heavy_weighted_pressure_plate') !== undefined, 'heavy weighted plate item missing');
     assert(ITEMS.get('mc:daylight_detector') !== undefined, 'daylight detector item missing');
     assert(RECIPES.recipes.some((recipe) => recipe.result === 'mc:daylight_detector'), 'daylight detector recipe missing');
+    assert(ITEMS.get('mc:note_block') !== undefined, 'note block item missing');
+    assert(RECIPES.recipes.some((recipe) => recipe.result === 'mc:note_block'), 'note block recipe missing');
     assert(RECIPES.recipes.some((recipe) => recipe.result === 'mc:light_weighted_pressure_plate'), 'light weighted plate recipe missing');
     assert(RECIPES.recipes.some((recipe) => recipe.result === 'mc:heavy_weighted_pressure_plate'), 'heavy weighted plate recipe missing');
     assert(ITEMS.get('mc:redstone_wire') === undefined, 'wire must not add a duplicate creative item');

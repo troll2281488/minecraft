@@ -217,6 +217,29 @@ export const RedstoneDevicesMixin = {
     this._tickWeightedPressurePlates(baseX, baseY, baseZ, !!player);
     this._tickRepeaters(baseX, baseY, baseZ, !!player);
     this._tickRedstoneWireNetwork(baseX, baseY, baseZ, !!player);
+    this._tickNoteBlocks(baseX, baseY, baseZ, !!player);
+  },
+
+  _tickNoteBlocks(baseX, baseY, baseZ, hasPlayer) {
+    if (!hasPlayer) return;
+    const world = this.world;
+    for (let y = baseY - 3; y <= baseY + 3; y++) {
+      for (let x = baseX - 8; x <= baseX + 8; x++) for (let z = baseZ - 8; z <= baseZ + 8; z++) {
+        const state = world.getBlock(x, y, z);
+        if (state.block.id !== 'mc:note_block') continue;
+        let powered = false;
+        for (const [dx,dy,dz] of NEIGHBORS) {
+          if (readSignal(world,x+dx,y+dy,z+dz,x,y,z) > 0) { powered = true; break; }
+        }
+        if (powered === state.get('powered')) continue;
+        const next = state.with('powered', powered);
+        writeState(this,x,y,z,next);
+        if (powered) {
+          const support = world.getBlock(x,y-1,z);
+          this.sounds?.playNote(state.get('note'),support.block.soundGroup || 'wood');
+        }
+      }
+    }
   },
 
   _tickDaylightDetectors(baseX, baseY, baseZ, hasPlayer) {
