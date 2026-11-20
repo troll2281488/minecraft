@@ -182,6 +182,41 @@ export class Inventory {
     this.version++;
   }
 
+  /** Distribute a cursor stack as evenly as possible across dragged player slots. */
+  distributeCursor(indices) {
+    if (this.cursor.isEmpty || !Array.isArray(indices)) return false;
+    const unique = [...new Set(indices)].filter((index) =>
+      Number.isInteger(index) && index >= SLOT.HOTBAR_START &&
+      index <= SLOT.MAIN_END && index < this.slots.length);
+    const eligible = unique.filter((index) => {
+      const slot = this.slots[index];
+      return slot.isEmpty || (slot.canStackWith(this.cursor) && slot.count < slot.maxStackSize);
+    });
+    if (!eligible.length) return false;
+
+    let remaining = this.cursor.count;
+    for (let i = 0; i < eligible.length && remaining > 0; i++) {
+      const index = eligible[i];
+      const slot = this.slots[index];
+      const targetsLeft = eligible.length - i;
+      const fairShare = Math.ceil(remaining / targetsLeft);
+      const room = slot.isEmpty ? this.cursor.maxStackSize : slot.maxStackSize - slot.count;
+      const moved = Math.min(fairShare, room, remaining);
+      if (moved <= 0) continue;
+      if (slot.isEmpty) {
+        this.slots[index] = new ItemStack(this.cursor.item, moved, this.cursor.damage, this.cursor.data);
+      } else {
+        slot.count += moved;
+      }
+      remaining -= moved;
+    }
+
+    this.cursor.count = remaining;
+    if (remaining <= 0) this.cursor = ItemStack.EMPTY.clone();
+    this.version++;
+    return true;
+  }
+
   rightClickSlot(index) {
     const slot = this.get(index);
     const cursor = this.cursor;
