@@ -319,6 +319,8 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
     ];
   }
 
+  if (id === 'mc:nether_gold_ore') return [{ id: 'mc:gold_nugget', count: 2 + rng.nextInt(4) }];
+
   if (id === 'mc:gravel') {
     return rng.nextDouble() < 0.10
       ? [{ id: 'mc:flint', count: 1 }]

@@ -60,6 +60,17 @@ export const BlockActionsMixin = {
       return;
     }
     const heldItem = this.inventory?.held?.item;
+    if (this.hit?.state?.block?.id === 'mc:bed') {
+      if (this.world.dimension !== 'overworld') {
+        this.ui.toast('В этом измерении нельзя спать.', { error: true });
+      } else {
+        this.worldMeta.spawnPoint = { x: this.hit.x + 0.5, y: this.hit.y + 1, z: this.hit.z + 0.5 };
+        this.world.time = 1000;
+        this._save(false).catch(() => {});
+        this.ui.toast('Точка возрождения установлена. Ночь пропущена.');
+      }
+      return;
+    }
     if (heldItem?.id === 'mc:flint_and_steel' && this.hit) {
       if (this.hit.state.block.id === 'mc:portal') {
         const target = this.world.dimension === 'nether' ? 'overworld' : 'nether';

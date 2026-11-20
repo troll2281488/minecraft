@@ -452,6 +452,11 @@ const TEXTURES = {
   polished_andesite:  () => grainy(hex(0x929292), 0.1, 'polished_andesite'),
   sandstone:          () => grainy(hex(0xdbd0a0), 0.14, 'sandstone'),
   obsidian:           () => grainy(hex(0x150c24), 0.55, 'obsidian', { clumps: 6, clumpColor: hex(0x2d1a4a) }),
+  netherrack:         () => grainy(hex(0x713b35), 0.38, 'netherrack', { clumps: 11, clumpColor: hex(0x4c2828), clumpSize: 3 }),
+  nether_bricks:      () => grainy(hex(0x321b20), 0.18, 'nether_bricks', { clumps: 7, clumpColor: hex(0x4c292c) }),
+  soul_sand:          () => grainy(hex(0x55402e), 0.35, 'soul_sand', { clumps: 9, clumpColor: hex(0x33251d) }),
+  nether_gold_ore:    () => oreTile(hex(0x713b35), hex(0xf2c43c), 'nether_gold_ore', 7),
+  bed:                () => grainy(hex(0xb94b43), 0.12, 'bed', { clumps: 5, clumpColor: hex(0x8b302d) }),
   bedrock:            () => grainy(hex(0x565656), 0.55, 'bedrock', { clumps: 10, clumpColor: hex(0x2a2a2a), clumpSize: 3 }),
 
   dirt:               () => grainy(DIRT_BROWN, 0.26, 'dirt', { clumps: 6 }),

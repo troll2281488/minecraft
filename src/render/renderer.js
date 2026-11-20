@@ -500,8 +500,11 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     gl.disable(gl.DEPTH_TEST);
     // Keep a readable deep-blue night and warm dawn/dusk rather than
     // multiplying the entire sky to black whenever daylight approaches zero.
-    const nightTop = [0.012, 0.022, 0.060], dayTop = [0.24, 0.46, 0.88];
-    const nightHorizon = [0.035, 0.045, 0.085], dayHorizon = [0.68, 0.79, 0.94];
+    const nether = this.world?.dimension === 'nether';
+    const nightTop = nether ? [0.20, 0.018, 0.025] : [0.012, 0.022, 0.060];
+    const dayTop = nether ? [0.48, 0.045, 0.035] : [0.24, 0.46, 0.88];
+    const nightHorizon = nether ? [0.34, 0.035, 0.025] : [0.035, 0.045, 0.085];
+    const dayHorizon = nether ? [0.72, 0.12, 0.055] : [0.68, 0.79, 0.94];
     const blend = (a, b) => a.map((value, i) => value + (b[i] - value) * daylight);
     const top = blend(nightTop, dayTop), horizon = blend(nightHorizon, dayHorizon);
     const dusk = Math.max(0, 1 - Math.abs(daylight - 0.22) / 0.22);

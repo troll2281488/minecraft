@@ -103,11 +103,13 @@ stoneLike('mc:andesite', 'andesite', 1.5, 6);
 stoneLike('mc:polished_andesite', 'polished_andesite', 1.5, 6);
 stoneLike('mc:sandstone', 'sandstone', 0.8, 0.8);
 stoneLike('mc:obsidian', 'obsidian', 50, 1200, 3);
-stoneLike('mc:netherrack', 'stone', 0.4, 2);
-stoneLike('mc:nether_bricks', 'stone_bricks', 2, 6);
-stoneLike('mc:nether_brick_fence', 'stone_bricks', 2, 6);
+stoneLike('mc:netherrack', 'netherrack', 0.4, 2);
+stoneLike('mc:nether_bricks', 'nether_bricks', 2, 6);
+stoneLike('mc:nether_brick_fence', 'nether_bricks', 2, 6);
+stoneLike('mc:nether_gold_ore', 'nether_gold_ore', 3, 3);
 stoneLike('mc:glowstone', 'sea_lantern', 0.3, 0.3);
-define('mc:soul_sand', { hardness: 0.5, resistance: 0.5, tool: 'shovel', soundGroup: 'sand', texture: 'sand' });
+define('mc:soul_sand', { hardness: 0.5, resistance: 0.5, tool: 'shovel', soundGroup: 'sand', texture: 'soul_sand' });
+define('mc:bed', { hardness: 0.2, resistance: 0.2, tool: 'axe', soundGroup: 'wood', texture: 'bed', renderShape: 'slab', opaqueCube: false, properties: { type: PROPS.slabType }, defaultValues: { type: 'bottom' } });
 
 
 define('mc:bedrock', {

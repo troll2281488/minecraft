@@ -15,6 +15,7 @@ import { Inventory, CraftingGrid } from './inventory.js';
 import { RECIPES } from './recipes.js';
 import * as storage from '../save/storage.js';
 import { buildSave, exportWorld } from '../save/io.js';
+import { GENERATOR_VERSION } from '../world/gen/terrain.js';
 import { materializeChunk, decodeChunkBinary, encodeChunk } from '../save/format.js';
 
 const SAVE_DIMENSION = { overworld: 'mc:overworld', nether: 'mc:the_nether', end: 'mc:the_end' };
@@ -30,6 +31,13 @@ export const SessionMixin = {
     this.chunkRenderer.dispose();
 
     this.world = new World({ seed: meta.seed, textureTable: this.textureTable, dimension: meta.dimension || 'overworld' });
+    if (this.world.dimension === 'nether' && meta.netherGeneratorVersion !== GENERATOR_VERSION) {
+      if (!this.multiplayer?.roomId) await storage.clearDimensionChunks(meta.id, SAVE_DIMENSION.nether);
+      meta.netherGeneratorVersion = GENERATOR_VERSION;
+      meta.netherFortressLootPlaced = false;
+      await storage.putWorld(meta);
+      this.ui.toast('Нижний мир обновлён: старая генерация Незера заменена новой.', { duration: 6000 });
+    }
     this.entities?.reset();
     this.world.time = meta.time ?? 0;
 
@@ -66,23 +74,6 @@ export const SessionMixin = {
     if (isNew) {
       const spawn = await this._findSafeSpawn();
       this.player.teleport(spawn.x, spawn.y, spawn.z);
-      if (this.world.dimension === 'overworld' && !meta.ruinedPortalSpawned) {
-        const obsidian = BLOCKS.get('mc:obsidian')?.defaultState;
-        const spawnX = Math.floor(spawn.x + 10), spawnY = Math.floor(spawn.y), spawnZ = Math.floor(spawn.z + 10);
-        if (obsidian) {
-          for (let dx=0; dx<4; dx++) for (let dy=0; dy<5; dy++) {
-            const edge=dx===0||dx===3||dy===0||dy===4;
-            // Two missing pieces make the portal visibly ruined and repairable.
-            if (edge && !(dx===1&&dy===4) && !(dx===0&&dy===2)) this.world.setBlock(spawnX+dx,spawnY+dy,spawnZ,obsidian);
-          }
-          const chestBlock=BLOCKS.get('mc:chest');
-          if(chestBlock) this.world.setBlock(spawnX+4,spawnY,spawnZ,chestBlock.defaultState);
-          const loot=this._chestAt?.(spawnX+4,spawnY,spawnZ);
-          if(loot) for(const [id,count] of [['mc:flint',2],['mc:iron_ingot',1],['mc:obsidian',3],['mc:gold_nugget',5]]) { const stack=ItemStack.of(id,count); if(stack) loot.insert(stack); }
-          meta.ruinedPortalSpawned=true;
-          await storage.putWorld(meta);
-        }
-      }
       if (meta.bonusChest && !meta.bonusChestSpawned) {
         const chestX = Math.floor(spawn.x + 2), chestY = Math.floor(spawn.y), chestZ = Math.floor(spawn.z + 1);
         const chestBlock = BLOCKS.get('mc:chest');
@@ -116,24 +107,6 @@ export const SessionMixin = {
       }
     }
 
-    // Existing worlds receive the same ruined portal on their first load after this update.
-    if (this.world.dimension === 'overworld' && !meta.ruinedPortalSpawned) {
-      const obsidian = BLOCKS.get('mc:obsidian')?.defaultState;
-      const baseX = Math.floor(this.player.x + 10), baseY = Math.floor(this.player.y), baseZ = Math.floor(this.player.z + 10);
-      if (obsidian) {
-        for (let dx=0; dx<4; dx++) for (let dy=0; dy<5; dy++) {
-          const edge=dx===0||dx===3||dy===0||dy===4;
-          if(edge && !(dx===1&&dy===4) && !(dx===0&&dy===2)) this.world.setBlock(baseX+dx,baseY+dy,baseZ,obsidian);
-        }
-        const chestBlock=BLOCKS.get('mc:chest');
-        if(chestBlock) this.world.setBlock(baseX+4,baseY,baseZ,chestBlock.defaultState);
-        const loot=this._chestAt?.(baseX+4,baseY,baseZ);
-        if(loot) for(const [id,count] of [['mc:flint',2],['mc:iron_ingot',1],['mc:obsidian',3],['mc:gold_nugget',5]]) { const stack=ItemStack.of(id,count); if(stack) loot.insert(stack); }
-        meta.ruinedPortalSpawned=true;
-        await storage.putWorld(meta);
-      }
-    }
-
     this.craftingGrid = new CraftingGrid(2, RECIPES);
     this._rebuildInventoryUI();
 
@@ -164,6 +137,13 @@ export const SessionMixin = {
     this.chunkRenderer.dispose();
     this.world = new World({ seed: this.worldMeta.seed, textureTable: this.textureTable, dimension: next });
     this.worldMeta.dimension = next;
+    if (next === 'nether' && this.worldMeta.netherGeneratorVersion !== GENERATOR_VERSION) {
+      if (!this.multiplayer?.roomId) await storage.clearDimensionChunks(this.worldMeta.id, SAVE_DIMENSION.nether);
+      this.worldMeta.netherGeneratorVersion = GENERATOR_VERSION;
+      this.worldMeta.netherFortressLootPlaced = false;
+      await storage.putWorld(this.worldMeta);
+      this.ui.toast('Нижний мир обновлён: старая генерация Незера заменена новой.', { duration: 6000 });
+    }
     this.entities?.reset();
     this.world.time = this.worldMeta.time ?? 0;
     if (!this.multiplayer?.roomId) {
@@ -184,9 +164,10 @@ export const SessionMixin = {
     if (safe) this.player.teleport(safe.x,safe.y,safe.z);
     if (next === 'nether') {
       const obsidian=BLOCKS.get('mc:obsidian')?.defaultState;
+      const netherrack=BLOCKS.get('mc:netherrack')?.defaultState;
       const landingX=Math.floor(this.player.x), landingZ=Math.floor(this.player.z);
       if(obsidian) for(let dz=-2;dz<=2;dz++) for(let dx=-2;dx<=2;dx++) {
-        this.world.setBlock(landingX+dx,63,landingZ+dz,obsidian);
+        this.world.setBlock(landingX+dx,63,landingZ+dz,netherrack || obsidian);
         this.world.setBlock(landingX+dx,64,landingZ+dz,BLOCKS.get('mc:air').defaultState);
         this.world.setBlock(landingX+dx,65,landingZ+dz,BLOCKS.get('mc:air').defaultState);
         this.world.setBlock(landingX+dx,66,landingZ+dz,BLOCKS.get('mc:air').defaultState);
@@ -201,8 +182,13 @@ export const SessionMixin = {
       const baseX=36,baseZ=36;
       for(const [dx,dz] of [[0,0],[4,2],[-3,4]]) this.entities?._spawn?.('blaze',baseX+dx,baseZ+dz,{y:53});
       if(!this.worldMeta.netherFortressLootPlaced) {
-        const chest=this._chestAt?.(46,53,36);
-        if(chest) for(const [id,count] of [['mc:gold_ingot',5],['mc:iron_ingot',4],['mc:diamond',2],['mc:blaze_rod',2]]) { const stack=ItemStack.of(id,count); if(stack) chest.insert(stack); }
+        for (const [cx, cy, cz] of [[46, 53, 36], [60, 53, 34], [69, 53, 38]]) {
+          const chest = this._chestAt?.(cx, cy, cz);
+          if (chest) for (const [id, count] of [['mc:gold_ingot', 3], ['mc:iron_ingot', 2], ['mc:diamond', 1], ['mc:blaze_rod', 1], ['mc:gold_nugget', 8]]) {
+            const stack = ItemStack.of(id, count);
+            if (stack) chest.insert(stack);
+          }
+        }
         this.worldMeta.netherFortressLootPlaced=true;
       }
     }
@@ -276,7 +262,15 @@ export const SessionMixin = {
 
   async _respawnAfterDeath() {
     if (!this.world || !this.player) return;
-    const spawn = await this._findSafeSpawn();
+    let spawn;
+    const savedSpawn = this.worldMeta?.spawnPoint;
+    if (this.world.dimension !== 'overworld') await this._switchDimension('overworld');
+    if (savedSpawn && Number.isFinite(savedSpawn.x) && Number.isFinite(savedSpawn.y) && Number.isFinite(savedSpawn.z)) {
+      this.player.teleport(savedSpawn.x, savedSpawn.y, savedSpawn.z);
+      this.world.requestAround(savedSpawn.x, savedSpawn.z, 4, 32);
+      await this._waitForSpawnChunks(false);
+      spawn = savedSpawn;
+    } else spawn = await this._findSafeSpawn();
     this.entities?.reset();
     if (this.worldMeta?.keepInventory === false) {
       for (let slot = 0; slot < this.inventory.slots.length; slot++) {

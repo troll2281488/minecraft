@@ -341,6 +341,12 @@ class Game {
       player.attackTime = 8;
     }
     player.tick(world);
+    const lavaAtFeet = world.getBlock(Math.floor(player.x), Math.floor(player.y + 0.05), Math.floor(player.z)).block.id === 'mc:lava';
+    const lavaAtHead = world.getBlock(Math.floor(player.x), Math.floor(player.y + 1.2), Math.floor(player.z)).block.id === 'mc:lava';
+    if (!player.flying && (lavaAtFeet || lavaAtHead)) {
+      this._lavaDamageTicks = (this._lavaDamageTicks || 0) + 1;
+      if (this._lavaDamageTicks % 20 === 1) player.health = Math.max(0, player.health - 2);
+    } else this._lavaDamageTicks = 0;
     const portalContact = world.getBlock(Math.floor(player.x), Math.floor(player.y + 1), Math.floor(player.z)).block.id === 'mc:portal';
     if (portalContact && !this._portalTransition) {
       this._portalTransition = true;

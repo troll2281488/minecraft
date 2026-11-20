@@ -60,6 +60,12 @@ recipes.push({
   key: { C: '#mc:coals', S: 'mc:stick' },
 });
 
+recipes.push({
+  result: 'mc:bed', count: 1,
+  pattern: ['WWW', 'PPP'],
+  key: { W: 'mc:white_wool', P: '#mc:planks' },
+});
+
 // -- Tools -----------------------------------------------------------------
 
 /**

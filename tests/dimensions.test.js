@@ -12,7 +12,8 @@ describe('Nether and End dimensions', () => {
     const generator = new TerrainGenerator('dimension-test', 'nether');
     const chunk = generator.generate(new Chunk(0, 0));
     assertEqual(chunk.getBlock(0, 0, 0).block.id, 'mc:bedrock');
-    assert(['mc:netherrack','mc:stone'].includes(chunk.getBlock(8, 10, 8).block.id));
+    assertEqual(chunk.getBlock(8, 31, 8).block.id, 'mc:lava');
+    assertEqual(chunk.getBlock(0, 0, 0).block.id, 'mc:bedrock');
   });
 
   it('generates an End island rather than Overworld terrain', () => {
@@ -39,9 +40,19 @@ describe('Nether portal gameplay additions', () => {
   it('registers lava, portal, flint and steel, and blaze rods', () => {
     assert(BLOCKS.get('mc:lava'));
     assert(BLOCKS.get('mc:portal'));
+    assert(BLOCKS.get('mc:netherrack'));
+    assert(BLOCKS.get('mc:nether_gold_ore'));
+    assert(BLOCKS.get('mc:bed'));
     assert(ITEMS.get('mc:flint_and_steel'));
     assert(ITEMS.get('mc:blaze_rod'));
     assertEqual(RECIPES.producing('mc:flint_and_steel').length, 1);
+  });
+
+  it('drops gold nuggets from Nether gold ore', () => {
+    const state = BLOCKS.get('mc:nether_gold_ore').defaultState;
+    const drops = blockDrops(state, { item: ITEMS.get('mc:iron_pickaxe') }, 'nether-gold-test', 4, 52, 7);
+    assertEqual(drops[0].id, 'mc:gold_nugget');
+    assert(drops[0].count >= 2 && drops[0].count <= 5);
   });
 
   it('drops coal items rather than coal ore blocks', () => {

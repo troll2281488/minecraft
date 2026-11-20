@@ -29,7 +29,7 @@ import { hash01, seedToInt } from './hash.js';
 import { ChunkWriter, mineshaftPlan, placeMineshaftPlan, placeDungeonRoom, villagePlan, placeVillagePlan, villageStyleForBiome } from './structures.js';
 
 /** Bumped whenever generation output changes. Stored per world. */
-export const GENERATOR_VERSION = 16;
+export const GENERATOR_VERSION = 17;
 
 
 // ---------------------------------------------------------------------------
@@ -401,7 +401,11 @@ export class TerrainGenerator {
 
   /** A deterministic damaged portal ruin near the default spawn area. */
   placeRuinedPortal(chunk, baseX, baseZ) {
-    const x0=24, z0=24, lx=x0-baseX, lz=z0-baseZ;
+    const cellX = Math.floor(baseX / 512), cellZ = Math.floor(baseZ / 512);
+    const rng = positionalRandom(this.seed, cellX, 8801, cellZ, 8801);
+    if (rng.nextInt(12) !== 0) return;
+    const x0 = cellX * 512 + 32 + rng.nextInt(448), z0 = cellZ * 512 + 32 + rng.nextInt(448);
+    const lx=x0-baseX, lz=z0-baseZ;
     if(lx>15||lx+3<0||lz>15||lz<0) return;
     const S=this.states.byId, obsidian=S['mc:obsidian'], crying=S['mc:crying_obsidian']||obsidian;
     const chest=S['mc:chest'], netherrack=S['mc:netherrack']||S['mc:stone'];
@@ -419,59 +423,89 @@ export class TerrainGenerator {
     put(x0+4,y+1,z0+1,chest);
   }
 
-  /** Classic Nether terrain, generated independently from the Overworld. */
+  /** Floating netherrack islands over a deep lava sea, with a clear red-sky ceiling. */
   generateNetherChunk(chunk) {
     const baseX = chunk.cx * CHUNK_SIZE, baseZ = chunk.cz * CHUNK_SIZE;
-    const S = this.states.byId, netherrack = S['mc:netherrack'] || S['mc:stone'];
+    const S = this.states.byId;
+    const netherrack = S['mc:netherrack'] || S['mc:stone'];
     const bedrock = S['mc:bedrock'], lava = S['mc:lava'] || netherrack;
-    const soul = S['mc:soul_sand'] || netherrack, gravel = S['mc:gravel'] || netherrack;
-    const glowstone = S['mc:glowstone'] || netherrack;
-    for (let z=0; z<CHUNK_SIZE; z++) for (let x=0; x<CHUNK_SIZE; x++) {
-      const wx=baseX+x, wz=baseZ+z;
-      const cave=this.caveA.sample3(wx*0.035, 62*0.035, wz*0.035);
-      const ceiling=112+Math.floor(this.detail.sample2(wx,wz,0.018)*9);
-      const floor = Math.hypot(wx,wz)<58 ? 27 : 28+Math.floor(this.detail.sample2(wx+91,wz-37,0.02)*8);
-      for(let y=MIN_Y;y<MAX_Y;y++) {
-        let state=null;
-        if(y<=MIN_Y+1 || y>=ceiling-1) state=bedrock;
-        else if(y<floor) state=netherrack;
-        else if(y<=31) state=lava;
-        else if(y<ceiling && cave>0.16) state=netherrack;
-        if(state) chunk.setBlock(x,y,z,state);
-        if(y===floor && state===netherrack && ((wx*31+wz*17)&31)===0) chunk.setBlock(x,y,z,soul);
-        if(y===ceiling-2 && state===netherrack && ((wx*13+wz*7)&63)===0) chunk.setBlock(x,y,z,glowstone);
-        if(y===floor+1 && state===netherrack && ((wx*11+wz*19)&47)===0) chunk.setBlock(x,y,z,gravel);
+    const soul = S['mc:soul_sand'] || netherrack, glowstone = S['mc:glowstone'] || netherrack;
+    const gold = S['mc:nether_gold_ore'];
+    for (let z = 0; z < CHUNK_SIZE; z++) for (let x = 0; x < CHUNK_SIZE; x++) {
+      const wx = baseX + x, wz = baseZ + z;
+      const islandNoise = this.continent.sample2(wx + 713, wz - 291, 0.014);
+      const detail = this.detail.sample2(wx, wz, 0.026);
+      const central = Math.hypot(wx, wz) < 62;
+      const island = central || islandNoise > 0.12;
+      const top = 48 + Math.floor(detail * 18) + Math.floor(this.ridge.sample2(wx, wz, 0.035) * 7);
+      const thickness = 7 + Math.floor(Math.abs(this.detail.sample2(wx - 40, wz + 80, 0.045)) * 8);
+      const bottom = top - thickness;
+      const cave = this.caveA.sample3(wx * 0.025, 1.4, wz * 0.025);
+      for (let y = MIN_Y; y < MAX_Y; y++) {
+        let state = null;
+        if (y <= MIN_Y + 1) state = bedrock;
+        else if (y >= 1 && y <= 31) state = lava;
+        else if (island && y >= bottom && y <= top) {
+          const hollow = y < top - 2 && cave > 0.42 && this.caveB.sample3(wx * 0.045, y * 0.045, wz * 0.045) > 0.1;
+          if (!hollow) {
+            state = netherrack;
+            if (gold && y > bottom + 1 && y < top - 1 &&
+                hash01(this.hseed, wx, y, wz, 0x6e7a1) > 0.992) state = gold;
+            if (y === bottom && ((wx * 31 + wz * 17) & 63) === 0) state = soul;
+            if (y === top && ((wx * 13 + wz * 7) & 127) === 0) state = glowstone;
+          }
+        }
+        if (state) chunk.setBlock(x, y, z, state);
       }
-      chunk.setBiome(x,64,z,'mc:nether_wastes');
+      chunk.setBiome(x, 64, z, 'mc:nether_wastes');
     }
-    this.placeNetherFortress(chunk,baseX,baseZ);
+    this.placeNetherFortress(chunk, baseX, baseZ);
     chunk.rebuildHeightmap();
-    chunk.generatedStage=GEN_STAGE.FEATURES;
+    chunk.generatedStage = GEN_STAGE.FEATURES;
     return chunk;
   }
 
   placeNetherFortress(chunk, baseX, baseZ) {
-    const S=this.states.byId, brick=S['mc:nether_bricks']||S['mc:netherrack'], fence=S['mc:nether_brick_fence']||brick;
-    const minX=Math.floor((baseX-48)/384), maxX=Math.floor((baseX+CHUNK_SIZE+48)/384);
-    const minZ=Math.floor((baseZ-48)/384), maxZ=Math.floor((baseZ+CHUNK_SIZE+48)/384);
-    for(let gz=minZ;gz<=maxZ;gz++) for(let gx=minX;gx<=maxX;gx++) {
-      const rng=positionalRandom(this.seed,gx,4101,gz,4101);
-      if((gx!==0||gz!==0)&&rng.nextInt(3)!==0) continue;
-      const x=gx===0&&gz===0?36:gx*384+64+rng.nextInt(256), z=gx===0&&gz===0?36:gz*384+64+rng.nextInt(256), y=gx===0&&gz===0?52:48+rng.nextInt(20);
-      const put=(wx,wy,wz,state)=>{if(!state)return;const lx=wx-baseX,lz=wz-baseZ;if(lx>=0&&lx<16&&lz>=0&&lz<16&&wy>=MIN_Y&&wy<MAX_Y)chunk.setBlock(lx,wy,lz,state);};
-      const length=gx===0&&gz===0?34:38+rng.nextInt(24), air=S['mc:air'];
-      for(let i=0;i<length;i++) for(let dx=-2;dx<=2;dx++) {
-        put(x+i,y,z+dx,brick); put(x+i,y+5,z+dx,brick);
-        for(let dy=1;dy<5;dy++) { if(Math.abs(dx)<=1) put(x+i,y+dy,z+dx,air); if(Math.abs(dx)===2) put(x+i,y+dy,z+dx,brick); }
-      }
-      if(gx===0&&gz===0) put(x+10,y+1,z,S['mc:chest']);
-      for(const offset of [8,24]) {
-        for(let dx=-4;dx<=4;dx++) for(let dz=-4;dz<=4;dz++) {
-          put(x+offset+dx,y+6,z+dz,brick);
-          if(Math.abs(dx)===4||Math.abs(dz)===4) for(let dy=1;dy<=5;dy++) put(x+offset+dx,y+6+dy,z+dz,brick);
+    const S = this.states.byId, brick = S['mc:nether_bricks'] || S['mc:netherrack'];
+    const fence = S['mc:nether_brick_fence'] || brick, air = S['mc:air'];
+    const minX = Math.floor((baseX - 48) / 384), maxX = Math.floor((baseX + CHUNK_SIZE + 48) / 384);
+    const minZ = Math.floor((baseZ - 48) / 384), maxZ = Math.floor((baseZ + CHUNK_SIZE + 48) / 384);
+    for (let gz = minZ; gz <= maxZ; gz++) for (let gx = minX; gx <= maxX; gx++) {
+      const rng = positionalRandom(this.seed, gx, 4101, gz, 4101);
+      if ((gx !== 0 || gz !== 0) && rng.nextInt(12) !== 0) continue;
+      const x = gx === 0 && gz === 0 ? 36 : gx * 384 + 64 + rng.nextInt(256);
+      const z = gx === 0 && gz === 0 ? 36 : gz * 384 + 64 + rng.nextInt(256);
+      const y = gx === 0 && gz === 0 ? 52 : 48 + rng.nextInt(20);
+      const put = (wx, wy, wz, state) => {
+        const lx = wx - baseX, lz = wz - baseZ;
+        if (state && lx >= 0 && lx < 16 && lz >= 0 && lz < 16 && wy >= MIN_Y && wy < MAX_Y)
+          chunk.setBlock(lx, wy, lz, state);
+      };
+      // A long covered bridge joins three large chambers. Each chamber has
+      // walkable floor, walls, doorways, and room for loot and blaze spawners.
+      for (let i = 0; i < 42; i++) for (let dz = -2; dz <= 2; dz++) {
+        put(x + i, y, z + dz, brick);
+        put(x + i, y + 5, z + dz, brick);
+        for (let dy = 1; dy < 5; dy++) {
+          if (Math.abs(dz) === 2) put(x + i, y + dy, z + dz, brick);
+          else put(x + i, y + dy, z + dz, air);
         }
       }
-      for(let i=0;i<length;i+=5) put(x+i,y+6,z-3,fence);
+      for (const offset of [7, 20, 33]) {
+        for (let dx = -5; dx <= 5; dx++) for (let dz = -5; dz <= 5; dz++) {
+          put(x + offset + dx, y, z + dz, brick);
+          put(x + offset + dx, y + 6, z + dz, brick);
+          if (Math.abs(dx) === 5 || Math.abs(dz) === 5)
+            for (let dy = 1; dy <= 5; dy++) put(x + offset + dx, y + dy, z + dz, brick);
+          else for (let dy = 1; dy <= 5; dy++) put(x + offset + dx, y + dy, z + dz, air);
+        }
+      }
+      for (let i = 0; i < 42; i += 4) put(x + i, y + 6, z - 3, fence);
+      if (gx === 0 && gz === 0) {
+        put(x + 10, y + 1, z, S['mc:chest']);
+        put(x + 24, y + 1, z - 2, S['mc:chest']);
+        put(x + 33, y + 1, z + 2, S['mc:chest']);
+      }
     }
   }
 
