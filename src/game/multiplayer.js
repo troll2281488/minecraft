@@ -34,7 +34,7 @@ export function electRoomHost(room, players) {
 
 /** Keep valid room records discoverable even when every player temporarily disconnects. */
 export function isValidContainerKey(key) {
-  return typeof key === 'string' && /^-?\\d+,-?\\d+,-?\\d+$/.test(key);
+  return typeof key === 'string' && /^-?\d+,-?\d+,-?\d+$/.test(key);
 }
 
 export function queueContainerWrite(queue, roomId, key, record, limit = 512) {
