@@ -60,6 +60,34 @@ export const BlockActionsMixin = {
       return;
     }
     const heldItem = this.inventory?.held?.item;
+    if (heldItem?.id === 'mc:flint_and_steel' && this.hit) {
+      if (this.hit.state.block.id === 'mc:portal') {
+        const target = this.world.dimension === 'nether' ? 'overworld' : 'nether';
+        this._switchDimension(target).catch((error) => this.ui.toast('Портал: ' + error.message, { error: true }));
+        return;
+      }
+      if (this.hit.state.block.id === 'mc:obsidian') {
+        const portal = BLOCKS.get('mc:portal')?.defaultState;
+        let activated = false;
+        if (portal) for (let x0=this.hit.x-3; x0<=this.hit.x && !activated; x0++) for (let y0=this.hit.y-4; y0<=this.hit.y && !activated; y0++) {
+          let valid=true;
+          for(let dx=0;dx<4&&valid;dx++) for(let dy=0;dy<5;dy++) {
+            const edge=dx===0||dx===3||dy===0||dy===4;
+            const id=this.world.getBlock(x0+dx,y0+dy,this.hit.z).block.id;
+            if(edge?id!=='mc:obsidian':id!=='mc:air'){valid=false;break;}
+          }
+          if(!valid) continue;
+          for(let dx=1;dx<=2;dx++) for(let dy=1;dy<=3;dy++) {
+            this.world.setBlock(x0+dx,y0+dy,this.hit.z,portal);
+            this.multiplayer?.pushBlockChange(x0+dx,y0+dy,this.hit.z,portal);
+          }
+          activated=true;
+        }
+        if(activated){this.inventory.damageHeld(1);this.ui.toast('Портал активирован! Нажми ПКМ по порталу, чтобы войти.');}
+        else this.ui.toast('Сначала восстанови рамку портала обсидианом.');
+        return;
+      }
+    }
     // Right-click equips armour directly from the selected hotbar stack.
     if (heldItem?.armorSlot && this.player?.gamemode === GAMEMODE.SURVIVAL) {
       const slots = { boots: 36, leggings: 37, chestplate: 38, helmet: 39 };
