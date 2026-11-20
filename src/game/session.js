@@ -66,23 +66,6 @@ export const SessionMixin = {
     if (isNew) {
       const spawn = await this._findSafeSpawn();
       this.player.teleport(spawn.x, spawn.y, spawn.z);
-      if (this.world.dimension === 'overworld' && !meta.ruinedPortalSpawned) {
-        const obsidian = BLOCKS.get('mc:obsidian')?.defaultState;
-        const spawnX = Math.floor(spawn.x + 10), spawnY = Math.floor(spawn.y), spawnZ = Math.floor(spawn.z + 10);
-        if (obsidian) {
-          for (let dx=0; dx<4; dx++) for (let dy=0; dy<5; dy++) {
-            const edge=dx===0||dx===3||dy===0||dy===4;
-            // Two missing pieces make the portal visibly ruined and repairable.
-            if (edge && !(dx===1&&dy===4) && !(dx===0&&dy===2)) this.world.setBlock(spawnX+dx,spawnY+dy,spawnZ,obsidian);
-          }
-          const chestBlock=BLOCKS.get('mc:chest');
-          if(chestBlock) this.world.setBlock(spawnX+4,spawnY,spawnZ,chestBlock.defaultState);
-          const loot=this._chestAt?.(spawnX+4,spawnY,spawnZ);
-          if(loot) for(const [id,count] of [['mc:flint',2],['mc:iron_ingot',1],['mc:obsidian',3],['mc:gold_nugget',5]]) { const stack=ItemStack.of(id,count); if(stack) loot.insert(stack); }
-          meta.ruinedPortalSpawned=true;
-          await storage.putWorld(meta);
-        }
-      }
       if (meta.bonusChest && !meta.bonusChestSpawned) {
         const chestX = Math.floor(spawn.x + 2), chestY = Math.floor(spawn.y), chestZ = Math.floor(spawn.z + 1);
         const chestBlock = BLOCKS.get('mc:chest');
@@ -113,24 +96,6 @@ export const SessionMixin = {
         const spawn = await this._findSafeSpawn();
         this.player.teleport(spawn.x, spawn.y, spawn.z);
         this.ui.toast('Старая точка появления была в воде — перенёс тебя на сушу.', { duration: 6000 });
-      }
-    }
-
-    // Existing worlds receive the same ruined portal on their first load after this update.
-    if (this.world.dimension === 'overworld' && !meta.ruinedPortalSpawned) {
-      const obsidian = BLOCKS.get('mc:obsidian')?.defaultState;
-      const baseX = Math.floor(this.player.x + 10), baseY = Math.floor(this.player.y), baseZ = Math.floor(this.player.z + 10);
-      if (obsidian) {
-        for (let dx=0; dx<4; dx++) for (let dy=0; dy<5; dy++) {
-          const edge=dx===0||dx===3||dy===0||dy===4;
-          if(edge && !(dx===1&&dy===4) && !(dx===0&&dy===2)) this.world.setBlock(baseX+dx,baseY+dy,baseZ,obsidian);
-        }
-        const chestBlock=BLOCKS.get('mc:chest');
-        if(chestBlock) this.world.setBlock(baseX+4,baseY,baseZ,chestBlock.defaultState);
-        const loot=this._chestAt?.(baseX+4,baseY,baseZ);
-        if(loot) for(const [id,count] of [['mc:flint',2],['mc:iron_ingot',1],['mc:obsidian',3],['mc:gold_nugget',5]]) { const stack=ItemStack.of(id,count); if(stack) loot.insert(stack); }
-        meta.ruinedPortalSpawned=true;
-        await storage.putWorld(meta);
       }
     }
 
@@ -276,7 +241,14 @@ export const SessionMixin = {
 
   async _respawnAfterDeath() {
     if (!this.world || !this.player) return;
-    const spawn = await this._findSafeSpawn();
+    let spawn;
+    const savedSpawn = this.worldMeta?.spawnPoint;
+    if (this.world.dimension !== 'overworld') await this._switchDimension('overworld');
+    if (savedSpawn && Number.isFinite(savedSpawn.x) && Number.isFinite(savedSpawn.y) && Number.isFinite(savedSpawn.z)) {
+      this.world.requestAround(savedSpawn.x, savedSpawn.z, 3, 24);
+      await this._waitForSpawnChunks(false);
+      spawn = savedSpawn;
+    } else spawn = await this._findSafeSpawn();
     this.entities?.reset();
     if (this.worldMeta?.keepInventory === false) {
       for (let slot = 0; slot < this.inventory.slots.length; slot++) {
