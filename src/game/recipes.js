@@ -65,6 +65,12 @@ recipes.push({ result: 'mc:stone_pressure_plate', count: 1, pattern: ['SS'], key
 recipes.push({ result: 'mc:polished_blackstone_pressure_plate', count: 1, pattern: ['SS'], key: { S: 'mc:polished_blackstone' } });
 recipes.push({ result: 'mc:lever', count: 1, pattern: ['T', 'S'], key: { T: 'mc:stick', S: 'mc:cobblestone' } });
 
+for (const wood of WOODS) {
+  recipes.push({ result: `mc:${wood}_fence`, count: 3, pattern: ['PSP', 'PSP'], key: { P: `mc:${wood}_planks`, S: 'mc:stick' } });
+  recipes.push({ result: `mc:${wood}_fence_gate`, count: 1, pattern: ['SPS', 'SPS'], key: { P: `mc:${wood}_planks`, S: 'mc:stick' } });
+}
+recipes.push({ result: 'mc:nether_brick_fence', count: 6, pattern: ['NNN', 'NNN'], key: { N: 'mc:nether_brick' } });
+
 recipes.push({
   result: 'mc:stick', count: 4,
   pattern: ['P', 'P'],
