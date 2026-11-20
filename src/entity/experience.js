@@ -133,3 +133,9 @@ export function experienceForBreeding(random = Math.random) {
 export function experienceForVillagerTrade(random = Math.random) {
   return randomExperienceInRange(3, 6, random);
 }
+
+
+/** Java 1.19 XP range released by a bottle o' enchanting. */
+export function experienceForBottleOEnchanting(random = Math.random) {
+  return randomExperienceInRange(3, 11, random);
+}
