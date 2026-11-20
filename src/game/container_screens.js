@@ -2,8 +2,9 @@
  * Chest and furnace screens (Java 1.12.2). A prototype mixin, applied to Game in main.js.
  *
  * The screen is built in code as an overlay, so no index.html markup is needed. Logic
- * lives in game/containers.js. Contents are kept in memory per block position and are
- * not yet saved to the .mcw file. Breaking a container does not drop its contents yet.
+ * lives in game/containers.js. Local contents are saved with the player record; online
+ * container snapshots are shared through the room's Firebase state. Breaking a container
+ * drops its contents in survival.
  *
  * Clicks: left click takes, swaps or merges with the cursor; right click takes half or
  * puts down one; shift-click moves a stack between the player's inventory and the container.
