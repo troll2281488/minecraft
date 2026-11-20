@@ -6,6 +6,8 @@
  * never leave half the blocks moved.
  */
 import { AIR } from '../world/block.js';
+import { MIN_Y, MAX_Y } from '../core/constants.js';
+import { blockToChunk, chunkKey } from '../core/math.js';
 
 export const PISTON_MAX_PUSH = 12;
 
@@ -25,6 +27,16 @@ const VECTOR = Object.freeze({
 
 export function pistonVector(facing) {
   return VECTOR[facing] || null;
+}
+
+export function isPistonCellLoaded(world, x, y, z) {
+  if (y < MIN_Y || y >= MAX_Y) return false;
+  // World.getBlock deliberately returns air for unloaded chunks. A piston must
+  // distinguish that from real air or it could erase a block at a chunk seam.
+  if (world?.chunks instanceof Map) {
+    return world.chunks.has(chunkKey(blockToChunk(x), blockToChunk(z)));
+  }
+  return true;
 }
 
 export function canPistonMove(state) {
@@ -49,6 +61,7 @@ export function planPistonMove(world, x, y, z, facing) {
     const sx = x + dx * distance;
     const sy = y + dy * distance;
     const sz = z + dz * distance;
+    if (!isPistonCellLoaded(world, sx, sy, sz)) return null;
     const state = world.getBlock(sx, sy, sz);
 
     if (state.block === AIR || state.block.id === 'mc:air') {
