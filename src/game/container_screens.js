@@ -12,6 +12,7 @@ import { Chest, Furnace, SMELTING, SMELT_TICKS, serializeContainer, deserializeC
 import { ItemStack } from '../world/item.js';
 import { positionalRandom } from '../core/rng.js';
 import { mineshaftPlan } from '../world/gen/structures.js';
+import { hash01 } from '../world/gen/hash.js';
 import { TerrainGenerator, BIOME, dungeonCandidateForCell, villageCandidateForCell, mineshaftCandidateForCell, desertTempleCandidateForCell, jungleTempleCandidateForCell, strongholdCandidateForCell } from '../world/gen/terrain.js';
 
 const OVERLAY_ID = 'container-overlay';
@@ -72,12 +73,18 @@ function generatedChestKind(seed, x, y, z) {
     for (let gz = Math.floor((z - 192) / 96); gz <= Math.floor(z / 96); gz++) {
       const shaft = mineshaftCandidateForCell(seed, gx, gz);
       if (!shaft) continue;
-      for (const piece of mineshaftPlan(seed, shaft).pieces) {
-        if (piece.kind !== 'corridor' || !piece.deadEnd || !piece.chest) continue;
+      const plan = mineshaftPlan(seed, shaft);
+      for (const piece of plan.pieces) {
+        if (piece.kind !== 'corridor') continue;
+        const deadEndChest = piece.deadEnd && piece.chest;
+        const bonusChest = !piece.deadEnd && piece.length > 24 &&
+          hash01(plan.seedHash, piece.sx, piece.y, piece.sz, 7117) < 0.035;
+        if (!deadEndChest && !bonusChest) continue;
         const [dx, dz] = [[1,0],[-1,0],[0,1],[0,-1]][piece.d];
-        if (x === piece.sx + dx * (piece.length - 1) &&
+        const along = deadEndChest ? piece.length - 1 : (piece.length >> 1);
+        if (x === piece.sx + dx * along &&
             y === piece.y + 1 &&
-            z === piece.sz + dz * (piece.length - 1)) return 'mineshaft';
+            z === piece.sz + dz * along) return 'mineshaft';
       }
     }
   }
@@ -140,11 +147,20 @@ function fillGeneratedChest(seed, x, y, z, chest, kind) {
     ['mc:gold_ingot', 1, 3], ['mc:emerald', 1, 2], ['mc:diamond', 1, 2],
     ['mc:coal', 2, 6], ['mc:lapis_lazuli', 1, 4], ['mc:redstone', 2, 6],
   ];
+  const mineshaftLoot = [
+    ['mc:iron_ingot', 2, 6], ['mc:gold_ingot', 1, 3], ['mc:gold_nugget', 3, 9],
+    ['mc:coal', 4, 12], ['mc:diamond', 1, 2], ['mc:emerald', 1, 2],
+    ['mc:lapis_lazuli', 2, 6], ['mc:redstone', 3, 8], ['mc:bread', 1, 4],
+    ['mc:apple', 1, 3], ['mc:iron_pickaxe', 1, 1], ['mc:stick', 2, 8],
+    ['mc:string', 2, 8], ['mc:bone', 1, 4],
+  ];
   const pool = kind === 'village' ? villageLoot
     : kind === 'dungeon' ? dungeonLoot
-    : kind === 'stronghold' ? strongholdLoot : kind === 'mineshaft' ? dungeonLoot : templeLoot;
+    : kind === 'stronghold' ? strongholdLoot
+    : kind === 'mineshaft' ? mineshaftLoot : templeLoot;
   const rolls = kind === 'village' ? 5 + rng.nextInt(3)
-    : kind === 'stronghold' ? 5 + rng.nextInt(3) : 6 + rng.nextInt(4);
+    : kind === 'stronghold' ? 5 + rng.nextInt(3)
+    : kind === 'mineshaft' ? 8 + rng.nextInt(5) : 6 + rng.nextInt(4);
   for (let i = 0; i < rolls; i++) {
     const [id, min, max] = pool[rng.nextInt(pool.length)];
     chest.insert(ItemStack.of(id, min + rng.nextInt(max - min + 1)));
@@ -178,10 +194,19 @@ export const ContainerScreensMixin = {
   _chestAt(x, y, z) {
     this._containers ??= new Map();
     const key = this._containerKey(x, y, z);
-    if (!this._containers.has(key)) {
+    const entry = this._containers.get(key);
+    const validChest = entry?.type === 'chest' && entry.data instanceof Chest &&
+      Array.isArray(entry.data.slots) && entry.data.slots.length === 27;
+    if (!validChest) {
       const chest = new Chest();
-      const kind = generatedChestKind(this.world?.seed, x, y, z);
-      if (kind) fillGeneratedChest(this.world.seed, x, y, z, chest, kind);
+      try {
+        const seed = this.world?.seed;
+        const kind = generatedChestKind(seed, x, y, z);
+        if (kind && seed !== undefined && seed !== null) fillGeneratedChest(seed, x, y, z, chest, kind);
+      } catch (error) {
+        // A loot-table problem must never prevent the chest interface opening.
+        console.error('[chest] Could not generate structure loot:', error);
+      }
       this._containers.set(key, { type: 'chest', data: chest });
     }
     return this._containers.get(key).data;
@@ -190,7 +215,10 @@ export const ContainerScreensMixin = {
   _furnaceAt(x, y, z) {
     this._containers ??= new Map();
     const key = this._containerKey(x, y, z);
-    if (!this._containers.has(key)) this._containers.set(key, { type: 'furnace', data: new Furnace() });
+    const entry = this._containers.get(key);
+    if (entry?.type !== 'furnace' || !(entry.data instanceof Furnace)) {
+      this._containers.set(key, { type: 'furnace', data: new Furnace() });
+    }
     return this._containers.get(key).data;
   },
 
