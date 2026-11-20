@@ -676,6 +676,15 @@ TEXTURES.redstone_wire = () => {
   }
   return tile;
 };
+TEXTURES.note_block = () => {
+  const tile = planks(hex(0x8b5a32), 'note_block');
+  const dark = hex(0x35251b), top = hex(0xb77a46);
+  for(let y=1;y<15;y++) for(let x=1;x<15;x++) {
+    const edge=x===1||x===14||y===1||y===14;
+    const c=edge?dark:top; setPx(tile,x,y,c[0],c[1],c[2]);
+  }
+  return tile;
+};
 TEXTURES.daylight_detector = () => {
   const tile = grainy(hex(0x795b3b), 0.08, 'daylight_detector');
   const quartz = hex(0xd6c6a5), dark = hex(0x4d3827), center = hex(0x9a7952);
