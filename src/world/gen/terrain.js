@@ -502,7 +502,7 @@ export class TerrainGenerator {
       }
       for (let i = 0; i < 42; i += 4) put(x + i, y + 6, z - 3, fence);
       if (gx === 0 && gz === 0) {
-        put(x + 10, y + 1, z + 2, S['mc:chest']);
+        put(x + 10, y + 1, z, S['mc:chest']);
         put(x + 24, y + 1, z - 2, S['mc:chest']);
         put(x + 33, y + 1, z + 2, S['mc:chest']);
       }
