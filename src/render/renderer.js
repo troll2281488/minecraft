@@ -468,6 +468,13 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     document.getElementById('health')?.classList.toggle('hidden', creativeHud);
     document.getElementById('food')?.classList.toggle('hidden', creativeHud);
     document.getElementById('armor')?.classList.toggle('hidden', creativeHud);
+    document.getElementById('xpbar')?.classList.toggle('hidden', creativeHud);
+    document.getElementById('xp-level')?.classList.toggle('hidden', creativeHud);
+    const xpFill = document.getElementById('xpbar-fill');
+    if (xpFill) xpFill.style.width = `${Math.max(0, Math.min(1, this.player.experience?.progress ?? 0)) * 100}%`;
+    const xpLevel = document.getElementById('xp-level');
+    if (xpLevel) xpLevel.textContent = (this.player.experience?.level ?? 0) > 0 ? String(this.player.experience.level) : '';
+
     const health = document.getElementById('health');
     if (health) renderBar(health, this.player.health, 'heart');
     const armor = document.getElementById('armor');
@@ -872,6 +879,15 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       draw(drop.x, drop.y + 0.08, drop.z, phase, [
         [[0,0,0],size,[1,1,1,1]],
       ], 0, -1, -1, 1, { itemModel: true, itemSprite: true, itemTexture: entry.texture, itemReady: true, itemSwing: 0 });
+    }
+    // XP orbs use small bright voxel sprites; larger-value orbs have a warm core.
+    for (const orb of this.entities?.experienceOrbs ?? []) {
+      const phase = (orb.age || 0) * 0.075;
+      const green = 0.58 + (Math.sin(phase) + 1) * 0.10;
+      const body = [[0, 0, 0], [0.16, 0.16, 0.16], [0.30, green, 0.10, 1]];
+      const parts = [body];
+      if (orb.value >= 17) parts.push([[0, 0, 0.075], [0.07, 0.07, 0.035], [0.96, 0.48, 0.10, 1]]);
+      draw(orb.x, orb.y + Math.sin(phase) * 0.035, orb.z, phase, parts, 0, -1, -1, 1, {});
     }
     if (this.thirdPerson) {
       document.getElementById('held-item-view')?.classList.add('hidden');
