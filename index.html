@@ -739,6 +739,9 @@
     <h1>Настройки</h1>
     <h2>Графика и управление</h2>
     <div class="settings-row"><label for="setting-distance">Дальность прорисовки <strong id="setting-distance-value">8 чанков</strong></label><input id="setting-distance" type="range" min="3" max="16" step="1" value="8"></div>
+    <div class="settings-row"><label for="setting-simulation-distance">Дальность симуляции <strong id="setting-simulation-distance-value">6 чанков</strong></label><input id="setting-simulation-distance" type="range" min="2" max="12" step="1" value="6"></div>
+    <div class="settings-row"><label for="setting-simulation">Симуляция мобов</label><input id="setting-simulation" type="checkbox" checked></div>
+    <div class="settings-row"><label for="setting-particles">Частицы</label><select id="setting-particles"><option value="all">Все</option><option value="reduced">Уменьшено</option><option value="off">Выкл.</option></select></div>
     <div class="settings-row"><label for="setting-sensitivity">Чувствительность мыши</label><input id="setting-sensitivity" type="range" min="0.04" max="0.5" step="0.01" value="0.15"></div>
     <div class="settings-row"><label for="setting-fov">Поле зрения <strong id="setting-fov-value">70°</strong></label><input id="setting-fov" type="range" min="50" max="110" step="1" value="70"></div>
     <div class="settings-row"><label for="setting-quality">Качество графики</label><select id="setting-quality"><option value="performance">Производительность</option><option value="balanced" selected>Сбалансированное</option><option value="high">Высокое</option></select></div>
@@ -811,9 +814,9 @@
 <!-- Pause -->
 <div id="pause-screen" class="overlay hidden">
   <div class="panel">
-    <h1>Paused</h1>
+    <h1>Пауза</h1>
     <h2 id="pause-world-name"></h2>
-    <button id="btn-resume">Вернуться в игру</button>
+    <button id="btn-resume">Вернуться в игру</button>\n    <button id="btn-pause-settings" class="secondary">Настройки</button>
     <button id="btn-save" class="secondary">Сохранить сейчас</button>
     <button id="btn-export" class="secondary">Экспорт мира (.mcw)</button>
     <button id="btn-gamemode" class="secondary">Сменить режим игры</button>
