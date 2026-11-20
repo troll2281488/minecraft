@@ -369,6 +369,15 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
   _render() {
     const gl = this.gl;
     const player = this.player;
+    const feedback = this.damageFeedback || 0;
+    if (this.canvas?.style) {
+      this.canvas.style.boxShadow = feedback > 0.015
+        ? `inset 0 0 ${Math.round(34 * feedback)}px rgba(210, 24, 24, ${0.13 * feedback})`
+        : '';
+      const shake = feedback > 0.04 ? Math.sin(feedback * 92) * feedback * 0.55 : 0;
+      this.canvas.style.transform = shake ? `translate3d(${shake.toFixed(2)}px, 0, 0)` : '';
+    }
+    if (feedback > 0) this.damageFeedback = Math.max(0, feedback - 0.055);
     if (!this.world || !player) {
       gl.clearColor(0.05, 0.05, 0.07, 1);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
