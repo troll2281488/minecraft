@@ -52,7 +52,7 @@ describe('creative inventory list', () => {
   it('includes granite, polished granite and stone-brick decorative shapes', () => {
     for (const id of ['mc:granite', 'mc:polished_granite', 'mc:granite_stairs',
       'mc:granite_slab', 'mc:polished_granite_stairs', 'mc:stone_bricks',
-      'mc:stone_brick_stairs', 'mc:jungle_stairs']) {
+      'mc:stone_bricks_stairs', 'mc:jungle_stairs']) {
       assert(BLOCKS.get(id), `missing decorative block ${id}`);
       assert(ids.has(id), `creative inventory is missing ${id}`);
     }
