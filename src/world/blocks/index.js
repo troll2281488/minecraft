@@ -414,6 +414,18 @@ pressurePlate('stone', 'stone_pressure_plate');
 pressurePlate('polished_blackstone', 'polished_blackstone_pressure_plate');
 
 // Redstone dust is a flat, non-colliding wire with vanilla's 0..15 signal level.
+define('mc:redstone_torch', {
+  hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
+  lightEmission: 7, renderShape: 'torch', soundGroup: 'wood', texture: 'redstone_torch',
+});
+
+define('mc:repeater', {
+  hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
+  soundGroup: 'stone', renderShape: 'repeater', texture: 'repeater',
+  properties: { facing: PROPS.facing, delay: PROPS.repeaterDelay, powered: PROPS.powered },
+  defaultValues: { facing: 'north', delay: 1, powered: false },
+});
+
 define('mc:redstone_wire', {
   hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
   replaceable: true, soundGroup: 'stone', renderShape: 'redstone_wire', texture: 'redstone_wire',
