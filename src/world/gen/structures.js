@@ -244,6 +244,12 @@ export function placeStrongholdRoomNetwork(w, S, site, seed) {
     put(x + dx, y + 1, z - 13, brick);
     put(x + dx, y + 2, z - 13, brick);
   }
+  const ironDoor = S['mc:iron_door'], button = S['mc:stone_button'];
+  if (ironDoor) {
+    put(x + 15, y + 1, z - 12, ironDoor.with('facing', 'north').with('half', 'bottom'));
+    put(x + 15, y + 2, z - 12, ironDoor.with('facing', 'north').with('half', 'top'));
+  }
+  if (button) put(x + 14, y + 1, z - 12, button.with('facing', 'east'));
   if (S['mc:torch']) {
     put(x + 17, y + 3, z - 14, S['mc:torch']);
     put(x + 21, y + 3, z - 10, S['mc:torch']);
@@ -274,6 +280,12 @@ export function placeStrongholdRoomNetwork(w, S, site, seed) {
   // Entry corridor joins the library doorway to the bent western passage.
   hallX(lx + size - 1, x - 16, z - 2, z);
   for (let dy = 1; dy <= 3; dy++) put(lx + size - 1, y + dy, z - 1, air);
+  const libraryDoor = S['mc:oak_door'];
+  if (libraryDoor) {
+    const doorX = lx + size - 1, doorZ = lz + Math.floor(size / 2);
+    put(doorX, y + 1, doorZ, libraryDoor.with('facing', 'north').with('half', 'bottom').with('hinge', 'left'));
+    put(doorX, y + 2, doorZ, libraryDoor.with('facing', 'north').with('half', 'top').with('hinge', 'left'));
+  }
 
   // Dense bookcases form the perimeter shelves and paired interior rows.
   if (bookshelf) {
