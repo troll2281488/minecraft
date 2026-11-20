@@ -173,7 +173,9 @@ export function shapeBoxes(state) {
     case 'slab': return slabBoxes(state);
     case 'stair': return stairBoxes(state);
     case 'pane': return PANE_BOXES;
-    case 'ladder': return ladderBoxes(state);\n    case 'door': return doorBoxes(state);\n    case 'button': return buttonBoxes(state);
+    case 'ladder': return ladderBoxes(state);
+    case 'door': return doorBoxes(state);
+    case 'button': return buttonBoxes(state);
     default: return FULL_LIST;
   }
 }
