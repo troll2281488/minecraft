@@ -564,6 +564,17 @@ export class TerrainGenerator {
     }
   }
 
+  /** Biome-aware surface block used by cross-chunk tree placement. */
+  surfaceTop(biome, height, wx, wz) {
+    const rule = BIOME_SURFACE[biome];
+    if (!rule || height < SEA_LEVEL) return null;
+    if (biome === BIOME.MOUNTAINS || biome === BIOME.WINDSWEPT_HILLS) {
+      if (height >= 108) return 'mc:snow_block';
+      if (height >= 90) return this.patch.sample2(wx, wz, 0.06) > 0.2 ? 'mc:gravel' : 'mc:stone';
+    }
+    return rule.top;
+  }
+
   /** Deterministic tree origin, evaluated from world coordinates rather than chunk-local RNG. */
   treeAt(wx, wz) {
     const u = hash01(this.hseed, wx, 0, wz, 31337);
@@ -600,7 +611,7 @@ export class TerrainGenerator {
     const margin=TREE_MARGIN+1;
     for(let wz=baseZ-margin;wz<baseZ+CHUNK_SIZE+margin;wz++) for(let wx=baseX-margin;wx<baseX+CHUNK_SIZE+margin;wx++) {
       const tree=this.treeAt(wx,wz); if(!tree) continue;
-      const log=S[`mc:${tree.species}_log`], leaves=S[`mc:${tree.species}_leaves`];
+      const log=tree.material ? S[tree.material] : S[`mc:${tree.species}_log`], leaves=S[`mc:${tree.species}_leaves`];
       if(!log) continue;
       for(const [dx,dy,dz] of tree.leaves) {
         const x=wx+dx-baseX,z=wz+dz-baseZ;
