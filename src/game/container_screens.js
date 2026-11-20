@@ -224,12 +224,13 @@ export const ContainerScreensMixin = {
   },
 
   _openChest(x, y, z) {
-    this._openContainer({ title: 'Сундук', slots: this._chestAt(x, y, z).slots, kind: 'chest' });
+    const key = this._containerKey(x, y, z);
+    this._openContainer({ title: 'Сундук', slots: this._chestAt(x, y, z).slots, kind: 'chest', key });
   },
 
   _openFurnace(x, y, z) {
     const furnace = this._furnaceAt(x, y, z);
-    this._openContainer({ title: 'Печь', furnace, kind: 'furnace' });
+    this._openContainer({ title: 'Печь', furnace, kind: 'furnace', key: this._containerKey(x, y, z) });
   },
 
   /** Advance every furnace that exists in the world. Called from the fixed tick. */
@@ -344,6 +345,7 @@ export const ContainerScreensMixin = {
       }
       inv.version++;
       this._renderContainer();
+      this._syncActiveContainer();
       return;
     }
 
@@ -355,6 +357,7 @@ export const ContainerScreensMixin = {
       this._moveContainerSlotToInventory(target);
       inv.version++;
       this._renderContainer();
+      this._syncActiveContainer();
       return;
     }
     const cursor = inv.cursor;
@@ -378,6 +381,14 @@ export const ContainerScreensMixin = {
     }
     inv.version++;
     this._renderContainer();
+    this._syncActiveContainer();
+  },
+
+  _syncActiveContainer() {
+    const spec = this._activeContainer;
+    if (!spec?.key) return;
+    const entry = this._containers?.get(spec.key);
+    if (entry) this.multiplayer?.pushContainerState(spec.key, entry.type, entry.data);
   },
 
   _containerSlot(spec, kind, index) {
