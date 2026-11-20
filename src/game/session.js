@@ -173,9 +173,9 @@ export const SessionMixin = {
         this.world.setBlock(landingX+dx,65,landingZ+dz,BLOCKS.get('mc:air').defaultState);
         this.world.setBlock(landingX+dx,66,landingZ+dz,BLOCKS.get('mc:air').defaultState);
       }
-      this.player.teleport(landingX+0.5,64,landingZ+0.5);
-      // Build a lit return gate on the safe landing pad.
-      const portal=BLOCKS.get('mc:portal')?.defaultState, gateX=landingX+4, gateZ=landingZ;
+      this.player.teleport(landingX+0.5,64,landingZ-0.5);
+      // Build a lit return gate on the safe landing pad, aligned with the entry coordinates.
+      const portal=BLOCKS.get('mc:portal')?.defaultState, gateX=landingX-1, gateZ=landingZ;
       if(obsidian&&portal) {
         for(let dx=0;dx<4;dx++) for(let dy=0;dy<5;dy++) if(dx===0||dx===3||dy===0||dy===4) this.world.setBlock(gateX+dx,64+dy,gateZ,obsidian);
         for(let dx=1;dx<=2;dx++) for(let dy=1;dy<=3;dy++) this.world.setBlock(gateX+dx,64+dy,gateZ,portal);
