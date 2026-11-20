@@ -191,7 +191,7 @@ export class Player {
       }
     }
     if (!touching) return false;
-    if (this.input.sneak) this.vy = Math.min(this.vy, 0);
+    if (this.input.sneak) this.vy = 0;
     else if (this.input.jump || this.input.forward > 0) this.vy = Math.max(this.vy, 0.2);
     else this.vy = Math.max(this.vy, -0.15);
     this.vx = Math.max(-0.15, Math.min(0.15, this.vx));
