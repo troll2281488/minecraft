@@ -33,6 +33,14 @@ export function electRoomHost(room, players) {
 }
 
 /** Keep valid room records discoverable even when every player temporarily disconnects. */
+export function queueContainerWrite(queue, roomId, key, record, limit = 512) {
+  if (!(queue instanceof Map) || !roomId || !key || !record) return false;
+  const queueKey = `${roomId}:${key}`;
+  queue.set(queueKey, { roomId, key, record });
+  while (queue.size > limit) queue.delete(queue.keys().next().value);
+  return true;
+}
+
 export function listJoinableRooms(rooms, now = Date.now(), maxAgeMs = 30 * 24 * 60 * 60 * 1000) {
   return Object.entries(rooms || {})
     .filter(([code, room]) => {
@@ -63,6 +71,7 @@ export class Multiplayer {
     this.remotePlayers = new Map();
     this.pendingBlocks = new Map();
     this.pendingBlockWrites = new Map();
+    this.pendingContainerWrites = new Map();
     this.unsubscribers = [];
     this.syncElapsed = 0;
     this.syncInFlight = false;
@@ -478,6 +487,7 @@ export class Multiplayer {
       });
       this.firebaseError = '';
       await this._flushPendingBlockWrites();
+      await this._flushPendingContainerWrites();
       this._updateRoomHud();
     } catch (error) {
       this.firebaseError = error?.message || 'Не удалось восстановить сетевую сессию';
@@ -719,20 +729,39 @@ export class Multiplayer {
   }
 
 
-  /** Publish a container snapshot to the shared room state. */
+  /** Queue the newest snapshot per room/container, including while offline. */
   pushContainerState(key, type, data) {
-    if (!this.roomId || !this.db || !this.firebaseConnected || !key) return;
+    if (!this.roomId || !key) return;
     const record = serializeContainer(type, data);
     if (!record) return;
-    set(ref(this.db, `minecraft_game/rooms/${this.roomId}/containers/${key}`), record)
-      .catch((error) => console.warn('[multiplayer] container sync:', error));
+    queueContainerWrite(this.pendingContainerWrites, this.roomId, key, record);
+    if (this.firebaseConnected) void this._flushPendingContainerWrites();
   }
 
-  /** Mark a broken container as deleted so peers cannot restore stale contents. */
+  /** Queue a tombstone too, so an offline break cannot resurrect old contents. */
   removeContainerState(key) {
-    if (!this.roomId || !this.db || !this.firebaseConnected || !key) return;
-    set(ref(this.db, `minecraft_game/rooms/${this.roomId}/containers/${key}`), { deleted: true, ts: Date.now() })
-      .catch((error) => console.warn('[multiplayer] container removal sync:', error));
+    if (!this.roomId || !key) return;
+    queueContainerWrite(this.pendingContainerWrites, this.roomId, key, { deleted: true, ts: Date.now() });
+    if (this.firebaseConnected) void this._flushPendingContainerWrites();
+  }
+
+  async _flushPendingContainerWrites() {
+    if (!this.db || !this.roomId || !this.firebaseConnected || this.containerFlushInFlight) return;
+    this.containerFlushInFlight = true;
+    try {
+      for (const [queueKey, entry] of this.pendingContainerWrites) {
+        if (entry.roomId !== this.roomId) continue;
+        try {
+          await set(ref(this.db, `minecraft_game/rooms/${entry.roomId}/containers/${entry.key}`), entry.record);
+          if (this.pendingContainerWrites.get(queueKey) === entry) this.pendingContainerWrites.delete(queueKey);
+        } catch (error) {
+          console.warn('[multiplayer] queued container sync:', error);
+          break;
+        }
+      }
+    } finally {
+      this.containerFlushInFlight = false;
+    }
   }
 
   sendChat(text) {
