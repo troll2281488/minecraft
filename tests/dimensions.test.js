@@ -2,6 +2,9 @@ import '../src/world/blocks/index.js';
 import { describe, it, assert, assertEqual } from './framework.js';
 import { Chunk } from '../src/world/chunk.js';
 import { TerrainGenerator, findNearestStructure } from '../src/world/gen/terrain.js';
+import { BLOCKS } from '../src/world/block.js';
+import { ITEMS } from '../src/world/item.js';
+import { RECIPES } from '../src/game/recipes.js';
 
 describe('Nether and End dimensions', () => {
   it('generates a separate Nether chunk with bedrock and netherrack', () => {
@@ -27,5 +30,24 @@ describe('Nether and End dimensions', () => {
       JSON.stringify(fortress),
       JSON.stringify(findNearestStructure('locate-seed','nether','fortress',0,0,12000)),
     );
+  });
+});
+
+
+describe('Nether portal gameplay additions', () => {
+  it('registers lava, portal, flint and steel, and blaze rods', () => {
+    assert(BLOCKS.get('mc:lava'));
+    assert(BLOCKS.get('mc:portal'));
+    assert(ITEMS.get('mc:flint_and_steel'));
+    assert(ITEMS.get('mc:blaze_rod'));
+    assertEqual(RECIPES.producing('mc:flint_and_steel').length, 1);
+  });
+
+  it('creates a wide lava sea and a spawn-side fortress floor in the Nether', () => {
+    const generator = new TerrainGenerator('portal-nether-test', 'nether');
+    const lake = generator.generate(new Chunk(0, 0));
+    assertEqual(lake.getBlock(8, 31, 8).block.id, 'mc:lava');
+    const fortress = generator.generate(new Chunk(2, 2));
+    assertEqual(fortress.getBlock(4, 52, 4).block.id, 'mc:nether_bricks');
   });
 });

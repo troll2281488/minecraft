@@ -343,6 +343,9 @@ define('mc:water', {
   properties: { level: PROPS.level },
 });
 
+define('mc:lava', { hardness: 100, resistance: 100, solid: false, opaqueCube: false, opacity: 0, replaceable: true, renderShape: 'translucent', lightEmission: 15, soundGroup: 'none', texture: 'lava' });
+define('mc:portal', { hardness: -1, resistance: 0, solid: false, opaqueCube: false, opacity: 0, replaceable: false, renderShape: 'translucent', soundGroup: 'none', texture: 'purple_stained_glass', notInCreative: true });
+
 // ---------------------------------------------------------------------------
 // Slabs and stairs (Phase 2 box-model shapes)
 //
@@ -426,7 +429,7 @@ ITEM_TAGS.define('#mc:coals', ['mc:coal', 'mc:charcoal']);
 // ---------------------------------------------------------------------------
 
 /** Every block gets an item form unless it is unobtainable. */
-const NO_ITEM = new Set(['mc:air', 'mc:water', 'mc:wheat']);
+const NO_ITEM = new Set(['mc:air', 'mc:water', 'mc:lava', 'mc:portal', 'mc:wheat']);
 for (const block of BLOCKS.blocks.values()) {
   if (NO_ITEM.has(block.id)) continue;
   ITEMS.defineBlockItem(block.id, {
@@ -450,6 +453,7 @@ const MATERIALS = [
   ['mc:lapis_lazuli', {}],
   ['mc:redstone', {}],
   ['mc:flint', {}],
+  ['mc:blaze_rod', {}],
   ['mc:snowball', {}],
   ['mc:clay_ball', {}],
   ['mc:string', {}],
@@ -499,6 +503,7 @@ for (const [id, nutrition, saturation] of FOODS) {
  * come from the vanilla tables in the same file.
  */
 ITEMS.define('mc:shears', { stackSize: 1, maxDamage: 238, tool: 'shears', attackDamage: 1 });
+ITEMS.define('mc:flint_and_steel', { stackSize: 1, maxDamage: 64, tool: 'flint_and_steel' });
 ITEMS.define('mc:fishing_rod', { stackSize: 1, maxDamage: 64, tool: 'fishing_rod' });
 ITEMS.define('mc:bow', { stackSize: 1, maxDamage: 384, weapon: 'bow' });
 ITEMS.define('mc:arrow', { stackSize: 64 });
