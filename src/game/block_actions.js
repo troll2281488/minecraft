@@ -123,6 +123,11 @@ export const BlockActionsMixin = {
       return;
     }
     const heldItem = this.inventory?.held?.item;
+    if (this.hit?.state?.block?.id === 'mc:redstone_ore') {
+      this._activateRedstoneOre?.(this.hit.x, this.hit.y, this.hit.z);
+      return;
+    }
+
     if (this.hit?.state?.block?.id === 'mc:bed') {
       if (this.world.dimension !== 'overworld') {
         this.ui.toast('В этом измерении нельзя спать.', { error: true });
