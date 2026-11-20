@@ -127,7 +127,7 @@ function vanillaLayerParts(model, layerName = 'main') {
 }
 
 const MOB_TEXTURE_FILES = Object.freeze({
-  cow:'cow.png', pig:'pig.png', sheep:'sheep.png', sheep_fur:'sheep_fur.png', chicken:'chicken.png', wolf:'wolf.png',
+  cow:'cow.png', pig:'pig.png', sheep:'sheep.png', sheep_fur:'sheep_fur.png', chicken:'chicken.png', wolf:'wolf.png', horse:'horse.png',
   zombie:'zombie.png', skeleton:'skeleton.png', stray:'stray.png',
   creeper:'creeper.png', enderman:'enderman.png', spider:'spider.png', cave_spider:'cave_spider.png',
 });
