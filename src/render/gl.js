@@ -308,7 +308,12 @@ void main() {
   // Tint only green-dominant pixels so biome colouring never stains the soil.
   float greenMask = vFace == 4u ? 1.0 :
     smoothstep(0.015, 0.10, texel.g - max(texel.r, texel.b) * 0.85);
-  vec3 textureColor = texel.rgb * mix(vec3(1.0), vGrassTint, greenMask);
+  // Top texture is neutral grayscale: colour it green directly. Side pixels
+  // already contain vanilla green, so apply only the biome's relative shift.
+  vec3 sideShift = vGrassTint / vec3(0.43, 0.62, 0.28);
+  vec3 textureColor = vFace == 4u
+    ? texel.rgb * vGrassTint
+    : texel.rgb * mix(vec3(1.0), sideShift, greenMask);
   vec4 color = vec4(textureColor * vColor.rgb, texel.a * vColor.a);
 
   float fog = clamp((vFogDistance - uFogStart) / max(uFogEnd - uFogStart, 0.001), 0.0, 1.0);
