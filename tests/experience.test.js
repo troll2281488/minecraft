@@ -1,5 +1,5 @@
 import { describe, it, assertEqual } from './framework.js';
-import { PlayerExperience, experienceToNextLevel, splitExperienceIntoOrbs, experienceForMob, experienceForBlock, mergeExperienceOrbState, isExperienceOrbHazard, experienceForFishing, experienceForBreeding, experienceForVillagerTrade, experienceDroppedOnDeath } from '../src/entity/experience.js';
+import { PlayerExperience, experienceToNextLevel, splitExperienceIntoOrbs, experienceForMob, experienceForBlock, mergeExperienceOrbState, isExperienceOrbHazard, experienceForFishing, experienceForBreeding, experienceForVillagerTrade, experienceDroppedOnDeath, experienceForSpawner } from '../src/entity/experience.js';
 import { Player } from '../src/entity/player.js';
 import { InputMixin } from '../src/game/input.js';
 
@@ -175,5 +175,22 @@ describe('Java-style player death experience', () => {
     assertEqual(experienceDroppedOnDeath(-4), 0);
     assertEqual(experienceDroppedOnDeath(3.9), 21);
     assertEqual(experienceDroppedOnDeath(NaN), 0);
+  });
+});
+
+
+describe('Java 1.19 monster-spawner experience', () => {
+  it('uses two independent 0..14 rolls for a total of 15..43 XP', () => {
+    let calls = 0;
+    assertEqual(experienceForSpawner(() => { calls++; return 0; }), 15);
+    assertEqual(calls, 2);
+    assertEqual(experienceForSpawner(() => 0.5), 29);
+    assertEqual(experienceForSpawner(() => 0.999999), 43);
+  });
+
+  it('handles invalid random values without leaving the vanilla range', () => {
+    assertEqual(experienceForSpawner(() => NaN), 15);
+    assertEqual(experienceForSpawner(() => -1), 15);
+    assertEqual(experienceForSpawner(() => 2), 43);
   });
 });
