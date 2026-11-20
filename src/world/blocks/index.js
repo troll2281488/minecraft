@@ -328,6 +328,24 @@ define('mc:iron_bars', {
   renderShape: 'pane', soundGroup: 'metal', texture: 'iron_bars',
 });
 
+// Stronghold library and passage blocks. The ladder is a non-colliding
+// wall-mounted model; cobweb slowdown is a later movement-physics refinement.
+define('mc:bookshelf', {
+  hardness: 1.5, resistance: 1.5, tool: 'axe', soundGroup: 'wood', flammability: 5,
+  texture: 'bookshelf',
+});
+
+define('mc:cobweb', {
+  hardness: 4, resistance: 4, solid: false, opaqueCube: false, opacity: 0,
+  renderShape: 'cross', soundGroup: 'cloth', texture: 'cobweb',
+});
+
+define('mc:ladder', {
+  hardness: 0.4, resistance: 0.4, solid: false, opaqueCube: false, opacity: 0,
+  renderShape: 'ladder', soundGroup: 'wood', texture: 'ladder',
+  properties: { facing: PROPS.facing }, defaultValues: { facing: 'north' },
+});
+
 define('mc:end_portal_frame', {
   hardness: -1, resistance: 3600000, soundGroup: 'stone',
   texture: 'end_portal_frame',
