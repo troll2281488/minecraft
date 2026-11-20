@@ -22,6 +22,10 @@ export const InventoryControllerMixin = {
   _rebuildInventoryUI() {
     this.ui.buildInventory(this.inventory, this.craftingGrid, {
       onClick: (kind, index, button, shift) => this._onInventoryClick(kind, index, button, shift),
+      onDistribute: (indices) => {
+        if (indices.length < 2) this._onInventoryClick('inventory', indices[0], 0, false);
+        else if (this.inventory.distributeCursor(indices)) this.ui.updateInventory(this.inventory, this.craftingGrid, true);
+      },
       onDropCursor: (button = 0) => {
         const cursor = this.inventory.cursor;
         if (cursor.isEmpty) return;
