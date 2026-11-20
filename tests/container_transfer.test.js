@@ -176,3 +176,35 @@ describe('container persistence and break handling', () => {
     assertEqual(furnace.cookProgress, 0);
   });
 });
+
+
+describe('container edit lock UI gate', () => {
+  for (const lockState of ['pending', 'busy', 'offline', 'lost']) {
+    it(`blocks slot changes while lock state is ${lockState}`, () => {
+      const chest = new Chest();
+      chest.slots[0] = ItemStack.of('mc:diamond', 4);
+      const game = gameWith({ kind: 'chest', slots: chest.slots, lockState });
+      game.inventory.cursor = ItemStack.of('mc:stone', 2);
+
+      ContainerScreensMixin._onContainerClick.call(game, 'chest', 0, 0, false);
+
+      assertEqual(chest.slots[0].count, 4);
+      assertEqual(chest.slots[0].item.id, 'mc:diamond');
+      assertEqual(game.inventory.cursor.count, 2);
+      assertEqual(game.inventory.cursor.item.id, 'mc:stone');
+    });
+  }
+
+  it('does not publish container snapshots after the edit lease is lost', () => {
+    const chest = new Chest();
+    let published = 0;
+    const game = gameWith({ kind: 'chest', slots: chest.slots, key: '1,64,2', lockState: 'lost' });
+    game._containers = new Map([['1,64,2', { type: 'chest', data: chest }]]);
+    game.multiplayer = { pushContainerState: () => { published++; } };
+
+    ContainerScreensMixin._syncActiveContainer.call(game);
+
+    assertEqual(published, 0);
+  });
+});
+
