@@ -3,7 +3,11 @@ import {
   SPAWNER_MOB_TYPES, spawnerMobType, spawnerPlayerInRange,
   countSpawnerMobs, nextSpawnerDelay, spawnerSpawnPosition,
 } from '../src/entity/spawners.js';
-import { placeDungeonRoom } from '../src/world/gen/structures.js';
+import { placeDungeonRoom, dungeonDims } from '../src/world/gen/structures.js';
+import { dungeonCandidateForCell } from '../src/world/gen/terrain.js';
+import { positionalRandom } from '../src/core/rng.js';
+import { Chest } from '../src/game/containers.js';
+import { generatedChestKind, fillGeneratedChest } from '../src/game/container_screens.js';
 import '../src/world/blocks/index.js';
 import { BLOCKS } from '../src/world/block.js';
 
@@ -63,5 +67,36 @@ describe('Java monster spawner rules', () => {
     placeDungeonRoom(writer, states, { x: 10, y: 20, z: 30, variant: 0 }, 'test-dungeon-seed');
     assertEqual(placed.get(key(13,21,33))?.block?.id, 'mc:mob_spawner');
     assert(placed.has(key(11,21,31)), 'dungeon chest remains beside the spawner');
+  });
+});
+
+
+describe('generated dungeon chest loot', () => {
+  it('recognizes both deterministic chest positions in a dungeon room', () => {
+    const seed = 'dungeon-loot-regression';
+    let room = null;
+    for (let gx = -24; gx <= 24 && !room; gx++) {
+      for (let gz = -24; gz <= 24 && !room; gz++) {
+        const candidate = dungeonCandidateForCell(seed, gx, gz);
+        if (!candidate) continue;
+        const rng = positionalRandom(seed, candidate.x, 7301, candidate.z, 7301);
+        if (rng.nextBoolean()) room = candidate;
+      }
+    }
+    assert(room, 'test seed should contain a dungeon with its optional second chest');
+    const { ix, iz } = dungeonDims(room);
+    assertEqual(generatedChestKind(seed, room.x + 1, room.y + 1, room.z + 1), 'dungeon');
+    assertEqual(generatedChestKind(seed, room.x + ix, room.y + 1, room.z + iz), 'dungeon');
+  });
+
+  it('fills a generated dungeon chest deterministically and only once per saved chest', () => {
+    const seed = 'dungeon-loot-regression';
+    const a = new Chest();
+    const b = new Chest();
+    fillGeneratedChest(seed, 41, 18, -27, a, 'dungeon');
+    fillGeneratedChest(seed, 41, 18, -27, b, 'dungeon');
+    const contents = (chest) => chest.slots.map((stack) => stack.toJSON());
+    assert(contents(a).some(Boolean), 'dungeon chest should contain loot');
+    assertEqual(JSON.stringify(contents(a)), JSON.stringify(contents(b)));
   });
 });
