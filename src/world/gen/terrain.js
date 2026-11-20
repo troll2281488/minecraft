@@ -101,11 +101,11 @@ export const BIOME_SURFACE = {
   [BIOME.MOUNTAINS]: { top:'mc:stone', filler:'mc:stone', trees:0.004, grass:0.025, species:'oak' },
   [BIOME.WINDSWEPT_HILLS]: { top:'mc:stone', filler:'mc:stone', trees:0.012, grass:0.04, species:'oak' },
   [BIOME.SNOWY_PLAINS]: { top:'mc:snow_block', filler:'mc:dirt', trees:0.002, grass:0 },
-  [BIOME.ICE_SPIKES]: { top:'mc:packed_ice', filler:'mc:snow_block', trees:0, grass:0 },
+  [BIOME.ICE_SPIKES]: { top:'mc:snow_block', filler:'mc:dirt', trees:0.0035, grass:0, species:'ice_spike' },
   [BIOME.TAIGA]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.05, grass:0.12, species:'spruce' },
   [BIOME.SNOWY_TAIGA]: { top:'mc:snow_block', filler:'mc:dirt', trees:0.045, grass:0, species:'spruce' },
-  [BIOME.GIANT_TREE_TAIGA]: { top:'mc:podzol', filler:'mc:dirt', trees:0.062, grass:0.12, species:'spruce' },
-  [BIOME.GIANT_SPRUCE_TAIGA]: { top:'mc:podzol', filler:'mc:dirt', trees:0.072, grass:0.1, species:'spruce' },
+  [BIOME.GIANT_TREE_TAIGA]: { top:'mc:podzol', filler:'mc:dirt', trees:0.04, grass:0.08, ferns:0.25, mix:[['spruce',9],['boulder',1]] },
+  [BIOME.GIANT_SPRUCE_TAIGA]: { top:'mc:podzol', filler:'mc:dirt', trees:0.045, grass:0.06, ferns:0.25, mix:[['spruce',9],['boulder',1]] },
   [BIOME.SWAMP]: { top:'mc:clay', filler:'mc:dirt', trees:0.035, grass:0.12, species:'oak', ferns:0.06 },
   [BIOME.MUSHROOM_FIELDS]: { top:'mc:mycelium', filler:'mc:dirt', trees:0.002, grass:0.02, mushrooms:0.13 },
   [BIOME.DESERT_HILLS]: { top:'mc:sand', filler:'mc:sand', trees:0, grass:0, deadBush:0.025 },
@@ -174,7 +174,7 @@ export class TerrainGenerator {
     this.humidity = new OctaveNoise(root.fork('humidity'), 3, 0.5, 2.0);
     this.biomeDetail = new OctaveNoise(root.fork('biome_detail'), 2, 0.55, 2.0);
     this.biomeRarity = new OctaveNoise(root.fork('biome_rarity'), 2, 0.5, 2.0);
-    this.river = new OctaveNoise(root.fork('river'), 2, 0.5, 2.0);
+    this.river = new OctaveNoise(root.fork('river'), 3, 0.5, 2.0);
     this.density = new OctaveNoise(root.fork('density'), 3, 0.5, 2.0);
     this.caveA = new PerlinNoise(root.fork('cave_a'));
     this.caveB = new PerlinNoise(root.fork('cave_b'));
