@@ -7,6 +7,7 @@ import { RedstoneDevicesMixin } from '../src/game/redstone_devices.js';
 import { RECIPES } from '../src/game/recipes.js';
 import { ITEMS } from '../src/world/item.js';
 import { rollMobDrops } from '../src/entity/mobs.js';
+import { blockEmissionForState } from '../src/world/lighting.js';
 import { MAX_Y } from '../src/core/constants.js';
 
 const AIR = BLOCKS.get('mc:air').defaultState;
@@ -110,6 +111,21 @@ describe('piston and sticky piston', () => {
     assertEqual(blocks.get('1,0,0'), STONE);
     assertEqual(blocks.get('2,0,0'), AIR);
     assertEqual(blocks.get('0,0,0').get('extended'), false);
+  });
+
+  it('redstone ore lights up, emits level 9, and turns off after its timer', () => {
+    const ore = BLOCKS.get('mc:redstone_ore').defaultState;
+    const { world, blocks } = makeWorld([['0,0,0', ore]]);
+    const game = { world, tickCount: 1, ...RedstoneDevicesMixin };
+    assertEqual(blockEmissionForState(ore), 0);
+    assertEqual(game._activateRedstoneOre(0, 0, 0), true);
+    const lit = blocks.get('0,0,0');
+    assertEqual(lit.get('lit'), true);
+    assertEqual(blockEmissionForState(lit), 9);
+    game.tickCount = 31;
+    game._tickRedstoneOre(0, 0, 0, false);
+    assertEqual(blocks.get('0,0,0').get('lit'), false);
+    assertEqual(blockEmissionForState(blocks.get('0,0,0')), 0);
   });
 
   it('slimes provide slime balls needed for sticky piston crafting', () => {
