@@ -57,7 +57,7 @@ describe('Java monster spawner rules', () => {
 
   it('generates a Java-style portal room with inward frames, rare prefilled eyes, lava and a silverfish spawner', () => {
     const ids = ['mc:stone_bricks','mc:mossy_stone_bricks','mc:end_portal_frame','mc:lava',
-      'mc:stone_brick_stairs','mc:mob_spawner','mc:chest','mc:bookshelf'];
+      'mc:stone_bricks_stairs','mc:mob_spawner','mc:chest','mc:bookshelf'];
     const states = Object.fromEntries(ids.map(id => [id, BLOCKS.get(id)?.defaultState]).filter(([, state]) => state));
     const placed = new Map();
     const key = (x,y,z) => `${x},${y},${z}`;
