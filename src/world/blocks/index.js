@@ -312,6 +312,13 @@ define('mc:furnace', {
   textures: { top: 'furnace_top', bottom: 'furnace_side', side: 'furnace_front' },
 });
 
+define('mc:hopper', {
+  hardness: 3, resistance: 4.8, tool: 'pickaxe', harvestLevel: 0,
+  requiresTool: true, soundGroup: 'metal', texture: 'hopper',
+  properties: { facing: PROPS.hopperFacing, enabled: PROPS.enabled },
+  defaultValues: { facing: 'down', enabled: true },
+});
+
 define('mc:mob_spawner', {
   hardness: 5, resistance: 5, tool: 'pickaxe', harvestLevel: -1,
   requiresTool: true, soundGroup: 'stone', texture: 'mob_spawner',
