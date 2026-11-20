@@ -837,10 +837,10 @@ export class Multiplayer {
     }
     this.activeContainerLocks.delete(key);
     try {
-      await runTransaction(held.lockRef, (current) =>
+      const result = await runTransaction(held.lockRef, (current) =>
         ownsContainerLease(current, this.uid, token) ? null : undefined,
       { applyLocally: false });
-      return true;
+      return result.committed;
     } catch (error) {
       console.warn('[multiplayer] container lock release:', error);
       return false;
