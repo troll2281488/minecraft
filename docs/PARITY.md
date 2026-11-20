@@ -151,11 +151,11 @@ Reference target for this compatibility track is **Minecraft: Java Edition 1.19.
 
 ## Multiplayer (experimental)
 
-Room-code joining, remote avatar rendering, chat, shared overworld block edits, player health/food status display, sprint/sneak state, attack animation, held/offhand item identifiers and simplified remote armor/equipment rendering, a host-synchronized day/night clock with deterministic handoff when the host leaves, and per-player local save persistence across reconnects are implemented. This is not yet a complete co-op survival session: each browser still simulates its own mobs and combat; mob damage, inventory/container contents, weather and dimensions are not shared/authoritative. Firebase access also depends on the configured Realtime Database being reachable and its deployed security rules allowing the intended operations.
+Room-code joining, remote avatar rendering, chat, shared overworld block edits, player health/food/experience status display, sprint/sneak state, attack animation, held/offhand item identifiers and simplified remote armor/equipment rendering, a host-synchronized day/night clock with deterministic handoff when the host leaves, and per-player local save persistence across reconnects are implemented. This is not yet a complete co-op survival session: each browser still simulates its own mobs and combat; mob damage, inventory/container contents, XP orbs and XP awards, weather and dimensions are not shared/authoritative. Firebase access also depends on the configured Realtime Database being reachable and its deployed security rules allowing the intended operations.
 
 ## Not yet started
 
-Survival is partial: health and hunger are present, with food consumption and basic starvation/
+Survival is partial: health, hunger, player XP levels, XP orbs from player-credited mob kills, XP attraction/pickup and the survival XP HUD are present, with food consumption and basic starvation/
 regeneration; mob spawning, wandering, simple fleeing/pursuit, melee combat with armour damage reduction/durability, sheep shearing,
 fishing, apple drops from oak leaves, wheat seed drops from grass, rare zombie carrot/potato drops, and drops for pigs, sheep, cows, chickens and zombies are implemented in simplified
 form. Basic wheat farming is now playable: hoes till soil, seeds plant crops, seven growth stages advance near the player, and mature wheat yields wheat/seeds; bread is craftable. Crop growth is a fixed 600-tick interval within a 6-block player radius, without vanilla light, hydration or neighbour checks. Still missing are full vanilla mob AI, breeding, chicken egg laying, armour enchantments and potion effects, and vanilla death/drop/respawn rules. Fluids and flow, redstone, enchanting and
