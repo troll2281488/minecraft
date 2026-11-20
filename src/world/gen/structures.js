@@ -47,7 +47,7 @@ export function mineshaftPlan(seed, site) {
       }
     }
   }
-  return {pieces};
+  return {pieces, seedHash:seedToInt(normalizeSeed(seed))};
 }
 
 export function placeMineshaftPlan(w,S,plan,heights) {
@@ -85,7 +85,7 @@ export function placeMineshaftPlan(w,S,plan,heights) {
       }
       if(p.deadEnd&&p.chest) w.set(p.sx+dx*(p.length-1),p.y+1,p.sz+dz*(p.length-1),chest);
       // Rare extra loot chest halfway down a long branch.
-      if(chest&&!p.deadEnd&&p.length>24&&hash01(seedToInt(normalizeSeed(0)),p.sx,p.y,p.sz,7117)<0.035) w.set(p.sx+dx*(p.length>>1),p.y+1,p.sz+dz*(p.length>>1),chest);
+      if(chest&&!p.deadEnd&&p.length>24&&hash01(plan.seedHash,p.sx,p.y,p.sz,7117)<0.035) w.set(p.sx+dx*(p.length>>1),p.y+1,p.sz+dz*(p.length>>1),chest);
     } else if(p.kind==='crossing') {
       for(let z=p.z0;z<=p.z1;z++) for(let x=p.x0;x<=p.x1;x++) {
         if(carve(x,z,p.y+1,p.y+3,p.y+6)&&(w.id(x,p.y,z)==='mc:air'||w.id(x,p.y,z)==='mc:water')) w.set(x,p.y,z,plank);
