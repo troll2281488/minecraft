@@ -23,6 +23,15 @@ describe('Mob data and loot', () => {
     assert(Object.isFrozen(MOB_AI_PROFILES));
   });
 
+  it('gives every legacy hostile mob a combat profile', () => {
+    for (const type of [
+      'zombie', 'husk', 'zombie_villager', 'skeleton', 'stray', 'wither_skeleton',
+      'creeper', 'spider', 'cave_spider', 'enderman', 'silverfish', 'endermite',
+      'slime', 'magma_cube', 'vex', 'vindicator', 'evoker', 'witch', 'blaze',
+      'ghast', 'guardian', 'elder_guardian', 'wither',
+    ]) assert(MOB_AI_PROFILES[type], 'missing hostile profile: ' + type);
+  });
+
   it('chooses a safe detour and ignores blocked or malformed path options', () => {
     const current = 0;
     const chosen = chooseMobDetourYaw(current, 0, [
