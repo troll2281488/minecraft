@@ -9,10 +9,15 @@ import { RECIPES } from '../src/game/recipes.js';
  */
 describe('1.12.2 Phase 1 items', () => {
   const NEW = ['mc:gold_nugget', 'mc:bucket', 'mc:bow', 'mc:arrow',
-    'mc:flint_and_steel', 'mc:golden_apple', 'mc:enchanted_golden_apple'];
+    'mc:flint_and_steel', 'mc:golden_apple', 'mc:enchanted_golden_apple',
+    'mc:experience_bottle', 'mc:glass_bottle'];
   for (const id of NEW) {
     it(`${id} is registered`, () => assert(ITEMS.get(id) !== undefined, `${id} missing`));
   }
+  it('XP bottles and glass bottles stack to 64', () => {
+    assert(ITEMS.get('mc:experience_bottle').stackSize === 64, 'XP bottle should stack to 64');
+    assert(ITEMS.get('mc:glass_bottle').stackSize === 64, 'glass bottle should stack to 64');
+  });
   it('bow is durable and arrows stack to 64', () => {
     assert(ITEMS.get('mc:bow').maxDamage === 384, 'bow durability should be 384');
     assert(ITEMS.get('mc:arrow').stackSize === 64, 'arrow stack size should be 64');
