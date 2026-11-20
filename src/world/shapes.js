@@ -124,7 +124,8 @@ export function shapeBoxes(state) {
   switch (state.block.renderShape) {
     case 'slab': return slabBoxes(state);
     case 'stair': return stairBoxes(state);
-    case 'pane': return PANE_BOXES;\n    case 'ladder': return ladderBoxes(state);
+    case 'pane': return PANE_BOXES;
+    case 'ladder': return ladderBoxes(state);
     default: return FULL_LIST;
   }
 }
