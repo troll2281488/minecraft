@@ -162,9 +162,14 @@ export function placeVillagePlan(w,S,plan) {
     for(let z=0;z<b.d;z++)for(let x=0;x<b.w;x++){
       const edge=x===0||x===b.w-1||z===0||z===b.d-1,corner=(x===0||x===b.w-1)&&(z===0||z===b.d-1);
       w.set(b.x+x,gy,b.z+z,edge?S['mc:cobblestone']:plank);
-      for(let y=1;y<=3;y++)w.set(b.x+x,gy+y,b.z+z,edge?(corner?log:plank):air);
-      if(glass&&edge&&!corner&&yWindow(x,z,b))w.set(b.x+x,gy+2,b.z+z,glass);
+      // Solid, continuous wall panels; only intentional window openings are
+      // replaced with glass after the wall has been built.
+      for(let y=1;y<=3;y++) w.set(b.x+x,gy+y,b.z+z,edge?(corner?log:plank):air);
+      if(glass&&edge&&!corner&&yWindow(x,z,b)) w.set(b.x+x,gy+2,b.z+z,glass);
     }
+    // Close the roof underside so the stair profile never exposes black sky
+    // through gaps when viewed from below or from inside the house.
+    for(let z=-1;z<=b.d;z++) for(let x=-1;x<=b.w;x++) w.set(b.x+x,gy+4,b.z+z,plank);
     w.set(b.x+Math.floor(b.w/2),gy+1,b.z,air);w.set(b.x+Math.floor(b.w/2),gy+2,b.z,air);
     for(let z=-1;z<=b.d;z++)for(let x=-1;x<=b.w;x++){
       const centre=x===Math.floor(b.w/2);
