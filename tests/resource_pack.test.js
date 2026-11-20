@@ -1,5 +1,8 @@
 import { describe, it, assert, assertEqual } from './framework.js';
 import { shouldFetchExternalItemTexture } from '../src/render/resource_pack.js';
+import '../src/world/blocks/index.js';
+import { BLOCKS } from '../src/world/block.js';
+import { buildTextures, buildBlockTextureTable } from '../src/render/atlas.js';
 
 describe('External item texture selection', () => {
   it('uses built-in generated icons for spawn eggs', () => {
@@ -14,5 +17,22 @@ describe('External item texture selection', () => {
   it('still requests external textures for ordinary non-block items', () => {
     assert(shouldFetchExternalItemTexture({ id: 'mc:apple' }));
     assert(shouldFetchExternalItemTexture({ id: 'mc:iron_ingot' }));
+  });
+});
+
+describe('Grass biome tint and missing texture safety', () => {
+  it('tints the top and all four grass-block side faces', () => {
+    const grass = BLOCKS.get('mc:grass_block');
+    for (const face of ['up', 'north', 'south', 'west', 'east']) {
+      assert(grass.tintFaces.includes(face), `grass tint missing on ${face}`);
+    }
+    assert(!grass.tintFaces.includes('down'), 'bottom face should remain dirt');
+  });
+
+  it('never maps an unresolved block texture to the pink diagnostic checker', () => {
+    const built = buildTextures();
+    const table = buildBlockTextureTable(BLOCKS, built.index);
+    const missing = built.index.get('__missing');
+    for (const layer of table) assert(layer !== missing, 'block face mapped to pink missing texture');
   });
 });
