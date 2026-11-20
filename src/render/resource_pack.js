@@ -147,7 +147,7 @@ export async function loadCommunityTextures(blocks, items) {
       ? await fetchImage(encodeURIComponent(communityName) + '.png', SIMPLE_RP_RAW)
       : await fetchImage(encodeURIComponent(sourceName) + '.png');
     // A few files in older resource packs use legacy names. Missing textures are
-    // left to the atlas fallback instead of requesting ItsBrian or painting pixels.
+    // left to the atlas fallback instead of inventing replacement artwork.
     if (!bitmap) return null;
     const { ctx } = canvasFor(bitmap);
     const pixels = new Uint8Array(ctx.getImageData(0, 0, TILE_SIZE, TILE_SIZE).data);
