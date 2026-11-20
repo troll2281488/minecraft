@@ -253,6 +253,7 @@ export const ContainerScreensMixin = {
     ensureStyle();
     this._closeContainer();
     this._activeContainer = spec;
+    spec.lockState = this.multiplayer?.roomId ? 'pending' : 'local';
     this.inventoryOpen = true;
     document.exitPointerLock?.();
     const overlay = document.createElement('div');
@@ -261,6 +262,38 @@ export const ContainerScreensMixin = {
     document.body.appendChild(overlay);
     this._renderContainer();
     this._containerTimer = setInterval(() => this._renderContainer(), 250);
+    if (this.multiplayer?.roomId) {
+      const active = spec;
+      this.multiplayer.acquireContainerLock?.(spec.key).then((result) => {
+        if (this._activeContainer !== active) {
+          if (result?.ok && result.token) void this.multiplayer.releaseContainerLock?.(active.key, result.token);
+          return;
+        }
+        if (result?.ok) {
+          active.lockState = 'owned';
+          active.lockToken = result.token || null;
+          if (result.token) this._containerLockTimer = setInterval(async () => {
+            const renewed = await this.multiplayer.renewContainerLock?.(active.key, active.lockToken);
+            if (!renewed && this._activeContainer === active) {
+              active.lockState = 'lost';
+              clearInterval(this._containerLockTimer);
+              this._renderContainer();
+              this.ui?.toast?.('Блокировка контейнера потеряна. Изменения остановлены.', { error: true });
+            }
+          }, 5000);
+        } else {
+          active.lockState = result?.offline ? 'offline' : 'busy';
+          active.lockOwner = result?.owner || '';
+          this.ui?.toast?.(result?.offline ? 'Нет соединения: подключись, чтобы редактировать общий контейнер.' : 'Контейнер уже редактирует другой игрок.', { error: true });
+        }
+        this._renderContainer();
+      }).catch((error) => {
+        if (this._activeContainer !== active) return;
+        active.lockState = 'offline';
+        this._renderContainer();
+        console.warn('[container] lock acquisition failed:', error);
+      });
+    }
     // Handle both mouse buttons on pointer-down so slot transfers are immediate
     // and do not depend on a synthetic click surviving the UI re-render.
     overlay.onpointerdown = (e) => {
@@ -278,6 +311,9 @@ export const ContainerScreensMixin = {
     const overlay = document.getElementById(OVERLAY_ID);
     if (overlay) overlay.remove();
     clearInterval(this._containerTimer);
+    clearInterval(this._containerLockTimer);
+    const active = this._activeContainer;
+    if (active?.lockToken) void this.multiplayer?.releaseContainerLock?.(active.key, active.lockToken);
     this._activeContainer = null;
     this.inventoryOpen = false;
     this._requestPointerLock?.();
@@ -321,6 +357,11 @@ export const ContainerScreensMixin = {
     body += '</div><div class="row slots-9">';
     for (let i = 0; i <= 8; i++) body += this._slotHtml('inv', i, inv.slots[i]);
     body += '</div>';
+    if (spec.lockState === 'pending') body += '<div class="hint">Проверка блокировки контейнера…</div>';
+    else if (spec.lockState === 'busy') body += `<div class="hint">Контейнер редактирует ${spec.lockOwner || 'другой игрок'}</div>`;
+    else if (spec.lockState === 'offline') body += '<div class="hint">Нет соединения — редактирование общего контейнера отключено.</div>';
+    else if (spec.lockState === 'lost') body += '<div class="hint">Блокировка потеряна. Закрой и открой контейнер снова.</div>';
+    else if (spec.lockState === 'owned') body += '<div class="hint">Контейнер закреплён за вами на время редактирования.</div>';
     body += `<div class="hint">В курсоре: ${inv.cursor?.isEmpty ? 'пусто' : label(inv.cursor)}. Shift-клик переносит стак. Esc — закрыть.</div>`;
     body += '<button id="container-close">Закрыть</button>';
     overlay.innerHTML = `<div class="panel">${body}</div>`;
@@ -332,6 +373,7 @@ export const ContainerScreensMixin = {
     const inv = this.inventory;
     const spec = this._activeContainer;
     if (!spec) return;
+    if (['pending', 'busy', 'offline', 'lost'].includes(spec.lockState)) return;
 
     if (kind === 'inv') {
       if (shift && spec.kind === 'chest') {
@@ -394,7 +436,7 @@ export const ContainerScreensMixin = {
 
   _syncActiveContainer() {
     const spec = this._activeContainer;
-    if (!spec?.key) return;
+    if (!spec?.key || !['local', 'owned'].includes(spec.lockState)) return;
     const entry = this._containers?.get(spec.key);
     if (entry) this.multiplayer?.pushContainerState(spec.key, entry.type, entry.data);
   },
