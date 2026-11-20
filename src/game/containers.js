@@ -1,5 +1,5 @@
 /**
- * Chest and furnace logic (Java 1.12.2).
+ * Chest, furnace and hopper block-entity logic (Java Edition).
  *
  * Pure game state with no DOM or GL dependency, so it is testable under node
  * and reusable from any UI. The furnace numbers come from the 1.12.2 reference:
