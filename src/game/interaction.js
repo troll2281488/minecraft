@@ -364,6 +364,7 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
     'mc:diamond_ore': 'mc:diamond',
     'mc:emerald_ore': 'mc:emerald',
     'mc:redstone_ore': 'mc:redstone',
+    'mc:redstone_wire': 'mc:redstone',
     'mc:lapis_ore': 'mc:lapis_lazuli',
     'mc:clay': 'mc:clay_ball',
   };

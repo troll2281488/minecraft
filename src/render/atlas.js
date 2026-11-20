@@ -644,6 +644,17 @@ TEXTURES.stone_button = () => buttonTile(hex(0x858585), 'stone_button');
 TEXTURES.polished_blackstone_button = () => buttonTile(hex(0x38333a), 'polished_blackstone_button');
 TEXTURES.stone_pressure_plate = () => pressurePlateTile(hex(0x858585), 'stone_pressure_plate');
 TEXTURES.polished_blackstone_pressure_plate = () => pressurePlateTile(hex(0x38333a), 'polished_blackstone_pressure_plate');
+TEXTURES.redstone_wire = () => {
+  const tile = grainy(hex(0x8f1717), 0.1, 'redstone_wire');
+  const red = hex(0xd52c2c), dark = hex(0x701010);
+  for (let y = 2; y < 14; y++) for (let x = 2; x < 14; x++) {
+    if ((x + y) % 4 === 0 || (x % 5 === 0 && y % 3 === 0)) {
+      const c = (x + y) % 2 ? red : dark;
+      setPx(tile, x, y, c[0], c[1], c[2]);
+    }
+  }
+  return tile;
+};
 TEXTURES.lever = () => {
   const tile = grainy(hex(0x777777), 0.12, 'lever');
   const light = hex(0xb0b0b0), dark = hex(0x454545);

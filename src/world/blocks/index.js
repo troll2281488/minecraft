@@ -413,6 +413,17 @@ for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) p
 pressurePlate('stone', 'stone_pressure_plate');
 pressurePlate('polished_blackstone', 'polished_blackstone_pressure_plate');
 
+// Redstone dust is a flat, non-colliding wire with vanilla's 0..15 signal level.
+define('mc:redstone_wire', {
+  hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
+  replaceable: true, soundGroup: 'stone', renderShape: 'redstone_wire', texture: 'redstone_wire',
+  properties: {
+    power: PROPS.power, north: PROPS.north, south: PROPS.south,
+    east: PROPS.east, west: PROPS.west,
+  },
+  defaultValues: { power: 0, north: false, south: false, east: false, west: false },
+});
+
 define('mc:end_portal_frame', {
   hardness: -1, resistance: 3600000, soundGroup: 'stone',
   texture: 'end_portal_frame',
@@ -540,7 +551,7 @@ ITEM_TAGS.define('#mc:coals', ['mc:coal', 'mc:charcoal']);
 // ---------------------------------------------------------------------------
 
 /** Every block gets an item form unless it is unobtainable. */
-const NO_ITEM = new Set(['mc:air', 'mc:water', 'mc:lava', 'mc:portal', 'mc:wheat']);
+const NO_ITEM = new Set(['mc:air', 'mc:water', 'mc:lava', 'mc:portal', 'mc:wheat', 'mc:redstone_wire']);
 for (const block of BLOCKS.blocks.values()) {
   if (NO_ITEM.has(block.id)) continue;
   ITEMS.defineBlockItem(block.id, {
@@ -562,7 +573,7 @@ const MATERIALS = [
   ['mc:diamond', {}],
   ['mc:emerald', {}],
   ['mc:lapis_lazuli', {}],
-  ['mc:redstone', {}],
+  ['mc:redstone', { block: 'mc:redstone_wire' }],
   ['mc:flint', {}],
   ['mc:blaze_rod', {}],
   ['mc:snowball', {}],

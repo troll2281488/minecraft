@@ -345,6 +345,10 @@ export const BlockActionsMixin = {
         : this.world.getBlock(target.x + 1, target.y, target.z);
       if (!support.block.solid || !support.block.opaqueCube) return;
     }
+    if (block.renderShape === 'redstone_wire') {
+      const support = this.world.getBlock(target.x, target.y - 1, target.z);
+      if (!support.block.solid || !support.block.opaqueCube) return;
+    }
     if (block.renderShape === 'pressure_plate') {
       if (this.hit.face?.dy !== 1) return;
       const support = this.world.getBlock(target.x, target.y - 1, target.z);

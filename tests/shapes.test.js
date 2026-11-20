@@ -90,6 +90,13 @@ describe('shapes: box geometry', () => {
     }
   });
 
+  it('redstone wire is a thin non-colliding surface', () => {
+    const wire = BLOCKS.get('mc:redstone_wire').defaultState;
+    assertDeepEqual(shapeBoxes(wire), [[0, 0, 0, 1, 0.0625, 1]]);
+    assert(isNonCube(wire));
+    assertEqual(collisionBoxes(wire).length, 0);
+  });
+
   it('buttons, levers and pressure plates have compact render geometry', () => {
     const button = BLOCKS.get('mc:stone_button').defaultState;
     assertDeepEqual(shapeBoxes(button), [[0.375, 0.375, 0, 0.625, 0.625, 0.125]]);
