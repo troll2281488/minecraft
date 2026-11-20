@@ -19,7 +19,7 @@ Implementation branch: `feature/multiplayer-reconnect-stability`.
   record, and refreshes user presence after the connection returns.
 - Block edits are coalesced by coordinate and queued while Firebase is offline.
   The queue is bounded to 4,096 distinct pending edits and is flushed after
-  room presence is restored. The newest edit for a coordinate replaces an older
+  room presence is restored or the player rejoins that room. The newest edit for a coordinate replaces an older
   queued edit.
 
 ## Important limitations
@@ -40,7 +40,7 @@ Implementation branch: `feature/multiplayer-reconnect-stability`.
   so stale contents are not restored by another client. This is best-effort
   client-side replication, not an authoritative inventory service: two players
   editing the same container at nearly the same time can still overwrite one
-  another. Offline container edits are replayed after presence recovery, but they
+  another. Offline container edits are replayed after presence recovery or when rejoining the same room, but they
   remain best-effort snapshots and can still conflict with edits made by another
   player while the client was disconnected. Full authoritative
   chunk storage, player inventory, mobs, dimensions, conflict resolution, and
