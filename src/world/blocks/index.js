@@ -405,6 +405,13 @@ define('mc:comparator', {
   defaultValues: { facing: 'north', mode: 'compare', power: 0, powered: false },
 });
 
+// Redstone lamp: the lit state controls both its appearance and block-light emission.
+define('mc:redstone_lamp', {
+  hardness: 0.3, resistance: 0.3, tool: 'pickaxe', soundGroup: 'glass',
+  lightEmission: 15, texture: 'redstone_lamp',
+  properties: { lit: PROPS.lit }, defaultValues: { lit: false },
+});
+
 // Redstone power sources from the Java 1.19 block set.
 function button(id, texture, wood = false) {
   define(`mc:${id}_button`, {
@@ -450,6 +457,12 @@ for (const [id, texture] of [
 define('mc:redstone_torch', {
   hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
   lightEmission: 7, renderShape: 'torch', soundGroup: 'wood', texture: 'redstone_torch',
+  properties: { lit: PROPS.lit }, defaultValues: { lit: true },
+});
+
+define('mc:glowstone', {
+  hardness: 0.3, resistance: 0.3, tool: 'pickaxe', soundGroup: 'glass',
+  lightEmission: 15, texture: 'glowstone',
 });
 
 define('mc:repeater', {
@@ -625,6 +638,7 @@ const MATERIALS = [
   ['mc:clay_ball', {}],
   ['mc:string', {}],
   ['mc:quartz', {}],
+  ['mc:glowstone_dust', {}],
   ['mc:bone', {}],
   ['mc:leather', {}],
   ['mc:feather', {}],
