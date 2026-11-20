@@ -11,9 +11,9 @@
  */
 import { Chest, Furnace, SMELTING, SMELT_TICKS, serializeContainer, deserializeContainer } from './containers.js';
 import { ItemStack } from '../world/item.js';
-import { positionalRandom } from '../core/rng.js';
+import { positionalRandom, normalizeSeed } from '../core/rng.js';
 import { mineshaftPlan, dungeonDims } from '../world/gen/structures.js';
-import { hash01 } from '../world/gen/hash.js';
+import { hash01, seedToInt } from '../world/gen/hash.js';
 import { TerrainGenerator, BIOME, dungeonCandidateForCell, villageCandidateForCell, mineshaftCandidateForCell, desertTempleCandidateForCell, jungleTempleCandidateForCell, strongholdCandidateForCell } from '../world/gen/terrain.js';
 
 const OVERLAY_ID = 'container-overlay';
@@ -132,7 +132,7 @@ export function generatedChestKind(seed, x, y, z) {
       if (x === stronghold.x + 7 && z === stronghold.z - 24) return 'stronghold_crossing';
       if ((x === stronghold.x - 10 && z === stronghold.z + 8) ||
           (x === stronghold.x - 6 && z === stronghold.z + 8)) return 'stronghold_library';
-      const largeLibrary = hash01(Number.parseInt(String(seed), 10) || 0, stronghold.x, stronghold.y, stronghold.z, 7419) >= 0.22;
+      const largeLibrary = hash01(seedToInt(normalizeSeed(seed)), stronghold.x, stronghold.y, stronghold.z, 7419) >= 0.22;
       const libraryX = stronghold.x - (largeLibrary ? 32 : 28);
       const libraryZ = stronghold.z - (largeLibrary ? 7 : 5);
       if (y === stronghold.y + (largeLibrary && x === libraryX + 2 && z === libraryZ + 12 ? 6 : 1) &&
