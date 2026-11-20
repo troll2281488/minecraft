@@ -473,6 +473,8 @@ const MATERIALS = [
   ['mc:wheat', {}],
   ['mc:paper', {}],
   ['mc:book', {}],
+  ['mc:enchanted_book', { stackSize: 1, rarity: 'uncommon' }],
+  ['mc:gunpowder', {}],
   ['mc:name_tag', { stackSize: 1 }],
   ['mc:music_disc_13', { stackSize: 1 }],
   ['mc:music_disc_cat', { stackSize: 1 }],

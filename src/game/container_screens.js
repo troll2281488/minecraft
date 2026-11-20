@@ -147,7 +147,7 @@ export const DUNGEON_LOOT_POOLS = Object.freeze([
       ['mc:golden_horse_armor', 10, 1, 1],
       ['mc:iron_horse_armor', 15, 1, 1],
       ['mc:diamond_horse_armor', 5, 1, 1],
-      ['mc:book', 10, 1, 1],
+      ['mc:enchanted_book', 10, 1, 1],
     ],
   },
   {
@@ -169,6 +169,7 @@ export const DUNGEON_LOOT_POOLS = Object.freeze([
     rolls: 3,
     entries: [
       ['mc:bone', 10, 1, 8],
+      ['mc:gunpowder', 10, 1, 8],
       ['mc:rotten_flesh', 10, 1, 8],
       ['mc:string', 10, 1, 8],
     ],
