@@ -7,7 +7,7 @@ import { placeDungeonRoom, dungeonDims } from '../src/world/gen/structures.js';
 import { dungeonCandidateForCell } from '../src/world/gen/terrain.js';
 import { positionalRandom } from '../src/core/rng.js';
 import { Chest } from '../src/game/containers.js';
-import { generatedChestKind, fillGeneratedChest, DUNGEON_LOOT_POOLS, chooseWeightedLootEntry, scatterGeneratedChestLoot } from '../src/game/container_screens.js';
+import { generatedChestKind, fillGeneratedChest, DUNGEON_LOOT_POOLS, TEMPLE_LOOT_POOLS, chooseWeightedLootEntry, scatterGeneratedChestLoot } from '../src/game/container_screens.js';
 import { ITEMS, ItemStack } from '../src/world/item.js';
 import '../src/world/blocks/index.js';
 import { BLOCKS } from '../src/world/block.js';
@@ -106,6 +106,29 @@ describe('generated dungeon chest loot', () => {
     const entries = DUNGEON_LOOT_POOLS[0].entries;
     assertEqual(chooseWeightedLootEntry(entries, { nextInt: () => 0 })[0], 'mc:saddle');
     assertEqual(chooseWeightedLootEntry(entries, { nextInt: () => 20 })[0], 'mc:golden_apple');
+  });
+
+  it('uses distinct weighted loot pools for desert and jungle temples', () => {
+    assertEqual(TEMPLE_LOOT_POOLS.desert_temple.length, 3);
+    assertEqual(TEMPLE_LOOT_POOLS.jungle_temple.length, 2);
+    for (const [kind, pools] of Object.entries(TEMPLE_LOOT_POOLS)) {
+      assert(pools.length > 0, kind + ' must have loot pools');
+      for (const pool of pools) {
+        assert(pool.entries.length > 0);
+        for (const [id, weight, min, max] of pool.entries) {
+          assert(ITEMS.get(id), kind + ' loot item ' + id + ' must be registered');
+          assert(weight > 0 && min > 0 && max >= min);
+        }
+      }
+    }
+    const desert = new Chest();
+    const jungle = new Chest();
+    fillGeneratedChest('temple-pool-test', 4, 30, 8, desert, 'desert_temple');
+    fillGeneratedChest('temple-pool-test', 4, 30, 8, jungle, 'jungle_temple');
+    const contents = chest => JSON.stringify(chest.slots.map(stack => stack.toJSON()));
+    assert(contents(desert).length > 2);
+    assert(contents(jungle).length > 2);
+    assert(contents(desert) !== contents(jungle), 'temple types must not share identical loot rolls');
   });
 
   it('scatters loot into deterministic non-packed chest slots', () => {
