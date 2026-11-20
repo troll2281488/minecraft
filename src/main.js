@@ -398,7 +398,7 @@ class Game {
         // floating promise per chunk meant a storage failure surfaced as an
         // unhandled rejection with no context, and silently lost the chunk.
         this._persist(
-          storage.putChunks(this.worldMeta.id, 'mc:overworld', entries),
+          storage.putChunks(this.worldMeta.id, this.world.dimension, entries),
           `saving ${entries.length} unloaded chunk(s)`,
         );
       }
