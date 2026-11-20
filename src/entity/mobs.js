@@ -581,7 +581,11 @@ export class MobSystem {
     }
     if (worn && inventory) inventory.version++;
     const finalDamage = calculateArmorDamage(amount, armorPoints, toughness);
-    if (finalDamage > 0) this.game.sounds?.play('hurt');
+    if (finalDamage > 0) {
+      this.game.sounds?.play('hurt');
+      // A restrained hit cue: a short red edge tint and sub-pixel camera shake.
+      this.game.damageFeedback = Math.min(1, (this.game.damageFeedback || 0) + 0.72);
+    }
     player.health = Math.max(0, player.health - finalDamage);
     return finalDamage;
   }
