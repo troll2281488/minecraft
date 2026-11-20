@@ -356,6 +356,7 @@ export const ScreensMixin = {
       seed: level.seed ?? '0',
       generatorVersion: level.generatorVersion ?? GENERATOR_VERSION,
       time: level.time ?? 0,
+      dimension: ['overworld','nether','end'].includes(level.dimension) ? level.dimension : 'overworld',
       createdWith: level.createdWith ?? result.fromVersion,
     });
 
