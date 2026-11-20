@@ -132,7 +132,6 @@ function doorBoxes(state) {
   } else {
     const left = hinge === 'left';
     if (facing === 'north' || facing === 'south') {
-      const x0 = left ? 0.40625 : 0.59375, x1 = left ? 0.59375 : 0.40625;
       box = left ? [0, 0, 0.40625, 0.1875, 1, 1] : [0.8125, 0, 0, 1, 1, 0.59375];
     } else {
       box = left ? [0, 0, 0, 0.59375, 1, 0.1875] : [0.40625, 0, 0.8125, 1, 1, 1];
