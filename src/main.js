@@ -334,6 +334,7 @@ class Game {
     this._tickRedstoneDevices?.();
     this._tickFurnaces?.();
     this._tickHoppers?.();
+    this._tickDroppers?.();
 
     if (!this.inventoryOpen && !this.tradeOpen) {
       player.input.forward =
