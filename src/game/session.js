@@ -64,7 +64,6 @@ export const SessionMixin = {
     if (isNew) {
       const spawn = await this._findSafeSpawn();
       this.player.teleport(spawn.x, spawn.y, spawn.z);
-      this._giveStartingItems();
     } else {
       // Old saves may contain the previous ocean fallback position. Inspect
       // the player's feet column down to the first solid floor: if water is
