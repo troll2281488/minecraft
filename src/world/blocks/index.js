@@ -283,7 +283,7 @@ plant('mc:dead_bush', 'dead_bush');
 plant('mc:red_mushroom', 'red_mushroom');
 plant('mc:brown_mushroom', 'brown_mushroom');
 plant('mc:bamboo', 'bamboo');
-plant('mc:vine', 'vine');
+plant('mc:vine', 'vine', 'foliage');
 
 define('mc:mycelium', {
   hardness: 0.6, resistance: 0.6, tool: 'shovel', soundGroup: 'grass',
