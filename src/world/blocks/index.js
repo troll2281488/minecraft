@@ -61,7 +61,7 @@ function woodSet(species) {
     // Leaves are a full cube but do not hide their neighbours' faces -- that is
     // what makes a tree canopy look like foliage rather than a solid green box.
     opaqueCube: false, opacity: 1, flammability: 30,
-    renderShape: 'cutout', tint: species === 'spruce' || species === 'birch' ? null : 'foliage',
+    renderShape: 'cutout', tint: species === 'spruce' ? null : 'foliage',
     texture: `${species}_leaves`,
     properties: { distance: PROPS.distance, persistent: PROPS.persistent },
     defaultValues: { distance: 7, persistent: false },
@@ -272,6 +272,7 @@ plant('mc:dead_bush', 'dead_bush');
 plant('mc:red_mushroom', 'red_mushroom');
 plant('mc:brown_mushroom', 'brown_mushroom');
 plant('mc:bamboo', 'bamboo');
+plant('mc:vine', 'vine');
 
 define('mc:mycelium', {
   hardness: 0.6, resistance: 0.6, tool: 'shovel', soundGroup: 'grass',
@@ -376,7 +377,7 @@ for (const base of ['mc:stone', 'mc:cobblestone', 'mc:sandstone']) {
   slab(base, STONE_LIKE);
   stairs(base, STONE_LIKE);
 }
-for (const wood of ['oak', 'birch', 'spruce']) {
+for (const wood of ['oak', 'birch', 'spruce', 'acacia', 'dark_oak']) {
   slab(`mc:${wood}_planks`, WOOD_LIKE);
   stairs(`mc:${wood}_planks`, WOOD_LIKE);
 }

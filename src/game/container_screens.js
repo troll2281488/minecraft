@@ -11,7 +11,8 @@
 import { Chest, Furnace, SMELTING, SMELT_TICKS, serializeContainer, deserializeContainer } from './containers.js';
 import { ItemStack } from '../world/item.js';
 import { positionalRandom } from '../core/rng.js';
-import { TerrainGenerator, BIOME, dungeonCandidateForCell, villageCandidateForCell, desertTempleCandidateForCell, jungleTempleCandidateForCell, strongholdCandidateForCell } from '../world/gen/terrain.js';
+import { mineshaftPlan } from '../world/gen/structures.js';
+import { TerrainGenerator, BIOME, dungeonCandidateForCell, villageCandidateForCell, mineshaftCandidateForCell, desertTempleCandidateForCell, jungleTempleCandidateForCell, strongholdCandidateForCell } from '../world/gen/terrain.js';
 
 const OVERLAY_ID = 'container-overlay';
 
@@ -64,12 +65,28 @@ function generatedChestKind(seed, x, y, z) {
   // Structure loot is attached only to deterministic generated chest
   // coordinates. Ordinary player-placed chests never receive random contents.
   const generator = new TerrainGenerator(seed);
+
+  // Minecart-free mineshaft corridor chests are placed at the end of selected
+  // dead-end branches by the same deterministic planner used by terrain gen.
+  for (let gx = Math.floor((x - 192) / 96); gx <= Math.floor(x / 96); gx++) {
+    for (let gz = Math.floor((z - 192) / 96); gz <= Math.floor(z / 96); gz++) {
+      const shaft = mineshaftCandidateForCell(seed, gx, gz);
+      if (!shaft) continue;
+      for (const piece of mineshaftPlan(seed, shaft).pieces) {
+        if (piece.kind !== 'corridor' || !piece.deadEnd || !piece.chest) continue;
+        const [dx, dz] = [[1,0],[-1,0],[0,1],[0,-1]][piece.d];
+        if (x === piece.sx + dx * (piece.length - 1) &&
+            y === piece.y + 1 &&
+            z === piece.sz + dz * (piece.length - 1)) return 'mineshaft';
+      }
+    }
+  }
   for (let gx = Math.floor((x - 140) / 128); gx <= Math.floor(x / 128); gx++) {
     for (let gz = Math.floor((z - 140) / 128); gz <= Math.floor(z / 128); gz++) {
       const village = villageCandidateForCell(seed, gx, gz);
       if (!village) continue;
       const site = generator.validateVillageSite(village.x, village.z);
-      if (site && x === village.x + 4 && y === site.y + 2 && z === village.z + 13) return 'village';
+      if (site && x === village.x + 5 && y === site.y + 1 && z === village.z + 5) return 'village';
     }
   }
 
@@ -99,7 +116,7 @@ function generatedChestKind(seed, x, y, z) {
 }
 
 function fillGeneratedChest(seed, x, y, z, chest, kind) {
-  const salt = kind === 'dungeon' ? 3301 : kind === 'village' ? 3302 : kind === 'stronghold' ? 3304 : 3303;
+  const salt = kind === 'dungeon' ? 3301 : kind === 'village' ? 3302 : kind === 'stronghold' ? 3304 : kind === 'mineshaft' ? 3305 : 3303;
   const rng = positionalRandom(seed, x, y, z, salt);
   const villageLoot = [
     ['mc:bread', 2, 5], ['mc:apple', 1, 3], ['mc:wheat_seeds', 2, 6],
@@ -125,7 +142,7 @@ function fillGeneratedChest(seed, x, y, z, chest, kind) {
   ];
   const pool = kind === 'village' ? villageLoot
     : kind === 'dungeon' ? dungeonLoot
-    : kind === 'stronghold' ? strongholdLoot : templeLoot;
+    : kind === 'stronghold' ? strongholdLoot : kind === 'mineshaft' ? dungeonLoot : templeLoot;
   const rolls = kind === 'village' ? 5 + rng.nextInt(3)
     : kind === 'stronghold' ? 5 + rng.nextInt(3) : 6 + rng.nextInt(4);
   for (let i = 0; i < rolls; i++) {

@@ -172,7 +172,7 @@ describe('Generated structure chest loot', () => {
         const village = villageCandidateForCell(seed, gx, gz);
         if (!village) continue;
         const site = generator.validateVillageSite(village.x, village.z);
-        if (site) pantry = [village.x + 4, site.y + 2, village.z + 13];
+        if (site) pantry = [village.x + 5, site.y + 1, village.z + 5];
       }
     }
     assert(pantry, 'test seed did not produce a village site');

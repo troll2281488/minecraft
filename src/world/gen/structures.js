@@ -28,15 +28,15 @@ export function mineshaftPlan(seed, site) {
   const rx=3+rng.nextInt(3), rz=3+rng.nextInt(3);
   const pieces=[{kind:'room',cx:site.x,cz:site.z,rx,rz,y,x0:site.x-rx,x1:site.x+rx,z0:site.z-rz,z1:site.z+rz}];
   const queue=DIRS.map(([dx,dz],d)=>({x:site.x+(dx?dx*(dx>0?rx+1:rx+1):0),z:site.z+(dz?dz*(dz>0?rz+1:rz+1):0),d,depth:0}));
-  while(queue.length&&pieces.length<20) {
-    const job=queue.shift(); if(job.depth>3&&rng.nextInt(3)===0) continue;
-    const [dx,dz]=DIRS[job.d], length=10+5*rng.nextInt(3);
+  while(queue.length&&pieces.length<48) {
+    const job=queue.shift(); if(job.depth>5&&rng.nextInt(3)===0) continue;
+    const [dx,dz]=DIRS[job.d], length=14+6*rng.nextInt(3);
     const ex=job.x+dx*length, ez=job.z+dz*length;
     const box={x0:Math.min(job.x,ex)-(dz?1:0),x1:Math.max(job.x,ex)+(dz?1:0),z0:Math.min(job.z,ez)-(dx?1:0),z1:Math.max(job.z,ez)+(dx?1:0)};
-    if(Math.max(Math.abs(box.x0-site.x),Math.abs(box.x1-site.x),Math.abs(box.z0-site.z),Math.abs(box.z1-site.z))>48||pieces.some(p=>overlap(box,p))) continue;
-    const p={kind:'corridor',sx:job.x,sz:job.z,d:job.d,length,y,...box,deadEnd:true,chest:rng.nextInt(3)===0};
+    if(Math.max(Math.abs(box.x0-site.x),Math.abs(box.x1-site.x),Math.abs(box.z0-site.z),Math.abs(box.z1-site.z))>96||pieces.some(p=>overlap(box,p))) continue;
+    const p={kind:'corridor',sx:job.x,sz:job.z,d:job.d,length,y,...box,deadEnd:true,chest:rng.nextInt(2)===0};
     pieces.push(p);
-    if(job.depth<3&&rng.nextInt(3)!==0) {
+    if(job.depth<5&&rng.nextInt(3)!==0) {
       const cx=ex+dx*2,cz=ez+dz*2,cross={kind:'crossing',cx,cz,y,x0:cx-2,x1:cx+2,z0:cz-2,z1:cz+2};
       if(!pieces.some(q=>overlap(cross,q))) {
         pieces.push(cross);
@@ -159,8 +159,17 @@ export function placeVillagePlan(w,S,plan) {
       if(glass&&edge&&!corner&&yWindow(x,z,b))w.set(b.x+x,gy+2,b.z+z,glass);
     }
     w.set(b.x+Math.floor(b.w/2),gy+1,b.z,air);w.set(b.x+Math.floor(b.w/2),gy+2,b.z,air);
-    for(let z=-1;z<=b.d;z++)for(let x=-1;x<=b.w;x++){const centre=x===Math.floor(b.w/2);w.set(b.x+x,gy+5+Math.min(x,b.w-1-x),b.z+z,centre?plank:(roof||plank));}
-    if(b.type==='smithy'&&S['mc:furnace'])w.set(b.x+2,gy+2,b.z+3,S['mc:furnace']);
+    for(let z=-1;z<=b.d;z++)for(let x=-1;x<=b.w;x++){
+      const centre=x===Math.floor(b.w/2);
+      const stair=roof&&typeof roof.with==='function'
+        ? roof.with('facing',x<Math.floor(b.w/2)?'east':'west')
+        : (roof||plank);
+      w.set(b.x+x,gy+5+Math.min(x,b.w-1-x),b.z+z,centre?plank:stair);
+    }
+    if(b.type==='smithy') {
+      if(S['mc:furnace'])w.set(b.x+2,gy+2,b.z+3,S['mc:furnace']);
+      if(S['mc:chest'])w.set(b.x+b.w-2,gy+1,b.z+b.d-2,S['mc:chest']);
+    }
   }
   const torch=S['mc:torch'];if(torch)for(const r of plan.roads){const x=Math.floor((r.x0+r.x1)/2),z=Math.floor((r.z0+r.z1)/2);if(w.inside(x,z)){w.set(x,gy+1,z,log);w.set(x,gy+2,z,log);w.set(x,gy+3,z,torch);}}
 }

@@ -29,7 +29,7 @@ import { hash01, seedToInt } from './hash.js';
 import { ChunkWriter, mineshaftPlan, placeMineshaftPlan, placeDungeonRoom, villagePlan, placeVillagePlan, villageStyleForBiome } from './structures.js';
 
 /** Bumped whenever generation output changes. Stored per world. */
-export const GENERATOR_VERSION = 12;
+export const GENERATOR_VERSION = 13;
 
 
 // ---------------------------------------------------------------------------
@@ -88,13 +88,13 @@ export const BIOME_SURFACE = {
   [BIOME.BIRCH_FOREST]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.065, grass:0.16, species:'birch' },
   [BIOME.TALL_BIRCH_FOREST]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.075, grass:0.12, species:'birch' },
   [BIOME.DARK_FOREST]: { top:'mc:podzol', filler:'mc:dirt', trees:0.075, grass:0.08, species:'dark_oak' },
-  [BIOME.JUNGLE]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.072, grass:0.18, species:'jungle', ferns:0.2 },
-  [BIOME.SPARSE_JUNGLE]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.035, grass:0.2, species:'jungle', ferns:0.12 },
-  [BIOME.BAMBOO_JUNGLE]: { top:'mc:podzol', filler:'mc:dirt', trees:0.08, grass:0.18, species:'jungle', ferns:0.24 },
+  [BIOME.JUNGLE]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.14, grass:0.28, species:'jungle', ferns:0.42 },
+  [BIOME.SPARSE_JUNGLE]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.075, grass:0.24, species:'jungle', ferns:0.24 },
+  [BIOME.BAMBOO_JUNGLE]: { top:'mc:podzol', filler:'mc:dirt', trees:0.13, grass:0.26, species:'jungle', ferns:0.4 },
   [BIOME.DESERT]: { top:'mc:sand', filler:'mc:sand', trees:0, grass:0, deadBush:0.025 },
-  [BIOME.SAVANNA]: { top:'mc:coarse_dirt', filler:'mc:dirt', trees:0.032, grass:0.18, species:'acacia' },
-  [BIOME.SAVANNA_PLATEAU]: { top:'mc:coarse_dirt', filler:'mc:stone', trees:0.025, grass:0.14, species:'acacia' },
-  [BIOME.SHATTERED_SAVANNA]: { top:'mc:stone', filler:'mc:coarse_dirt', trees:0.012, grass:0.08, species:'acacia' },
+  [BIOME.SAVANNA]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.042, grass:0.48, species:'acacia', deadBush:0.006 },
+  [BIOME.SAVANNA_PLATEAU]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.034, grass:0.42, species:'acacia', deadBush:0.008 },
+  [BIOME.SHATTERED_SAVANNA]: { top:'mc:grass_block', filler:'mc:coarse_dirt', trees:0.022, grass:0.34, species:'acacia', deadBush:0.01 },
   [BIOME.BADLANDS]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0, grass:0, deadBush:0.02 },
   [BIOME.WOODED_BADLANDS]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0.012, grass:0.015, species:'oak', deadBush:0.012 },
   [BIOME.ERODED_BADLANDS]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0, grass:0, deadBush:0.01 },
@@ -209,10 +209,10 @@ export class TerrainGenerator {
     const wxw = wx + this.warp.sample2(wx, wz, 0.004) * 24;
     const wzw = wz + this.warp.sample2(wz + 913, wx - 421, 0.004) * 24;
     const c = this.continent.sample2(wxw, wzw, 0.0021);
-    const T = quant(this.temperature.sample2(wxw, wzw, 0.0032));
-    const H = quant(this.humidity.sample2(wxw, wzw, 0.0036));
-    const R = quant(this.biomeRarity.sample2(wxw, wzw, 0.0045));
-    const D = quant(this.biomeDetail.sample2(wxw, wzw, 0.012));
+    const T = quant(this.temperature.sample2(wxw, wzw, 0.00125));
+    const H = quant(this.humidity.sample2(wxw, wzw, 0.00135));
+    const R = quant(this.biomeRarity.sample2(wxw, wzw, 0.0017));
+    const D = quant(this.biomeDetail.sample2(wxw, wzw, 0.0045));
     const rel = quant(this.relief.sample2(wxw, wzw, 0.0042));
     const rv = this.river.sample2(wxw, wzw, 0.0021);
     const desertness = smooth01(T, 0.7, 0.8) * (1 - smooth01(H, 0.25, 0.4));
@@ -231,6 +231,16 @@ export class TerrainGenerator {
     const hillM = smooth01(f.rel, 0.5, 0.85) * (1 - f.desertness * 0.7);
     land += hillM * Math.max(0, this.detail.sample2(wx + 200, wz - 300, 0.03) + 0.06) * 45;
     if (f.mountM > 0.001) land += f.mountM * (this.ridge.ridged2(wx, wz, 0.005) * 62 - 14);
+    // Ice-spike fields are actual terrain formations, not tiny packed-ice "trees".
+    // Keep their footprint restricted to the same cold/rare climate used by _biome().
+    const spikeClimate = smooth01(0.17 - f.T, 0.0, 0.12) *
+      smooth01(f.R, 0.88, 0.96) * (1 - smooth01(f.rel, 0.48, 0.62)) *
+      (1 - smooth01(f.H, 0.48, 0.66));
+    if (spikeClimate > 0.01) {
+      const peaks = this.ridge.ridged2(wx + 1700, wz - 900, 0.018);
+      const spike = smooth01(peaks, 0.58, 0.82);
+      land += spikeClimate * spike * 48;
+    }
     if (f.mesaZ > 0.001) {
       const m = quant(this.mesa.sample2(wx, wz, 0.007)) * 4;
       const step = Math.floor(m) + smooth01(m - Math.floor(m), 0.82, 1);
@@ -579,7 +589,8 @@ export class TerrainGenerator {
         if (top < 0) continue;
 
         const submerged = top < SEA_LEVEL;
-        const topId = submerged && biome !== BIOME.OCEAN ? 'mc:sand' : surface.top;
+        const junglePodzol = [BIOME.JUNGLE, BIOME.JUNGLE_HILLS, BIOME.BAMBOO_JUNGLE].includes(biome) && this.patch.sample2(baseX + x, baseZ + z, 0.09) > 0.18;
+        const topId = submerged && biome !== BIOME.OCEAN ? 'mc:sand' : junglePodzol ? 'mc:podzol' : surface.top;
 
         const topState = S.byId[topId];
         const badlands = biome === BIOME.BADLANDS || biome === BIOME.WOODED_BADLANDS || biome === BIOME.ERODED_BADLANDS;
@@ -649,7 +660,7 @@ export class TerrainGenerator {
   placeTrees(chunk, baseX, baseZ) {
     const S=this.states.byId;
     const passable=(id)=>id==='mc:air'||id==='mc:short_grass'||id==='mc:fern'||id==='mc:dandelion'||
-      id==='mc:poppy'||id==='mc:dead_bush'||id==='mc:red_mushroom'||id==='mc:brown_mushroom';
+      id==='mc:poppy'||id==='mc:dead_bush'||id==='mc:red_mushroom'||id==='mc:brown_mushroom'||id==='mc:vine';
     const margin=TREE_MARGIN+1;
     for(let wz=baseZ-margin;wz<baseZ+CHUNK_SIZE+margin;wz++) for(let wx=baseX-margin;wx<baseX+CHUNK_SIZE+margin;wx++) {
       const tree=this.treeAt(wx,wz); if(!tree) continue;
@@ -666,6 +677,13 @@ export class TerrainGenerator {
         if(x<0||x>=CHUNK_SIZE||z<0||z>=CHUNK_SIZE) continue;
         const id=chunk.getBlock(x,tree.y+dy,z).block.id;
         if(passable(id)||/_leaves$/.test(id)) chunk.setBlock(x,tree.y+dy,z,log);
+      }
+      const vine=S['mc:vine'];
+      if(vine) for(const [dx,dy,dz] of tree.vines ?? []) {
+        const x=wx+dx-baseX,z=wz+dz-baseZ;
+        if(x<0||x>=CHUNK_SIZE||z<0||z>=CHUNK_SIZE) continue;
+        const id=chunk.getBlock(x,tree.y+dy,z).block.id;
+        if(passable(id)) chunk.setBlock(x,tree.y+dy,z,vine);
       }
     }
   }

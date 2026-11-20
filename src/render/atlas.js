@@ -512,6 +512,7 @@ const TEXTURES = {
   red_mushroom:       () => crossPlant('red_mushroom', (t) => { for (let y=3;y<13;y++) for (let x=4;x<12;x++) if ((x-8)**2+(y-7)**2<19) setPx(t,x,y,190,48,42); setPx(t,8,12,224,210,184); }),
   brown_mushroom:     () => crossPlant('brown_mushroom', (t) => { for (let y=4;y<12;y++) for (let x=4;x<12;x++) if ((x-8)**2+(y-7)**2<20) setPx(t,x,y,126,83,54); setPx(t,8,12,224,210,184); }),
   bamboo:             () => crossPlant('bamboo', (t) => { for (let y=1;y<15;y++) { setPx(t,7,y,75,139,48); setPx(t,8,y,105,170,61); } for (let x=5;x<11;x++) setPx(t,x,5,54,105,39); for (let x=5;x<11;x++) setPx(t,x,11,54,105,39); }),
+  vine:               () => crossPlant('vine', (t) => { for (let y=0;y<16;y++) for (let x=4;x<12;x++) if ((x+y)%4!==0) setPx(t,x,y,58,105,45); }),
   dandelion:          () => crossPlant('dandelion', (t, r) => flower(t, r, hex(0x4f8f38), hex(0xf5d63a), hex(0xfff2a0))),
   poppy:              () => crossPlant('poppy', (t, r) => flower(t, r, hex(0x4f8f38), hex(0xd93b30), hex(0x2a2a2a))),
 };
