@@ -96,6 +96,7 @@ stoneLike('mc:cobblestone', 'cobblestone', 2, 6);
 stoneLike('mc:mossy_cobblestone', 'mossy_cobblestone', 2, 6);
 stoneLike('mc:granite', 'granite', 1.5, 6);
 stoneLike('mc:polished_granite', 'polished_granite', 1.5, 6);
+stoneLike('mc:stone_bricks', 'stone_bricks', 1.5, 6);
 stoneLike('mc:diorite', 'diorite', 1.5, 6);
 stoneLike('mc:polished_diorite', 'polished_diorite', 1.5, 6);
 stoneLike('mc:andesite', 'andesite', 1.5, 6);
@@ -383,11 +384,13 @@ function stairs(baseId, { tool, harvestLevel = -1, requiresTool = false, sound =
 const STONE_LIKE = { tool: 'pickaxe', harvestLevel: 0, requiresTool: true, sound: 'stone' };
 const WOOD_LIKE = { tool: 'axe', sound: 'wood' };
 
-for (const base of ['mc:stone', 'mc:cobblestone', 'mc:sandstone']) {
+for (const base of ['mc:stone', 'mc:cobblestone', 'mc:sandstone',
+  'mc:granite', 'mc:polished_granite', 'mc:diorite', 'mc:polished_diorite',
+  'mc:andesite', 'mc:polished_andesite', 'mc:stone_bricks']) {
   slab(base, STONE_LIKE);
   stairs(base, STONE_LIKE);
 }
-for (const wood of ['oak', 'birch', 'spruce', 'acacia', 'dark_oak']) {
+for (const wood of ['oak', 'birch', 'spruce', 'jungle', 'acacia', 'dark_oak']) {
   slab(`mc:${wood}_planks`, WOOD_LIKE);
   stairs(`mc:${wood}_planks`, WOOD_LIKE);
 }
