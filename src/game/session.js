@@ -116,6 +116,24 @@ export const SessionMixin = {
       }
     }
 
+    // Existing worlds receive the same ruined portal on their first load after this update.
+    if (this.world.dimension === 'overworld' && !meta.ruinedPortalSpawned) {
+      const obsidian = BLOCKS.get('mc:obsidian')?.defaultState;
+      const baseX = Math.floor(this.player.x + 10), baseY = Math.floor(this.player.y), baseZ = Math.floor(this.player.z + 10);
+      if (obsidian) {
+        for (let dx=0; dx<4; dx++) for (let dy=0; dy<5; dy++) {
+          const edge=dx===0||dx===3||dy===0||dy===4;
+          if(edge && !(dx===1&&dy===4) && !(dx===0&&dy===2)) this.world.setBlock(baseX+dx,baseY+dy,baseZ,obsidian);
+        }
+        const chestBlock=BLOCKS.get('mc:chest');
+        if(chestBlock) this.world.setBlock(baseX+4,baseY,baseZ,chestBlock.defaultState);
+        const loot=this._chestAt?.(baseX+4,baseY,baseZ);
+        if(loot) for(const [id,count] of [['mc:flint',2],['mc:iron_ingot',1],['mc:obsidian',3],['mc:gold_nugget',5]]) { const stack=ItemStack.of(id,count); if(stack) loot.insert(stack); }
+        meta.ruinedPortalSpawned=true;
+        await storage.putWorld(meta);
+      }
+    }
+
     this.craftingGrid = new CraftingGrid(2, RECIPES);
     this._rebuildInventoryUI();
 
