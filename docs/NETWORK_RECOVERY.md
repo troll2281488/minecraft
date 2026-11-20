@@ -6,6 +6,8 @@ valid room code appear unusable.
 
 ## Changes
 
+Implementation branch: `feature/multiplayer-reconnect-stability`.
+
 - Room creation claims a short code with a Firebase Realtime Database transaction.
   A random-code collision no longer overwrites an existing room/world.
 - The lobby lists valid, non-archived room records even when their player list is
