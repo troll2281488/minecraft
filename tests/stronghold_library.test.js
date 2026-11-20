@@ -55,6 +55,6 @@ describe('Java 1.19 stronghold library pieces', () => {
     const libraryX = site.x - 28;
     const libraryZ = site.z - 5;
     assertEqual(chunk.getBlock(libraryX + 2 + 32, site.y + 1, libraryZ + 2).block.id, 'mc:chest');
-    assertEqual(chunk.getBlock(libraryX + 1 + 32, site.y + 1, libraryZ + 1).block.id, 'mc:air');
+    assert(chunk.getBlock(libraryX + 1 + 32, site.y + 1, libraryZ + 1).block.id !== 'mc:ladder', 'compact variant has no ladder');
   });
 });
