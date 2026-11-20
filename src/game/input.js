@@ -145,7 +145,8 @@ export const InputMixin = {
 
     if (isAction(e.code, 'inventory')) {
       e.preventDefault();
-      if (this.inventoryOpen) this._closeInventory();
+      if (this._activeContainer) this._closeContainer();
+      else if (this.inventoryOpen) this._closeInventory();
       else if (this.player.gamemode === GAMEMODE.CREATIVE) this._openCreativeInventory();
       else this._openInventory();
       return;
