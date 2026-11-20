@@ -33,6 +33,22 @@ export function electRoomHost(room, players) {
 }
 
 /** Keep valid room records discoverable even when every player temporarily disconnects. */
+/** Extract only public visual equipment identifiers; never replicate full inventories. */
+export function remoteEquipmentSnapshot(inventory) {
+  if (!inventory) return { heldItem: null, offhandItem: null, armor: [] };
+  const itemIdAt = (index) => {
+    const stack = inventory.get?.(index) ?? inventory.slots?.[index];
+    if (!stack || stack.isEmpty || !stack.item) return null;
+    const id = String(stack.item.id || '');
+    return /^[a-z0-9_.-]+:[a-z0-9_./-]+$/i.test(id) ? id.slice(0, 128) : null;
+  };
+  return {
+    heldItem: itemIdAt(inventory.selectedSlot ?? 0),
+    offhandItem: itemIdAt(40),
+    armor: [itemIdAt(36), itemIdAt(37), itemIdAt(38), itemIdAt(39)],
+  };
+}
+
 /** Apply validated animation and status fields from a remote player snapshot. */
 export function applyRemotePlayerState(current, snapshot) {
   if (!current || !snapshot || typeof snapshot !== 'object') return current;
@@ -46,6 +62,11 @@ export function applyRemotePlayerState(current, snapshot) {
   current.gamemode = ['survival', 'creative', 'spectator'].includes(snapshot.gamemode) ? snapshot.gamemode : 'survival';
   current.attackTime = Number.isFinite(snapshot.attackTime) ? Math.max(0, Math.min(10, snapshot.attackTime)) : 0;
   current.attacking = current.attackTime > 0;
+  current.heldItem = typeof snapshot.heldItem === 'string' ? snapshot.heldItem.slice(0, 128) : null;
+  current.offhandItem = typeof snapshot.offhandItem === 'string' ? snapshot.offhandItem.slice(0, 128) : null;
+  current.armor = Array.isArray(snapshot.armor)
+    ? snapshot.armor.slice(0, 4).map((id) => typeof id === 'string' ? id.slice(0, 128) : null)
+    : [null, null, null, null];
   current.targetX = snapshot.x;
   current.targetY = snapshot.y;
   current.targetZ = snapshot.z;
@@ -630,6 +651,7 @@ export class Multiplayer {
       sneaking: !!p.sneaking,
       sprinting: !!p.sprinting,
       attackTime: Math.max(0, Math.min(10, Number(p.attackTime) || 0)),
+      ...remoteEquipmentSnapshot(this.game.inventory),
       ts: Date.now(),
     };
   }
