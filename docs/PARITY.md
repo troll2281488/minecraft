@@ -67,6 +67,7 @@ Reference target for this compatibility track is **Minecraft: Java Edition 1.19.
 | 10-stage crack overlay | overlay on the block being broken | ✅ *(generated in-shader rather than as a texture)* |
 | Block drops seeded from world seed + position | reproducible | ✅ |
 | Ore mining XP (coal, lapis, redstone, diamond, emerald, nether quartz) | vanilla XP ranges, harvest-tool gated | 🟡 *(orb pickup is implemented; Fortune/Silk Touch and full deepslate catalog remain incomplete)* |
+| Fishing, breeding and villager trade XP | Java 1.19 point ranges | 🟡 *(orbs and pickup work; breeding/trading rules remain simplified)* |
 
 ## Inventory & crafting
 
@@ -156,7 +157,7 @@ Room-code joining, remote avatar rendering, chat, shared overworld block edits, 
 
 ## Not yet started
 
-Survival is partial: health, hunger, player XP levels, XP orbs from player-credited mob kills and eligible ore mining, same-value orb merging, water buoyancy, fire/lava/cactus destruction, XP attraction/pickup and the survival XP HUD are present, with food consumption and basic starvation/
+Survival is partial: health, hunger, player XP levels, XP orbs from player-credited mob kills, eligible ore mining, fishing, successful animal breeding and villager trades; same-value orb merging, water buoyancy, fire/lava/cactus destruction, XP attraction/pickup and the survival XP HUD are present, with food consumption and basic starvation/
 regeneration; mob spawning, wandering, simple fleeing/pursuit, melee combat with armour damage reduction/durability, sheep shearing,
 fishing, apple drops from oak leaves, wheat seed drops from grass, rare zombie carrot/potato drops, and drops for pigs, sheep, cows, chickens and zombies are implemented in simplified
 form. Basic wheat farming is now playable: hoes till soil, seeds plant crops, seven growth stages advance near the player, and mature wheat yields wheat/seeds; bread is craftable. Crop growth is a fixed 600-tick interval within a 6-block player radius, without vanilla light, hydration or neighbour checks. Still missing are full vanilla mob AI, breeding, chicken egg laying, armour enchantments and potion effects, and vanilla death/drop/respawn rules. Fluids and flow, redstone, enchanting and
