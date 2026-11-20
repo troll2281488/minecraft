@@ -114,6 +114,7 @@ export class MobSystem {
     this.game = game;
     this.mobs = [];
     this.arrows = [];
+    this.blockParticles = [];
     this.bowDrawStart = null;
     this.droppedItems = [];
     this.spawnTicks = 0;
@@ -128,6 +129,7 @@ export class MobSystem {
   reset() {
     this.mobs.length = 0;
     this.arrows.length = 0;
+    this.blockParticles.length = 0;
     this.bowDrawStart = null;
     this.droppedItems.length = 0;
     this.spawnTicks = 0;
@@ -136,6 +138,38 @@ export class MobSystem {
     this.villageCheckTicks = 0;
     this.villageGenerator = null;
     this.populatedVillages.clear();
+  }
+
+  spawnBlockParticles(x, y, z, blockId = '') {
+    const palette = blockId.includes('grass') ? [0.35, 0.58, 0.24, 1]
+      : blockId.includes('dirt') || blockId.includes('mud') ? [0.43, 0.29, 0.17, 1]
+      : blockId.includes('sand') ? [0.78, 0.70, 0.48, 1]
+      : blockId.includes('ore') ? [0.48, 0.47, 0.43, 1]
+      : blockId.includes('wood') || blockId.includes('log') ? [0.42, 0.29, 0.16, 1]
+      : [0.55, 0.55, 0.55, 1];
+    for (let i = 0; i < 10; i++) {
+      this.blockParticles.push({
+        x: x + 0.2 + Math.random() * 0.6,
+        y: y + 0.2 + Math.random() * 0.6,
+        z: z + 0.2 + Math.random() * 0.6,
+        vx: (Math.random() - 0.5) * 0.16,
+        vy: Math.random() * 0.12 + 0.025,
+        vz: (Math.random() - 0.5) * 0.16,
+        life: 18 + Math.floor(Math.random() * 10),
+        color: palette,
+      });
+    }
+  }
+
+  _tickBlockParticles() {
+    for (let i = this.blockParticles.length - 1; i >= 0; i--) {
+      const p = this.blockParticles[i];
+      p.x += p.vx; p.y += p.vy; p.z += p.vz;
+      p.vy -= 0.012;
+      p.vx *= 0.94; p.vz *= 0.94;
+      p.life--;
+      if (p.life <= 0) this.blockParticles.splice(i, 1);
+    }
   }
 
   beginBowDraw() {
@@ -766,6 +800,7 @@ export class MobSystem {
     }
     if (this.attackCooldown > 0) this.attackCooldown--;
     this._tickArrows();
+    this._tickBlockParticles();
     // Populate nearby loaded chunks quickly so a new world does not feel empty.
     if (this.spawnTicks >= 180 && this.mobs.length < 7) {
       this.spawnTicks = 0;
