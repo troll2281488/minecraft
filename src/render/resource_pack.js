@@ -18,10 +18,19 @@ const STORAGE_KEY = 'mc-resource-pack';
 const ITSBRIAN_RAW = 'https://raw.githubusercontent.com/ItsBrian/minecraft-textures/main/';
 
 const BLOCK_TEXTURE_ALIASES = Object.freeze({
-  // The game uses a few descriptive keys that differ from vanilla asset names.
+  // Use the classic brown dirt tile for every biome soil alias.
   short_grass: 'grass',
   wheat_crop: 'wheat_stage7',
   water: 'water_still',
+  plains_soil: 'dirt',
+  forest_floor: 'dirt',
+  birch_soil: 'dirt',
+  jungle_soil: 'dirt',
+  savanna_soil: 'dirt',
+  taiga_soil: 'dirt',
+  swamp_mud: 'dirt',
+  // The community pack's gravel tile is tinted purple; use our neutral grey tile.
+  alpine_gravel: 'gravel',
 });
 
 const ITEM_TEXTURE_ALIASES = Object.freeze({
@@ -96,9 +105,7 @@ export async function loadItsBrianTextures(blocks, items) {
     // Keep foliage and soil textures local. Grass top and side deliberately load
     // from ItsBrian: the shader tints only green pixels, never the brown dirt.
     if (name.endsWith('_leaves') || name.endsWith('_sapling') || [
-      'coarse_dirt', 'podzol_top',
-      'podzol_side', 'plains_soil', 'forest_floor', 'birch_soil', 'jungle_soil',
-      'savanna_soil', 'taiga_soil', 'swamp_mud', 'alpine_gravel',
+      'coarse_dirt', 'gravel', 'podzol_top', 'podzol_side',
     ].includes(name)) return null;
     const sourceName = BLOCK_TEXTURE_ALIASES[name] ?? name;
     if (name === 'chest_side' || name === 'chest_top') {
