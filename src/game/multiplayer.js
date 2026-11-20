@@ -50,7 +50,7 @@ export class Multiplayer {
     this.remotePlayers = new Map();
     this.pendingBlocks = new Map();
     this.unsubscribers = [];
-    this.syncElapsed = 0;
+    this.syncElapsed = 0;\n    this.syncInFlight = false;
     this.presenceElapsed = 0;
     this.worldSyncElapsed = 0;
     this.hudElapsed = 0;
@@ -492,12 +492,17 @@ export class Multiplayer {
       this.hudElapsed = 0;
       this._updateRoomHud();
     }
-    if (this.syncElapsed >= 0.12) {
+    // Avoid flooding Firebase on slow links. Never queue multiple stale
+    // position writes: send the newest position only after the prior write ends.
+    const syncInterval = this.serverPingMs > 800 ? 0.65 : this.serverPingMs > 350 ? 0.4 : 0.25;
+    if (this.syncElapsed >= syncInterval && !this.syncInFlight) {
       this.syncElapsed = 0;
+      this.syncInFlight = true;
       const pingStarted = performance.now();
       update(ref(this.db, `minecraft_game/rooms/${this.roomId}/players/${this.uid}`), this._playerPayload())
         .then(() => { this.serverPingMs = Math.round(performance.now() - pingStarted); })
-        .catch((error) => console.warn('[multiplayer] player sync:', error));
+        .catch((error) => console.warn('[multiplayer] player sync:', error))
+        .finally(() => { this.syncInFlight = false; });
     }
     if (this.worldSyncElapsed >= 2) {
       this.worldSyncElapsed = 0;
