@@ -163,6 +163,15 @@ export const BlockActionsMixin = {
     if (this.entities?.feedAnimalFromPlayer()) return;
     if (this._farmInteraction()) return;
     const sneaking = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
+    if (this.hit && !sneaking && this.hit.state.block.renderShape === 'trapdoor') {
+      const trapdoor = this.hit.state;
+      // Iron trapdoors require redstone; wooden variants can be used by hand.
+      if (trapdoor.block.id === 'mc:iron_trapdoor') return true;
+      const next = trapdoor.with('open', !trapdoor.get('open'));
+      this.world.setBlock(this.hit.x, this.hit.y, this.hit.z, next);
+      this.multiplayer?.pushBlockChange(this.hit.x, this.hit.y, this.hit.z, next);
+      return true;
+    }
     if (this.hit && !sneaking && this.hit.state.block.renderShape === 'door') {
       const doorState = this.hit.state;
       // Iron doors require a redstone signal; manual interaction only works on wood.

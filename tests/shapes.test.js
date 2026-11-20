@@ -72,6 +72,24 @@ describe('shapes: box geometry', () => {
     assertDeepEqual(collisionBoxes(door), closed);
   });
 
+  it('trapdoors use a thin horizontal panel when closed and vertical panel when open', () => {
+    const trapdoor = BLOCKS.get('mc:oak_trapdoor').defaultState;
+    assertDeepEqual(shapeBoxes(trapdoor), [[0, 0, 0, 1, 0.1875, 1]]);
+    assertDeepEqual(shapeBoxes(trapdoor.with('half', 'top')), [[0, 0.8125, 0, 1, 1, 1]]);
+    assertDeepEqual(shapeBoxes(trapdoor.with('open', true)), [[0, 0, 0, 1, 1, 0.1875]]);
+    assertDeepEqual(collisionBoxes(trapdoor), shapeBoxes(trapdoor));
+    assert(isNonCube(trapdoor));
+  });
+
+  it('all six wooden trapdoors and iron trapdoor are registered', () => {
+    for (const id of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak', 'iron']) {
+      const block = BLOCKS.get(`mc:${id}_trapdoor`);
+      assert(block, `${id} trapdoor missing`);
+      assertEqual(block.renderShape, 'trapdoor');
+      assertEqual(block.states.length, 4 * 2 * 2 * 2);
+    }
+  });
+
   it('all six wooden door variants and iron door are registered', () => {
     for (const id of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak', 'iron']) {
       const block = BLOCKS.get(`mc:${id}_door`);

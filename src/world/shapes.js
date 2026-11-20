@@ -143,6 +143,25 @@ function doorBoxes(state) {
 }
 
 // ---------------------------------------------------------------------------
+// Trapdoors (horizontal slab when closed, vertical panel when open)
+// ---------------------------------------------------------------------------
+
+const TRAPDOOR_THICKNESS = 0.1875;
+function trapdoorBoxes(state) {
+  if (!state.get('open')) {
+    return [state.get('half') === 'top'
+      ? [0, 1 - TRAPDOOR_THICKNESS, 0, 1, 1, 1]
+      : [0, 0, 0, 1, TRAPDOOR_THICKNESS, 1]];
+  }
+  switch (state.get('facing')) {
+    case 'north': return [[0, 0, 0, 1, 1, TRAPDOOR_THICKNESS]];
+    case 'south': return [[0, 0, 1 - TRAPDOOR_THICKNESS, 1, 1, 1]];
+    case 'east': return [[1 - TRAPDOOR_THICKNESS, 0, 0, 1, 1, 1]];
+    default: return [[0, 0, 0, TRAPDOOR_THICKNESS, 1, 1]];
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -157,6 +176,7 @@ export function shapeBoxes(state) {
     case 'pane': return PANE_BOXES;
     case 'ladder': return ladderBoxes(state);
     case 'door': return doorBoxes(state);
+    case 'trapdoor': return trapdoorBoxes(state);
     default: return FULL_LIST;
   }
 }
@@ -173,8 +193,8 @@ export function collisionBoxes(state) {
 /** True if this block is anything other than a plain full cube. */
 export function isNonCube(state) {
   const shape = state.block.renderShape;
-  return shape === 'slab' || shape === 'stair' || shape === 'pane' || shape === 'ladder' || shape === 'door';
+  return shape === 'slab' || shape === 'stair' || shape === 'pane' || shape === 'ladder' || shape === 'door' || shape === 'trapdoor';
 }
 
 /** The shapes the mesher must render with the box emitter rather than as a cube. */
-export const BOX_SHAPES = Object.freeze(new Set(['slab', 'stair', 'pane', 'ladder', 'door']));
+export const BOX_SHAPES = Object.freeze(new Set(['slab', 'stair', 'pane', 'ladder', 'door', 'trapdoor']));
