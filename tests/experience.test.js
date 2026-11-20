@@ -1,5 +1,5 @@
 import { describe, it, assertEqual } from './framework.js';
-import { PlayerExperience, experienceToNextLevel, splitExperienceIntoOrbs, experienceForMob, experienceForBlock, mergeExperienceOrbState, isExperienceOrbHazard, experienceForFishing, experienceForBreeding, experienceForVillagerTrade } from '../src/entity/experience.js';
+import { PlayerExperience, experienceToNextLevel, splitExperienceIntoOrbs, experienceForMob, experienceForBlock, mergeExperienceOrbState, isExperienceOrbHazard, experienceForFishing, experienceForBreeding, experienceForVillagerTrade, experienceDroppedOnDeath } from '../src/entity/experience.js';
 import { Player } from '../src/entity/player.js';
 import { InputMixin } from '../src/game/input.js';
 
@@ -157,5 +157,23 @@ describe('Java-style XP from non-combat activities', () => {
   it('rolls villager trade XP from 3 through 6 points', () => {
     assertEqual(experienceForVillagerTrade(() => 0), 3);
     assertEqual(experienceForVillagerTrade(() => 0.999), 6);
+  });
+});
+
+
+describe('Java-style player death experience', () => {
+  it('drops seven times the current level, capped at 100 XP', () => {
+    assertEqual(experienceDroppedOnDeath(0), 0);
+    assertEqual(experienceDroppedOnDeath(1), 7);
+    assertEqual(experienceDroppedOnDeath(7), 49);
+    assertEqual(experienceDroppedOnDeath(14), 98);
+    assertEqual(experienceDroppedOnDeath(15), 100);
+    assertEqual(experienceDroppedOnDeath(100), 100);
+  });
+
+  it('normalizes invalid and fractional levels safely', () => {
+    assertEqual(experienceDroppedOnDeath(-4), 0);
+    assertEqual(experienceDroppedOnDeath(3.9), 21);
+    assertEqual(experienceDroppedOnDeath(NaN), 0);
   });
 });
