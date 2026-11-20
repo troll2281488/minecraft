@@ -608,6 +608,18 @@ export class MobSystem {
       return true;
     }
 
+    if (mob.type === 'horse' && mob.tamed && mob.saddled && (!held || held.isEmpty)) {
+      if (player.ridingHorse === mob) {
+        player.ridingHorse = null;
+        this.game.ui?.toast('Ты слез с лошади');
+      } else if (!player.ridingHorse) {
+        player.ridingHorse = mob;
+        mob.targetYaw = player.yaw * Math.PI / 180;
+        this.game.ui?.toast('Ты сел на лошадь');
+      }
+      return true;
+    }
+
     if (mob.type === 'horse' && mob.tamed && held?.item?.horseArmor && !mob.horseArmor) {
       mob.horseArmor = held.item.horseArmor;
       if (player.gamemode !== 'creative') this.game.inventory.consumeHeld(1);
@@ -875,6 +887,14 @@ export class MobSystem {
             mob.hurtTicks = 5;
           }
         } else mob.sunBurnTicks = 0;
+      }
+
+      if (player.ridingHorse === mob) {
+        mob.x = player.x; mob.y = player.y - 0.15; mob.z = player.z;
+        mob.yaw = player.yaw * Math.PI / 180;
+        mob.walkPhase += Math.hypot(player.vx || 0, player.vz || 0) * 8;
+        mob.anim.walking = Math.hypot(player.vx || 0, player.vz || 0) > 0.01;
+        continue;
       }
 
       const profile = MOB_AI_PROFILES[mob.type] ?? null;
