@@ -194,6 +194,13 @@ export const BlockActionsMixin = {
       this.multiplayer?.pushBlockChange(this.hit.x, this.hit.y, this.hit.z, next);
       return true;
     }
+    if (this.hit && !sneaking && this.hit.state.block.renderShape === 'comparator') {
+      const state = this.hit.state;
+      const next = state.with('mode', state.get('mode') === 'compare' ? 'subtract' : 'compare');
+      this.world.setBlock(this.hit.x, this.hit.y, this.hit.z, next);
+      this.multiplayer?.pushBlockChange(this.hit.x, this.hit.y, this.hit.z, next);
+      return true;
+    }
     if (this.hit && !sneaking && this.hit.state.block.renderShape === 'repeater') {
       const state = this.hit.state;
       const next = state.with('delay', state.get('delay') % 4 + 1);
@@ -373,7 +380,7 @@ export const BlockActionsMixin = {
       const support = this.world.getBlock(target.x, target.y - 1, target.z);
       if (!support.block.solid || !support.block.opaqueCube) return;
     }
-    if (block.renderShape === 'repeater') {
+    if (['repeater', 'comparator'].includes(block.renderShape)) {
       if (this.hit.face?.dy !== 1) return;
       const support = this.world.getBlock(target.x, target.y - 1, target.z);
       if (!support.block.solid || !support.block.opaqueCube) return;

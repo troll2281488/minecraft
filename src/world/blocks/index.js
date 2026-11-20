@@ -397,6 +397,14 @@ define('mc:daylight_detector', {
   defaultValues: { power: 0, inverted: false },
 });
 
+// Comparator: directional analogue transmission with compare/subtract modes.
+define('mc:comparator', {
+  hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
+  soundGroup: 'stone', renderShape: 'comparator', texture: 'comparator',
+  properties: { facing: PROPS.facing, mode: PROPS.comparatorMode, power: PROPS.power, powered: PROPS.powered },
+  defaultValues: { facing: 'north', mode: 'compare', power: 0, powered: false },
+});
+
 // Redstone power sources from the Java 1.19 block set.
 function button(id, texture, wood = false) {
   define(`mc:${id}_button`, {

@@ -676,6 +676,16 @@ TEXTURES.redstone_wire = () => {
   }
   return tile;
 };
+TEXTURES.comparator = () => {
+  const tile = grainy(hex(0x777777), 0.1, 'comparator');
+  const stone = hex(0x9b9b9b), red = hex(0xb72b2b), dark = hex(0x4b2424), quartz = hex(0xd9c9a8);
+  for (let y = 4; y < 12; y++) for (let x = 2; x < 14; x++) {
+    const c = (x < 5 || x > 10) ? stone : (y >= 7 && y <= 8 ? red : dark);
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  for (let y = 6; y < 10; y++) for (let x = 7; x < 9; x++) setPx(tile, x, y, quartz[0], quartz[1], quartz[2]);
+  return tile;
+};
 TEXTURES.note_block = () => {
   const tile = planks(hex(0x8b5a32), 'note_block');
   const dark = hex(0x35251b), top = hex(0xb77a46);

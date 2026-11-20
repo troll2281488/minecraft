@@ -10,6 +10,26 @@ const NEIGHBORS = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
 const HORIZONTAL = [[1,0,0,'east','west'],[-1,0,0,'west','east'],[0,0,1,'south','north'],[0,0,-1,'north','south']];
 const FACING_VECTOR = { north: [0,0,-1], south: [0,0,1], east: [1,0,0], west: [-1,0,0] };
 
+export function comparatorOutput(rear, left = 0, right = 0, subtract = false) {
+  const back = Math.max(0, Math.min(15, Math.floor(Number(rear) || 0)));
+  const side = Math.max(Math.max(0, Math.min(15, Math.floor(Number(left) || 0))), Math.max(0, Math.min(15, Math.floor(Number(right) || 0))));
+  return subtract ? Math.max(0, back - side) : (back >= side ? back : 0);
+}
+
+/** Vanilla container fullness formula; slots contain {count, maxStackSize}. */
+export function comparatorContainerOutput(slots, slotCount = slots && slots.length || 0) {
+  if (!Array.isArray(slots) || slotCount <= 0) return 0;
+  let fullness = 0;
+  for (const slot of slots) {
+    if (!slot) continue;
+    const count = Math.max(0, Number(slot.count) || 0);
+    const max = Math.max(1, Number(slot.maxStackSize) || 64);
+    fullness += Math.min(1, count / max);
+  }
+  if (fullness <= 0) return 0;
+  return Math.max(1, Math.min(15, Math.floor(1 + (fullness / slotCount) * 14)));
+}
+
 export function daylightDetectorPower(time, inverted = false) {
   const t = ((Math.floor(time || 0) % 24000) + 24000) % 24000;
   let power;
@@ -28,6 +48,10 @@ function readSignal(world, x, y, z, targetX, targetY, targetZ) {
   if (state.block.id === 'mc:redstone_torch') return 15;
   if ((state.block.renderShape === 'lever' || state.block.renderShape === 'button' || state.block.renderShape === 'pressure_plate') && state.get('powered')) return 15;
   if (state.block.renderShape === 'weighted_pressure_plate') return state.get('power') || 0;
+  if (state.block.renderShape === 'comparator' && state.get('power') > 0) {
+    const [dx,dy,dz] = FACING_VECTOR[state.get('facing')] || [0,0,-1];
+    if (x+dx === targetX && y+dy === targetY && z+dz === targetZ) return state.get('power');
+  }
   if (state.block.renderShape === 'repeater' && state.get('powered')) {
     const [dx,dy,dz] = FACING_VECTOR[state.get('facing')] || [0,0,-1];
     if (x+dx === targetX && y+dy === targetY && z+dz === targetZ) return 15;
@@ -216,6 +240,7 @@ export const RedstoneDevicesMixin = {
     this._tickDaylightDetectors(baseX, baseY, baseZ, !!player);
     this._tickWeightedPressurePlates(baseX, baseY, baseZ, !!player);
     this._tickRepeaters(baseX, baseY, baseZ, !!player);
+    this._tickComparators(baseX, baseY, baseZ, !!player);
     this._tickRedstoneWireNetwork(baseX, baseY, baseZ, !!player);
     this._tickNoteBlocks(baseX, baseY, baseZ, !!player);
   },
@@ -315,6 +340,54 @@ export const RedstoneDevicesMixin = {
       const [dx,dy,dz]=FACING_VECTOR[next.get('facing')] || [0,0,-1];
       const out=world.getBlock(x+dx,y+dy,z+dz);
       applyMechanism(this,x+dx,y+dy,z+dz,out,timer.powered);
+    }
+  },
+
+  _tickComparators(baseX, baseY, baseZ, hasPlayer) {
+    if (!hasPlayer) return;
+    const world = this.world, tick = this.tickCount || 0;
+    this._comparatorTimers ||= new Map();
+    const sideSignal = (x, y, z, tx, ty, tz) => {
+      const state = world.getBlock(x, y, z);
+      if (state.block.id === 'mc:redstone_block') return 15;
+      if (!['redstone_wire', 'repeater', 'comparator'].includes(state.block.renderShape)) return 0;
+      return readSignal(world, x, y, z, tx, ty, tz);
+    };
+    for (let y = baseY - 3; y <= baseY + 4; y++) {
+      for (let x = baseX - 8; x <= baseX + 8; x++) for (let z = baseZ - 8; z <= baseZ + 8; z++) {
+        const state = world.getBlock(x, y, z);
+        if (state.block.renderShape !== 'comparator') continue;
+        const [dx, , dz] = FACING_VECTOR[state.get('facing')] || [0, 0, -1];
+        const rearX = x - dx, rearY = y, rearZ = z - dz;
+        const rearBlock = world.getBlock(rearX, rearY, rearZ);
+        let containerPower = 0;
+        if (rearBlock.block.id === 'mc:chest' || rearBlock.block.id === 'mc:trapped_chest') {
+          const chest = this._chestAt?.(rearX, rearY, rearZ);
+          if (chest?.slots) containerPower = comparatorContainerOutput(chest.slots, chest.slots.length);
+        } else if (rearBlock.block.id === 'mc:furnace') {
+          const furnace = this._furnaceAt?.(rearX, rearY, rearZ);
+          if (furnace) containerPower = comparatorContainerOutput([furnace.input, furnace.fuel, furnace.output], 3);
+        }
+        const rear = Math.max(readSignal(world, rearX, rearY, rearZ, x, y, z), containerPower);
+        const left = sideSignal(x + dz, y, z - dx, x, y, z);
+        const right = sideSignal(x - dz, y, z + dx, x, y, z);
+        const desired = comparatorOutput(rear, left, right, state.get('mode') === 'subtract');
+        const key = String(x) + ',' + y + ',' + z;
+        if (desired === state.get('power')) { this._comparatorTimers.delete(key); continue; }
+        const pending = this._comparatorTimers.get(key);
+        if (!pending || pending.power !== desired) this._comparatorTimers.set(key, { power: desired, due: tick + 2 });
+      }
+    }
+    for (const [key, pending] of this._comparatorTimers) {
+      const [x, y, z] = key.split(',').map(Number);
+      const state = world.getBlock(x, y, z);
+      if (state.block.renderShape !== 'comparator') { this._comparatorTimers.delete(key); continue; }
+      if (tick < pending.due) continue;
+      const next = state.with('power', pending.power).with('powered', pending.power > 0);
+      writeState(this, x, y, z, next);
+      this._comparatorTimers.delete(key);
+      const [dx, dy, dz] = FACING_VECTOR[next.get('facing')] || [0, 0, -1];
+      applyMechanism(this, x + dx, y + dy, z + dz, world.getBlock(x + dx, y + dy, z + dz), pending.power > 0);
     }
   },
 

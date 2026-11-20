@@ -70,6 +70,7 @@ recipes.push({ result: 'mc:light_weighted_pressure_plate', count: 1, pattern: ['
 recipes.push({ result: 'mc:heavy_weighted_pressure_plate', count: 1, pattern: ['II'], key: { I: 'mc:iron_ingot' } });
 recipes.push({ result: 'mc:daylight_detector', count: 1, pattern: ['GGG', 'QQQ', 'SSS'], key: { G: 'mc:glass', Q: 'mc:quartz', S: 'mc:oak_slab' } });
 recipes.push({ result: 'mc:note_block', count: 1, pattern: ['PPP', 'PRP', 'PPP'], key: { P: '#mc:planks', R: 'mc:redstone' } });
+recipes.push({ result: 'mc:comparator', count: 1, pattern: [' T ', 'TQT', 'SSS'], key: { T: 'mc:redstone_torch', Q: 'mc:quartz', S: 'mc:stone' } });
 
 recipes.push({
   result: 'mc:stick', count: 4,
