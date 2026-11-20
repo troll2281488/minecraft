@@ -413,6 +413,29 @@ for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) p
 pressurePlate('stone', 'stone_pressure_plate');
 pressurePlate('polished_blackstone', 'polished_blackstone_pressure_plate');
 
+// Six wood fences, their matching gates, and the Nether brick fence.
+function fence(id, texture, soundGroup = 'wood') {
+  define(`mc:${id}_fence`, {
+    hardness: 2, resistance: 3, tool: soundGroup === 'wood' ? 'axe' : 'pickaxe',
+    soundGroup, solid: true, opaqueCube: false, renderShape: 'fence', texture,
+    properties: { north: PROPS.north, south: PROPS.south, east: PROPS.east, west: PROPS.west },
+    defaultValues: { north: false, south: false, east: false, west: false },
+  });
+}
+function fenceGate(id, texture) {
+  define(`mc:${id}_fence_gate`, {
+    hardness: 2, resistance: 3, tool: 'axe', soundGroup: 'wood',
+    solid: true, opaqueCube: false, renderShape: 'fence_gate', texture,
+    properties: { facing: PROPS.facing, open: PROPS.open, powered: PROPS.powered },
+    defaultValues: { facing: 'north', open: false, powered: false },
+  });
+}
+for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) {
+  fence(wood, `${wood}_fence`);
+  fenceGate(wood, `${wood}_fence_gate`);
+}
+fence('nether_brick', 'nether_brick_fence', 'stone');
+
 define('mc:end_portal_frame', {
   hardness: -1, resistance: 3600000, soundGroup: 'stone',
   texture: 'end_portal_frame',
