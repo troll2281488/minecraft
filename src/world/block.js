@@ -84,6 +84,7 @@ export const PROPS = {
   ]),
   powered: boolProp('powered'),
   extended: boolProp('extended'),
+  sticky: boolProp('sticky'),
   inverted: boolProp('inverted'),
   lit: boolProp('lit'),
   open: boolProp('open'),
