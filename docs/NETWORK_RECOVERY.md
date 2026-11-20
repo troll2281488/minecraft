@@ -66,7 +66,24 @@ For online furnaces, only the elected room host advances the smelting timer and
 publishes periodic snapshots; this avoids every client simulating the same furnace
 and racing to write its progress.
 
-This is an initial replication layer only. It does not lock a container while a player edits it or provide server-side item
-validation. Offline snapshots are queued, but a later replay can still overwrite
+This is an initial replication layer only. It does not provide server-side item validation. Offline snapshots are queued, but a later replay can still overwrite
 newer changes made by another player while the client was disconnected. Avoid treating simultaneous edits as conflict-free until those
 protections and live two-browser tests are added.
+
+
+## Advisory container leases
+
+A player opening a shared chest or furnace attempts a Firebase transaction at
+`minecraft_game/rooms/{code}/containerLocks/{x,y,z}`. The lease is tied to the
+player's per-tab UID and a unique token. It expires after 15 seconds and is
+renewed every 5 seconds while the screen remains open. Closing the screen or
+leaving the room releases only the lease whose owner and token still match.
+If the browser closes unexpectedly, the expiry permits another player to open
+the container later. A failed acquisition, lost lease, or unavailable connection
+blocks slot interaction in that shared screen.
+
+This is an advisory client-side coordination mechanism, not a security boundary.
+The Firebase database rules are not stored in this repository, so the lock path's
+permissions must be verified against the live project. A client that writes
+directly to the container data path can bypass the UI lease. Offline queued
+snapshots also remain best-effort and can conflict with newer remote changes.
