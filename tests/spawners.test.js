@@ -3,7 +3,7 @@ import {
   SPAWNER_MOB_TYPES, spawnerMobType, spawnerPlayerInRange,
   countSpawnerMobs, nextSpawnerDelay, spawnerSpawnPosition,
 } from '../src/entity/spawners.js';
-import { placeDungeonRoom, placeStrongholdPortalRoom, dungeonDims } from '../src/world/gen/structures.js';
+import { placeDungeonRoom, placeStrongholdPortalRoom, placeStrongholdRoomNetwork, dungeonDims } from '../src/world/gen/structures.js';
 import { dungeonCandidateForCell, strongholdCandidateForCell } from '../src/world/gen/terrain.js';
 import { positionalRandom } from '../src/core/rng.js';
 import { Chest } from '../src/game/containers.js';
@@ -89,6 +89,25 @@ describe('Java monster spawner rules', () => {
     assertEqual(placed.get(key(px + 5, site.y + 2, pz + 1))?.get('spawner_type'), 'silverfish');
     assertEqual(placed.get(key(px + 5, site.y, pz + 5))?.block.id, 'mc:lava');
     assertEqual(placed.get(key(px + 2, site.y, pz + 5))?.block.id, 'mc:lava');
+  });
+
+
+  it('builds a connected multi-room stronghold branch network with a stocked store room', () => {
+    const ids = ['mc:air','mc:stone_bricks','mc:mossy_stone_bricks','mc:oak_planks',
+      'mc:stone_bricks_slab','mc:water','mc:torch','mc:chest'];
+    const states = Object.fromEntries(ids.map(id => [id, BLOCKS.get(id)?.defaultState]).filter(([, state]) => state));
+    const placed = new Map();
+    const key = (x,y,z) => `${x},${y},${z}`;
+    const writer = { set: (x,y,z,state) => placed.set(key(x,y,z), state) };
+    const site = { x: 200, y: 18, z: 300 };
+    placeStrongholdRoomNetwork(writer, states, site, 'stronghold-network-test');
+    const at = (x,y,z) => placed.get(key(x,y,z));
+    assertEqual(at(site.x + 7, site.y + 1, site.z - 24)?.block.id, 'mc:chest');
+    assertEqual(at(site.x + 7, site.y + 1, site.z - 12)?.block.id, 'mc:water');
+    assertEqual(at(site.x + 19, site.y + 2, site.z - 13)?.block.id, 'mc:stone_bricks');
+    assertEqual(at(site.x + 7, site.y + 1, site.z - 17)?.block.id, 'mc:stone_bricks');
+    assertEqual(at(site.x - 2, site.y, site.z + 7)?.block.id, 'mc:stone_bricks');
+    assert(at(site.x + 4, site.y + 1, site.z - 12), 'crossing room interior is carved');
   });
 
   it('places a monster spawner in the center of every generated dungeon room', () => {
