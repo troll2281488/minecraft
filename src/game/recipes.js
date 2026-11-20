@@ -30,6 +30,20 @@ for (const wood of WOODS) {
   });
 }
 
+// Six matching planks craft three doors; iron uses the same 2×3 shape.
+for (const wood of WOODS) {
+  recipes.push({
+    result: `mc:${wood}_door`, count: 3,
+    pattern: ['PP', 'PP', 'PP'],
+    key: { P: `mc:${wood}_planks` },
+  });
+}
+recipes.push({
+  result: 'mc:iron_door', count: 3,
+  pattern: ['II', 'II', 'II'],
+  key: { I: 'mc:iron_ingot' },
+});
+
 recipes.push({
   result: 'mc:stick', count: 4,
   pattern: ['P', 'P'],
