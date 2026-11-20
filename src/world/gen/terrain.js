@@ -29,7 +29,7 @@ import { hash01, seedToInt } from './hash.js';
 import { ChunkWriter, mineshaftPlan, placeMineshaftPlan, placeDungeonRoom, placeStrongholdPortalRoom, placeStrongholdRoomNetwork, villagePlan, placeVillagePlan, villageStyleForBiome } from './structures.js';
 
 /** Bumped whenever generation output changes. Stored per world. */
-export const GENERATOR_VERSION = 21;
+export const GENERATOR_VERSION = 22;
 
 
 // ---------------------------------------------------------------------------

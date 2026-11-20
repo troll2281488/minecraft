@@ -122,6 +122,7 @@ export class Player {
       : PHYSICS.DEFAULT_SLIPPERINESS;
 
     this._applyInput(slipperiness);
+    if (this._isInCobweb(world)) { this.vx *= 0.25; this.vy *= 0.05; this.vz *= 0.25; }
     this._move(world);
     const moved = Math.hypot(this.x - oldX, this.z - oldZ);
     if (this.inWater) this.walkPhase += 0.12;
@@ -262,6 +263,12 @@ export class Player {
     const x = Math.floor(this.x), z = Math.floor(this.z);
     return [0.25, 0.9, 1.5].some((height) =>
       world.getBlock(x, Math.floor(this.y + height), z).block.id === 'mc:water');
+  }
+
+  _isInCobweb(world) {
+    const x = Math.floor(this.x), z = Math.floor(this.z);
+    return [0.25, 0.9, 1.5].some((height) =>
+      world.getBlock(x, Math.floor(this.y + height), z).block.id === 'mc:cobweb');
   }
 
   _isHeadUnderwater(world) {

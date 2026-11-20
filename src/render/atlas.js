@@ -519,6 +519,50 @@ const TEXTURES = {
   furnace_top:         () => furnaceSideTile('furnace_top'),
   furnace_side:        () => furnaceSideTile('furnace_side'),
   furnace_front:       () => furnaceFrontTile('furnace_front'),
+  bookshelf:          () => {
+    const tile = planks(hex(0x81552f), 'bookshelf');
+    const books = [hex(0x9c2929), hex(0x244c9a), hex(0x2d7139), hex(0xd0b34c), hex(0x6b3d87)];
+    for (let x = 1; x < 15; x += 3) for (let y = 2; y < 15; y += 5) {
+      const c = books[((x + y) / 2) % books.length | 0];
+      for (let dy = 0; dy < 3; dy++) for (let dx = 0; dx < 2; dx++) setPx(tile, x + dx, y + dy, c[0], c[1], c[2]);
+    }
+    for (let y of [0, 5, 10, 15]) for (let x = 0; x < 16; x++) setPx(tile, x, y, 91, 58, 31);
+    return tile;
+  },
+  cobweb:             () => {
+    const tile = newTile(), c = hex(0xd9d9d9);
+    for (let i = 0; i < 16; i++) {
+      setPx(tile, i, i, c[0], c[1], c[2], 220);
+      setPx(tile, 15 - i, i, c[0], c[1], c[2], 220);
+      if (i % 4 === 0) for (let x = 0; x < 16; x++) setPx(tile, x, i, c[0], c[1], c[2], 170);
+    }
+    return tile;
+  },
+  ladder:             () => {
+    const tile = newTile(), c = hex(0x9a7544), dark = hex(0x654b2d);
+    for (let y = 1; y < 16; y++) for (const x of [3, 4, 11, 12]) setPx(tile, x, y, c[0], c[1], c[2]);
+    for (const y of [2, 6, 10, 14]) for (let x = 3; x <= 12; x++) setPx(tile, x, y, dark[0], dark[1], dark[2]);
+    return tile;
+  },
+  oak_door:           () => {
+    const tile = planks(hex(0x9a7442), 'oak_door');
+    for (let y = 1; y < 15; y++) { setPx(tile, 2, y, 75, 48, 25); setPx(tile, 13, y, 75, 48, 25); }
+    for (const y of [2, 7, 13]) for (let x = 4; x < 12; x++) setPx(tile, x, y, 122, 83, 43);
+    for (let y = 4; y <= 6; y++) for (let x = 5; x <= 10; x++) setPx(tile, x, y, 126, 91, 51);
+    for (let y = 9; y <= 12; y++) for (let x = 5; x <= 10; x++) setPx(tile, x, y, 126, 91, 51);
+    setPx(tile, 11, 8, 218, 185, 77);
+    return tile;
+  },
+  iron_door:          () => {
+    const tile = grainy(hex(0x777777), 0.12, 'iron_door');
+    for (let x = 2; x < 14; x++) for (let y = 1; y < 15; y++) {
+      if (x % 4 === 0 || y % 5 === 0) setPx(tile, x, y, 55, 55, 55);
+    }
+    for (let y = 3; y < 13; y += 4) for (let x = 4; x < 12; x += 4) setPx(tile, x, y, 190, 190, 190);
+    return tile;
+  },
+  stone_button:       () => grainy(hex(0x888888), 0.12, 'stone_button'),
+
   mob_spawner:         () => {
     const tile = grainy(hex(0x343434), 0.2, 'mob_spawner', { clumps: 5 });
     const iron = hex(0x999999), dark = hex(0x242424), ember = hex(0x9b633b);

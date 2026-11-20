@@ -74,6 +74,9 @@ export const BlockActionsMixin = {
       return;
     }
     const heldItem = this.inventory?.held?.item;
+    if (this.hit?.state?.block?.id === 'mc:oak_door') { this._toggleDoorAt(this.hit.x, this.hit.y, this.hit.z); return; }
+    if (this.hit?.state?.block?.id === 'mc:iron_door') return;
+    if (this.hit?.state?.block?.id === 'mc:stone_button') { this._pressStrongholdButton(this.hit.x, this.hit.y, this.hit.z); return; }
     if (this.hit?.state?.block?.id === 'mc:bed') {
       if (this.world.dimension !== 'overworld') {
         this.ui.toast('В этом измерении нельзя спать.', { error: true });
@@ -152,6 +155,51 @@ export const BlockActionsMixin = {
     // survival. A full food bar prevents ordinary food from being consumed.
     if (!sneaking && this._eatHeldFood()) return;
     this._placeBlock();
+  },
+
+  _toggleDoorAt(x, y, z) {
+    const clicked = this.world.getBlock(x, y, z);
+    const id = clicked.block.id;
+    if (id !== 'mc:oak_door' && id !== 'mc:iron_door') return false;
+    if (id === 'mc:iron_door') return false;
+    const lowerY = clicked.get('half') === 'top' ? y - 1 : y;
+    const lower = this.world.getBlock(x, lowerY, z);
+    const upper = this.world.getBlock(x, lowerY + 1, z);
+    if (lower.block.id !== id || upper.block.id !== id) return false;
+    const open = !lower.get('open');
+    const lowerState = lower.with('open', open);
+    const upperState = upper.with('open', open);
+    this.world.setBlock(x, lowerY, z, lowerState);
+    this.world.setBlock(x, lowerY + 1, z, upperState);
+    this.multiplayer?.pushBlockChange(x, lowerY, z, lowerState);
+    this.multiplayer?.pushBlockChange(x, lowerY + 1, z, upperState);
+    this.sounds?.play('place', 'wood');
+    return true;
+  },
+
+  _pressStrongholdButton(x, y, z) {
+    const button = this.world.getBlock(x, y, z);
+    if (button.block.id !== 'mc:stone_button') return false;
+    const powered = !button.get('powered');
+    const nextButton = button.with('powered', powered);
+    this.world.setBlock(x, y, z, nextButton);
+    this.multiplayer?.pushBlockChange(x, y, z, nextButton);
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      for (const dy of [0, -1]) {
+        const door = this.world.getBlock(x + dx, y + dy, z + dz);
+        if (door.block.id !== 'mc:iron_door' || door.get('half') !== 'bottom') continue;
+        const upper = this.world.getBlock(x + dx, y + dy + 1, z + dz);
+        if (upper.block.id !== 'mc:iron_door') continue;
+        const open = powered;
+        const lowerState = door.with('open', open), upperState = upper.with('open', open);
+        this.world.setBlock(x + dx, y + dy, z + dz, lowerState);
+        this.world.setBlock(x + dx, y + dy + 1, z + dz, upperState);
+        this.multiplayer?.pushBlockChange(x + dx, y + dy, z + dz, lowerState);
+        this.multiplayer?.pushBlockChange(x + dx, y + dy + 1, z + dz, upperState);
+      }
+    }
+    this.sounds?.play('place', 'stone');
+    return true;
   },
 
   _openVillagerTrade(villager) {
@@ -272,11 +320,24 @@ export const BlockActionsMixin = {
     if (!target) return;
     if (block.solid && wouldTrapPlayer(this.player, target.x, target.y, target.z)) return;
 
-    const state = orientPlacement(block, this.player, this.hit);
-    if (!this.world.setBlock(target.x, target.y, target.z, state)) return;
+    let state = orientPlacement(block, this.player, this.hit);
+    if (block.renderShape === 'door') {
+      const upper = this.world.getBlock(target.x, target.y + 1, target.z);
+      if (!upper.block.replaceable && upper.block.id !== 'mc:air') return;
+      state = state.with('half', 'bottom').with('open', false);
+      const upperState = state.with('half', 'top');
+      if (!this.world.setBlock(target.x, target.y, target.z, state)) return;
+      if (!this.world.setBlock(target.x, target.y + 1, target.z, upperState)) {
+        this.world.setBlock(target.x, target.y, target.z, AIR.defaultState);
+        return;
+      }
+      this.multiplayer?.pushBlockChange(target.x, target.y, target.z, state);
+      this.multiplayer?.pushBlockChange(target.x, target.y + 1, target.z, upperState);
+    } else {
+      if (!this.world.setBlock(target.x, target.y, target.z, state)) return;
+      this.multiplayer?.pushBlockChange(target.x, target.y, target.z, state);
+    }
     this.sounds?.play('place', block.soundGroup || 'stone');
-    this.multiplayer?.pushBlockChange(target.x, target.y, target.z, state);
-
     if (this.player.gamemode !== GAMEMODE.CREATIVE) this.inventory.consumeHeld(1);
   },
 

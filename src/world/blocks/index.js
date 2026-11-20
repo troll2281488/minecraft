@@ -329,7 +329,7 @@ define('mc:iron_bars', {
 });
 
 // Stronghold library and passage blocks. The ladder is a non-colliding
-// wall-mounted model; cobweb slowdown is a later movement-physics refinement.
+// wall-mounted model; player movement applies the cobweb slowdown.
 define('mc:bookshelf', {
   hardness: 1.5, resistance: 1.5, tool: 'axe', soundGroup: 'wood', flammability: 5,
   texture: 'bookshelf',
@@ -344,6 +344,24 @@ define('mc:ladder', {
   hardness: 0.4, resistance: 0.4, solid: false, opaqueCube: false, opacity: 0,
   renderShape: 'ladder', soundGroup: 'wood', texture: 'ladder',
   properties: { facing: PROPS.facing }, defaultValues: { facing: 'north' },
+});
+
+// Java stronghold doors: two blockstates represent the lower and upper halves.
+for (const [id, texture, hardness, tool, soundGroup] of [
+  ['mc:oak_door', 'oak_door', 3, 'axe', 'wood'],
+  ['mc:iron_door', 'iron_door', 5, 'pickaxe', 'metal'],
+]) define(id, {
+  hardness, resistance: hardness, tool, soundGroup, solid: true, opaqueCube: false,
+  renderShape: 'door', texture,
+  properties: { facing: PROPS.facing, half: PROPS.half, hinge: PROPS.hinge, open: PROPS.open },
+  defaultValues: { facing: 'north', half: 'bottom', hinge: 'left', open: false },
+});
+
+define('mc:stone_button', {
+  hardness: 0.5, resistance: 0.5, tool: 'pickaxe', soundGroup: 'stone',
+  solid: false, opaqueCube: false, opacity: 0, renderShape: 'button', texture: 'stone_button',
+  properties: { facing: PROPS.facing, powered: PROPS.powered },
+  defaultValues: { facing: 'north', powered: false },
 });
 
 define('mc:end_portal_frame', {
@@ -652,7 +670,7 @@ const VANILLA_FUEL_TICKS_112 = {
   'mc:crafting_table': 300, 'mc:chest': 300, 'mc:trapped_chest': 300,
   'mc:bookshelf': 300, 'mc:jukebox': 300, 'mc:note_block': 300,
   'mc:ladder': 300, 'mc:fence': 300, 'mc:fence_gate': 300,
-  'mc:wooden_door': 200, 'mc:wooden_trapdoor': 300,
+  'mc:wooden_door': 200, 'mc:oak_door': 200, 'mc:wooden_trapdoor': 300,
   'mc:wooden_pickaxe': 200, 'mc:wooden_axe': 200,
   'mc:wooden_shovel': 200, 'mc:wooden_hoe': 200, 'mc:wooden_sword': 200,
 };

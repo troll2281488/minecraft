@@ -80,6 +80,7 @@ export const PROPS = {
   powered: boolProp('powered'),
   lit: boolProp('lit'),
   open: boolProp('open'),
+  hinge: enumProp('hinge', ['left', 'right']),
   snowy: boolProp('snowy'),
   persistent: boolProp('persistent'),
   distance: intProp('distance', 1, 7),
