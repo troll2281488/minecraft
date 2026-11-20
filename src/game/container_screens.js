@@ -125,20 +125,20 @@ export function generatedChestKind(seed, x, y, z) {
   for (let gx = Math.floor((x - 512) / 512); gx <= Math.floor(x / 512); gx++) {
     for (let gz = Math.floor((z - 512) / 512); gz <= Math.floor(z / 512); gz++) {
       const stronghold = strongholdCandidateForCell(seed, gx, gz);
-      if (!stronghold || y !== stronghold.y + 1) continue;
+      if (!stronghold) continue;
       // The three room types are placed at fixed, world-seed-derived
       // coordinates by TerrainGenerator.placeStronghold.
-      if (x === stronghold.x + 2 && z === stronghold.z + 2) return 'stronghold_crossing';
-      if (x === stronghold.x + 7 && z === stronghold.z - 24) return 'stronghold_crossing';
-      if ((x === stronghold.x - 10 && z === stronghold.z + 8) ||
-          (x === stronghold.x - 6 && z === stronghold.z + 8)) return 'stronghold_library';
+      if (y === stronghold.y + 1 && x === stronghold.x + 2 && z === stronghold.z + 2) return 'stronghold_crossing';
+      if (y === stronghold.y + 1 && x === stronghold.x + 7 && z === stronghold.z - 24) return 'stronghold_crossing';
+      if (y === stronghold.y + 1 && ((x === stronghold.x - 10 && z === stronghold.z + 8) ||
+          (x === stronghold.x - 6 && z === stronghold.z + 8))) return 'stronghold_library';
       const largeLibrary = hash01(seedToInt(normalizeSeed(seed)), stronghold.x, stronghold.y, stronghold.z, 7419) >= 0.22;
       const libraryX = stronghold.x - (largeLibrary ? 32 : 28);
       const libraryZ = stronghold.z - (largeLibrary ? 7 : 5);
       if (y === stronghold.y + (largeLibrary && x === libraryX + 2 && z === libraryZ + 12 ? 6 : 1) &&
           x === libraryX + 2 && z === libraryZ + 2) return 'stronghold_library';
       if (largeLibrary && x === libraryX + 2 && z === libraryZ + 12 && y === stronghold.y + 6) return 'stronghold_library';
-      if (x === stronghold.x + 20 && z === stronghold.z + 10) return 'stronghold_corridor';
+      if (y === stronghold.y + 1 && x === stronghold.x + 20 && z === stronghold.z + 10) return 'stronghold_corridor';
     }
   }
   return null;
