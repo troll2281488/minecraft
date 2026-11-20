@@ -89,7 +89,7 @@ describe('generated dungeon chest loot', () => {
     assertEqual(generatedChestKind(seed, room.x + ix, room.y + 1, room.z + iz), 'dungeon');
   });
 
-  it('fills a generated dungeon chest deterministically and only once per saved chest', () => {
+  it('generates repeatable loot for a generated dungeon chest', () => {
     const seed = 'dungeon-loot-regression';
     const a = new Chest();
     const b = new Chest();
