@@ -211,6 +211,7 @@ uniform vec3 uWaterColor;
 out vec3 vTexCoord;           // xy within the tile, z is the array layer
 out vec4 vColor;
 out vec3 vGrassTint;
+flat out uint vFace;
 out float vFogDistance;
 
 // Fixed directional shading, matching Minecraft: the top face is fully lit,
@@ -271,6 +272,7 @@ void main() {
   else if (tintKind == 3u) tint = uWaterColor;
 
   vGrassTint = grassTint;
+  vFace = face;
   vColor = vec4(tint * light * aoFactor * shade, 1.0);
   vFogDistance = length(worldPos - uCameraPos);
 }
@@ -283,6 +285,7 @@ precision highp sampler2DArray;
 in vec3 vTexCoord;
 in vec4 vColor;
 in vec3 vGrassTint;
+flat in uint vFace;
 in float vFogDistance;
 
 uniform sampler2DArray uTexture;
@@ -303,8 +306,14 @@ void main() {
 
   // Grass-block side textures contain both green crown pixels and brown dirt.
   // Tint only green-dominant pixels so biome colouring never stains the soil.
-  float greenMask = smoothstep(0.015, 0.10, texel.g - max(texel.r, texel.b) * 0.85);
-  vec3 textureColor = texel.rgb * mix(vec3(1.0), vGrassTint, greenMask);
+  float greenMask = vFace == 4u ? 1.0 :
+    smoothstep(0.015, 0.10, texel.g - max(texel.r, texel.b) * 0.85);
+  // Top texture is neutral grayscale: colour it green directly. Side pixels
+  // already contain vanilla green, so apply only the biome's relative shift.
+  vec3 sideShift = vGrassTint / vec3(0.43, 0.62, 0.28);
+  vec3 textureColor = vFace == 4u
+    ? texel.rgb * vGrassTint
+    : texel.rgb * mix(vec3(1.0), sideShift, greenMask);
   vec4 color = vec4(textureColor * vColor.rgb, texel.a * vColor.a);
 
   float fog = clamp((vFogDistance - uFogStart) / max(uFogEnd - uFogStart, 0.001), 0.0, 1.0);

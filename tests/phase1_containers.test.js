@@ -236,6 +236,16 @@ describe('Furnace', () => {
     assertEqual(f.output.count, 1);
     assert(f.input.isEmpty, 'input should be consumed');
   });
+  it('smelts cobblestone into stone and sand into glass', () => {
+    for (const [input, output] of [['mc:cobblestone', 'mc:stone'], ['mc:sand', 'mc:glass']]) {
+      const f = new Furnace();
+      f.input = ItemStack.of(input, 1);
+      f.fuel = ItemStack.of('mc:coal', 1);
+      for (let i = 0; i < SMELT_TICKS; i++) f.tick();
+      assertEqual(f.output.item?.id, output, input);
+    }
+  });
+
   it('does not smelt without fuel', () => {
     const f = new Furnace();
     f.input = ItemStack.of('mc:cobblestone', 1);

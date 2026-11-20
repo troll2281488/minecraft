@@ -204,6 +204,12 @@ for (const [rough, polished] of POLISHED) {
 }
 
 recipes.push({
+  result: 'mc:stone_bricks', count: 4,
+  pattern: ['SS', 'SS'],
+  key: { S: 'mc:stone' },
+});
+
+recipes.push({
   result: 'mc:sandstone', count: 1,
   pattern: ['SS', 'SS'],
   key: { S: 'mc:sand' },
@@ -245,9 +251,17 @@ const SHAPED_FROM = [
   ['mc:stone', 'stone'],
   ['mc:cobblestone', 'cobblestone'],
   ['mc:sandstone', 'sandstone'],
+  ['mc:granite', 'granite'],
+  ['mc:polished_granite', 'polished_granite'],
+  ['mc:diorite', 'diorite'],
+  ['mc:polished_diorite', 'polished_diorite'],
+  ['mc:andesite', 'andesite'],
+  ['mc:polished_andesite', 'polished_andesite'],
+  ['mc:stone_bricks', 'stone_bricks'],
   ['mc:oak_planks', 'oak'],
   ['mc:birch_planks', 'birch'],
   ['mc:spruce_planks', 'spruce'],
+  ['mc:jungle_planks', 'jungle'],
 ];
 
 for (const [material, name] of SHAPED_FROM) {

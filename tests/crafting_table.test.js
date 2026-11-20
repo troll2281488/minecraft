@@ -2,6 +2,7 @@ import '../src/world/blocks/index.js';
 import { describe, it, assert, assertEqual } from './framework.js';
 import { CraftingGrid } from '../src/game/inventory.js';
 import { RECIPES } from '../src/game/recipes.js';
+import { BLOCKS } from '../src/world/block.js';
 import { ItemStack } from '../src/world/item.js';
 // These used to come from main.js, which meant this test pulled in gl.js, atlas.js,
 // chunk_renderer.js and storage.js -- the whole render graph -- to read two pieces of
@@ -46,6 +47,24 @@ describe('creative inventory list', () => {
                       'mc:diamond_pickaxe', 'mc:iron_ingot', 'mc:oak_planks']) {
       assert(ids.has(id), `creative list is missing ${id}`);
     }
+  });
+
+  it('includes granite, polished granite and stone-brick decorative shapes', () => {
+    for (const id of ['mc:granite', 'mc:polished_granite', 'mc:granite_stairs',
+      'mc:granite_slab', 'mc:polished_granite_stairs', 'mc:stone_bricks',
+      'mc:stone_bricks_stairs', 'mc:jungle_stairs']) {
+      assert(BLOCKS.get(id), `missing decorative block ${id}`);
+      assert(ids.has(id), `creative inventory is missing ${id}`);
+    }
+  });
+
+  it('crafts polished granite and stone bricks from stone materials', () => {
+    const polished = fill(2, ['mc:granite', 'mc:granite', 'mc:granite', 'mc:granite']);
+    assertEqual(polished.result.item?.id, 'mc:polished_granite');
+    assertEqual(polished.result.count, 4);
+    const bricks = fill(2, ['mc:stone', 'mc:stone', 'mc:stone', 'mc:stone']);
+    assertEqual(bricks.result.item?.id, 'mc:stone_bricks');
+    assertEqual(bricks.result.count, 4);
   });
 
   it('excludes the unknown-block placeholder', () => {

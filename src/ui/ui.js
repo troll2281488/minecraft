@@ -12,6 +12,7 @@
 
 import { SLOT } from '../game/inventory.js';
 import { VILLAGER_CAREERS } from '../entity/villager_trades.js';
+import { RECIPES } from '../game/recipes.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -169,6 +170,7 @@ export class UI {
    */
   buildInventory(inventory, grid, handlers) {
     this.invHandlers = handlers;
+    const screen = $('inventory-screen');
 
     const build = (container, count, indexOf, kind) => {
       container.innerHTML = '';
@@ -180,16 +182,33 @@ export class UI {
         el.oncontextmenu = (e) => e.preventDefault();
         el.onmousedown = (e) => {
           e.preventDefault();
+          if (e.button === 2) {
+            screen._rightDragActive = true;
+            screen._rightDragSeen = new Set([kind + ':' + index]);
+          }
           handlers.onClick(kind, index, e.button, e.shiftKey);
         };
+        el.addEventListener('mouseenter', () => {
+          if (!screen._rightDragActive) return;
+          const key = kind + ':' + index;
+          if (screen._rightDragSeen && screen._rightDragSeen.has(key)) return;
+          screen._rightDragSeen?.add(key);
+          handlers.onClick(kind, index, 2, false);
+        });
         container.appendChild(el);
         slots.push(el);
       }
       return slots;
     };
 
-    const screen = $('inventory-screen');
     screen.oncontextmenu = (e) => e.preventDefault();
+    if (!screen._rightDragReleaseBound) {
+      document.addEventListener('mouseup', () => {
+        screen._rightDragActive = false;
+        screen._rightDragSeen = null;
+      });
+      screen._rightDragReleaseBound = true;
+    }
     const dropOnEmpty = (e) => {
       if (e.target.closest?.('.slot, button, input, textarea, select')) return;
       e.preventDefault();
@@ -212,7 +231,58 @@ export class UI {
     this.resultSlots = build($('craft-result'), 1, () => 0, 'result');
 
     $('craft-grid').className = grid.size === 2 ? 'craft-grid-2' : 'craft-grid-3';
+    const craftRow = screen.querySelector('.craft-row');
+    if (craftRow && !craftRow.querySelector('#recipe-book-button')) {
+      const book = document.createElement('button');
+      book.id = 'recipe-book-button';
+      book.type = 'button';
+      book.textContent = 'Книга рецептов';
+      book.style.cssText = 'width:auto;max-width:128px;padding:6px 8px;font-size:11px;margin:0 0 0 8px;white-space:normal;';
+      book.onclick = () => this._showRecipeBook();
+      craftRow.appendChild(book);
+    }
     this._invVersion = -1;
+  }
+
+  _showRecipeBook() {
+    document.getElementById('recipe-book-overlay')?.remove();
+    const overlay = document.createElement('div');
+    overlay.id = 'recipe-book-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:1200;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:18px;';
+    const panel = document.createElement('div');
+    panel.style.cssText = 'width:min(760px,96vw);max-height:86vh;overflow:auto;background:#20252d;color:#f1f3f5;border:2px solid #8a98aa;padding:16px;box-shadow:0 12px 40px #000;';
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;';
+    const title = document.createElement('h2');
+    title.textContent = 'Книга рецептов';
+    const close = document.createElement('button');
+    close.type = 'button'; close.textContent = 'Закрыть'; close.style.cssText = 'width:auto;margin:0;';
+    close.onclick = () => overlay.remove();
+    header.append(title, close);
+    panel.append(header);
+    for (const recipe of RECIPES.recipes) {
+      const entry = document.createElement('section');
+      entry.style.cssText = 'padding:9px 10px;margin:7px 0;background:#303946;border:1px solid #536174;';
+      const result = document.createElement('strong');
+      result.textContent = prettyName(recipe.result) + ' ×' + (recipe.count ?? 1);
+      const details = document.createElement('pre');
+      details.style.cssText = 'white-space:pre-wrap;font:12px/1.5 monospace;color:#d0d8e2;margin-top:5px;';
+      if (recipe.pattern) {
+        const ingredients = Object.entries(recipe.key).map(([symbol, id]) => {
+          const value = Array.isArray(id) ? id.map(prettyName).join(' / ') : prettyName(id);
+          return symbol + ' = ' + value;
+        }).join(String.fromCharCode(10));
+        details.textContent = recipe.pattern.join(String.fromCharCode(10)) + String.fromCharCode(10) + ingredients;
+      } else {
+        const ingredients = recipe.ingredients.map((id) => Array.isArray(id) ? id.map(prettyName).join(' / ') : prettyName(id));
+        details.textContent = 'Без формы: ' + ingredients.join(' + ');
+      }
+      entry.append(result, details);
+      panel.append(entry);
+    }
+    overlay.append(panel);
+    overlay.addEventListener('click', (event) => { if (event.target === overlay) overlay.remove(); });
+    document.body.append(overlay);
   }
 
   updateInventory(inventory, grid, force = false) {
