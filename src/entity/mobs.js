@@ -145,6 +145,7 @@ export class MobSystem {
     this.villageCheckTicks = 0;
     this.villageGenerator = null;
     this.populatedVillages = new Set();
+    this.netherFortressWave = false;
   }
 
   reset() {
@@ -159,6 +160,7 @@ export class MobSystem {
     this.villageCheckTicks = 0;
     this.villageGenerator = null;
     this.populatedVillages.clear();
+    this.netherFortressWave = false;
   }
 
   spawnBlockParticles(x, y, z, blockId = '') {
@@ -869,6 +871,15 @@ export class MobSystem {
     this._tickArrows();
     this._tickBlockParticles();
     if (this.game.mobSimulationEnabled === false) return;
+    if (world.dimension === 'nether' && !this.netherFortressWave &&
+        Math.hypot(player.x - 52, player.z - 36) < 110) {
+      let spawned = 0;
+      for (const [x,z] of [[45,36],[58,36],[63,37]]) {
+        if (!world.hasChunk(Math.floor(x/16),Math.floor(z/16))) continue;
+        if (this._spawn('blaze',x,z,{y:53})) spawned++;
+      }
+      if (spawned > 0) this.netherFortressWave = true;
+    }
     // Populate nearby loaded chunks quickly so a new world does not feel empty.
     if (this.spawnTicks >= 180 && this.mobs.length < 7) {
       this.spawnTicks = 0;
