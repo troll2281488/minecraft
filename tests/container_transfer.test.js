@@ -1,7 +1,7 @@
 import '../src/world/blocks/index.js';
 import { describe, it, assert, assertEqual } from './framework.js';
 import { Inventory } from '../src/game/inventory.js';
-import { Chest, Furnace } from '../src/game/containers.js';
+import { Chest, Furnace, serializeContainer, deserializeContainer, drainContainer } from '../src/game/containers.js';
 import { ItemStack } from '../src/world/item.js';
 import { ContainerScreensMixin } from '../src/game/container_screens.js';
 
@@ -111,4 +111,68 @@ describe('container shift-click transfers', () => {
     assertEqual(furnace.output.count, 6, 'output remainder must stay in the furnace');
   });
 
+});
+
+
+describe('container persistence and break handling', () => {
+  it('round-trips chest slots without sharing mutable stack objects', () => {
+    const chest = new Chest();
+    chest.slots[4] = ItemStack.of('mc:diamond', 7);
+    const restored = deserializeContainer(serializeContainer('chest', chest));
+
+    assert(restored && restored.type === 'chest');
+    assertEqual(restored.data.slots[4].item.id, 'mc:diamond');
+    assertEqual(restored.data.slots[4].count, 7);
+    restored.data.slots[4].count = 1;
+    assertEqual(chest.slots[4].count, 7, 'restored state must not alias original stacks');
+  });
+
+  it('rejects malformed chest records instead of restoring partial inventories', () => {
+    assertEqual(deserializeContainer({ type: 'chest', slots: [] }), null);
+    assertEqual(deserializeContainer({ type: 'chest', slots: Array(26).fill(null) }), null);
+    assertEqual(deserializeContainer(null), null);
+  });
+
+  it('clamps restored furnace timers to valid non-negative ranges', () => {
+    const restored = deserializeContainer({
+      type: 'furnace',
+      input: null, fuel: null, output: null,
+      burnTotal: 20, burnLeft: 99, cookProgress: 999,
+    });
+
+    assert(restored && restored.type === 'furnace');
+    assertEqual(restored.data.burnTotal, 20);
+    assertEqual(restored.data.burnLeft, 20);
+    assertEqual(restored.data.cookProgress, 199);
+  });
+
+  it('drains chest contents as independent drops and empties the chest', () => {
+    const chest = new Chest();
+    chest.slots[0] = ItemStack.of('mc:iron_ingot', 4);
+    const drops = drainContainer('chest', chest);
+
+    assertEqual(drops.length, 1);
+    assertEqual(drops[0].count, 4);
+    assert(chest.slots.every((stack) => stack.isEmpty));
+    drops[0].count = 1;
+    assertEqual(chest.slots[0].count, 0);
+  });
+
+  it('clears furnace slots and progress when the furnace is drained', () => {
+    const furnace = new Furnace();
+    furnace.input = ItemStack.of('mc:iron_ore', 2);
+    furnace.fuel = ItemStack.of('mc:coal', 3);
+    furnace.output = ItemStack.of('mc:iron_ingot', 1);
+    furnace.burnLeft = 80;
+    furnace.burnTotal = 160;
+    furnace.cookProgress = 45;
+
+    const drops = drainContainer('furnace', furnace);
+
+    assertEqual(drops.length, 3);
+    assert(furnace.input.isEmpty && furnace.fuel.isEmpty && furnace.output.isEmpty);
+    assertEqual(furnace.burnLeft, 0);
+    assertEqual(furnace.burnTotal, 0);
+    assertEqual(furnace.cookProgress, 0);
+  });
 });
