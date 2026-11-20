@@ -341,7 +341,7 @@ class Game {
       player.attackTime = 8;
     }
     player.tick(world);
-    const portalContact = world.getBlock(Math.floor(player.x), Math.floor(player.y), Math.floor(player.z)).block.id === 'mc:portal';
+    const portalContact = world.getBlock(Math.floor(player.x), Math.floor(player.y + 1), Math.floor(player.z)).block.id === 'mc:portal';
     if (portalContact && !this._portalTransition) {
       this._portalTransition = true;
       const destination = world.dimension === 'nether' ? 'overworld' : 'nether';
