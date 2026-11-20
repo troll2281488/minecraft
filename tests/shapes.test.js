@@ -19,6 +19,7 @@ const AIR = BLOCKS.get('mc:air').defaultState;
 const STONE = BLOCKS.get('mc:stone').defaultState;
 const OAK_SLAB = BLOCKS.get('mc:oak_slab').defaultState; // bottom by default
 const STONE_STAIRS = BLOCKS.get('mc:stone_stairs').defaultState;
+const IRON_BARS = BLOCKS.get('mc:iron_bars').defaultState;
 
 describe('shapes: box geometry', () => {
   it('a full cube is one unit box', () => {
@@ -51,9 +52,18 @@ describe('shapes: box geometry', () => {
     assertDeepEqual(boxes[1], [0.5, 0, 0, 1, 0.5, 1], 'east step below');
   });
 
-  it('isNonCube distinguishes slabs and stairs from cubes', () => {
+  it('iron bars use a thin five-part pane profile', () => {
+    const boxes = shapeBoxes(IRON_BARS);
+    assertEqual(boxes.length, 5);
+    assertDeepEqual(boxes[0], [0.4375, 0, 0.4375, 0.5625, 1, 0.5625]);
+    assert(isNonCube(IRON_BARS));
+    assertDeepEqual(collisionBoxes(IRON_BARS), boxes);
+  });
+
+  it('isNonCube distinguishes slabs, stairs and panes from cubes', () => {
     assert(isNonCube(OAK_SLAB));
     assert(isNonCube(STONE_STAIRS));
+    assert(isNonCube(IRON_BARS));
     assert(!isNonCube(STONE));
   });
 });
@@ -173,6 +183,14 @@ describe('shapes: mesher emits box geometry', () => {
     const quads = meshChunk(viewFor(chunk)).opaqueQuads;
     // Base slab (6) + step box (6), minus nothing culled in open air = 12.
     assert(quads >= 10, `a stair should emit ~12 faces, got ${quads}`);
+  });
+
+  it('iron bars emit pane geometry instead of a full cube', () => {
+    const chunk = new Chunk(0, 0);
+    chunk.setBlock(8, 64, 8, IRON_BARS);
+    computeChunkLight(chunk);
+    const quads = meshChunk(viewFor(chunk)).opaqueQuads;
+    assert(quads > 6, `iron bars should emit multiple thin boxes, got ${quads} quads`);
   });
 
   it('a slab under an opaque block culls its top face', () => {
