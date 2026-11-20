@@ -133,7 +133,9 @@ Reference target for this compatibility track is **Minecraft: Java Edition 1.19.
 | Box-model system (render + collision from one box list) | yes | ✅ *tested* |
 | Slabs (bottom/top/double) — render, collide, auto-step | yes | ✅ *tested* |
 | Stairs (facing/half, straight) — render, collide, walk up | yes | 🟡 *straight only; corner auto-shaping and cropped-UV textures are refinements* |
-| Non-cube models (fence, gate, wall, pane, door, trapdoor) | yes | ⬜ *(next Phase 2 increment)* |
+| Doors (oak, spruce, birch, jungle, acacia, dark oak, iron) — two-block placement, paired state, wooden toggle, open/closed collision and removal | yes | 🟡 *(iron redstone activation, hinge placement rules and exact door sound/UV polish remain)* |
+| Door geometry / collision | shared 1/16-thick model | 🟡 *(axis-aligned panel boxes; model is simplified)* |
+| Fence, gate, wall, trapdoor models | yes | ⬜ |
 | Cloud layer, weather, particles | yes | ⬜ |
 
 ## Saves
