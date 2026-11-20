@@ -24,9 +24,10 @@ import { Chunk, GEN_STAGE } from '../chunk.js';
 import { BLOCKS } from '../block.js';
 import { CHUNK_SIZE, MIN_Y, MAX_Y, SEA_LEVEL } from '../../core/constants.js';
 import { clamp } from '../../core/math.js';
+import { buildTree } from './trees.js';
 
 /** Bumped whenever generation output changes. Stored per world. */
-export const GENERATOR_VERSION = 10;
+export const GENERATOR_VERSION = 11;
 
 
 // ---------------------------------------------------------------------------
@@ -1255,110 +1256,23 @@ export class TerrainGenerator {
   }
 
   placeTree(chunk, x, y, z, species, rng) {
-    const S = this.states;
-    const log = S.byId[`mc:${species}_log`];
-    const leaves = S.byId[`mc:${species}_leaves`];
-    if (!log || !leaves) return;
+    const S = this.states.byId;
+    const shape = buildTree(species, rng);
+    const material = S[shape.material || `mc:${species}_log`];
+    const leaves = S[`mc:${species}_leaves`];
+    if (!material) return;
 
-    // Species-specific silhouettes: spruce is conical, birch/oak are rounded,
-    // jungle is tall and broad, acacia has an angled crown, and dark oak has a
-    // heavy trunk with a dense canopy. All writes stay inside this chunk.
-    const isSpruce = species === 'spruce';
-    const isJungle = species === 'jungle';
-    const isAcacia = species === 'acacia';
-    const isBirch = species === 'birch';
-    const isDarkOak = species === 'dark_oak';
-    const acaciaLean = isAcacia && rng.nextBoolean() ? 1 : -1;
-    const height = isSpruce ? 7 + rng.nextInt(3)
-      : isJungle ? 9 + rng.nextInt(5)
-      : isAcacia ? 6 + rng.nextInt(3)
-      : isBirch ? 7 + rng.nextInt(3)
-      : isDarkOak ? 7 + rng.nextInt(2)
-      : 5 + rng.nextInt(3);
-
-    if (isDarkOak) {
-      for (let dy = 0; dy < height; dy++) {
-        for (const [ox, oz] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
-          if (y + dy < MAX_Y) chunk.setBlock(x + ox, y + dy, z + oz, log);
-        }
-      }
-    } else {
-      for (let dy = 0; dy < height; dy++) {
-        const ox = isAcacia && dy >= Math.floor(height * 0.55) ? acaciaLean : 0;
-        if (y + dy < MAX_Y) chunk.setBlock(x + ox, y + dy, z, log);
+    for (const [dx, dy, dz] of shape.logs) {
+      const px = x + dx, py = y + dy, pz = z + dz;
+      if (px >= 0 && px < CHUNK_SIZE && pz >= 0 && pz < CHUNK_SIZE && py >= MIN_Y && py < MAX_Y) {
+        chunk.setBlock(px, py, pz, material);
       }
     }
-
-    if (isSpruce) {
-      let radius = 2;
-      for (let layer = 0; layer < 5; layer++) {
-        const ly = y + height - 1 - layer * 2;
-        for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) {
-          if (Math.abs(dx) + Math.abs(dz) > radius + 1) continue;
-          this.setLeaf(chunk, x + dx, ly, z + dz, leaves);
-        }
-        radius = radius === 2 ? 1 : 2;
-      }
-      this.setLeaf(chunk, x, y + height, z, leaves);
-      return;
-    }
-
-    if (isJungle) {
-      for (let dy = -2; dy <= 1; dy++) {
-        const radius = dy === -2 ? 2 : 3;
-        for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) {
-          if (Math.abs(dx) === radius && Math.abs(dz) === radius && rng.nextBoolean()) continue;
-          this.setLeaf(chunk, x + dx, y + height + dy, z + dz, leaves);
-        }
-      }
-      return;
-    }
-
-    if (isAcacia) {
-      // Acacia: a visibly leaning upper trunk and a broad, flat umbrella crown.
-      const lean = acaciaLean;
-      const crownX = x + lean * 2;
-      for (let step = 1; step <= 2; step++) {
-        const branchY = y + height - 2 + step;
-        const branchX = x + lean * step;
-        if (branchY < MAX_Y) chunk.setBlock(branchX, branchY, z, log);
-      }
-      for (let dy = -1; dy <= 1; dy++) {
-        const radiusX = dy === 1 ? 2 : 3;
-        const radiusZ = dy === 1 ? 2 : 3;
-        for (let dx = -radiusX; dx <= radiusX; dx++) for (let dz = -radiusZ; dz <= radiusZ; dz++) {
-          if ((dx * dx) / (radiusX * radiusX + 0.01) + (dz * dz) / (radiusZ * radiusZ + 0.01) > 1.15) continue;
-          if (Math.abs(dx) === radiusX && Math.abs(dz) === radiusZ && rng.nextBoolean()) continue;
-          this.setLeaf(chunk, crownX + dx, y + height + dy, z + dz, leaves);
-        }
-      }
-      return;
-    }
-
-    if (isBirch) {
-      // Birch crowns are taller and narrower than oak, with a loose oval profile.
-      for (let dy = -3; dy <= 1; dy++) {
-        const radius = dy === 1 || dy === -3 ? 1 : 2;
-        const ly = y + height - 1 + dy;
-        for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) {
-          if (Math.abs(dx) === radius && Math.abs(dz) === radius && rng.nextBoolean()) continue;
-          this.setLeaf(chunk, x + dx, ly, z + dz, leaves);
-        }
-      }
-      this.setLeaf(chunk, x, y + height + 1, z, leaves);
-      return;
-    }
-
-    const radius = isDarkOak ? 3 : 2;
-    for (let dy = -2; dy <= 0; dy++) {
-      const ly = y + height - 1 + dy;
-      const layerRadius = dy === 0 ? radius - 1 : radius;
-      for (let dx = -layerRadius; dx <= layerRadius; dx++) for (let dz = -layerRadius; dz <= layerRadius; dz++) {
-        if (Math.abs(dx) === layerRadius && Math.abs(dz) === layerRadius && rng.nextBoolean()) continue;
-        this.setLeaf(chunk, x + dx, ly, z + dz, leaves);
+    if (leaves) {
+      for (const [dx, dy, dz] of shape.leaves) {
+        this.setLeaf(chunk, x + dx, y + dy, z + dz, leaves);
       }
     }
-    this.setLeaf(chunk, x, y + height, z, leaves);
   }
 
   setLeaf(chunk, x, y, z, leaves) {
