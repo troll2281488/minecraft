@@ -99,6 +99,10 @@ describe('generated dungeon chest loot', () => {
         assert(weight > 0 && min > 0 && max >= min);
       }
     }
+    assert(ITEMS.get('mc:enchanted_book'), 'enchanted book loot item must be registered');
+    assert(ITEMS.get('mc:gunpowder'), 'gunpowder loot item must be registered');
+    assert(DUNGEON_LOOT_POOLS[0].entries.some(([id]) => id === 'mc:enchanted_book'));
+    assert(DUNGEON_LOOT_POOLS[2].entries.some(([id]) => id === 'mc:gunpowder'));
     const entries = DUNGEON_LOOT_POOLS[0].entries;
     assertEqual(chooseWeightedLootEntry(entries, { nextInt: () => 0 })[0], 'mc:saddle');
     assertEqual(chooseWeightedLootEntry(entries, { nextInt: () => 20 })[0], 'mc:golden_apple');
