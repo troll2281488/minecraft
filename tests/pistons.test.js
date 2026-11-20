@@ -135,6 +135,22 @@ describe('piston and sticky piston', () => {
     assertEqual(drops[0].count, 2);
   });
 
+  it('runs piston world mutations only on the multiplayer host', () => {
+    const piston = BLOCKS.get('mc:piston').defaultState.with('facing', 'east');
+    const source = BLOCKS.get('mc:redstone_block').defaultState;
+    const { world, blocks } = makeWorld([
+      ['0,0,0', piston], ['0,0,-1', source], ['1,0,0', STONE],
+    ]);
+    const game = {
+      world, player: { x: 0, y: 0, z: 0 },
+      multiplayer: { roomId: 'ABCDE', isHost: false },
+      ...RedstoneDevicesMixin,
+    };
+    game._tickPistons(0, 0, 0, true);
+    assertEqual(blocks.get('0,0,0').get('extended'), false);
+    assertEqual(blocks.get('1,0,0'), STONE);
+  });
+
   it('does not extend into an immovable block', () => {
     const piston = BLOCKS.get('mc:piston').defaultState.with('facing', 'east');
     const source = BLOCKS.get('mc:redstone_block').defaultState;
