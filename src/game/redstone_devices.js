@@ -8,6 +8,20 @@ import { AIR } from '../world/block.js';
  */
 const NEIGHBORS = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
 const HORIZONTAL = [[1,0,0,'east','west'],[-1,0,0,'west','east'],[0,0,1,'south','north'],[0,0,-1,'north','south']];
+const FACING_VECTOR = { north: [0,0,-1], south: [0,0,1], east: [1,0,0], west: [-1,0,0] };
+
+function readSignal(world, x, y, z, targetX, targetY, targetZ) {
+  const state = world.getBlock(x,y,z);
+  if (state.block.id === 'mc:redstone_block') return 15;
+  if (state.block.renderShape === 'redstone_wire') return state.get('power') || 0;
+  if (state.block.id === 'mc:redstone_torch') return 15;
+  if ((state.block.renderShape === 'lever' || state.block.renderShape === 'button' || state.block.renderShape === 'pressure_plate') && state.get('powered')) return 15;
+  if (state.block.renderShape === 'repeater' && state.get('powered')) {
+    const [dx,dy,dz] = FACING_VECTOR[state.get('facing')] || [0,0,-1];
+    if (x+dx === targetX && y+dy === targetY && z+dz === targetZ) return 15;
+  }
+  return 0;
+}
 
 function writeState(game, x, y, z, state) {
   game.world.setBlock(x, y, z, state);
@@ -156,7 +170,35 @@ export const RedstoneDevicesMixin = {
       this._knownPressurePlates.delete(key);
     }
 
+    this._tickRepeaters(baseX, baseY, baseZ, !!player);
     this._tickRedstoneWireNetwork(baseX, baseY, baseZ, !!player);
+  },
+
+  _tickRepeaters(baseX, baseY, baseZ, hasPlayer) {
+    if (!hasPlayer) return;
+    const world = this.world, tick = this.tickCount || 0;
+    this._repeaterTimers ||= new Map();
+    for(let y=baseY-3;y<=baseY+4;y++) for(let x=baseX-8;x<=baseX+8;x++) for(let z=baseZ-8;z<=baseZ+8;z++) {
+      const state=world.getBlock(x,y,z);
+      if(state.block.renderShape!=='repeater') continue;
+      const [dx,dy,dz]=FACING_VECTOR[state.get('facing')] || [0,0,-1];
+      const input=readSignal(world,x-dx,y-dy,z-dz,x,y,z)>0;
+      const key=`${x},${y},${z}`;
+      if(input===state.get('powered')) { this._repeaterTimers.delete(key); continue; }
+      const pending=this._repeaterTimers.get(key);
+      if(!pending || pending.powered!==input) this._repeaterTimers.set(key,{powered:input,due:tick+state.get('delay')*4});
+    }
+    for(const [key,timer] of this._repeaterTimers) {
+      const [x,y,z]=key.split(',').map(Number), state=world.getBlock(x,y,z);
+      if(state.block.renderShape!=='repeater') { this._repeaterTimers.delete(key); continue; }
+      if(tick<timer.due) continue;
+      const next=state.with('powered',timer.powered);
+      writeState(this,x,y,z,next);
+      this._repeaterTimers.delete(key);
+      const [dx,dy,dz]=FACING_VECTOR[next.get('facing')] || [0,0,-1];
+      const out=world.getBlock(x+dx,y+dy,z+dz);
+      applyMechanism(this,x+dx,y+dy,z+dz,out,timer.powered);
+    }
   },
 
   _tickRedstoneWireNetwork(baseX, baseY, baseZ, hasPlayer) {
@@ -167,19 +209,14 @@ export const RedstoneDevicesMixin = {
     const minZ = baseZ - 8, maxZ = baseZ + 8;
     const wires = new Map();
     const keyOf = (x,y,z) => `${x},${y},${z}`;
-    const sourcePower = (x,y,z) => {
-      const state = world.getBlock(x,y,z);
-      if (state.block.id === 'mc:redstone_block') return 15;
-      if ((state.block.renderShape === 'lever' || state.block.renderShape === 'button' || state.block.renderShape === 'pressure_plate') && state.get('powered')) return 15;
-      return 0;
-    };
+    const sourcePower = (x,y,z,targetX,targetY,targetZ) => readSignal(world,x,y,z,targetX,targetY,targetZ);
     for (let y=minY;y<=maxY;y++) for(let x=minX;x<=maxX;x++) for(let z=minZ;z<=maxZ;z++) {
       const state=world.getBlock(x,y,z);
       if(state.block.renderShape==='redstone_wire') wires.set(keyOf(x,y,z),{x,y,z,state,power:0});
     }
     if (!wires.size) return;
     for (const wire of wires.values()) {
-      for (const [dx,dy,dz] of NEIGHBORS) wire.power=Math.max(wire.power,sourcePower(wire.x+dx,wire.y+dy,wire.z+dz));
+      for (const [dx,dy,dz] of NEIGHBORS) wire.power=Math.max(wire.power,sourcePower(wire.x+dx,wire.y+dy,wire.z+dz,wire.x,wire.y,wire.z));
     }
     for(let pass=0;pass<15;pass++) {
       let changed=false;
@@ -203,7 +240,7 @@ export const RedstoneDevicesMixin = {
       let next=old;
       if(old.get('power')!==wire.power)next=next.with('power',wire.power);
       for(const [dx,dy,dz,prop] of [[1,0,0,'east'],[-1,0,0,'west'],[0,0,1,'south'],[0,0,-1,'north']]) {
-        const connected=wires.has(keyOf(wire.x+dx,wire.y+dy,wire.z+dz)) || sourcePower(wire.x+dx,wire.y+dy,wire.z+dz)>0;
+        const connected=wires.has(keyOf(wire.x+dx,wire.y+dy,wire.z+dz)) || sourcePower(wire.x+dx,wire.y+dy,wire.z+dz,wire.x,wire.y,wire.z)>0;
         if(next.get(prop)!==connected)next=next.with(prop,connected);
       }
       if(next!==old)writeState(this,wire.x,wire.y,wire.z,next);

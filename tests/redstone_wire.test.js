@@ -4,6 +4,29 @@ import { BLOCKS } from '../src/world/block.js';
 import { RedstoneDevicesMixin } from '../src/game/redstone_devices.js';
 
 describe('redstone wire signal network', () => {
+  it('repeater delays a rising signal according to its selected setting', () => {
+    const blocks = new Map();
+    const key = (x,y,z) => `${x},${y},${z}`;
+    const air = BLOCKS.get('mc:air').defaultState;
+    const lever = BLOCKS.get('mc:lever').defaultState.with('powered', true);
+    const repeater = BLOCKS.get('mc:repeater').defaultState.with('facing', 'east');
+    blocks.set(key(0,0,0), lever);
+    blocks.set(key(1,0,0), repeater);
+    const world = {
+      getBlock(x,y,z) { return blocks.get(key(x,y,z)) || air; },
+      setBlock(x,y,z,state) { blocks.set(key(x,y,z), state); return true; },
+    };
+    const game = { world, tickCount: 0, multiplayer: null };
+    RedstoneDevicesMixin._tickRepeaters.call(game, 1, 0, 0, true);
+    assertEqual(world.getBlock(1,0,0).get('powered'), false);
+    game.tickCount = 3;
+    RedstoneDevicesMixin._tickRepeaters.call(game, 1, 0, 0, true);
+    assertEqual(world.getBlock(1,0,0).get('powered'), false);
+    game.tickCount = 4;
+    RedstoneDevicesMixin._tickRepeaters.call(game, 1, 0, 0, true);
+    assertEqual(world.getBlock(1,0,0).get('powered'), true);
+  });
+
   it('carries a lever signal with one strength lost per wire', () => {
     const blocks = new Map();
     const key = (x,y,z) => `${x},${y},${z}`;

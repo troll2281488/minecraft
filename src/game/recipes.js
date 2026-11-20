@@ -64,6 +64,8 @@ recipes.push({ result: 'mc:polished_blackstone_button', count: 1, ingredients: [
 recipes.push({ result: 'mc:stone_pressure_plate', count: 1, pattern: ['SS'], key: { S: 'mc:stone' } });
 recipes.push({ result: 'mc:polished_blackstone_pressure_plate', count: 1, pattern: ['SS'], key: { S: 'mc:polished_blackstone' } });
 recipes.push({ result: 'mc:lever', count: 1, pattern: ['T', 'S'], key: { T: 'mc:stick', S: 'mc:cobblestone' } });
+recipes.push({ result: 'mc:redstone_torch', count: 1, pattern: ['R', 'S'], key: { R: 'mc:redstone', S: 'mc:stick' } });
+recipes.push({ result: 'mc:repeater', count: 1, pattern: ['T T', ' R ', 'SSS'], key: { T: 'mc:redstone_torch', R: 'mc:redstone', S: 'mc:stone' } });
 
 recipes.push({
   result: 'mc:stick', count: 4,
