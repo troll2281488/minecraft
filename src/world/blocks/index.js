@@ -346,6 +346,24 @@ define('mc:ladder', {
   properties: { facing: PROPS.facing }, defaultValues: { facing: 'north' },
 });
 
+// Java stronghold doors: two blockstates represent the lower and upper halves.
+for (const [id, texture, hardness, tool, soundGroup] of [
+  ['mc:oak_door', 'oak_door', 3, 'axe', 'wood'],
+  ['mc:iron_door', 'iron_door', 5, 'pickaxe', 'metal'],
+]) define(id, {
+  hardness, resistance: hardness, tool, soundGroup, solid: true, opaqueCube: false,
+  renderShape: 'door', texture,
+  properties: { facing: PROPS.facing, half: PROPS.half, hinge: PROPS.hinge, open: PROPS.open },
+  defaultValues: { facing: 'north', half: 'bottom', hinge: 'left', open: false },
+});
+
+define('mc:stone_button', {
+  hardness: 0.5, resistance: 0.5, tool: 'pickaxe', soundGroup: 'stone',
+  solid: false, opaqueCube: false, opacity: 0, renderShape: 'button', texture: 'stone_button',
+  properties: { facing: PROPS.facing, powered: PROPS.powered },
+  defaultValues: { facing: 'north', powered: false },
+});
+
 define('mc:end_portal_frame', {
   hardness: -1, resistance: 3600000, soundGroup: 'stone',
   texture: 'end_portal_frame',
