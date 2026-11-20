@@ -9,7 +9,7 @@
  * Clicks: left click takes, swaps or merges with the cursor; right click takes half or
  * puts down one; shift-click moves a stack between the player's inventory and the container.
  */
-import { Chest, Hopper, Furnace, SMELTING, SMELT_TICKS, moveOneItem, serializeContainer, deserializeContainer } from './containers.js';
+import { Chest, Hopper, Dropper, Furnace, SMELTING, SMELT_TICKS, moveOneItem, serializeContainer, deserializeContainer } from './containers.js';
 import { readSignal } from './redstone_devices.js';
 import { ItemStack } from '../world/item.js';
 import { positionalRandom, normalizeSeed } from '../core/rng.js';
@@ -425,6 +425,16 @@ export const ContainerScreensMixin = {
     return this._containers.get(key).data;
   },
 
+  _dropperAt(x, y, z) {
+    this._containers ??= new Map();
+    const key = this._containerKey(x, y, z);
+    const entry = this._containers.get(key);
+    if (entry?.type !== 'dropper' || !(entry.data instanceof Dropper) || entry.data.slots.length !== 9) {
+      this._containers.set(key, { type: 'dropper', data: new Dropper() });
+    }
+    return this._containers.get(key).data;
+  },
+
   _hopperAt(x, y, z) {
     this._containers ??= new Map();
     const key = this._containerKey(x, y, z);
@@ -448,6 +458,11 @@ export const ContainerScreensMixin = {
   _openChest(x, y, z) {
     const key = this._containerKey(x, y, z);
     this._openContainer({ title: 'Сундук', slots: this._chestAt(x, y, z).slots, kind: 'chest', key });
+  },
+
+  _openDropper(x, y, z) {
+    const dropper = this._dropperAt(x, y, z);
+    this._openContainer({ title: 'Выбрасыватель', slots: dropper.slots, kind: 'dropper', key: this._containerKey(x, y, z) });
   },
 
   _openHopper(x, y, z) {
@@ -520,6 +535,62 @@ export const ContainerScreensMixin = {
       return true;
     }
     return moveOneItem(sourceSlots, destinationEntry.data?.slots);
+  },
+
+  /** Host-authoritative dropper: one item per rising redstone pulse. */
+  _tickDroppers() {
+    const player = this.player;
+    if (!player || (this.multiplayer?.roomId && !this.multiplayer.isHost)) return;
+    const tick = this.tickCount || 0;
+    this._dropperPending ||= new Map();
+    this._dropperPowered ||= new Map();
+    const world = this.world;
+    const bx = Math.floor(player.x), by = Math.floor(player.y), bz = Math.floor(player.z);
+    const vectors = { down:[0,-1,0], up:[0,1,0], north:[0,0,-1], south:[0,0,1], west:[-1,0,0], east:[1,0,0] };
+    for (let y=by-3;y<=by+4;y++) for(let x=bx-8;x<=bx+8;x++) for(let z=bz-8;z<=bz+8;z++) {
+      const state=world.getBlock(x,y,z);
+      if(state.block.id!=='mc:dropper') continue;
+      const key=this._containerKey(x,y,z);
+      if(this.multiplayer?.isContainerLockedByOther?.(key)) continue;
+      let powered=false;
+      for(const [dx,dy,dz] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]) {
+        if(readSignal(world,x+dx,y+dy,z+dz,x,y,z)>0){powered=true;break;}
+      }
+      const wasPowered=this._dropperPowered.get(key)===true;
+      this._dropperPowered.set(key,powered);
+      if(powered&&!wasPowered&&!this._dropperPending.has(key)) this._dropperPending.set(key,tick+4);
+    }
+    for(const [key,due] of this._dropperPending) {
+      const [x,y,z]=key.split(',').map(Number), state=world.getBlock(x,y,z);
+      if(state.block.id!=='mc:dropper'){this._dropperPending.delete(key);this._dropperPowered.delete(key);continue;}
+      if(tick<due) continue;
+      const dropper=this._dropperAt(x,y,z);
+      const slotIndex=dropper.slots.findIndex((slot)=>slot&&!slot.isEmpty);
+      if(slotIndex<0){this._dropperPending.delete(key);continue;}
+      const [dx,dy,dz]=vectors[state.get('facing')]||vectors.north;
+      const tx=x+dx,ty=y+dy,tz=z+dz, targetId=world.getBlock(tx,ty,tz).block.id;
+      let destination=null;
+      if(targetId==='mc:chest'||targetId==='mc:trapped_chest') destination={type:'chest',data:this._chestAt(tx,ty,tz)};
+      else if(targetId==='mc:hopper') destination={type:'hopper',data:this._hopperAt(tx,ty,tz)};
+      else if(targetId==='mc:dropper') destination={type:'dropper',data:this._dropperAt(tx,ty,tz)};
+      else if(targetId==='mc:furnace') destination={type:'furnace',data:this._furnaceAt(tx,ty,tz)};
+      let moved=false;
+      if(destination&&!this.multiplayer?.isContainerLockedByOther?.(this._containerKey(tx,ty,tz))) {
+        moved=this._hopperTransferOne({type:'dropper',data:dropper},destination,dy>0?'top':'side');
+        if(moved&&this.multiplayer?.roomId){this._hopperDirtyKeys||=new Set();this._hopperDirtyKeys.add(this._containerKey(tx,ty,tz));}
+      }
+      if(!moved) {
+        const source=dropper.slots[slotIndex];
+        const one=ItemStack.of(source.item.id,1,source.damage,source.data);
+        const px=x+0.5+dx*0.72, py=y+0.35+dy*0.72, pz=z+0.5+dz*0.72;
+        this.entities?.spawnItemStackAt(one,px,py,pz,dx*0.12,0.08+dy*0.08,dz*0.12);
+        source.count--;
+        if(source.count<=0) dropper.slots[slotIndex]=ItemStack.EMPTY.clone();
+        moved=true;
+      }
+      if(moved&&this.multiplayer?.roomId){this._hopperDirtyKeys||=new Set();this._hopperDirtyKeys.add(key);}
+      this._dropperPending.delete(key);
+    }
   },
 
   /** Host-authoritative hopper transfer, sampled every eight game ticks nearby. */
@@ -703,7 +774,7 @@ export const ContainerScreensMixin = {
     if (!overlay || !spec) return;
     const inv = this.inventory;
     let body = '';
-    if (spec.kind === 'chest' || spec.kind === 'hopper') {
+    if (spec.kind === 'chest' || spec.kind === 'hopper' || spec.kind === 'dropper') {
       body += `<h3>${spec.title}</h3><div class="row slots-9">`;
       for (let i = 0; i < spec.slots.length; i++) body += this._slotHtml(spec.kind, i, spec.slots[i]);
       body += '</div>';
@@ -744,10 +815,11 @@ export const ContainerScreensMixin = {
     if (['pending', 'busy', 'offline', 'lost'].includes(spec.lockState)) return;
 
     if (kind === 'inv') {
-      if (shift && (spec.kind === 'chest' || spec.kind === 'hopper')) {
+      if (shift && (spec.kind === 'chest' || spec.kind === 'hopper' || spec.kind === 'dropper')) {
         const stack = inv.slots[index];
         const movedAll = !stack.isEmpty && (spec.kind === 'chest'
-          ? this._moveToChest(spec, stack) : this._moveToHopper(spec, stack));
+          ? this._moveToChest(spec, stack) : spec.kind === 'hopper'
+            ? this._moveToHopper(spec, stack) : this._moveToDropper(spec, stack));
         if (movedAll) inv.slots[index] = ItemStack.EMPTY.clone();
       } else if (shift && spec.kind === 'furnace') {
         const stack = inv.slots[index];
@@ -823,7 +895,7 @@ export const ContainerScreensMixin = {
   },
 
   _containerSlot(spec, kind, index) {
-    if (kind === 'chest' || kind === 'hopper') {
+    if (kind === 'chest' || kind === 'hopper' || kind === 'dropper') {
       return { get: () => spec.slots[index], set: (v) => { spec.slots[index] = v; } };
     }
     const f = spec.furnace;
@@ -903,6 +975,15 @@ export const ContainerScreensMixin = {
     else current.count += moved;
     stack.count -= moved;
     return true;
+  },
+
+  /** Move as much of `stack` into the dropper as fits. Returns true if all moved. */
+  _moveToDropper(spec, stack) {
+    const dropper = new Dropper();
+    dropper.slots = spec.slots;
+    const rest = dropper.insert(stack.clone());
+    stack.count = rest;
+    return rest === 0;
   },
 
   /** Move as much of `stack` into the hopper as fits. Returns true if all moved. */
