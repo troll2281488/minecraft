@@ -26,6 +26,7 @@ import { CHUNK_SIZE, MIN_Y, MAX_Y, SEA_LEVEL } from '../../core/constants.js';
 import { clamp } from '../../core/math.js';
 import { buildTree, TREE_MARGIN } from './trees.js';
 import { hash01, seedToInt } from './hash.js';
+import { ChunkWriter, mineshaftPlan, placeMineshaftPlan, placeDungeonRoom, villagePlan, placeVillagePlan, villageStyleForBiome } from './structures.js';
 
 /** Bumped whenever generation output changes. Stored per world. */
 export const GENERATOR_VERSION = 12;
@@ -901,44 +902,17 @@ export class TerrainGenerator {
    * regardless of worker completion order.
    */
   placeVillages(chunk, baseX, baseZ) {
-    const minGridX = Math.floor((baseX - 30) / 128);
-    const maxGridX = Math.floor((baseX + CHUNK_SIZE + 30) / 128);
-    const minGridZ = Math.floor((baseZ - 30) / 128);
-    const maxGridZ = Math.floor((baseZ + CHUNK_SIZE + 30) / 128);
-
-    for (let gz = minGridZ; gz <= maxGridZ; gz++) {
-      for (let gx = minGridX; gx <= maxGridX; gx++) {
-        const candidate = villageCandidateForCell(this.seed, gx, gz);
-        if (!candidate) continue;
-
-        const site = this.validateVillageSite(candidate.x, candidate.z);
-        if (!site) continue;
-        // Seeded village plans: each settlement chooses a different street pattern,
-        // building mix and farm position while retaining chunk-order determinism.
-        const planRng = positionalRandom(this.seed, gx, 7301, gz, 7301);
-        const plan = planRng.nextInt(5);
-        const layouts = [
-          [[0,0,0],[10,0,1],[0,10,2],[10,10,3],[20,10,4]],
-          [[0,0,0],[10,0,2],[20,0,3],[0,10,4],[20,10,1]],
-          [[0,0,0],[10,0,3],[20,0,4],[0,10,2],[10,20,1]],
-          [[0,0,0],[10,0,4],[20,0,3],[0,10,1],[20,10,2]],
-          [[0,0,0],[10,0,1],[20,0,2],[0,10,3],[10,20,4]],
-        ];
-        for (const [dx,dz,kind] of layouts[plan]) {
-          if (kind===4) this.placeVillageFarm(chunk,baseX,baseZ,candidate.x+dx,candidate.z+dz,site.y);
-          else this.placeVillageHouse(chunk,baseX,baseZ,candidate.x+dx,candidate.z+dz,site.y,site.biome,kind);
-        }
-        const path = this.states.byId['mc:coarse_dirt'];
-        // Main lane and two cross-lanes link the doors, farm and village centre.
-        for (let dx = 3; dx <= 23; dx++) {
-          this.setVillageBlock(chunk, baseX, baseZ, candidate.x + dx, site.y, candidate.z + 8, path);
-          this.setVillageBlock(chunk, baseX, baseZ, candidate.x + dx, site.y, candidate.z + 18, path);
-        }
-        for (let dz = 3; dz <= 18; dz++) {
-          this.setVillageBlock(chunk, baseX, baseZ, candidate.x + 8, site.y, candidate.z + dz, path);
-          this.setVillageBlock(chunk, baseX, baseZ, candidate.x + 18, site.y, candidate.z + dz, path);
-        }
-      }
+    const w = new ChunkWriter(chunk, baseX, baseZ), S = this.states.byId;
+    const minX = Math.floor((baseX - 48) / 128), maxX = Math.floor((baseX + CHUNK_SIZE + 48) / 128);
+    const minZ = Math.floor((baseZ - 48) / 128), maxZ = Math.floor((baseZ + CHUNK_SIZE + 48) / 128);
+    for (let gz = minZ; gz <= maxZ; gz++) for (let gx = minX; gx <= maxX; gx++) {
+      const candidate = villageCandidateForCell(this.seed, gx, gz);
+      if (!candidate) continue;
+      const site = this.validateVillageSite(candidate.x, candidate.z);
+      if (!site) continue;
+      const style = villageStyleForBiome(site.biome) || 'plains';
+      const plan = villagePlan(this.seed, candidate.x, candidate.z, site.y, style);
+      placeVillagePlan(w, S, plan);
     }
   }
 
@@ -1050,38 +1024,26 @@ export class TerrainGenerator {
     put(fossil.x + 4, fossil.y + 2, fossil.z + 1, bone);
   }
 
-  placeUndergroundStructures(chunk, baseX, baseZ) {
-    const minX = Math.floor((baseX - 36) / 96);
-    const maxX = Math.floor((baseX + CHUNK_SIZE + 36) / 96);
-    const minZ = Math.floor((baseZ - 36) / 96);
-    const maxZ = Math.floor((baseZ + CHUNK_SIZE + 36) / 96);
-    for (let gz = minZ; gz <= maxZ; gz++) {
-      for (let gx = minX; gx <= maxX; gx++) {
-        const shaft = mineshaftCandidateForCell(this.seed, gx, gz);
-        if (shaft) this.placeMineshaft(chunk, baseX, baseZ, shaft);
-      }
+  placeUndergroundStructures(chunk, baseX, baseZ, heights) {
+    const w = new ChunkWriter(chunk, baseX, baseZ), S = this.states.byId;
+    const minX = Math.floor((baseX - 64) / 96), maxX = Math.floor((baseX + CHUNK_SIZE + 64) / 96);
+    const minZ = Math.floor((baseZ - 64) / 96), maxZ = Math.floor((baseZ + CHUNK_SIZE + 64) / 96);
+    for (let gz = minZ; gz <= maxZ; gz++) for (let gx = minX; gx <= maxX; gx++) {
+      const shaft = mineshaftCandidateForCell(this.seed, gx, gz);
+      if (shaft) placeMineshaftPlan(w, S, mineshaftPlan(this.seed, shaft), heights);
     }
-
-    const dungeonMinX = Math.floor((baseX - 20) / 80);
-    const dungeonMaxX = Math.floor((baseX + CHUNK_SIZE + 20) / 80);
-    const dungeonMinZ = Math.floor((baseZ - 20) / 80);
-    const dungeonMaxZ = Math.floor((baseZ + CHUNK_SIZE + 20) / 80);
-    for (let gz = dungeonMinZ; gz <= dungeonMaxZ; gz++) {
-      for (let gx = dungeonMinX; gx <= dungeonMaxX; gx++) {
-        const room = dungeonCandidateForCell(this.seed, gx, gz);
-        if (room) this.placeDungeon(chunk, baseX, baseZ, room);
-      }
+    const dMinX = Math.floor((baseX - 20) / 80), dMaxX = Math.floor((baseX + CHUNK_SIZE + 20) / 80);
+    const dMinZ = Math.floor((baseZ - 20) / 80), dMaxZ = Math.floor((baseZ + CHUNK_SIZE + 20) / 80);
+    for (let gz = dMinZ; gz <= dMaxZ; gz++) for (let gx = dMinX; gx <= dMaxX; gx++) {
+      const room = dungeonCandidateForCell(this.seed, gx, gz);
+      if (room) placeDungeonRoom(w, S, room, this.seed, heights);
     }
-
-    const strongholdMinX = Math.floor((baseX - 32) / 512);
-    const strongholdMaxX = Math.floor((baseX + CHUNK_SIZE + 32) / 512);
-    const strongholdMinZ = Math.floor((baseZ - 32) / 512);
-    const strongholdMaxZ = Math.floor((baseZ + CHUNK_SIZE + 32) / 512);
-    for (let gz = strongholdMinZ; gz <= strongholdMaxZ; gz++) {
-      for (let gx = strongholdMinX; gx <= strongholdMaxX; gx++) {
-        const stronghold = strongholdCandidateForCell(this.seed, gx, gz);
-        if (stronghold) this.placeStronghold(chunk, baseX, baseZ, stronghold);
-      }
+    // Keep the newer stronghold system from main intact.
+    const strongholdMinX = Math.floor((baseX - 32) / 512), strongholdMaxX = Math.floor((baseX + CHUNK_SIZE + 32) / 512);
+    const strongholdMinZ = Math.floor((baseZ - 32) / 512), strongholdMaxZ = Math.floor((baseZ + CHUNK_SIZE + 32) / 512);
+    for (let gz = strongholdMinZ; gz <= strongholdMaxZ; gz++) for (let gx = strongholdMinX; gx <= strongholdMaxX; gx++) {
+      const stronghold = strongholdCandidateForCell(this.seed, gx, gz);
+      if (stronghold) this.placeStronghold(chunk, baseX, baseZ, stronghold);
     }
   }
 
