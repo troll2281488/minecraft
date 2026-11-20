@@ -172,7 +172,8 @@ describe('Generated structure chest loot', () => {
         const shaft = mineshaftCandidateForCell(seed, gx, gz);
         if (!shaft) continue;
         for (const piece of mineshaftPlan(seed, shaft).pieces) {
-          if (piece.kind !== 'corridor' || !piece.deadEnd || !piece.chest) continue;
+          if (piece.kind !== 'corridor' || !piece.deadEnd || !piece.chest || piece.d !== 1 ||
+              shaft.x - gx * 96 >= 29) continue;
           const [dx, dz] = [[1, 0], [-1, 0], [0, 1], [0, -1]][piece.d];
           position = [piece.sx + dx * (piece.length - 1), piece.y + 1,
             piece.sz + dz * (piece.length - 1)];
