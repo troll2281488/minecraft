@@ -69,6 +69,7 @@ export const BlockActionsMixin = {
     this.sounds?.play('break', state.block.soundGroup || 'stone');
     this.world.setBlock(x, y, z, AIR.defaultState);
     this.multiplayer?.pushBlockChange(x, y, z, AIR.defaultState);
+    this._removeAttachedRedstoneDevices?.(x, y, z);
     if (isDoor) {
       this.world.setBlock(x, pairedDoorY, z, AIR.defaultState);
       this.multiplayer?.pushBlockChange(x, pairedDoorY, z, AIR.defaultState);
