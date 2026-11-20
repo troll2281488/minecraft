@@ -32,7 +32,63 @@ export function electRoomHost(room, players) {
   return Object.keys(players || {}).sort()[0] || null;
 }
 
+/** Store bounded chat messages under stable IDs so reconnect retries cannot duplicate them. */
+export function queueChatMessage(queue, roomId, message, limit = 100) {
+  if (!(queue instanceof Map) || !roomId || !message || typeof message.id !== 'string' ||
+      !/^[a-zA-Z0-9_-]{1,80}$/.test(message.id) ||
+      typeof message.text !== 'string' || !message.text.trim()) return false;
+  queue.set(`${roomId}:${message.id}`, {
+    roomId, id: message.id,
+    sender: safeName(message.sender),
+    text: message.text.trim().slice(0, 240),
+    timestamp: Number.isFinite(message.timestamp) ? message.timestamp : Date.now(),
+  });
+  while (queue.size > limit) queue.delete(queue.keys().next().value);
+  return true;
+}
+
 /** Keep valid room records discoverable even when every player temporarily disconnects. */
+/** Extract only public visual equipment identifiers; never replicate full inventories. */
+export function remoteEquipmentSnapshot(inventory) {
+  if (!inventory) return { heldItem: null, offhandItem: null, armor: [] };
+  const itemIdAt = (index) => {
+    const stack = inventory.get?.(index) ?? inventory.slots?.[index];
+    if (!stack || stack.isEmpty || !stack.item) return null;
+    const id = String(stack.item.id || '');
+    return /^[a-z0-9_.-]+:[a-z0-9_./-]+$/i.test(id) ? id.slice(0, 128) : null;
+  };
+  return {
+    heldItem: itemIdAt(inventory.selectedSlot ?? 0),
+    offhandItem: itemIdAt(40),
+    armor: [itemIdAt(36), itemIdAt(37), itemIdAt(38), itemIdAt(39)],
+  };
+}
+
+/** Apply validated animation and status fields from a remote player snapshot. */
+export function applyRemotePlayerState(current, snapshot) {
+  if (!current || !snapshot || typeof snapshot !== 'object') return current;
+  current.name = safeName(snapshot.name);
+  current.health = Number.isFinite(snapshot.health) ? Math.max(0, Math.min(20, snapshot.health)) : 20;
+  current.food = Number.isFinite(snapshot.food) ? Math.max(0, Math.min(20, snapshot.food)) : 20;
+  current.inWater = snapshot.inWater === true;
+  current.sneaking = snapshot.sneaking === true;
+  current.sprinting = snapshot.sprinting === true;
+  current.airborne = snapshot.onGround === false;
+  current.gamemode = ['survival', 'creative', 'spectator'].includes(snapshot.gamemode) ? snapshot.gamemode : 'survival';
+  current.attackTime = Number.isFinite(snapshot.attackTime) ? Math.max(0, Math.min(10, snapshot.attackTime)) : 0;
+  current.attacking = current.attackTime > 0;
+  current.heldItem = typeof snapshot.heldItem === 'string' ? snapshot.heldItem.slice(0, 128) : null;
+  current.offhandItem = typeof snapshot.offhandItem === 'string' ? snapshot.offhandItem.slice(0, 128) : null;
+  current.armor = Array.isArray(snapshot.armor)
+    ? snapshot.armor.slice(0, 4).map((id) => typeof id === 'string' ? id.slice(0, 128) : null)
+    : [null, null, null, null];
+  current.targetX = snapshot.x;
+  current.targetY = snapshot.y;
+  current.targetZ = snapshot.z;
+  current.targetYaw = Number.isFinite(snapshot.yaw) ? snapshot.yaw : 0;
+  return current;
+}
+
 export function isValidContainerKey(key) {
   return typeof key === 'string' && /^-?\d+,-?\d+,-?\d+$/.test(key);
 }
@@ -96,6 +152,7 @@ export class Multiplayer {
     this.pendingBlocks = new Map();
     this.pendingBlockWrites = new Map();
     this.pendingContainerWrites = new Map();
+    this.pendingChatMessages = new Map();
     this.activeContainerLocks = new Map();
     this.containerFlushInFlight = false;
     this.containerFlushRequested = false;
@@ -137,7 +194,10 @@ export class Multiplayer {
           this.firebaseError = '';
           // Firebase executes onDisconnect handlers server-side. Re-register
           // presence and the room player node after every network restoration.
-          if (!wasConnected && this.roomId) void this._restoreRoomPresence();
+          if (!wasConnected && this.roomId) {
+            void this._restoreRoomPresence();
+            void this._flushPendingChatMessages();
+          }
         }
         this._updateRoomHud();
       }, (error) => {
@@ -395,13 +455,7 @@ export class Multiplayer {
       for (const [uid, p] of Object.entries(players)) {
         if (uid === this.uid || !Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.z)) continue;
         const current = this.remotePlayers.get(uid) || { id: uid, name: safeName(p.name), x: p.x, y: p.y, z: p.z, yaw: p.yaw || 0, targetX: p.x, targetY: p.y, targetZ: p.z, targetYaw: p.yaw || 0 };
-        current.name = safeName(p.name);
-        current.health = Number.isFinite(p.health) ? p.health : 20;
-        current.food = Number.isFinite(p.food) ? p.food : 20;
-        current.inWater = !!p.inWater;
-        current.sneaking = !!p.sneaking;
-        current.airborne = p.onGround === false;
-        current.targetX = p.x; current.targetY = p.y; current.targetZ = p.z; current.targetYaw = p.yaw || 0;
+        applyRemotePlayerState(current, p);
         this.remotePlayers.set(uid, current);
       }
       if (!this.spawnSeparationChecked && this.remotePlayers.size > 0) {
@@ -614,6 +668,9 @@ export class Multiplayer {
       inWater: !!p.inWater,
       onGround: !!p.onGround,
       sneaking: !!p.sneaking,
+      sprinting: !!p.sprinting,
+      attackTime: Math.max(0, Math.min(10, Number(p.attackTime) || 0)),
+      ...remoteEquipmentSnapshot(this.game.inventory),
       ts: Date.now(),
     };
   }
@@ -916,9 +973,29 @@ export class Multiplayer {
       this.addChat(`<${this.nickname}> ${value}`);
       return;
     }
-    push(ref(this.db, `minecraft_game/rooms/${this.roomId}/chat`), {
-      sender: this.nickname, text: value, timestamp: Date.now(),
-    }).catch((error) => this.game.ui.toast(`Чат недоступен: ${error.message}`, { error: true }));
+    const id = (globalThis.crypto?.randomUUID?.() || `m${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`)
+      .replace(/[^a-z0-9_-]/gi, '').slice(0, 80);
+    queueChatMessage(this.pendingChatMessages, this.roomId, {
+      id, sender: this.nickname, text: value, timestamp: Date.now(),
+    });
+    if (this.firebaseConnected) void this._flushPendingChatMessages();
+    else this.game.ui.toast('Сообщение сохранено и отправится после восстановления связи.');
+  }
+
+  async _flushPendingChatMessages() {
+    if (!this.db || !this.firebaseConnected) return;
+    for (const [queueKey, message] of this.pendingChatMessages) {
+      if (message.roomId !== this.roomId) continue;
+      try {
+        await set(ref(this.db, `minecraft_game/rooms/${message.roomId}/chat/${message.id}`), {
+          sender: message.sender, text: message.text, timestamp: message.timestamp,
+        });
+        if (this.pendingChatMessages.get(queueKey) === message) this.pendingChatMessages.delete(queueKey);
+      } catch (error) {
+        console.warn('[multiplayer] chat queue:', error);
+        break;
+      }
+    }
   }
 
   addChat(text) {
@@ -940,6 +1017,7 @@ export class Multiplayer {
       // Try to persist this room's last edits before clearing the active room ID.
       await this._flushPendingBlockWrites();
       await this._flushPendingContainerWrites();
+      await this._flushPendingChatMessages();
       await remove(ref(this.db, `minecraft_game/rooms/${this.roomId}/players/${this.uid}`)).catch(() => {});
       await update(ref(this.db, `minecraft_game/players/${this.uid}`), { room: '' }).catch(() => {});
       await update(ref(this.db, `minecraft_game/users/${this.uid}`), { room: '', online: true, ts: Date.now() }).catch(() => {});

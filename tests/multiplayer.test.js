@@ -1,5 +1,5 @@
 import { describe, it, assertEqual } from './framework.js';
-import { canAcquireContainerLease, electRoomHost, isContainerLeaseHeldByOther, isValidContainerKey, listJoinableRooms, ownsContainerLease, queueContainerWrite } from '../src/game/multiplayer.js';
+import { applyRemotePlayerState, remoteEquipmentSnapshot, queueChatMessage, canAcquireContainerLease, electRoomHost, isContainerLeaseHeldByOther, isValidContainerKey, listJoinableRooms, ownsContainerLease, queueContainerWrite } from '../src/game/multiplayer.js';
 
 describe('multiplayer container key validation', () => {
   it('accepts signed integer coordinates only', () => {
@@ -111,5 +111,126 @@ describe('multiplayer room recovery', () => {
     }, 1000, 500);
     assertEqual(rooms.length, 1);
     assertEqual(rooms[0][0], 'MNO12');
+  });
+});
+
+describe('multiplayer remote player state', () => {
+  it('replicates sprint, sneak, attack animation, and game mode', () => {
+    const remote = applyRemotePlayerState({}, {
+      name: 'Runner', health: 17, food: 13, inWater: false, sneaking: true,
+      sprinting: true, onGround: true, gamemode: 'creative', attackTime: 6,
+      x: 1, y: 2, z: 3, yaw: 90,
+    });
+    assertEqual(remote.name, 'Runner');
+    assertEqual(remote.sprinting, true);
+    assertEqual(remote.sneaking, true);
+    assertEqual(remote.attacking, true);
+    assertEqual(remote.attackTime, 6);
+    assertEqual(remote.gamemode, 'creative');
+    assertEqual(remote.targetYaw, 90);
+  });
+
+  it('clamps untrusted status and animation values and supplies safe defaults', () => {
+    const remote = applyRemotePlayerState({}, {
+      name: '<bad>', health: 99, food: -4, attackTime: 999,
+      gamemode: 'invalid', x: 0, y: 0, z: 0,
+    });
+    assertEqual(remote.health, 20);
+    assertEqual(remote.food, 0);
+    assertEqual(remote.attackTime, 10);
+    assertEqual(remote.attacking, true);
+    assertEqual(remote.gamemode, 'survival');
+    assertEqual(remote.sprinting, false);
+    assertEqual(remote.sneaking, false);
+  });
+
+  it('clears a previous attack pose when the next snapshot is idle', () => {
+    const remote = applyRemotePlayerState({ attacking: true, attackTime: 4 }, {
+      name: 'Player', attackTime: 0, x: 0, y: 0, z: 0,
+    });
+    assertEqual(remote.attacking, false);
+    assertEqual(remote.attackTime, 0);
+  });
+});
+
+describe('multiplayer equipment snapshots', () => {
+  it('sends only held, offhand, and four armor item identifiers', () => {
+    const stacks = [
+      { isEmpty: false, item: { id: 'minecraft:diamond_sword' } },
+      ...Array.from({ length: 35 }, () => ({ isEmpty: true, item: null })),
+      { isEmpty: false, item: { id: 'minecraft:diamond_boots' } },
+      { isEmpty: false, item: { id: 'minecraft:iron_leggings' } },
+      { isEmpty: false, item: { id: 'minecraft:iron_chestplate' } },
+      { isEmpty: false, item: { id: 'minecraft:iron_helmet' } },
+      { isEmpty: false, item: { id: 'minecraft:shield' } },
+    ];
+    const snapshot = remoteEquipmentSnapshot({ selectedSlot: 0, get: (index) => stacks[index] });
+    assertEqual(snapshot.heldItem, 'minecraft:diamond_sword');
+    assertEqual(snapshot.offhandItem, 'minecraft:shield');
+    assertEqual(snapshot.armor[0], 'minecraft:diamond_boots');
+    assertEqual(snapshot.armor[3], 'minecraft:iron_helmet');
+    assertEqual(Object.keys(snapshot).length, 3);
+  });
+
+  it('uses empty equipment defaults and ignores malformed item identifiers', () => {
+    const snapshot = remoteEquipmentSnapshot({ selectedSlot: 0, get: () => ({
+      isEmpty: false, item: { id: '../invalid' },
+    }) });
+    assertEqual(snapshot.heldItem, null);
+    assertEqual(snapshot.offhandItem, null);
+    assertEqual(snapshot.armor.every((id) => id === null), true);
+  });
+
+  it('applies equipment from remote snapshots and clears stale slots', () => {
+    const remote = applyRemotePlayerState({}, {
+      heldItem: 'minecraft:iron_pickaxe', offhandItem: 'minecraft:shield',
+      armor: ['minecraft:iron_boots', null, null, 'minecraft:iron_helmet'],
+      x: 0, y: 0, z: 0,
+    });
+    assertEqual(remote.heldItem, 'minecraft:iron_pickaxe');
+    assertEqual(remote.offhandItem, 'minecraft:shield');
+    assertEqual(remote.armor[0], 'minecraft:iron_boots');
+    applyRemotePlayerState(remote, { x: 0, y: 0, z: 0 });
+    assertEqual(remote.heldItem, null);
+    assertEqual(remote.armor.every((id) => id === null), true);
+  });
+});
+
+describe('multiplayer offline chat queue', () => {
+  it('queues messages by room and stable message ID', () => {
+    const queue = new Map();
+    assertEqual(queueChatMessage(queue, 'ROOM1', {
+      id: 'msg_1', sender: 'Alex', text: 'hello', timestamp: 123,
+    }), true);
+    assertEqual(queue.size, 1);
+    assertEqual(queue.get('ROOM1:msg_1').text, 'hello');
+  });
+
+  it('keeps room queues isolated and replaces retries with the same ID', () => {
+    const queue = new Map();
+    queueChatMessage(queue, 'ROOM1', { id: 'same', sender: 'Alex', text: 'old' });
+    queueChatMessage(queue, 'ROOM1', { id: 'same', sender: 'Alex', text: 'new' });
+    queueChatMessage(queue, 'ROOM2', { id: 'same', sender: 'Sam', text: 'other room' });
+    assertEqual(queue.size, 2);
+    assertEqual(queue.get('ROOM1:same').text, 'new');
+    assertEqual(queue.get('ROOM2:same').text, 'other room');
+  });
+
+  it('rejects invalid message IDs and empty messages', () => {
+    const queue = new Map();
+    assertEqual(queueChatMessage(queue, 'ROOM1', { id: '../x', text: 'bad' }), false);
+    assertEqual(queueChatMessage(queue, 'ROOM1', { id: 'empty', text: '  ' }), false);
+    assertEqual(queue.size, 0);
+  });
+
+  it('bounds pending messages and truncates oversized text', () => {
+    const queue = new Map();
+    queueChatMessage(queue, 'ROOM1', { id: 'a', sender: 'A', text: 'x'.repeat(500) }, 2);
+    queueChatMessage(queue, 'ROOM1', { id: 'b', sender: 'B', text: 'b' }, 2);
+    queueChatMessage(queue, 'ROOM1', { id: 'c', sender: 'C', text: 'c' }, 2);
+    assertEqual(queue.size, 2);
+    assertEqual(queue.has('ROOM1:a'), false);
+    assertEqual(queue.get('ROOM1:b').text, 'b');
+    assertEqual(queue.get('ROOM1:c').text, 'c');
   });
 });
