@@ -978,7 +978,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       // During an attack lift it vertically; do not thrust it toward the camera.
       const handDistance = 0.48;
       const handX = this.renderPosition.x + forwardX * handDistance + rightX * 0.34;
-      const handY = this.renderPosition.y + this.player.eyeHeight + forwardY * handDistance - 0.43;
+      const handY = this.renderPosition.y + this.player.eyeHeight + (this.player.ridingHorse ? 1.15 : 0) + forwardY * handDistance - 0.43;
       const handZ = this.renderPosition.z + forwardZ * handDistance + rightZ * 0.34;
       const handBob = Math.sin(this.player.walkPhase * 2) * 0.006;
       const armParts = [
