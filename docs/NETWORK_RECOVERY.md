@@ -50,7 +50,7 @@ Implementation branch: `feature/multiplayer-reconnect-stability`.
 
 ## Verification
 
-Pure helper tests cover room host election and discoverability of empty rooms.
+Automated tests cover room host election and discoverability of empty rooms, coordinate-key validation for shared containers, chest/furnace shift-click edge cases, save/restore validation, and container draining when blocks break.
 Run `npm test` (or `node tests/run-node.mjs`) from the repository root.
 Live multi-browser/network-loss testing still needs to be performed in browsers
 with two separate player sessions.
