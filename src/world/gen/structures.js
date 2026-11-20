@@ -155,7 +155,7 @@ export function placeStrongholdPortalRoom(w, S, site, seed) {
     if (rng.nextInt(10) === 0) state = state.with('eye', true);
     w.set(x, y0 + 1, z, state);
   }
-  const stairs = S['mc:stone_brick_stairs'];
+  const stairs = S['mc:stone_bricks_stairs'];
   if (stairs) w.set(px + 5, y0 + 1, pz + 1, stairs.with('facing', 'south'));
   const spawner = S['mc:mob_spawner'];
   if (spawner) w.set(px + 5, y0 + 2, pz + 1, spawner.with('spawner_type', 'silverfish'));
