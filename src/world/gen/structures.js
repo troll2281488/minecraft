@@ -28,15 +28,15 @@ export function mineshaftPlan(seed, site) {
   const rx=3+rng.nextInt(3), rz=3+rng.nextInt(3);
   const pieces=[{kind:'room',cx:site.x,cz:site.z,rx,rz,y,x0:site.x-rx,x1:site.x+rx,z0:site.z-rz,z1:site.z+rz}];
   const queue=DIRS.map(([dx,dz],d)=>({x:site.x+(dx?dx*(dx>0?rx+1:rx+1):0),z:site.z+(dz?dz*(dz>0?rz+1:rz+1):0),d,depth:0}));
-  while(queue.length&&pieces.length<48) {
-    const job=queue.shift(); if(job.depth>5&&rng.nextInt(3)===0) continue;
-    const [dx,dz]=DIRS[job.d], length=14+6*rng.nextInt(3);
+  while(queue.length&&pieces.length<88) {
+    const job=queue.shift(); if(job.depth>7&&rng.nextInt(3)===0) continue;
+    const [dx,dz]=DIRS[job.d], length=18+6*rng.nextInt(3);
     const ex=job.x+dx*length, ez=job.z+dz*length;
     const box={x0:Math.min(job.x,ex)-(dz?1:0),x1:Math.max(job.x,ex)+(dz?1:0),z0:Math.min(job.z,ez)-(dx?1:0),z1:Math.max(job.z,ez)+(dx?1:0)};
-    if(Math.max(Math.abs(box.x0-site.x),Math.abs(box.x1-site.x),Math.abs(box.z0-site.z),Math.abs(box.z1-site.z))>96||pieces.some(p=>overlap(box,p))) continue;
+    if(Math.max(Math.abs(box.x0-site.x),Math.abs(box.x1-site.x),Math.abs(box.z0-site.z),Math.abs(box.z1-site.z))>144||pieces.some(p=>overlap(box,p))) continue;
     const p={kind:'corridor',sx:job.x,sz:job.z,d:job.d,length,y,...box,deadEnd:true,chest:rng.nextInt(2)===0};
     pieces.push(p);
-    if(job.depth<5&&rng.nextInt(3)!==0) {
+    if(job.depth<7&&rng.nextInt(3)!==0) {
       const cx=ex+dx*2,cz=ez+dz*2,cross={kind:'crossing',cx,cz,y,x0:cx-2,x1:cx+2,z0:cz-2,z1:cz+2};
       if(!pieces.some(q=>overlap(cross,q))) {
         pieces.push(cross);
@@ -51,7 +51,7 @@ export function mineshaftPlan(seed, site) {
 }
 
 export function placeMineshaftPlan(w,S,plan,heights) {
-  const air=S['mc:air'],plank=S['mc:oak_planks'],log=S['mc:oak_log']||plank,torch=S['mc:torch'],chest=S['mc:chest'];
+  const air=S['mc:air'],plank=S['mc:oak_planks'],log=S['mc:oak_log']||plank,torch=S['mc:torch'],chest=S['mc:chest'],moss=S['mc:mossy_cobblestone'],vine=S['mc:vine'];
   if(!air||!plank) return;
   const carve=(x,z,y0,y1,minSurface)=> {
     if(!w.inside(x,z)) return false;
@@ -76,9 +76,16 @@ export function placeMineshaftPlan(w,S,plan,heights) {
         if(!carve(x,z,p.y+1,p.y+3,p.y+6)) continue;
         if(w.id(x,p.y,z)==='mc:air'||w.id(x,p.y,z)==='mc:water') w.set(x,p.y,z,plank);
         if(t%4===0) { w.set(x,p.y+3,z,plank); if(side!==0) {w.set(x,p.y+1,z,log);w.set(x,p.y+2,z,log);} }
+        // A few damp, overgrown supports make some abandoned shafts feel old.
+        if(moss&&side!==0&&t%13===6) w.set(x,p.y,z,moss);
+        if(vine&&side!==0&&t%17===8&&w.id(x,p.y+3,z)==='mc:air') {
+          for(let hang=1;hang<=2+((t/17)|0)%3;hang++) w.set(x,p.y+3-hang,z,vine);
+        }
         if(torch&&side===0&&t%9===4) w.set(x,p.y+1,z,torch);
       }
       if(p.deadEnd&&p.chest) w.set(p.sx+dx*(p.length-1),p.y+1,p.sz+dz*(p.length-1),chest);
+      // Rare extra loot chest halfway down a long branch.
+      if(chest&&!p.deadEnd&&p.length>24&&hash01(seedToInt(normalizeSeed(0)),p.sx,p.y,p.sz,7117)<0.035) w.set(p.sx+dx*(p.length>>1),p.y+1,p.sz+dz*(p.length>>1),chest);
     } else if(p.kind==='crossing') {
       for(let z=p.z0;z<=p.z1;z++) for(let x=p.x0;x<=p.x1;x++) {
         if(carve(x,z,p.y+1,p.y+3,p.y+6)&&(w.id(x,p.y,z)==='mc:air'||w.id(x,p.y,z)==='mc:water')) w.set(x,p.y,z,plank);
