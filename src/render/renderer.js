@@ -907,6 +907,46 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     for (const remote of this.multiplayer?.remotePlayers?.values?.() ?? []) {
       draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, human, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, jumping: !!remote.jumping, sneaking: !!remote.sneaking, walking: !!remote.walking, attack: !!remote.attacking, attackTime: remote.attackTime ?? 0 }, true);
       draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, outerHuman, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, sneaking: !!remote.sneaking, skinLayer: true }, true);
+      const remoteArmorParts = [];
+      for (const id of remote.armor ?? []) {
+        if (!id) continue;
+        const color = id.includes('diamond') ? [0.20,0.82,0.78,1]
+          : id.includes('iron') ? [0.72,0.76,0.80,1]
+          : id.includes('gold') ? [0.95,0.72,0.18,1]
+          : id.includes('leather') ? [0.48,0.28,0.14,1]
+          : id.includes('chainmail') ? [0.52,0.58,0.62,1] : [0.48,0.52,0.58,1];
+        if (id.endsWith('_helmet')) remoteArmorParts.push([[0,1.55,0],[0.55,0.55,0.55],color]);
+        if (id.endsWith('_chestplate')) remoteArmorParts.push(
+          [[0,1.00,0],[0.56,0.78,0.30],color],
+          [[-0.375,1.00,0],[0.29,0.78,0.29],color],
+          [[0.375,1.00,0],[0.29,0.78,0.29],color],
+        );
+        if (id.endsWith('_leggings')) remoteArmorParts.push(
+          [[-0.125,0.39,0],[0.28,0.78,0.28],color],
+          [[0.125,0.39,0],[0.28,0.78,0.28],color],
+        );
+        if (id.endsWith('_boots')) remoteArmorParts.push(
+          [[-0.125,0.08,0.035],[0.27,0.18,0.30],color],
+          [[0.125,0.08,0.035],[0.27,0.18,0.30],color],
+        );
+      }
+      if (remoteArmorParts.length) draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, remoteArmorParts, 0, -1, -1, 1, {});
+      const equipmentPart = (id, side) => {
+        if (!id) return;
+        const color = id.includes('diamond') ? [0.20,0.82,0.78,1]
+          : id.includes('iron') ? [0.72,0.76,0.80,1]
+          : id.includes('gold') ? [0.95,0.72,0.18,1]
+          : id.includes('wooden') ? [0.48,0.30,0.16,1]
+          : id.includes('stone') ? [0.48,0.50,0.52,1]
+          : id.includes('shield') ? [0.42,0.28,0.16,1] : [0.62,0.62,0.62,1];
+        const tool = /sword|pickaxe|axe|shovel|hoe|trident/.test(id);
+        const parts = tool
+          ? [[[side * 0.36,1.02,0.30],[0.10,0.34,0.10],[0.42,0.27,0.14,1]],[[side * 0.36,1.31,0.30],[0.15,0.30,0.055],color]]
+          : [[[side * 0.36,1.12,0.30],[id.includes('shield') ? 0.34 : 0.22,id.includes('shield') ? 0.42 : 0.22,0.10],color]];
+        draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, parts, 0, -1, -1, 1, {});
+      };
+      equipmentPart(remote.heldItem, 1);
+      equipmentPart(remote.offhandItem, -1);
     }
     for (const particle of (this.particlesMode === 'off' ? [] : this.entities?.blockParticles ?? [])) {
       const size = 0.045 + Math.min(1, particle.life / 28) * 0.025;
