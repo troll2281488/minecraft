@@ -1,5 +1,5 @@
 import { ItemStack } from '../world/item.js';
-import { experienceForMob, splitExperienceIntoOrbs } from './experience.js';
+import { experienceForMob, splitExperienceIntoOrbs, mergeExperienceOrbState, isExperienceOrbHazard } from './experience.js';
 import { TerrainGenerator, villageCandidateForCell } from '../world/gen/terrain.js';
 import { createVillagerProfile } from './villager_trades.js';
 import { drawPower, canFire } from '../game/bow.js';
@@ -375,7 +375,7 @@ export class MobSystem {
     for (const orb of this.experienceOrbs) entries.push({
       type: 'experience_orb', id: orb.id, value: orb.value,
       x: orb.x, y: orb.y, z: orb.z, vx: orb.vx, vy: orb.vy, vz: orb.vz,
-      age: orb.age, pickupDelay: orb.pickupDelay,
+      age: orb.age, pickupDelay: orb.pickupDelay, count: orb.count || 1,
     });
     return entries;
   }
@@ -402,6 +402,7 @@ export class MobSystem {
           vy: Number.isFinite(entry.vy) ? entry.vy : 0,
           vz: Number.isFinite(entry.vz) ? entry.vz : 0,
           age: entry.age, pickupDelay: Number.isFinite(entry.pickupDelay) ? Math.max(0, Math.min(100, entry.pickupDelay)) : 0,
+          count: Number.isSafeInteger(entry.count) ? Math.max(1, Math.min(32767, entry.count)) : 1,
         });
       }
       if (entry?.type === 'village_marker' && typeof entry.villageKey === 'string' && entry.villageKey.length <= 48) {
@@ -877,7 +878,7 @@ export class MobSystem {
         id: this.nextId++, value, x: x + (Math.random() - 0.5) * 0.35,
         y: y + (Math.random() - 0.5) * 0.25, z: z + (Math.random() - 0.5) * 0.35,
         vx: Math.cos(angle) * 0.045, vy: 0.08 + Math.random() * 0.05,
-        vz: Math.sin(angle) * 0.045, age: 0, pickupDelay: 0,
+        vz: Math.sin(angle) * 0.045, age: 0, pickupDelay: 0, count: 1,
       });
     }
     return values.length;
@@ -887,11 +888,29 @@ export class MobSystem {
     const player = this.game.player, world = this.game.world;
     if (!player || !world) return;
     if (this.experiencePickupCooldown > 0) this.experiencePickupCooldown--;
+
+    // Java 1.17+ coalesces nearby orbs of the same value without increasing
+    // their denomination; Count tracks how many individual pickups remain.
+    for (let i = this.experienceOrbs.length - 1; i >= 0; i--) {
+      const orb = this.experienceOrbs[i];
+      for (let j = i - 1; j >= 0; j--) {
+        const other = this.experienceOrbs[j];
+        if (other.value !== orb.value || Math.hypot(other.x - orb.x, other.y - orb.y, other.z - orb.z) > 0.5) continue;
+        if (mergeExperienceOrbState(other, orb)) this.experienceOrbs.splice(i, 1);
+        break;
+      }
+    }
+
     for (let i = this.experienceOrbs.length - 1; i >= 0; i--) {
       const orb = this.experienceOrbs[i];
       orb.age++;
       if (orb.age >= 6000) { this.experienceOrbs.splice(i, 1); continue; }
       if (orb.pickupDelay > 0) orb.pickupDelay--;
+
+      const bx = Math.floor(orb.x), by = Math.floor(orb.y), bz = Math.floor(orb.z);
+      const contactBlock = world.getBlock(bx, by, bz)?.block?.id;
+      if (isExperienceOrbHazard(contactBlock)) { this.experienceOrbs.splice(i, 1); continue; }
+
       const dx = player.x - orb.x, dy = (player.y + 0.65) - orb.y, dz = player.z - orb.z;
       const distance = Math.hypot(dx, dy, dz);
       if (distance < 7.25 && distance > 0.001) {
@@ -905,21 +924,34 @@ export class MobSystem {
           orb.vx *= scale; orb.vy *= scale; orb.vz *= scale;
         }
       }
-      orb.vy = Math.max(-0.18, orb.vy - 0.012);
+
       const nx = orb.x + orb.vx, ny = orb.y + orb.vy, nz = orb.z + orb.vz;
-      const floor = world.getHeight(Math.floor(nx), Math.floor(nz)) + 1.04;
-      if (ny <= floor) {
-        orb.y = floor + 0.025;
-        orb.vy = Math.abs(orb.vy) * 0.18;
+      const nextBlock = world.getBlock(Math.floor(nx), Math.floor(ny), Math.floor(nz))?.block?.id;
+      if (isExperienceOrbHazard(nextBlock)) { this.experienceOrbs.splice(i, 1); continue; }
+      const inWater = nextBlock === 'mc:water';
+      if (inWater) {
+        // Water buoyancy keeps the orb rising instead of sinking to the floor.
+        orb.vy = Math.max(0.025, orb.vy * 0.8);
         orb.vx *= 0.82; orb.vz *= 0.82;
-      } else orb.y = ny;
+        orb.y = ny;
+      } else {
+        orb.vy = Math.max(-0.18, orb.vy - 0.012);
+        const floor = world.getHeight(Math.floor(nx), Math.floor(nz)) + 1.04;
+        if (ny <= floor) {
+          orb.y = floor + 0.025;
+          orb.vy = Math.abs(orb.vy) * 0.18;
+          orb.vx *= 0.82; orb.vz *= 0.82;
+        } else orb.y = ny;
+      }
       orb.x = nx; orb.z = nz;
       orb.vx *= 0.985; orb.vy *= 0.985; orb.vz *= 0.985;
+
       if (orb.pickupDelay <= 0 && distance < 0.78 && this.experiencePickupCooldown <= 0 &&
           player.gamemode !== 'spectator' && player.health > 0) {
         const oldLevel = player.experience?.level ?? 0;
         player.addExperience?.(orb.value);
-        this.experienceOrbs.splice(i, 1);
+        orb.count = Math.max(1, orb.count || 1) - 1;
+        if (orb.count <= 0) this.experienceOrbs.splice(i, 1);
         this.experiencePickupCooldown = 2;
         this.game.sounds?.play((player.experience?.level ?? 0) > oldLevel ? 'levelup' : 'xp');
       }
