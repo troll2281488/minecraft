@@ -322,6 +322,12 @@ define('mc:mob_spawner', {
 
 // Stronghold portal frames retain their inward-facing orientation and the
 // per-frame eye-of-ender state in the saved blockstate palette.
+define('mc:iron_bars', {
+  hardness: 5, resistance: 6, tool: 'pickaxe', harvestLevel: 0,
+  solid: true, opaqueCube: false, opacity: 0,
+  renderShape: 'pane', soundGroup: 'metal', texture: 'iron_bars',
+});
+
 define('mc:end_portal_frame', {
   hardness: -1, resistance: 3600000, soundGroup: 'stone',
   texture: 'end_portal_frame',
