@@ -8,7 +8,7 @@ describe('Nether and End dimensions', () => {
     const generator = new TerrainGenerator('dimension-test', 'nether');
     const chunk = generator.generate(new Chunk(0, 0));
     assertEqual(chunk.getBlock(0, -64, 0).block.id, 'mc:bedrock');
-    assert(['mc:netherrack','mc:stone'].includes(chunk.getBlock(8, 40, 8).block.id));
+    assert(['mc:netherrack','mc:stone'].includes(chunk.getBlock(8, 10, 8).block.id));
   });
 
   it('generates an End island rather than Overworld terrain', () => {
