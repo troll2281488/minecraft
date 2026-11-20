@@ -18,7 +18,7 @@ describe('Java-style player experience', () => {
     assertEqual(xp.progress, 0);
     xp.add(10);
     assertEqual(xp.level, 2);
-    assertEqual(xp.progress, 1);
+    assertEqual(xp.progress, 1 / 11);
     assertEqual(xp.total, 17);
   });
 
