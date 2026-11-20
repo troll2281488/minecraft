@@ -79,31 +79,17 @@ export async function boot() {
     toLegacyParts() { return null; },
     getAnimations() { return null; },
   };
-  const withDeadline = (promise, fallback, ms, onTimeout = () => {}) => {
-    let timer;
-    return Promise.race([
-      promise.catch((error) => {
-        console.warn('[boot] Optional assets unavailable; using built-in assets.', error);
-        return fallback;
-      }),
-      new Promise((resolve) => {
-        timer = setTimeout(() => {
-          onTimeout();
-          console.warn('[boot] Optional asset loading took too long; opening with built-in assets.');
-          resolve(fallback);
-        }, ms);
-      }),
-    ]).finally(() => clearTimeout(timer));
-  };
+  // On normal connections, wait for the full community texture/model packs.
+  // Only connections explicitly reported as 2G or data-saver skip optional assets,
+  // so players with fast internet keep the full visual experience.
   const connection = navigator.connection;
   const slowConnection = !!(connection?.saveData || /(^|-)2g/.test(connection?.effectiveType || ''));
-  const textureAbort = new AbortController();
   const texturePromise = slowConnection
     ? Promise.resolve(emptyTextures)
-    : withDeadline(loadItsBrianTextures(BLOCKS, ITEMS, { signal: textureAbort.signal }), emptyTextures, 2500, () => textureAbort.abort());
+    : loadItsBrianTextures(BLOCKS, ITEMS);
   const modelPromise = slowConnection
     ? Promise.resolve(emptyModels)
-    : withDeadline(loadEntityModelPack(), emptyModels, 2500);
+    : loadEntityModelPack();
   const [remoteTextures, entityModels] = await Promise.all([texturePromise, modelPromise]);
   setHudSprites(remoteTextures.hud);
   setMinecraftUiTextures(remoteTextures.ui);
