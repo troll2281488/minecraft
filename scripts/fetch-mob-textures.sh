@@ -21,6 +21,10 @@ download "sheep/sheep_fur.png" "sheep_fur.png"
 download "chicken.png" "chicken.png"
 download "wolf/wolf.png" "wolf.png"
 download "horse/horse_brown.png" "horse.png"
+download "rabbit/brown.png" "rabbit.png"
+download "bear/polarbear.png" "polar_bear.png"
+download "cow/brown_mooshroom.png" "mooshroom.png"
+download "villager/profession/fletcher.png" "villager_fletcher.png"
 download "zombie/zombie.png" "zombie.png"
 download "skeleton/skeleton.png" "skeleton.png"
 download "skeleton/stray.png" "stray.png"
@@ -31,7 +35,7 @@ download "spider/cave_spider.png" "cave_spider.png"
 
 # Vanilla villager base + career overlays (composited at runtime by the renderer).
 download "villager/villager.png" "villager.png"
-for career in farmer fisherman shepherd librarian cleric armorer toolsmith butcher leatherworker nitwit; do
+for career in farmer fisherman shepherd librarian cleric armorer toolsmith butcher leatherworker fletcher nitwit; do
   download "villager/profession/$career.png" "villager_$career.png"
 done
 
