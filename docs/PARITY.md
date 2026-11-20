@@ -136,7 +136,7 @@ Reference target for this compatibility track is **Minecraft: Java Edition 1.19.
 | Doors (oak, spruce, birch, jungle, acacia, dark oak, iron) — two-block placement, paired state, wooden toggle, open/closed collision and removal | yes | 🟡 *(iron redstone activation, hinge placement rules and exact door sound/UV polish remain)* |
 | Door geometry / collision | shared 1/16-thick model | 🟡 *(axis-aligned panel boxes; model is simplified)* |
 | Trapdoors (six wood types + iron) — open/closed shape, collision, hand toggle and recipes | yes | 🟡 *(iron requires redstone; attachment validation and exact orientation remain)* |
-| Buttons (wood, stone, polished blackstone), lever, standard and weighted pressure plates, daylight detector, note block, redstone wire, redstone torch (floor-mounted inversion), repeater, comparator (compare/subtract modes, directional 0–15 output, 2-tick delay), redstone lamp and glowstone, hopper (five-slot inventory, eight-tick item transfer between nearby hoppers/chests/furnaces, redstone lock) | yes | 🟡 *(local simulation; double-chest merging, item-frame/portal-frame reads, piston, torch burnout/wall mounting and exact side-input rules remain)* |
+| Buttons (wood, stone, polished blackstone), lever, standard and weighted pressure plates, daylight detector, note block, redstone wire, redstone torch (floor-mounted inversion), repeater, comparator (compare/subtract modes, directional 0–15 output, 2-tick delay), redstone lamp and glowstone, hopper (five-slot inventory, eight-tick item transfer), observer, dropper, target, piston and sticky piston | 🟡 | *(local active-area simulation; piston push/retract is transactional and capped at 12 blocks; slime/honey block adhesion, block entities, quasi-connectivity, exact Java update scheduling and moving-block animation remain incomplete)* |
 | Fence, gate, wall models | yes | ⬜ |
 | Cloud layer, weather, particles | yes | ⬜ |
 
@@ -204,3 +204,8 @@ brewing, dimensions, structures, villagers and audio are not implemented. See
 ### Ladder movement
 
 Player movement now detects ladder contact: forward or jump input climbs at a capped upward velocity, falling is limited while attached, and sneaking holds vertical position. This is an initial movement implementation; directional attachment validation and exact vanilla climbing acceleration remain parity work.
+
+
+### Pistons
+
+Normal and sticky pistons now react to adjacent local redstone signals. Extension validates the complete push line before mutating anything, moves up to 12 movable blocks from farthest to nearest, creates an oriented internal piston head, and records the extended blockstate. Retraction removes the head; sticky pistons pull one movable block from two blocks ahead when the front cell is clear. Bedrock, obsidian, portal blocks, piston parts, containers, spawners and other registered immovable IDs block movement. The piston head has a shared render/collision box model. This remains a deliberately bounded first implementation: no slime/honey adhesion, moving-block entity interpolation, quasi-connectivity, block-entity movement, or complete Java neighbor-update scheduler.
