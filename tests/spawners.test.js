@@ -3,7 +3,7 @@ import {
   SPAWNER_MOB_TYPES, spawnerMobType, spawnerPlayerInRange,
   countSpawnerMobs, nextSpawnerDelay, spawnerSpawnPosition,
 } from '../src/entity/spawners.js';
-import { placeDungeonRoom, dungeonDims } from '../src/world/gen/structures.js';
+import { placeDungeonRoom, placeStrongholdPortalRoom, dungeonDims } from '../src/world/gen/structures.js';
 import { dungeonCandidateForCell, strongholdCandidateForCell } from '../src/world/gen/terrain.js';
 import { positionalRandom } from '../src/core/rng.js';
 import { Chest } from '../src/game/containers.js';
@@ -52,6 +52,38 @@ describe('Java monster spawner rules', () => {
     assert(p.x >= 4 && p.x <= 12);
     assert(p.z >= -7 && p.z <= 1);
     assert(p.y >= 19 && p.y <= 21);
+  });
+
+
+  it('generates a Java-style portal room with inward frames, rare prefilled eyes, lava and a silverfish spawner', () => {
+    const ids = ['mc:stone_bricks','mc:mossy_stone_bricks','mc:end_portal_frame','mc:lava',
+      'mc:stone_brick_stairs','mc:mob_spawner','mc:chest','mc:bookshelf'];
+    const states = Object.fromEntries(ids.map(id => [id, BLOCKS.get(id)?.defaultState]).filter(([, state]) => state));
+    const placed = new Map();
+    const key = (x,y,z) => `${x},${y},${z}`;
+    const writer = { set: (x,y,z,state) => placed.set(key(x,y,z), state) };
+    const site = { x: 100, y: 20, z: -40 };
+    placeStrongholdPortalRoom(writer, states, site, 'portal-room-regression');
+    const px = site.x + 18, pz = site.z + 5, y = site.y + 1;
+    const framePositions = [];
+    for (let i = 0; i < 3; i++) {
+      framePositions.push([px + 4 + i, pz + 2, 'south']);
+      framePositions.push([px + 4 + i, pz + 8, 'north']);
+      framePositions.push([px + 2, pz + 4 + i, 'east']);
+      framePositions.push([px + 8, pz + 4 + i, 'west']);
+    }
+    assertEqual(framePositions.length, 12);
+    let eyes = 0;
+    for (const [x,z,facing] of framePositions) {
+      const state = placed.get(key(x,y,z));
+      assertEqual(state?.block.id, 'mc:end_portal_frame');
+      assertEqual(state.get('facing'), facing);
+      if (state.get('eye')) eyes++;
+    }
+    assert(eyes >= 0 && eyes <= 12, 'prefilled eyes stay within the twelve frame sockets');
+    assertEqual(placed.get(key(px + 5, site.y + 2, pz + 1))?.get('spawner_type'), 'silverfish');
+    assertEqual(placed.get(key(px + 5, site.y, pz + 5))?.block.id, 'mc:lava');
+    assertEqual(placed.get(key(px + 2, site.y, pz + 5))?.block.id, 'mc:lava');
   });
 
   it('places a monster spawner in the center of every generated dungeon room', () => {
