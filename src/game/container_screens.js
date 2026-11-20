@@ -216,30 +216,35 @@ export const TEMPLE_LOOT_POOLS = Object.freeze({
 // Stronghold room loot follows the separate Java 1.19 chest tables.
 // Map and compass entries are omitted until those item IDs are implemented.
 export const STRONGHOLD_LOOT_POOLS = Object.freeze({
+  // Java 1.19 library: 2–10 rolls from one weighted pool.
   stronghold_library: Object.freeze([
     { rolls: [2, 10], entries: [
       ['mc:book', 20, 1, 3], ['mc:paper', 20, 2, 7],
-      ['mc:enchanted_book', 10, 1, 1],
+      ['mc:enchanted_book', 10, 1, 1], ['mc:compass', 1, 1, 1],
+      ['mc:map', 1, 1, 1],
     ] },
   ]),
+  // Java 1.19 storeroom: 1–4 rolls, with the original 62 total weight.
   stronghold_crossing: Object.freeze([
     { rolls: [1, 4], entries: [
-      ['mc:iron_ingot', 10, 1, 5], ['mc:gold_ingot', 5, 1, 3],
-      ['mc:redstone', 5, 4, 9], ['mc:coal', 10, 3, 8],
-      ['mc:bread', 15, 1, 3], ['mc:apple', 15, 1, 3],
-      ['mc:book', 1, 1, 1], ['mc:enchanted_book', 1, 1, 1],
+      ['mc:apple', 15, 1, 3], ['mc:bread', 15, 1, 3],
+      ['mc:coal', 10, 3, 8], ['mc:iron_ingot', 10, 1, 5],
+      ['mc:redstone', 5, 4, 9], ['mc:gold_ingot', 5, 1, 3],
+      ['mc:enchanted_book', 1, 1, 1], ['mc:iron_pickaxe', 1, 1, 1],
     ] },
   ]),
+  // Java 1.19 altar: 2–3 common rolls, then one rare bonus roll.
   stronghold_corridor: Object.freeze([
     { rolls: [2, 3], entries: [
-      ['mc:diamond', 3, 1, 1], ['mc:iron_ingot', 10, 1, 5],
-      ['mc:gold_ingot', 5, 1, 3], ['mc:redstone', 5, 4, 9],
-      ['mc:bread', 15, 1, 3], ['mc:apple', 15, 1, 3],
+      ['mc:ender_pearl', 10, 1, 1], ['mc:diamond', 3, 1, 3],
+      ['mc:iron_ingot', 10, 1, 5], ['mc:gold_ingot', 5, 1, 3],
+      ['mc:redstone', 5, 4, 9], ['mc:bread', 15, 1, 3],
+      ['mc:apple', 15, 1, 3],
     ] },
     { rolls: 1, entries: [
-      ['mc:golden_apple', 1, 1, 1], ['mc:saddle', 1, 1, 1],
-      ['mc:iron_horse_armor', 1, 1, 1], ['mc:golden_horse_armor', 1, 1, 1],
-      ['mc:diamond_horse_armor', 1, 1, 1], ['mc:enchanted_book', 1, 1, 1],
+      ['mc:golden_apple', 1, 1, 1], ['mc:enchanted_book', 1, 1, 1],
+      ['mc:saddle', 1, 1, 1], ['mc:iron_horse_armor', 1, 1, 1],
+      ['mc:golden_horse_armor', 1, 1, 1], ['mc:diamond_horse_armor', 1, 1, 1],
       ['mc:music_disc_13', 1, 1, 1], ['mc:music_disc_cat', 1, 1, 1],
       ['mc:music_disc_otherside', 1, 1, 1], ['mc:leather', 1, 1, 5],
     ] },
