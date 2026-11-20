@@ -57,7 +57,7 @@ describe('Java monster spawner rules', () => {
 
   it('generates a Java-style portal room with inward frames, rare prefilled eyes, lava and a silverfish spawner', () => {
     const ids = ['mc:stone_bricks','mc:mossy_stone_bricks','mc:end_portal_frame','mc:lava',
-      'mc:stone_bricks_stairs','mc:mob_spawner','mc:chest','mc:bookshelf'];
+      'mc:stone_bricks_stairs','mc:mob_spawner','mc:chest','mc:bookshelf','mc:iron_bars'];
     const states = Object.fromEntries(ids.map(id => [id, BLOCKS.get(id)?.defaultState]).filter(([, state]) => state));
     const placed = new Map();
     const key = (x,y,z) => `${x},${y},${z}`;
@@ -86,6 +86,8 @@ describe('Java monster spawner rules', () => {
     assertEqual(BLOCKS.get('mc:mob_spawner')?.defaultState.get('spawner_type'), 'dungeon',
       'ordinary dungeon spawners keep their existing default behavior');
     assert(SPAWNER_MOB_TYPES.includes('silverfish'), 'silverfish spawner state must be accepted by saved spawner data');
+    assertEqual(placed.get(key(px, site.y + 2, pz + 5))?.block.id, 'mc:iron_bars',
+      'portal-room entrance is a barred grate');
     assertEqual(placed.get(key(px + 5, site.y + 2, pz + 1))?.get('spawner_type'), 'silverfish');
     assertEqual(placed.get(key(px + 5, site.y, pz + 5))?.block.id, 'mc:lava');
     assertEqual(placed.get(key(px + 2, site.y, pz + 5))?.block.id, 'mc:lava');
