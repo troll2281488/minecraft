@@ -246,7 +246,7 @@ export const STRONGHOLD_LOOT_POOLS = Object.freeze({
       ['mc:saddle', 1, 1, 1], ['mc:iron_horse_armor', 1, 1, 1],
       ['mc:golden_horse_armor', 1, 1, 1], ['mc:diamond_horse_armor', 1, 1, 1],
       ['mc:music_disc_13', 1, 1, 1], ['mc:music_disc_cat', 1, 1, 1],
-      ['mc:music_disc_otherside', 1, 1, 1], ['mc:leather', 1, 1, 5],
+      ['mc:music_disc_otherside', 1, 1, 1],
     ] },
   ]),
 });
