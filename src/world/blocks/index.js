@@ -670,7 +670,7 @@ const VANILLA_FUEL_TICKS_112 = {
   'mc:crafting_table': 300, 'mc:chest': 300, 'mc:trapped_chest': 300,
   'mc:bookshelf': 300, 'mc:jukebox': 300, 'mc:note_block': 300,
   'mc:ladder': 300, 'mc:fence': 300, 'mc:fence_gate': 300,
-  'mc:wooden_door': 200, 'mc:wooden_trapdoor': 300,
+  'mc:wooden_door': 200, 'mc:oak_door': 200, 'mc:wooden_trapdoor': 300,
   'mc:wooden_pickaxe': 200, 'mc:wooden_axe': 200,
   'mc:wooden_shovel': 200, 'mc:wooden_hoe': 200, 'mc:wooden_sword': 200,
 };
