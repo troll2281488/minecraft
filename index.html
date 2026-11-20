@@ -315,6 +315,10 @@
   #chat-messages { position:absolute; left:12px; bottom:72px; width:min(420px,70vw); font-size:.78rem; text-shadow:1px 1px #000; pointer-events:none; }
   #chat-messages div { margin:.15rem 0; }
   #remote-player-tags { position:absolute; inset:0; overflow:hidden; pointer-events:none; }
+  #tab-player-list { position:absolute; z-index:900; top:14px; left:50%; transform:translateX(-50%); width:min(520px,calc(100vw - 24px)); padding:12px 16px; background:rgba(12,16,14,.92); border:1px solid rgba(225,235,220,.38); box-shadow:0 8px 28px rgba(0,0,0,.45); color:#f0f2e9; pointer-events:none; }
+  #tab-player-list .tab-player-heading { display:flex; justify-content:space-between; gap:12px; margin-bottom:8px; color:#b9d19e; font-size:.78rem; letter-spacing:.06em; text-transform:uppercase; }
+  .tab-player-row { display:flex; justify-content:space-between; gap:12px; padding:5px 2px; border-top:1px solid rgba(255,255,255,.12); font-size:.82rem; }
+  .tab-player-row span:last-child { color:#b9d19e; text-align:right; }
   .remote-player-tag { position:absolute; transform:translate(-50%,-100%); padding:2px 7px; border-radius:3px; background:rgba(0,0,0,.72); color:#fff; font:12px/1.4 system-ui,sans-serif; white-space:nowrap; text-shadow:1px 1px #000; border:1px solid rgba(255,255,255,.35); }
   #chat-entry { position:absolute; left:12px; bottom:42px; width:min(420px,70vw); padding:.45rem; background:#171717; color:white; border:1px solid #777; pointer-events:auto; }
   kbd {
@@ -919,6 +923,7 @@
   </div>
 </div>
 
+<div id="tab-player-list" class="hidden" aria-live="polite"><div class="tab-player-heading"><span>Игроки в мире</span><span class="tab-player-summary"></span></div><div class="tab-player-rows"></div></div>
 <div id="cursor-stack" class="hidden"></div>
 
 <script>
