@@ -61,7 +61,7 @@ function woodSet(species) {
     // Leaves are a full cube but do not hide their neighbours' faces -- that is
     // what makes a tree canopy look like foliage rather than a solid green box.
     opaqueCube: false, opacity: 1, flammability: 30,
-    renderShape: 'cutout', tint: species === 'spruce' ? null : 'foliage',
+    renderShape: 'cutout', tint: 'foliage',
     texture: `${species}_leaves`,
     properties: { distance: PROPS.distance, persistent: PROPS.persistent },
     defaultValues: { distance: 7, persistent: false },
@@ -119,6 +119,16 @@ define('mc:dirt', {
 
 define('mc:coarse_dirt', {
   hardness: 0.5, resistance: 0.5, tool: 'shovel', soundGroup: 'gravel', texture: 'coarse_dirt',
+});
+
+// Biome-specific surface soils: distinct materials instead of a universal grass cap.
+for (const [name, texture] of [
+  ['plains_soil', 'plains_soil'], ['forest_floor', 'forest_floor'],
+  ['birch_soil', 'birch_soil'], ['jungle_soil', 'jungle_soil'],
+  ['savanna_soil', 'savanna_soil'], ['taiga_soil', 'taiga_soil'],
+  ['swamp_mud', 'swamp_mud'], ['alpine_gravel', 'alpine_gravel'],
+]) define(`mc:${name}`, {
+  hardness: 0.5, resistance: 0.5, tool: 'shovel', soundGroup: 'gravel', texture,
 });
 
 define('mc:grass_block', {
@@ -386,7 +396,9 @@ for (const wood of ['oak', 'birch', 'spruce', 'acacia', 'dark_oak']) {
 // Tags
 // ---------------------------------------------------------------------------
 
-BLOCK_TAGS.define('#mc:dirt', ['mc:dirt', 'mc:grass_block', 'mc:coarse_dirt', 'mc:podzol']);
+BLOCK_TAGS.define('#mc:dirt', ['mc:dirt', 'mc:grass_block', 'mc:coarse_dirt', 'mc:podzol',
+  'mc:plains_soil', 'mc:forest_floor', 'mc:birch_soil', 'mc:jungle_soil',
+  'mc:savanna_soil', 'mc:taiga_soil', 'mc:swamp_mud', 'mc:alpine_gravel']);
 BLOCK_TAGS.define('#mc:base_stone_overworld', [
   'mc:stone', 'mc:granite', 'mc:diorite', 'mc:andesite',
 ]);

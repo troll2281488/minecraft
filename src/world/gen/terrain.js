@@ -29,7 +29,7 @@ import { hash01, seedToInt } from './hash.js';
 import { ChunkWriter, mineshaftPlan, placeMineshaftPlan, placeDungeonRoom, villagePlan, placeVillagePlan, villageStyleForBiome } from './structures.js';
 
 /** Bumped whenever generation output changes. Stored per world. */
-export const GENERATOR_VERSION = 13;
+export const GENERATOR_VERSION = 15;
 
 
 // ---------------------------------------------------------------------------
@@ -81,41 +81,41 @@ export const BIOME_SURFACE = {
   [BIOME.STONE_SHORE]: { top:'mc:stone', filler:'mc:stone', trees:0, grass:0 },
   [BIOME.RIVER]: { top:'mc:gravel', filler:'mc:sand', trees:0, grass:0 },
   [BIOME.FROZEN_RIVER]: { top:'mc:ice', filler:'mc:gravel', trees:0, grass:0 },
-  [BIOME.PLAINS]: { top:'mc:grass_block', filler:'mc:dirt', trees:0, grass:0.24 },
-  [BIOME.SUNFLOWER_PLAINS]: { top:'mc:grass_block', filler:'mc:dirt', trees:0, grass:0.34, flowers:0.24 },
-  [BIOME.FOREST]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.052, grass:0.15, species:'oak' },
-  [BIOME.FLOWER_FOREST]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.045, grass:0.52, species:'oak', flowers:0.82 },
-  [BIOME.BIRCH_FOREST]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.065, grass:0.16, species:'birch' },
-  [BIOME.TALL_BIRCH_FOREST]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.075, grass:0.12, species:'birch' },
+  [BIOME.PLAINS]: { top:'mc:plains_soil', filler:'mc:dirt', trees:0, grass:0.24 },
+  [BIOME.SUNFLOWER_PLAINS]: { top:'mc:plains_soil', filler:'mc:dirt', trees:0, grass:0.34, flowers:0.24 },
+  [BIOME.FOREST]: { top:'mc:forest_floor', filler:'mc:dirt', trees:0.052, grass:0.15, species:'oak' },
+  [BIOME.FLOWER_FOREST]: { top:'mc:forest_floor', filler:'mc:dirt', trees:0.045, grass:0.52, species:'oak', flowers:0.82 },
+  [BIOME.BIRCH_FOREST]: { top:'mc:birch_soil', filler:'mc:dirt', trees:0.065, grass:0.16, species:'birch' },
+  [BIOME.TALL_BIRCH_FOREST]: { top:'mc:birch_soil', filler:'mc:dirt', trees:0.075, grass:0.12, species:'birch' },
   [BIOME.DARK_FOREST]: { top:'mc:podzol', filler:'mc:dirt', trees:0.075, grass:0.08, species:'dark_oak' },
-  [BIOME.JUNGLE]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.14, grass:0.28, species:'jungle', ferns:0.42 },
-  [BIOME.SPARSE_JUNGLE]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.075, grass:0.24, species:'jungle', ferns:0.24 },
+  [BIOME.JUNGLE]: { top:'mc:jungle_soil', filler:'mc:dirt', trees:0.14, grass:0.28, species:'jungle', ferns:0.42 },
+  [BIOME.SPARSE_JUNGLE]: { top:'mc:jungle_soil', filler:'mc:dirt', trees:0.075, grass:0.24, species:'jungle', ferns:0.24 },
   [BIOME.BAMBOO_JUNGLE]: { top:'mc:podzol', filler:'mc:dirt', trees:0.13, grass:0.26, species:'jungle', ferns:0.4 },
   [BIOME.DESERT]: { top:'mc:sand', filler:'mc:sand', trees:0, grass:0, deadBush:0.025 },
-  [BIOME.SAVANNA]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.042, grass:0.48, species:'acacia', deadBush:0.006 },
-  [BIOME.SAVANNA_PLATEAU]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.034, grass:0.42, species:'acacia', deadBush:0.008 },
-  [BIOME.SHATTERED_SAVANNA]: { top:'mc:grass_block', filler:'mc:coarse_dirt', trees:0.022, grass:0.34, species:'acacia', deadBush:0.01 },
+  [BIOME.SAVANNA]: { top:'mc:savanna_soil', filler:'mc:dirt', trees:0.042, grass:0.48, species:'acacia', deadBush:0.006 },
+  [BIOME.SAVANNA_PLATEAU]: { top:'mc:savanna_soil', filler:'mc:dirt', trees:0.034, grass:0.42, species:'acacia', deadBush:0.008 },
+  [BIOME.SHATTERED_SAVANNA]: { top:'mc:savanna_soil', filler:'mc:coarse_dirt', trees:0.022, grass:0.34, species:'acacia', deadBush:0.01 },
   [BIOME.BADLANDS]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0, grass:0, deadBush:0.02 },
   [BIOME.WOODED_BADLANDS]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0.012, grass:0.015, species:'oak', deadBush:0.012 },
   [BIOME.ERODED_BADLANDS]: { top:'mc:red_sand', filler:'mc:red_sand', trees:0, grass:0, deadBush:0.01 },
-  [BIOME.MOUNTAINS]: { top:'mc:stone', filler:'mc:stone', trees:0.004, grass:0.025, species:'oak' },
-  [BIOME.WINDSWEPT_HILLS]: { top:'mc:stone', filler:'mc:stone', trees:0.012, grass:0.04, species:'oak' },
+  [BIOME.MOUNTAINS]: { top:'mc:alpine_gravel', filler:'mc:stone', trees:0.004, grass:0.025, species:'oak' },
+  [BIOME.WINDSWEPT_HILLS]: { top:'mc:alpine_gravel', filler:'mc:stone', trees:0.012, grass:0.04, species:'oak' },
   [BIOME.SNOWY_PLAINS]: { top:'mc:snow_block', filler:'mc:dirt', trees:0.002, grass:0 },
   [BIOME.ICE_SPIKES]: { top:'mc:snow_block', filler:'mc:dirt', trees:0.0035, grass:0, species:'ice_spike' },
-  [BIOME.TAIGA]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.05, grass:0.12, species:'spruce' },
+  [BIOME.TAIGA]: { top:'mc:taiga_soil', filler:'mc:dirt', trees:0.05, grass:0.12, species:'spruce' },
   [BIOME.SNOWY_TAIGA]: { top:'mc:snow_block', filler:'mc:dirt', trees:0.045, grass:0, species:'spruce' },
   [BIOME.GIANT_TREE_TAIGA]: { top:'mc:podzol', filler:'mc:dirt', trees:0.04, grass:0.08, ferns:0.25, mix:[['spruce',9],['boulder',1]] },
   [BIOME.GIANT_SPRUCE_TAIGA]: { top:'mc:podzol', filler:'mc:dirt', trees:0.045, grass:0.06, ferns:0.25, mix:[['spruce',9],['boulder',1]] },
-  [BIOME.SWAMP]: { top:'mc:clay', filler:'mc:dirt', trees:0.035, grass:0.12, species:'oak', ferns:0.06 },
+  [BIOME.SWAMP]: { top:'mc:swamp_mud', filler:'mc:dirt', trees:0.035, grass:0.12, species:'oak', ferns:0.06 },
   [BIOME.MUSHROOM_FIELDS]: { top:'mc:mycelium', filler:'mc:dirt', trees:0.002, grass:0.02, mushrooms:0.13 },
   [BIOME.DESERT_HILLS]: { top:'mc:sand', filler:'mc:sand', trees:0, grass:0, deadBush:0.025 },
-  [BIOME.FOREST_HILLS]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.06, grass:0.15, species:'oak' },
-  [BIOME.TAIGA_HILLS]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.055, grass:0.12, species:'spruce' },
-  [BIOME.EXTREME_HILLS_EDGE]: { top:'mc:stone', filler:'mc:stone', trees:0.006, grass:0.035, species:'oak' },
-  [BIOME.EXTREME_HILLS_PLUS]: { top:'mc:stone', filler:'mc:stone', trees:0.008, grass:0.02, species:'oak' },
-  [BIOME.JUNGLE_HILLS]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.078, grass:0.18, species:'jungle', ferns:0.22 },
-  [BIOME.JUNGLE_EDGE]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.028, grass:0.16, species:'jungle', ferns:0.08 },
-  [BIOME.BIRCH_FOREST_HILLS]: { top:'mc:grass_block', filler:'mc:dirt', trees:0.07, grass:0.14, species:'birch' },
+  [BIOME.FOREST_HILLS]: { top:'mc:forest_floor', filler:'mc:dirt', trees:0.06, grass:0.15, species:'oak' },
+  [BIOME.TAIGA_HILLS]: { top:'mc:taiga_soil', filler:'mc:dirt', trees:0.055, grass:0.12, species:'spruce' },
+  [BIOME.EXTREME_HILLS_EDGE]: { top:'mc:alpine_gravel', filler:'mc:stone', trees:0.006, grass:0.035, species:'oak' },
+  [BIOME.EXTREME_HILLS_PLUS]: { top:'mc:alpine_gravel', filler:'mc:stone', trees:0.008, grass:0.02, species:'oak' },
+  [BIOME.JUNGLE_HILLS]: { top:'mc:jungle_soil', filler:'mc:dirt', trees:0.078, grass:0.18, species:'jungle', ferns:0.22 },
+  [BIOME.JUNGLE_EDGE]: { top:'mc:jungle_soil', filler:'mc:dirt', trees:0.028, grass:0.16, species:'jungle', ferns:0.08 },
+  [BIOME.BIRCH_FOREST_HILLS]: { top:'mc:birch_soil', filler:'mc:dirt', trees:0.07, grass:0.14, species:'birch' },
   [BIOME.COLD_TAIGA]: { top:'mc:snow_block', filler:'mc:dirt', trees:0.046, grass:0, species:'spruce' },
   [BIOME.COLD_TAIGA_HILLS]: { top:'mc:snow_block', filler:'mc:dirt', trees:0.052, grass:0, species:'spruce' },
   [BIOME.MEGA_TAIGA_HILLS]: { top:'mc:podzol', filler:'mc:dirt', trees:0.068, grass:0.1, species:'spruce' },
@@ -541,7 +541,7 @@ export class TerrainGenerator {
       for (let i = 0; i < count; i++) {
         if (y > MIN_Y && y < MAX_Y && x >= 0 && x < CHUNK_SIZE && z >= 0 && z < CHUNK_SIZE) {
           const existing = chunk.getBlock(x, y, z);
-          if (STONE_REPLACEABLE.has(existing.block.id)) {
+          if ((spec.block.endsWith('_ore') ? STONE_ORE_REPLACEABLE : STONE_REPLACEABLE).has(existing.block.id)) {
             let target = spec.block;
             const state = S.byId[target];
             if (state) chunk.setBlock(x, y, z, state);
@@ -637,7 +637,7 @@ export class TerrainGenerator {
     const rule = BIOME_SURFACE[col.biome];
     if (!rule || !rule.trees || u >= rule.trees) return null;
     const ground = this.surfaceTop(col.biome, col.h, wx, wz);
-    if (!ground || !['mc:grass_block','mc:podzol','mc:coarse_dirt','mc:snow_block','mc:dirt','mc:red_sand','mc:mycelium'].includes(ground)) return null;
+    if (!ground || !['mc:grass_block','mc:podzol','mc:coarse_dirt','mc:snow_block','mc:dirt','mc:red_sand','mc:mycelium','mc:plains_soil','mc:forest_floor','mc:birch_soil','mc:jungle_soil','mc:savanna_soil','mc:taiga_soil','mc:swamp_mud','mc:alpine_gravel'].includes(ground)) return null;
     if (this.isCave(wx, col.h, wz, col.h + 6)) return null;
     for (let dz=-2; dz<=2; dz++) for (let dx=-2; dx<=2; dx++) {
       if (!dx && !dz) continue;
@@ -714,13 +714,13 @@ export class TerrainGenerator {
           if (mushroom) chunk.setBlock(x, top + 1, z, mushroom);
         } else if (biomes[i] === BIOME.BAMBOO_JUNGLE && groundId === 'mc:podzol' && rng.nextDouble() < 0.075) {
           if (S.byId['mc:bamboo']) chunk.setBlock(x, top + 1, z, S.byId['mc:bamboo']);
-        } else if (surface.grass > 0 && groundId === 'mc:grass_block' && rng.nextDouble() < surface.grass) {
+        } else if (surface.grass > 0 && ['mc:grass_block','mc:plains_soil','mc:forest_floor','mc:birch_soil','mc:jungle_soil','mc:savanna_soil','mc:taiga_soil','mc:swamp_mud'].includes(groundId) && rng.nextDouble() < surface.grass) {
           const flowerChance = surface.flowers ?? 0.12;
           const plant = rng.nextDouble() < flowerChance
             ? (rng.nextBoolean() ? S.byId['mc:poppy'] : S.byId['mc:dandelion'])
             : S.byId['mc:short_grass'];
           if (plant) chunk.setBlock(x, top + 1, z, plant);
-        } else if (surface.ferns && groundId === 'mc:grass_block' && rng.nextDouble() < surface.ferns) {
+        } else if (surface.ferns && ['mc:grass_block','mc:plains_soil','mc:forest_floor','mc:birch_soil','mc:jungle_soil','mc:savanna_soil','mc:taiga_soil','mc:swamp_mud'].includes(groundId) && rng.nextDouble() < surface.ferns) {
           if (S.byId['mc:fern']) chunk.setBlock(x, top + 1, z, S.byId['mc:fern']);
         } else if (surface.deadBush && (groundId === 'mc:sand' || groundId === 'mc:red_sand') && rng.nextDouble() < surface.deadBush) {
           if (S.byId['mc:dead_bush']) chunk.setBlock(x, top + 1, z, S.byId['mc:dead_bush']);
@@ -1446,10 +1446,12 @@ function triangularY(rng, minY, maxY, peak) {
 }
 
 /** Blocks a vein or surface rule may overwrite. Never air, water, or wood. */
+const STONE_ORE_REPLACEABLE = new Set(['mc:stone', 'mc:granite', 'mc:diorite', 'mc:andesite']);
 const STONE_REPLACEABLE = new Set([
-  'mc:stone', 'mc:granite', 'mc:diorite', 'mc:andesite',
+  ...STONE_ORE_REPLACEABLE,
   'mc:dirt', 'mc:grass_block', 'mc:sand', 'mc:gravel', 'mc:coarse_dirt',
-  'mc:snow_block', 'mc:podzol', 'mc:red_sand',
+  'mc:snow_block', 'mc:podzol', 'mc:red_sand', 'mc:plains_soil', 'mc:forest_floor',
+  'mc:birch_soil', 'mc:jungle_soil', 'mc:savanna_soil', 'mc:taiga_soil', 'mc:swamp_mud', 'mc:alpine_gravel',
 ]);
 
 /** Resolve block ids to states once, so generation never does a map lookup by string in a loop. */

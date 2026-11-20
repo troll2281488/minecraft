@@ -93,6 +93,13 @@ export async function loadItsBrianTextures(blocks, items) {
   }
 
   const blockEntries = await mapWithLimit([...blockNames], 24, async (name) => {
+    // Keep foliage and soil textures local: third-party packs may supply already-
+    // coloured leaves, which look pale or incorrect when multiplied by biome tint.
+    if (name.endsWith('_leaves') || name.endsWith('_sapling') || [
+      'grass_block_top', 'grass_block_side', 'dirt', 'coarse_dirt', 'podzol_top',
+      'podzol_side', 'plains_soil', 'forest_floor', 'birch_soil', 'jungle_soil',
+      'savanna_soil', 'taiga_soil', 'swamp_mud', 'alpine_gravel',
+    ].includes(name)) return null;
     const sourceName = BLOCK_TEXTURE_ALIASES[name] ?? name;
     if (name === 'chest_side' || name === 'chest_top') {
       // Vanilla stores the chest as a 64x64 model skin rather than a block tile.

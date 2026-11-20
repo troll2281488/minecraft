@@ -104,7 +104,7 @@ export class ChunkRenderer {
       if (!chunk) continue;
 
       const geometry = meshChunk(world.viewFor(chunk));
-      this._upload(entry.cx, entry.cz, geometry, cameraX, cameraZ);
+      this._upload(entry.cx, entry.cz, geometry, cameraX, cameraZ, chunk);
       this.stats.meshedThisFrame++;
     }
 
@@ -112,7 +112,7 @@ export class ChunkRenderer {
     return this.stats.meshedThisFrame;
   }
 
-  _upload(cx, cz, geometry, cameraX, cameraZ) {
+  _upload(cx, cz, geometry, cameraX, cameraZ, chunk) {
     const gl = this.gl;
     const key = chunkKey(cx, cz);
 
@@ -179,6 +179,8 @@ export class ChunkRenderer {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.quadIndexBuffer.buffer);
     gl.bindVertexArray(null);
 
+    const surfaceY = Math.max(MIN_Y, Math.min(MAX_Y - 1, chunk.heightmap[8 + 8 * CHUNK_SIZE]));
+    mesh.biome = chunk.getBiome(8, surfaceY, 8);
     mesh.opaqueQuads = geometry.opaqueQuads;
     mesh.translucentQuads = geometry.translucentQuads;
     mesh.opaqueVertexCount = geometry.opaqueQuads * 4;
@@ -258,7 +260,7 @@ export class ChunkRenderer {
         continue;
       }
 
-      setChunkOrigin(minX, MIN_Y, minZ);
+      setChunkOrigin(minX, MIN_Y, minZ, mesh.biome);
 
       gl.bindVertexArray(mesh.vao);
       const firstQuad = pass === 'opaque' ? 0 : mesh.opaqueQuads;
