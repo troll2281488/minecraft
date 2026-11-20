@@ -61,7 +61,7 @@ function woodSet(species) {
     // Leaves are a full cube but do not hide their neighbours' faces -- that is
     // what makes a tree canopy look like foliage rather than a solid green box.
     opaqueCube: false, opacity: 1, flammability: 30,
-    renderShape: 'cutout', tint: species === 'spruce' || species === 'birch' ? null : 'foliage',
+    renderShape: 'cutout', tint: species === 'spruce' ? null : 'foliage',
     texture: `${species}_leaves`,
     properties: { distance: PROPS.distance, persistent: PROPS.persistent },
     defaultValues: { distance: 7, persistent: false },
