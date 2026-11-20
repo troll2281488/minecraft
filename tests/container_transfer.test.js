@@ -61,4 +61,54 @@ describe('container shift-click transfers', () => {
     assertEqual(chest.slots[0].count, 64);
     assertEqual(game.inventory.get(9).count, 4, 'remaining stack should stay in player inventory');
   });
+
+  it('moves only the available capacity into a furnace input slot', () => {
+    const furnace = new Furnace();
+    furnace.input = ItemStack.of('mc:iron_ore', 63);
+    const game = gameWith({ kind: 'furnace', furnace });
+    game.inventory.set(9, ItemStack.of('mc:iron_ore', 5));
+
+    ContainerScreensMixin._onContainerClick.call(game, 'inv', 9, 0, true);
+
+    assertEqual(furnace.input.count, 64);
+    assertEqual(game.inventory.get(9).count, 4, 'unmoved input must remain in inventory');
+  });
+
+  it('does not move non-smeltable, non-fuel items into a furnace', () => {
+    const furnace = new Furnace();
+    const game = gameWith({ kind: 'furnace', furnace });
+    game.inventory.set(9, ItemStack.of('mc:diamond', 3));
+
+    ContainerScreensMixin._onContainerClick.call(game, 'inv', 9, 0, true);
+
+    assert(furnace.input.isEmpty && furnace.fuel.isEmpty);
+    assertEqual(game.inventory.get(9).count, 3);
+  });
+
+  it('does not allow placing cursor items into the furnace output slot', () => {
+    const furnace = new Furnace();
+    furnace.output = ItemStack.of('mc:iron_ingot', 2);
+    const game = gameWith({ kind: 'furnace', furnace });
+    game.inventory.cursor = ItemStack.of('mc:diamond', 1);
+
+    ContainerScreensMixin._onContainerClick.call(game, 'furnace-out', 0, 0, false);
+
+    assertEqual(furnace.output.count, 2);
+    assertEqual(game.inventory.cursor.item.id, 'mc:diamond');
+    assertEqual(game.inventory.cursor.count, 1);
+  });
+
+  it('returns a partial furnace output transfer without losing the remainder', () => {
+    const furnace = new Furnace();
+    furnace.output = ItemStack.of('mc:iron_ingot', 10);
+    const game = gameWith({ kind: 'furnace', furnace });
+    for (let i = 0; i <= 35; i++) game.inventory.set(i, ItemStack.of('mc:stone', 64));
+    game.inventory.set(9, ItemStack.of('mc:iron_ingot', 60));
+
+    ContainerScreensMixin._onContainerClick.call(game, 'furnace-out', 0, 0, true);
+
+    assertEqual(game.inventory.get(9).count, 64);
+    assertEqual(furnace.output.count, 6, 'output remainder must stay in the furnace');
+  });
+
 });
