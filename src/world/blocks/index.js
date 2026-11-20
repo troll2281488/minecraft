@@ -346,6 +346,73 @@ define('mc:ladder', {
   properties: { facing: PROPS.facing }, defaultValues: { facing: 'north' },
 });
 
+// Two-block Java-style doors. Both halves carry the same orientation/open
+// state so a click or save/load never leaves the upper half out of sync.
+function door(id, texture, iron = false) {
+  define(`mc:${id}_door`, {
+    hardness: iron ? 5 : 3, resistance: iron ? 5 : 3,
+    tool: iron ? 'pickaxe' : 'axe', soundGroup: iron ? 'metal' : 'wood',
+    renderShape: 'door', texture, opaqueCube: false,
+    // The resource-pack loader fetches the matching Java 1.19 upper/lower tiles.
+    doorTextures: { lower: `${id}_door_bottom`, upper: `${id}_door_top` },
+    properties: {
+      facing: PROPS.facing, half: PROPS.doorHalf, hinge: PROPS.hinge,
+      open: PROPS.open, powered: PROPS.powered,
+    },
+    defaultValues: { facing: 'north', half: 'lower', hinge: 'left', open: false, powered: false },
+  });
+}
+for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) {
+  door(wood, `${wood}_door`);
+}
+door('iron', 'iron_door', true);
+
+// Trapdoors occupy one block and share their open state with collision geometry.
+function trapdoor(id, texture, iron = false) {
+  define(`mc:${id}_trapdoor`, {
+    hardness: iron ? 5 : 3, resistance: iron ? 5 : 3,
+    tool: iron ? 'pickaxe' : 'axe', soundGroup: iron ? 'metal' : 'wood',
+    renderShape: 'trapdoor', texture, opaqueCube: false,
+    properties: { facing: PROPS.facing, half: PROPS.half, open: PROPS.open, powered: PROPS.powered },
+    defaultValues: { facing: 'north', half: 'bottom', open: false, powered: false },
+  });
+}
+for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) {
+  trapdoor(wood, `${wood}_trapdoor`);
+}
+trapdoor('iron', 'iron_trapdoor', true);
+
+// Redstone power sources from the Java 1.19 block set.
+function button(id, texture, wood = false) {
+  define(`mc:${id}_button`, {
+    hardness: 0.5, resistance: 0.5, solid: false, opaqueCube: false, opacity: 0,
+    soundGroup: wood ? 'wood' : 'stone', renderShape: 'button', texture,
+    properties: { face: PROPS.face, facing: PROPS.facing, powered: PROPS.powered },
+    defaultValues: { face: 'wall', facing: 'north', powered: false },
+  });
+}
+for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) button(wood, `${wood}_button`, true);
+button('stone', 'stone_button');
+button('polished_blackstone', 'polished_blackstone_button');
+
+define('mc:lever', {
+  hardness: 0.5, resistance: 0.5, solid: false, opaqueCube: false, opacity: 0,
+  soundGroup: 'stone', renderShape: 'lever', texture: 'lever',
+  properties: { face: PROPS.face, facing: PROPS.facing, powered: PROPS.powered },
+  defaultValues: { face: 'wall', facing: 'north', powered: false },
+});
+
+function pressurePlate(id, texture, wood = false) {
+  define(`mc:${id}_pressure_plate`, {
+    hardness: 0.5, resistance: 0.5, solid: false, opaqueCube: false, opacity: 0,
+    soundGroup: wood ? 'wood' : 'stone', renderShape: 'pressure_plate', texture,
+    properties: { powered: PROPS.powered }, defaultValues: { powered: false },
+  });
+}
+for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) pressurePlate(wood, `${wood}_pressure_plate`, true);
+pressurePlate('stone', 'stone_pressure_plate');
+pressurePlate('polished_blackstone', 'polished_blackstone_pressure_plate');
+
 define('mc:end_portal_frame', {
   hardness: -1, resistance: 3600000, soundGroup: 'stone',
   texture: 'end_portal_frame',

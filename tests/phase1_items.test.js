@@ -17,7 +17,20 @@ describe('1.12.2 Phase 1 items', () => {
     assert(ITEMS.get('mc:bow').maxDamage === 384, 'bow durability should be 384');
     assert(ITEMS.get('mc:arrow').stackSize === 64, 'arrow stack size should be 64');
   });
-  it('recipe book loads with the new recipes', () => {
-    assert(RECIPES.size >= 78, 'expected at least 78 recipes');
+  it('recipe book loads with door recipes for all wood types and iron', () => {
+    assert(RECIPES.size >= 109, 'expected door, trapdoor and redstone device recipes to be registered');
+    for (const wood of ['oak', 'birch', 'spruce', 'jungle', 'acacia', 'dark_oak']) {
+      assert(RECIPES.recipes.some((recipe) => recipe.result === `mc:${wood}_door`), `${wood} door recipe missing`);
+    }
+    assert(RECIPES.recipes.some((recipe) => recipe.result === 'mc:iron_door'), 'iron door recipe missing');
+    for (const wood of ['oak', 'birch', 'spruce', 'jungle', 'acacia', 'dark_oak']) {
+      assert(RECIPES.recipes.some((recipe) => recipe.result === `mc:${wood}_trapdoor`), `${wood} trapdoor recipe missing`);
+    }
+    assert(RECIPES.recipes.some((recipe) => recipe.result === 'mc:iron_trapdoor'), 'iron trapdoor recipe missing');
+    assert(RECIPES.recipes.some((recipe) => recipe.result === 'mc:lever'), 'lever recipe missing');
+    for (const id of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak', 'stone', 'polished_blackstone']) {
+      assert(RECIPES.recipes.some((recipe) => recipe.result === `mc:${id}_button`), `${id} button recipe missing`);
+      assert(RECIPES.recipes.some((recipe) => recipe.result === `mc:${id}_pressure_plate`), `${id} pressure plate recipe missing`);
+    }
   });
 });

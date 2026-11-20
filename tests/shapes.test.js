@@ -60,6 +60,70 @@ describe('shapes: box geometry', () => {
     assertDeepEqual(collisionBoxes(IRON_BARS), boxes);
   });
 
+  it('door panels are thin, rotate when opened, and use both halves consistently', () => {
+    const door = BLOCKS.get('mc:oak_door').defaultState;
+    const closed = shapeBoxes(door);
+    assertEqual(closed.length, 1);
+    assertDeepEqual(closed[0], [0, 0, 0.8125, 1, 1, 1]);
+    const opened = shapeBoxes(door.with('open', true));
+    assertDeepEqual(opened[0], [0, 0, 0, 0.1875, 1, 1]);
+    assertDeepEqual(shapeBoxes(door.with('half', 'upper')), closed);
+    assert(isNonCube(door));
+    assertDeepEqual(collisionBoxes(door), closed);
+  });
+
+  it('trapdoors use a thin horizontal panel when closed and vertical panel when open', () => {
+    const trapdoor = BLOCKS.get('mc:oak_trapdoor').defaultState;
+    assertDeepEqual(shapeBoxes(trapdoor), [[0, 0, 0, 1, 0.1875, 1]]);
+    assertDeepEqual(shapeBoxes(trapdoor.with('half', 'top')), [[0, 0.8125, 0, 1, 1, 1]]);
+    assertDeepEqual(shapeBoxes(trapdoor.with('open', true)), [[0, 0, 0, 1, 1, 0.1875]]);
+    assertDeepEqual(collisionBoxes(trapdoor), shapeBoxes(trapdoor));
+    assert(isNonCube(trapdoor));
+  });
+
+  it('all six wooden trapdoors and iron trapdoor are registered', () => {
+    for (const id of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak', 'iron']) {
+      const block = BLOCKS.get(`mc:${id}_trapdoor`);
+      assert(block, `${id} trapdoor missing`);
+      assertEqual(block.renderShape, 'trapdoor');
+      assertEqual(block.states.length, 4 * 2 * 2 * 2);
+    }
+  });
+
+  it('buttons, levers and pressure plates have compact render geometry', () => {
+    const button = BLOCKS.get('mc:stone_button').defaultState;
+    assertDeepEqual(shapeBoxes(button), [[0.375, 0.375, 0, 0.625, 0.625, 0.125]]);
+    assertDeepEqual(shapeBoxes(button.with('powered', true)), [[0.375, 0.375, 0, 0.625, 0.625, 0.0625]]);
+    const plate = BLOCKS.get('mc:stone_pressure_plate').defaultState;
+    assertDeepEqual(shapeBoxes(plate), [[0, 0, 0, 1, 0.0625, 1]]);
+    assertDeepEqual(shapeBoxes(plate.with('powered', true)), [[0, 0, 0, 1, 0.03125, 1]]);
+    assertEqual(shapeBoxes(BLOCKS.get('mc:lever').defaultState).length, 2);
+    assert(isNonCube(button));
+    assertEqual(collisionBoxes(button).length, 0, 'buttons are non-solid controls');
+    assertEqual(collisionBoxes(plate).length, 0, 'pressure plates are non-solid controls');
+  });
+
+  it('all Java 1.19 button, lever and pressure plate blocks are registered', () => {
+    for (const id of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) {
+      assert(BLOCKS.get(`mc:${id}_button`), `${id} button missing`);
+      assert(BLOCKS.get(`mc:${id}_pressure_plate`), `${id} pressure plate missing`);
+    }
+    for (const id of ['stone', 'polished_blackstone']) {
+      assert(BLOCKS.get(`mc:${id}_button`), `${id} button missing`);
+      assert(BLOCKS.get(`mc:${id}_pressure_plate`), `${id} pressure plate missing`);
+    }
+    assert(BLOCKS.get('mc:lever'), 'lever missing');
+  });
+
+  it('all six wooden door variants and iron door are registered', () => {
+    for (const id of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak', 'iron']) {
+      const block = BLOCKS.get(`mc:${id}_door`);
+      assert(block, `${id} door missing`);
+      assertEqual(block.renderShape, 'door');
+      assertEqual(block.states.length, 4 * 2 * 2 * 2 * 2);
+    }
+  });
+
   it('isNonCube distinguishes slabs, stairs and panes from cubes', () => {
     assert(isNonCube(OAK_SLAB));
     assert(isNonCube(STONE_STAIRS));
