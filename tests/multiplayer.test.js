@@ -1,5 +1,5 @@
 import { describe, it, assertEqual } from './framework.js';
-import { applyRemotePlayerState, canAcquireContainerLease, electRoomHost, isContainerLeaseHeldByOther, isValidContainerKey, listJoinableRooms, ownsContainerLease, queueContainerWrite } from '../src/game/multiplayer.js';
+import { applyRemotePlayerState, remoteEquipmentSnapshot, canAcquireContainerLease, electRoomHost, isContainerLeaseHeldByOther, isValidContainerKey, listJoinableRooms, ownsContainerLease, queueContainerWrite } from '../src/game/multiplayer.js';
 
 describe('multiplayer container key validation', () => {
   it('accepts signed integer coordinates only', () => {
@@ -150,5 +150,48 @@ describe('multiplayer remote player state', () => {
     });
     assertEqual(remote.attacking, false);
     assertEqual(remote.attackTime, 0);
+  });
+});
+
+describe('multiplayer equipment snapshots', () => {
+  it('sends only held, offhand, and four armor item identifiers', () => {
+    const stacks = [
+      { isEmpty: false, item: { id: 'minecraft:diamond_sword' } },
+      ...Array.from({ length: 35 }, () => ({ isEmpty: true, item: null })),
+      { isEmpty: false, item: { id: 'minecraft:diamond_boots' } },
+      { isEmpty: false, item: { id: 'minecraft:iron_leggings' } },
+      { isEmpty: false, item: { id: 'minecraft:iron_chestplate' } },
+      { isEmpty: false, item: { id: 'minecraft:iron_helmet' } },
+      { isEmpty: false, item: { id: 'minecraft:shield' } },
+    ];
+    const snapshot = remoteEquipmentSnapshot({ selectedSlot: 0, get: (index) => stacks[index] });
+    assertEqual(snapshot.heldItem, 'minecraft:diamond_sword');
+    assertEqual(snapshot.offhandItem, 'minecraft:shield');
+    assertEqual(snapshot.armor[0], 'minecraft:diamond_boots');
+    assertEqual(snapshot.armor[3], 'minecraft:iron_helmet');
+    assertEqual(Object.keys(snapshot).length, 3);
+  });
+
+  it('uses empty equipment defaults and ignores malformed item identifiers', () => {
+    const snapshot = remoteEquipmentSnapshot({ selectedSlot: 0, get: () => ({
+      isEmpty: false, item: { id: '../invalid' },
+    }) });
+    assertEqual(snapshot.heldItem, null);
+    assertEqual(snapshot.offhandItem, null);
+    assertEqual(snapshot.armor.every((id) => id === null), true);
+  });
+
+  it('applies equipment from remote snapshots and clears stale slots', () => {
+    const remote = applyRemotePlayerState({}, {
+      heldItem: 'minecraft:iron_pickaxe', offhandItem: 'minecraft:shield',
+      armor: ['minecraft:iron_boots', null, null, 'minecraft:iron_helmet'],
+      x: 0, y: 0, z: 0,
+    });
+    assertEqual(remote.heldItem, 'minecraft:iron_pickaxe');
+    assertEqual(remote.offhandItem, 'minecraft:shield');
+    assertEqual(remote.armor[0], 'minecraft:iron_boots');
+    applyRemotePlayerState(remote, { x: 0, y: 0, z: 0 });
+    assertEqual(remote.heldItem, null);
+    assertEqual(remote.armor.every((id) => id === null), true);
   });
 });
