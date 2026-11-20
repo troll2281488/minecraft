@@ -112,3 +112,24 @@ export function isExperienceOrbHazard(blockId) {
   return blockId === 'mc:fire' || blockId === 'mc:soul_fire' ||
     blockId === 'mc:lava' || blockId === 'mc:cactus';
 }
+
+
+function randomExperienceInRange(min, max, random = Math.random) {
+  const roll = Math.max(0, Math.min(0.999999, Number(random()) || 0));
+  return min + Math.floor(roll * (max - min + 1));
+}
+
+/** XP awarded for a successful fishing catch in Java Edition. */
+export function experienceForFishing(random = Math.random) {
+  return randomExperienceInRange(1, 6, random);
+}
+
+/** XP orbs released when two adult animals successfully breed. */
+export function experienceForBreeding(random = Math.random) {
+  return randomExperienceInRange(1, 7, random);
+}
+
+/** XP released for a completed villager trade (before any breeding bonus). */
+export function experienceForVillagerTrade(random = Math.random) {
+  return randomExperienceInRange(3, 6, random);
+}
