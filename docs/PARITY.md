@@ -114,7 +114,7 @@ Reference target for this compatibility track is **Minecraft: Java Edition 1.19.
 | Deepslate ore variants + ragged transition | yes | ✅ |
 | Trees per biome | 8 species incl. large variants | 🟡 *(oak, birch, spruce; canopies clipped at chunk borders)* |
 | Biome count | ~24 | 🟡 *(8)* |
-| Aquifers, lava lakes, structures | yes | 🟡 *(dungeon rooms include mob spawners and seeded chest loot; both optional room chests now receive loot; three weighted dungeon loot pools and seeded random chest-slot placement follow Java 1.19; enchanted books remain plain books until enchantments are implemented)* |
+| Aquifers, lava lakes, structures | yes | 🟡 *(dungeon rooms include mob spawners and seeded chest loot; both optional room chests now receive loot; three weighted dungeon loot pools and seeded random chest-slot placement follow Java 1.19; enchanted books and gunpowder are represented by their own registered item IDs; randomized enchantment data is still pending)* |
 
 ## Rendering
 
