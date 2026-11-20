@@ -186,4 +186,4 @@ brewing, dimensions, structures, villagers and audio are not implemented. See
 
 ### Java 1.19 structure loot progress
 
-- Desert and jungle temple chests now use separate seeded, weighted loot pools. The desert temple has three pools; the jungle temple has two. Both use only registered item IDs. This is an implementation approximation, not a byte-for-byte import of Mojang's loot JSON; temple dispenser loot and exact vanilla pool weights remain outstanding.
+- Desert and jungle temple chests use separate seeded, weighted loot pools (three desert pools and two jungle pools). Strongholds now generate a distinct large-library room with two library chests, retain a crossing/storage chest, and add a portal-room chest; each chest type is recognized by its exact seed-derived coordinates and uses a separate weighted loot table. All loot entries use registered item IDs. The implementation remains an approximation: unimplemented map/compass/pearl entries, randomized enchantment data, exact Mojang weights, and temple dispenser loot remain outstanding.

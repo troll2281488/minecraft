@@ -125,7 +125,13 @@ export function generatedChestKind(seed, x, y, z) {
   for (let gx = Math.floor((x - 512) / 512); gx <= Math.floor(x / 512); gx++) {
     for (let gz = Math.floor((z - 512) / 512); gz <= Math.floor(z / 512); gz++) {
       const stronghold = strongholdCandidateForCell(seed, gx, gz);
-      if (stronghold && x === stronghold.x + 2 && y === stronghold.y + 1 && z === stronghold.z + 2) return 'stronghold';
+      if (!stronghold || y !== stronghold.y + 1) continue;
+      // The three room types are placed at fixed, world-seed-derived
+      // coordinates by TerrainGenerator.placeStronghold.
+      if (x === stronghold.x + 2 && z === stronghold.z + 2) return 'stronghold_crossing';
+      if ((x === stronghold.x - 10 && z === stronghold.z + 8) ||
+          (x === stronghold.x - 6 && z === stronghold.z + 8)) return 'stronghold_library';
+      if (x === stronghold.x + 20 && z === stronghold.z + 10) return 'stronghold_corridor';
     }
   }
   return null;
@@ -207,7 +213,40 @@ export const TEMPLE_LOOT_POOLS = Object.freeze({
   ]),
 });
 
-function fillWeightedPools(seed, x, y, z, chest, pools, salt) {
+// Stronghold room loot follows the separate Java 1.19 chest tables.
+// Map and compass entries are omitted until those item IDs are implemented.
+export const STRONGHOLD_LOOT_POOLS = Object.freeze({
+  stronghold_library: Object.freeze([
+    { rolls: [2, 10], entries: [
+      ['mc:book', 20, 1, 3], ['mc:paper', 20, 2, 7],
+      ['mc:enchanted_book', 10, 1, 1],
+    ] },
+  ]),
+  stronghold_crossing: Object.freeze([
+    { rolls: [1, 4], entries: [
+      ['mc:iron_ingot', 10, 1, 5], ['mc:gold_ingot', 5, 1, 3],
+      ['mc:redstone', 5, 4, 9], ['mc:coal', 10, 3, 8],
+      ['mc:bread', 15, 1, 3], ['mc:apple', 15, 1, 3],
+      ['mc:book', 1, 1, 1], ['mc:enchanted_book', 1, 1, 1],
+    ] },
+  ]),
+  stronghold_corridor: Object.freeze([
+    { rolls: [2, 3], entries: [
+      ['mc:diamond', 3, 1, 1], ['mc:iron_ingot', 10, 1, 5],
+      ['mc:gold_ingot', 5, 1, 3], ['mc:redstone', 5, 4, 9],
+      ['mc:bread', 15, 1, 3], ['mc:apple', 15, 1, 3],
+    ] },
+    { rolls: 1, entries: [
+      ['mc:golden_apple', 1, 1, 1], ['mc:saddle', 1, 1, 1],
+      ['mc:iron_horse_armor', 1, 1, 1], ['mc:golden_horse_armor', 1, 1, 1],
+      ['mc:diamond_horse_armor', 1, 1, 1], ['mc:enchanted_book', 1, 1, 1],
+      ['mc:music_disc_13', 1, 1, 1], ['mc:music_disc_cat', 1, 1, 1],
+      ['mc:music_disc_otherside', 1, 1, 1], ['mc:leather', 1, 1, 5],
+    ] },
+  ]),
+});
+
+function fillWeightedPools(seed, x, y, z, chest, pools, salt, kind) {
   const rng = positionalRandom(seed, x, y, z, salt);
   for (const pool of pools) {
     const rolls = Array.isArray(pool.rolls)
@@ -220,7 +259,7 @@ function fillWeightedPools(seed, x, y, z, chest, pools, salt) {
       chest.insert(ItemStack.of(id, minCount + rng.nextInt(maxCount - minCount + 1)));
     }
   }
-  scatterGeneratedChestLoot(seed, x, y, z, chest, pools === TEMPLE_LOOT_POOLS.desert_temple ? 'desert_temple' : 'jungle_temple');
+  scatterGeneratedChestLoot(seed, x, y, z, chest, kind);
 }
 
 export function chooseWeightedLootEntry(entries, rng) {
@@ -240,7 +279,12 @@ export function scatterGeneratedChestLoot(seed, x, y, z, chest, kind = 'dungeon'
   if (!chest || !Array.isArray(chest.slots)) return;
   const stacks = chest.slots.filter((stack) => stack && !stack.isEmpty);
   const slotOrder = Array.from({ length: chest.slots.length }, (_, i) => i);
-  const salt = 0x534c4f54 + (kind === 'dungeon' ? 0 : kind === 'village' ? 1 : kind === 'stronghold' ? 2 : kind === 'mineshaft' ? 3 : 4);
+  const kindSalt = {
+    dungeon: 0, village: 1, stronghold: 2, mineshaft: 3,
+    desert_temple: 4, jungle_temple: 5,
+    stronghold_library: 6, stronghold_crossing: 7, stronghold_corridor: 8,
+  }[kind] ?? 9;
+  const salt = 0x534c4f54 + kindSalt;
   const rng = positionalRandom(seed, x, y, z, salt);
   for (let i = slotOrder.length - 1; i > 0; i--) {
     const j = rng.nextInt(i + 1);
@@ -270,7 +314,12 @@ function fillDungeonChest(seed, x, y, z, chest) {
 
 export function fillGeneratedChest(seed, x, y, z, chest, kind) {
   if (kind === 'desert_temple' || kind === 'jungle_temple') {
-    fillWeightedPools(seed, x, y, z, chest, TEMPLE_LOOT_POOLS[kind], kind === 'desert_temple' ? 3306 : 3307);
+    fillWeightedPools(seed, x, y, z, chest, TEMPLE_LOOT_POOLS[kind], kind === 'desert_temple' ? 3306 : 3307, kind);
+    return;
+  }
+  if (kind === 'stronghold_library' || kind === 'stronghold_crossing' || kind === 'stronghold_corridor') {
+    const salts = { stronghold_library: 3308, stronghold_crossing: 3309, stronghold_corridor: 3310 };
+    fillWeightedPools(seed, x, y, z, chest, STRONGHOLD_LOOT_POOLS[kind], salts[kind], kind);
     return;
   }
   if (kind === 'dungeon') {

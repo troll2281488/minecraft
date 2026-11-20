@@ -4,10 +4,10 @@ import {
   countSpawnerMobs, nextSpawnerDelay, spawnerSpawnPosition,
 } from '../src/entity/spawners.js';
 import { placeDungeonRoom, dungeonDims } from '../src/world/gen/structures.js';
-import { dungeonCandidateForCell } from '../src/world/gen/terrain.js';
+import { dungeonCandidateForCell, strongholdCandidateForCell } from '../src/world/gen/terrain.js';
 import { positionalRandom } from '../src/core/rng.js';
 import { Chest } from '../src/game/containers.js';
-import { generatedChestKind, fillGeneratedChest, DUNGEON_LOOT_POOLS, TEMPLE_LOOT_POOLS, chooseWeightedLootEntry, scatterGeneratedChestLoot } from '../src/game/container_screens.js';
+import { generatedChestKind, fillGeneratedChest, DUNGEON_LOOT_POOLS, TEMPLE_LOOT_POOLS, STRONGHOLD_LOOT_POOLS, chooseWeightedLootEntry, scatterGeneratedChestLoot } from '../src/game/container_screens.js';
 import { ITEMS, ItemStack } from '../src/world/item.js';
 import '../src/world/blocks/index.js';
 import { BLOCKS } from '../src/world/block.js';
@@ -129,6 +129,45 @@ describe('generated dungeon chest loot', () => {
     assert(contents(desert).length > 2);
     assert(contents(jungle).length > 2);
     assert(contents(desert) !== contents(jungle), 'temple types must not share identical loot rolls');
+  });
+
+  it('recognizes distinct stronghold library, crossing, and portal-room chests', () => {
+    const seed = 'stronghold-room-loot-regression';
+    let site = null;
+    for (let gx = -80; gx <= 80 && !site; gx++) {
+      for (let gz = -80; gz <= 80 && !site; gz++) {
+        site = strongholdCandidateForCell(seed, gx, gz);
+      }
+    }
+    assert(site, 'test seed should contain a stronghold candidate');
+    const y = site.y + 1;
+    assertEqual(generatedChestKind(seed, site.x + 2, y, site.z + 2), 'stronghold_crossing');
+    assertEqual(generatedChestKind(seed, site.x - 10, y, site.z + 8), 'stronghold_library');
+    assertEqual(generatedChestKind(seed, site.x - 6, y, site.z + 8), 'stronghold_library');
+    assertEqual(generatedChestKind(seed, site.x + 20, y, site.z + 10), 'stronghold_corridor');
+  });
+
+  it('uses separate registered weighted loot pools for all stronghold room types', () => {
+    assertEqual(STRONGHOLD_LOOT_POOLS.stronghold_library.length, 1);
+    assertEqual(STRONGHOLD_LOOT_POOLS.stronghold_crossing.length, 1);
+    assertEqual(STRONGHOLD_LOOT_POOLS.stronghold_corridor.length, 2);
+    for (const [kind, pools] of Object.entries(STRONGHOLD_LOOT_POOLS)) {
+      for (const pool of pools) for (const [id, weight, min, max] of pool.entries) {
+        assert(ITEMS.get(id), kind + ' loot item ' + id + ' must be registered');
+        assert(weight > 0 && min > 0 && max >= min);
+      }
+    }
+    const make = kind => {
+      const chest = new Chest();
+      fillGeneratedChest('stronghold-pools-test', 12, 24, -8, chest, kind);
+      return chest.slots.map(stack => stack.toJSON());
+    };
+    const library = make('stronghold_library');
+    const crossing = make('stronghold_crossing');
+    const corridor = make('stronghold_corridor');
+    assert(library.some(Boolean) && crossing.some(Boolean) && corridor.some(Boolean));
+    assert(JSON.stringify(library) !== JSON.stringify(crossing));
+    assert(JSON.stringify(crossing) !== JSON.stringify(corridor));
   });
 
   it('scatters loot into deterministic non-packed chest slots', () => {
