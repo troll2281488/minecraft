@@ -233,6 +233,22 @@ export class MobSystem {
     const world = this.game.world;
     for (let i = this.arrows.length - 1; i >= 0; i--) {
       const arrow = this.arrows[i];
+      if (arrow.stuck) {
+        arrow.age++;
+        if (Math.hypot(player.x - arrow.x, player.y - arrow.y, player.z - arrow.z) < 1.15 && arrow.age > 12) {
+          const left = this.game.inventory?.addItem('mc:arrow', 1) ?? 1;
+          if (left === 0) { this.arrows.splice(i, 1); this.game.ui?.toast('Стрела поднята'); continue; }
+        }
+        if (arrow.age > 1200) this.arrows.splice(i, 1);
+        continue;
+      }
+      if (arrow.stuckMobId) {
+        arrow.age++;
+        const target = this.mobs.find((mob) => mob.id === arrow.stuckMobId);
+        if (target) { arrow.x = target.x + (arrow.offsetX || 0); arrow.y = target.y + (arrow.offsetY || 0); arrow.z = target.z + (arrow.offsetZ || 0); }
+        if (arrow.age > 1200 || !target) this.arrows.splice(i, 1);
+        continue;
+      }
       const result = stepArrow(arrow,
         (x, y, z) => world.getBlock(x, y, z).block.solid,
         this.mobs,
@@ -242,6 +258,13 @@ export class MobSystem {
         mob.health = Math.max(0, mob.health - (mob.type === 'horse' ? calculateHorseArmorDamage(arrow.damage, mob.horseArmor) : arrow.damage));
         mob.hurtTicks = 10;
         mob.anim.hurt = 1;
+        arrow.stuckMobId = mob.id;
+        arrow.offsetX = arrow.x - mob.x; arrow.offsetY = arrow.y - mob.y; arrow.offsetZ = arrow.z - mob.z;
+        arrow.done = false;
+      } else if (result.hit === 'block') {
+        arrow.stuck = true;
+        arrow.vx = arrow.vy = arrow.vz = 0;
+        arrow.done = false;
       }
       if (arrow.done) this.arrows.splice(i, 1);
     }
