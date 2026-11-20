@@ -86,12 +86,21 @@ export class Chest {
 }
 
 export const HOPPER_SLOTS = 5;
+export const DROPPER_SLOTS = 9;
 
 /** Five-slot hopper inventory with the same stack rules as a chest. */
 export class Hopper extends Chest {
   constructor() {
     super();
     this.slots = Array.from({ length: HOPPER_SLOTS }, () => ItemStack.EMPTY.clone());
+  }
+}
+
+/** Nine-slot dropper inventory; activation ejects or inserts one item. */
+export class Dropper extends Chest {
+  constructor() {
+    super();
+    this.slots = Array.from({ length: DROPPER_SLOTS }, () => ItemStack.EMPTY.clone());
   }
 }
 
@@ -135,6 +144,9 @@ export function serializeContainer(type, data) {
   if (type === 'hopper' && data instanceof Hopper) {
     return { type, slots: data.slots.map((stack) => stack.toJSON()) };
   }
+  if (type === 'dropper' && data instanceof Dropper) {
+    return { type, slots: data.slots.map((stack) => stack.toJSON()) };
+  }
   if (type === 'furnace' && data instanceof Furnace) {
     return {
       type,
@@ -165,6 +177,12 @@ export function deserializeContainer(record) {
     const hopper = new Hopper();
     hopper.slots = record.slots.map((stack) => ItemStack.fromJSON(stack));
     return { type: 'hopper', data: hopper };
+  }
+  if (record.type === 'dropper') {
+    if (!Array.isArray(record.slots) || record.slots.length !== DROPPER_SLOTS) return null;
+    const dropper = new Dropper();
+    dropper.slots = record.slots.map((stack) => ItemStack.fromJSON(stack));
+    return { type: 'dropper', data: dropper };
   }
   if (record.type === 'furnace') {
     const furnace = new Furnace();
@@ -197,6 +215,11 @@ export function drainContainer(type, data) {
   if (type === 'hopper' && data instanceof Hopper) {
     const drops = data.slots.filter((stack) => !stack.isEmpty).map((stack) => stack.clone());
     data.slots = Array.from({ length: HOPPER_SLOTS }, () => ItemStack.EMPTY.clone());
+    return drops;
+  }
+  if (type === 'dropper' && data instanceof Dropper) {
+    const drops = data.slots.filter((stack) => !stack.isEmpty).map((stack) => stack.clone());
+    data.slots = Array.from({ length: DROPPER_SLOTS }, () => ItemStack.EMPTY.clone());
     return drops;
   }
   if (type === 'furnace' && data instanceof Furnace) {

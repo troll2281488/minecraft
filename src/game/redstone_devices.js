@@ -8,7 +8,7 @@ import { AIR } from '../world/block.js';
  */
 const NEIGHBORS = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
 const HORIZONTAL = [[1,0,0,'east','west'],[-1,0,0,'west','east'],[0,0,1,'south','north'],[0,0,-1,'north','south']];
-const FACING_VECTOR = { north: [0,0,-1], south: [0,0,1], east: [1,0,0], west: [-1,0,0] };
+const FACING_VECTOR = { north: [0,0,-1], south: [0,0,1], east: [1,0,0], west: [-1,0,0], up:[0,1,0], down:[0,-1,0] };
 
 export function comparatorOutput(rear, left = 0, right = 0, subtract = false) {
   const back = Math.max(0, Math.min(15, Math.floor(Number(rear) || 0)));
@@ -44,7 +44,11 @@ export function readSignal(world, x, y, z, targetX, targetY, targetZ) {
   const state = world.getBlock(x,y,z);
   if (state.block.id === 'mc:redstone_block') return 15;
   if (state.block.renderShape === 'redstone_wire') return state.get('power') || 0;
-  if (state.block.id === 'mc:daylight_detector') return state.get('power') || 0;
+  if (state.block.id === 'mc:daylight_detector' || state.block.id === 'mc:target') return state.get('power') || 0;
+  if (state.block.id === 'mc:observer' && state.get('powered')) {
+    const [fx,fy,fz]=FACING_VECTOR[state.get('facing')]||[0,0,1];
+    if (x-fx===targetX && y-fy===targetY && z-fz===targetZ) return 15;
+  }
   if (state.block.id === 'mc:redstone_torch' && state.get('lit') !== false) return 15;
   if ((state.block.renderShape === 'lever' || state.block.renderShape === 'button' || state.block.renderShape === 'pressure_plate') && state.get('powered')) return 15;
   if (state.block.renderShape === 'weighted_pressure_plate') return state.get('power') || 0;
@@ -239,6 +243,8 @@ export const RedstoneDevicesMixin = {
       this._knownPressurePlates.delete(key);
     }
 
+    this._tickObservers(baseX, baseY, baseZ, !!player);
+    this._tickTargetBlocks(baseX, baseY, baseZ, !!player);
     this._tickDaylightDetectors(baseX, baseY, baseZ, !!player);
     this._tickWeightedPressurePlates(baseX, baseY, baseZ, !!player);
     this._tickRepeaters(baseX, baseY, baseZ, !!player);
@@ -247,6 +253,65 @@ export const RedstoneDevicesMixin = {
     this._tickRedstoneTorches(baseX, baseY, baseZ, !!player);
     this._tickRedstoneLamps(baseX, baseY, baseZ, !!player);
     this._tickNoteBlocks(baseX, baseY, baseZ, !!player);
+  },
+
+  _tickObservers(baseX, baseY, baseZ, hasPlayer) {
+    if (!hasPlayer) return;
+    const world=this.world,tick=this.tickCount||0;
+    this._observerLastStates ||= new Map();
+    this._observerPulseUntil ||= new Map();
+    const vectors=FACING_VECTOR;
+    for(let y=baseY-3;y<=baseY+4;y++) for(let x=baseX-8;x<=baseX+8;x++) for(let z=baseZ-8;z<=baseZ+8;z++) {
+      const state=world.getBlock(x,y,z);
+      if(state.block.id!=='mc:observer') continue;
+      const key=`${x},${y},${z}`;
+      const [dx,dy,dz]=vectors[state.get('facing')]||vectors.south;
+      const watched=world.getBlock(x+dx,y+dy,z+dz).stringId;
+      if(!this._observerLastStates.has(key)) this._observerLastStates.set(key,watched);
+      else if(this._observerLastStates.get(key)!==watched) {
+        this._observerLastStates.set(key,watched);
+        this._observerPulseUntil.set(key,tick+2);
+        if(!state.get('powered')) writeState(this,x,y,z,state.with('powered',true));
+      }
+    }
+    for(const [key,until] of this._observerPulseUntil) {
+      const [x,y,z]=key.split(',').map(Number),state=world.getBlock(x,y,z);
+      if(state.block.id!=='mc:observer'){this._observerPulseUntil.delete(key);this._observerLastStates.delete(key);continue;}
+      if(tick>=until) {
+        if(state.get('powered')) writeState(this,x,y,z,state.with('powered',false));
+        this._observerPulseUntil.delete(key);
+      }
+    }
+  },
+
+  _tickTargetBlocks(baseX, baseY, baseZ, hasPlayer) {
+    if(!hasPlayer) return;
+    const world=this.world,tick=this.tickCount||0;
+    this._targetPulseTimers ||= new Map();
+    for(let y=baseY-3;y<=baseY+4;y++) for(let x=baseX-8;x<=baseX+8;x++) for(let z=baseZ-8;z<=baseZ+8;z++) {
+      const state=world.getBlock(x,y,z);
+      if(state.block.id!=='mc:target') continue;
+      let power=0;
+      for(const arrow of this.entities?.arrows||[]) {
+        if(!arrow||arrow.targetScored||!Number.isFinite(arrow.x)||!Number.isFinite(arrow.y)||!Number.isFinite(arrow.z)) continue;
+        if(arrow.x<x||arrow.x>x+1||arrow.y<y||arrow.y>y+1||arrow.z<z||arrow.z>z+1) continue;
+        const cx=x+0.5,cy=y+0.5,cz=z+0.5;
+        const distance=Math.hypot(arrow.x-cx,arrow.y-cy,arrow.z-cz);
+        power=Math.max(power,Math.max(1,Math.min(15,Math.round(15*(1-distance/0.9)))));
+        arrow.targetScored=true;
+      }
+      const key=`${x},${y},${z}`;
+      if(power>0) {
+        writeState(this,x,y,z,state.with('power',power));
+        this._targetPulseTimers.set(key,tick+10);
+      } else {
+        const due=this._targetPulseTimers.get(key);
+        if(due&&tick>=due) {
+          if(state.get('power')!==0) writeState(this,x,y,z,state.with('power',0));
+          this._targetPulseTimers.delete(key);
+        }
+      }
+    }
   },
 
   _tickRedstoneTorches(baseX, baseY, baseZ, hasPlayer) {

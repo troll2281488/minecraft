@@ -162,6 +162,10 @@ Reference target for this compatibility track is **Minecraft: Java Edition 1.19.
 
 Room-code joining, remote avatar rendering, chat, shared overworld block edits, player health/food/experience status display, sprint/sneak state, attack animation, held/offhand item identifiers and simplified remote armor/equipment rendering, a host-synchronized day/night clock with deterministic handoff when the host leaves, and per-player local save persistence across reconnects are implemented. This is not yet a complete co-op survival session: each browser still simulates its own mobs and combat; mob damage, inventory/container contents, XP orbs and XP awards, weather and dimensions are not shared/authoritative. Firebase access also depends on the configured Realtime Database being reachable and its deployed security rules allowing the intended operations.
 
+### Observer, dropper and target block
+
+Observer detects a change in the adjacent block on its facing side and emits a two-tick pulse. Dropper stores nine slots and on a rising redstone edge transfers one item into a supported adjacent container or ejects it into the world. Target block reports an analogue signal for arrow hits, with stronger output near the center. These systems are active-area simulations; exact Java update ordering, all projectile types and chunk-wide ticking remain incomplete.
+
 ### Hopper automation
 
 Hoppers now have a five-slot saved inventory, a vanilla-shaped recipe, a container UI, one-item transfers on an eight-tick cadence between nearby hoppers/chests/furnaces, and redstone locking. The simulation is host-authoritative in multiplayer and only scans a small area around the active player to limit work and network traffic. Dropped-item pickup, minecart containers, exact sided furnace slot rules, and full unloaded-chunk scheduling remain incomplete.

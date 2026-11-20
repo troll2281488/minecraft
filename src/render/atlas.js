@@ -676,6 +676,32 @@ TEXTURES.redstone_wire = () => {
   }
   return tile;
 };
+TEXTURES.dropper = () => {
+  const tile=grainy(hex(0x777777),0.16,'dropper'), dark=hex(0x252525), rim=hex(0x4a4a4a), iron=hex(0x999999);
+  for(let y=2;y<14;y++) for(let x=2;x<14;x++) {
+    const hole=x>=5&&x<=10&&y>=5&&y<=10;
+    const edge=x===2||x===13||y===2||y===13;
+    const c=hole?dark:edge?rim:iron; setPx(tile,x,y,c[0],c[1],c[2]);
+  }
+  return tile;
+};
+TEXTURES.observer = () => {
+  const tile=grainy(hex(0x777777),0.12,'observer'), stone=hex(0x777777), face=hex(0x454545), eye=hex(0xb32626), pupil=hex(0x241010);
+  for(let y=1;y<15;y++) for(let x=1;x<15;x++) { const c=(x<3||x>12||y<3||y>12)?stone:face; setPx(tile,x,y,c[0],c[1],c[2]); }
+  for(let y=5;y<11;y++) for(let x=5;x<11;x++) setPx(tile,x,y,eye[0],eye[1],eye[2]);
+  for(let y=7;y<9;y++) for(let x=7;x<9;x++) setPx(tile,x,y,pupil[0],pupil[1],pupil[2]);
+  return tile;
+};
+TEXTURES.target = () => {
+  const tile=grainy(hex(0xf0f0f0),0.06,'target');
+  const red=hex(0xc72b2b), white=hex(0xf4f0e8), dark=hex(0x8f1c1c);
+  for(let y=0;y<16;y++) for(let x=0;x<16;x++) {
+    const d=Math.hypot(x-7.5,y-7.5);
+    const c=d<2?dark:d<4?white:d<6?red:d<7?white:red;
+    setPx(tile,x,y,c[0],c[1],c[2]);
+  }
+  return tile;
+};
 TEXTURES.hopper = () => {
   const tile = grainy(hex(0x777777), 0.16, 'hopper');
   const dark = hex(0x343434), iron = hex(0xb0b0b0), rim = hex(0x555555);
