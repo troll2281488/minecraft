@@ -23,6 +23,9 @@ function applyMechanism(game, x, y, z, state, powered) {
     if (upper.get('open') !== powered) writeState(game, x, lowerY + 1, z, upper.with('open', powered));
   } else if (state.block.renderShape === 'trapdoor' && state.get('open') !== powered) {
     writeState(game, x, y, z, state.with('open', powered));
+  } else if (state.block.renderShape === 'fence_gate' &&
+      (state.get('open') !== powered || state.get('powered') !== powered)) {
+    writeState(game, x, y, z, state.with('open', powered).with('powered', powered));
   }
 }
 

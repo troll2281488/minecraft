@@ -70,6 +70,7 @@ export const BlockActionsMixin = {
     this.world.setBlock(x, y, z, AIR.defaultState);
     this.multiplayer?.pushBlockChange(x, y, z, AIR.defaultState);
     this._removeAttachedRedstoneDevices?.(x, y, z);
+    this._updateFenceConnectionsAround?.(x, y, z);
     if (isDoor) {
       this.world.setBlock(x, pairedDoorY, z, AIR.defaultState);
       this.multiplayer?.pushBlockChange(x, pairedDoorY, z, AIR.defaultState);
@@ -164,6 +165,13 @@ export const BlockActionsMixin = {
     if (this.entities?.feedAnimalFromPlayer()) return;
     if (this._farmInteraction()) return;
     const sneaking = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
+    if (this.hit && !sneaking && this.hit.state.block.renderShape === 'fence_gate') {
+      const state = this.hit.state;
+      const next = state.with('open', !state.get('open'));
+      this.world.setBlock(this.hit.x, this.hit.y, this.hit.z, next);
+      this.multiplayer?.pushBlockChange(this.hit.x, this.hit.y, this.hit.z, next);
+      return true;
+    }
     if (this.hit && !sneaking && ['button', 'lever'].includes(this.hit.state.block.renderShape)) {
       const state = this.hit.state;
       const powered = state.block.renderShape === 'lever' ? !state.get('powered') : true;
@@ -367,6 +375,7 @@ export const BlockActionsMixin = {
       if (!this.world.setBlock(target.x, target.y, target.z, state)) return;
       this.multiplayer?.pushBlockChange(target.x, target.y, target.z, state);
     }
+    this._updateFenceConnectionsAround?.(target.x, target.y, target.z);
     this.sounds?.play('place', block.soundGroup || 'stone');
     if (this.player.gamemode !== GAMEMODE.CREATIVE) this.inventory.consumeHeld(1);
   },

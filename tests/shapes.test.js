@@ -103,6 +103,31 @@ describe('shapes: box geometry', () => {
     assertEqual(collisionBoxes(plate).length, 0, 'pressure plates are non-solid controls');
   });
 
+  it('fences have a post and add two rails for every connected side', () => {
+    const fence = BLOCKS.get('mc:oak_fence').defaultState;
+    assertEqual(shapeBoxes(fence).length, 1);
+    const connected = fence.with('north', true).with('east', true);
+    assertEqual(shapeBoxes(connected).length, 5);
+    assertEqual(collisionBoxes(connected).length, 5);
+    assert(isNonCube(fence));
+  });
+
+  it('fence gates rotate when open and stop colliding', () => {
+    const gate = BLOCKS.get('mc:oak_fence_gate').defaultState;
+    assertDeepEqual(shapeBoxes(gate), [[0, 0, 0.375, 1, 1.5, 0.625]]);
+    assertEqual(collisionBoxes(gate).length, 1);
+    assertEqual(collisionBoxes(gate.with('open', true)).length, 0);
+    assert(isNonCube(gate));
+  });
+
+  it('all wood fences/gates and the Nether brick fence are registered', () => {
+    for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) {
+      assert(BLOCKS.get(`mc:${wood}_fence`), `${wood} fence missing`);
+      assert(BLOCKS.get(`mc:${wood}_fence_gate`), `${wood} fence gate missing`);
+    }
+    assert(BLOCKS.get('mc:nether_brick_fence'), 'Nether brick fence missing');
+  });
+
   it('all Java 1.19 button, lever and pressure plate blocks are registered', () => {
     for (const id of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) {
       assert(BLOCKS.get(`mc:${id}_button`), `${id} button missing`);

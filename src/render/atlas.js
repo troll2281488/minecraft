@@ -635,6 +635,8 @@ for (const [species, c] of Object.entries(WOOD)) {
   TEXTURES[`${species}_trapdoor`] = () => trapdoorPanelTile(c.planks, `${species}_trapdoor`);
   TEXTURES[`${species}_button`] = () => buttonTile(c.planks, `${species}_button`);
   TEXTURES[`${species}_pressure_plate`] = () => pressurePlateTile(c.planks, `${species}_pressure_plate`);
+  TEXTURES[`${species}_fence`] = () => planks(c.planks, `${species}_fence`);
+  TEXTURES[`${species}_fence_gate`] = () => planks(c.planks, `${species}_fence_gate`);
 }
 
 TEXTURES.iron_door_bottom = () => ironDoorPanelTile(false);
@@ -644,6 +646,7 @@ TEXTURES.stone_button = () => buttonTile(hex(0x858585), 'stone_button');
 TEXTURES.polished_blackstone_button = () => buttonTile(hex(0x38333a), 'polished_blackstone_button');
 TEXTURES.stone_pressure_plate = () => pressurePlateTile(hex(0x858585), 'stone_pressure_plate');
 TEXTURES.polished_blackstone_pressure_plate = () => pressurePlateTile(hex(0x38333a), 'polished_blackstone_pressure_plate');
+TEXTURES.nether_brick_fence = () => grainy(hex(0x4b292d), 0.08, 'nether_brick_fence');
 TEXTURES.lever = () => {
   const tile = grainy(hex(0x777777), 0.12, 'lever');
   const light = hex(0xb0b0b0), dark = hex(0x454545);

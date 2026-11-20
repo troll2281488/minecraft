@@ -196,6 +196,33 @@ function pressurePlateBoxes(state) {
 }
 
 // ---------------------------------------------------------------------------
+// Fences and fence gates
+// ---------------------------------------------------------------------------
+
+function fenceBoxes(state) {
+  const boxes = [[0.375, 0, 0.375, 0.625, 1.5, 0.625]];
+  for (const [direction, connected] of [['north', 'north'], ['south', 'south'], ['east', 'east'], ['west', 'west']]) {
+    if (!state.get(connected)) continue;
+    const rail = direction === 'north' ? [0.375, 0.375, 0, 0.625, 0.5625, 0.5]
+      : direction === 'south' ? [0.375, 0.375, 0.5, 0.625, 0.5625, 1]
+      : direction === 'east' ? [0.5, 0.375, 0.375, 1, 0.5625, 0.625]
+      : [0, 0.375, 0.375, 0.5, 0.5625, 0.625];
+    const upper = [...rail]; upper[1] = 0.75; upper[4] = 0.9375;
+    boxes.push(rail, upper);
+  }
+  return boxes;
+}
+
+function fenceGateBoxes(state) {
+  const alongX = ['north', 'south'].includes(state.get('facing'));
+  const open = state.get('open');
+  const planeAlongX = open ? !alongX : alongX;
+  return [planeAlongX
+    ? [0, 0, 0.375, 1, 1.5, 0.625]
+    : [0.375, 0, 0, 0.625, 1.5, 1]];
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -214,6 +241,8 @@ export function shapeBoxes(state) {
     case 'button': return buttonBoxes(state);
     case 'lever': return leverBoxes(state);
     case 'pressure_plate': return pressurePlateBoxes(state);
+    case 'fence': return fenceBoxes(state);
+    case 'fence_gate': return fenceGateBoxes(state);
     default: return FULL_LIST;
   }
 }
@@ -224,14 +253,15 @@ export function shapeBoxes(state) {
  */
 export function collisionBoxes(state) {
   if (!state.block.solid) return EMPTY_LIST;
+  if (state.block.renderShape === 'fence_gate' && state.get('open')) return EMPTY_LIST;
   return shapeBoxes(state);
 }
 
 /** True if this block is anything other than a plain full cube. */
 export function isNonCube(state) {
   const shape = state.block.renderShape;
-  return shape === 'slab' || shape === 'stair' || shape === 'pane' || shape === 'ladder' || shape === 'door' || shape === 'trapdoor' || shape === 'button' || shape === 'lever' || shape === 'pressure_plate';
+  return shape === 'slab' || shape === 'stair' || shape === 'pane' || shape === 'ladder' || shape === 'door' || shape === 'trapdoor' || shape === 'button' || shape === 'lever' || shape === 'pressure_plate' || shape === 'fence' || shape === 'fence_gate';
 }
 
 /** The shapes the mesher must render with the box emitter rather than as a cube. */
-export const BOX_SHAPES = Object.freeze(new Set(['slab', 'stair', 'pane', 'ladder', 'door', 'trapdoor', 'button', 'lever', 'pressure_plate']));
+export const BOX_SHAPES = Object.freeze(new Set(['slab', 'stair', 'pane', 'ladder', 'door', 'trapdoor', 'button', 'lever', 'pressure_plate', 'fence', 'fence_gate']));
