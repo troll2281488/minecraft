@@ -67,7 +67,7 @@ Reference target for this compatibility track is **Minecraft: Java Edition 1.19.
 | 10-stage crack overlay | overlay on the block being broken | ✅ *(generated in-shader rather than as a texture)* |
 | Block drops seeded from world seed + position | reproducible | ✅ |
 | Ore mining XP (coal, lapis, redstone, diamond, emerald, nether quartz) | vanilla XP ranges, harvest-tool gated | 🟡 *(orb pickup is implemented; Fortune/Silk Touch and full deepslate catalog remain incomplete)* |
-| Fishing, breeding and villager trade XP | Java 1.19 point ranges, +5 on villager level-up | 🟡 *(orbs and pickup work; breeding/trading rules remain simplified)* |
+| Fishing, breeding and villager trade XP | Java 1.19 point ranges | 🟡 *(3–6 trade XP is implemented; +5 level-up bonus awaits real villager XP progression)* |
 
 ## Inventory & crafting
 
