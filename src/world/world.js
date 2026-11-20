@@ -288,7 +288,9 @@ export class World {
           let y = this.getHeight(x, z);
           // Ocean columns have water at the heightmap top; skip them quickly
           // rather than scanning the entire water column on every spawn retry.
-          if (this.getBlock(x, y, z).block.id === 'mc:water') continue;
+          const surfaceId = this.getBlock(x, y, z).block.id;
+          if (surfaceId === 'mc:water' || surfaceId === 'mc:ice' ||
+              surfaceId === 'mc:packed_ice' || surfaceId === 'mc:frosted_ice') continue;
           // Heightmaps can include plants or other non-solid surface blocks.
           while (y >= MIN_Y) {
             const ground = this.getBlock(x, y, z).block;
