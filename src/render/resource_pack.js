@@ -26,6 +26,12 @@ const BLOCK_TEXTURE_ALIASES = Object.freeze({
   water: 'water_still',
 });
 
+// Kept as a public selection helper for the resource-pack UI/tests. The
+// community pack currently supplies block textures only, so item icons remain local.
+export function shouldFetchExternalItemTexture(item) {
+  return Boolean(item && !item.block && !item.spawnEggMob);
+}
+
 async function fetchImage(path, base = SIMPLE_RP_RAW) {
   const response = await fetch(base + path, { signal: AbortSignal.timeout(4000) });
   if (!response.ok) return null;
