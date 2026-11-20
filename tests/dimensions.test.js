@@ -5,6 +5,7 @@ import { TerrainGenerator, findNearestStructure } from '../src/world/gen/terrain
 import { BLOCKS } from '../src/world/block.js';
 import { ITEMS } from '../src/world/item.js';
 import { RECIPES } from '../src/game/recipes.js';
+import { blockDrops } from '../src/game/interaction.js';
 
 describe('Nether and End dimensions', () => {
   it('generates a separate Nether chunk with bedrock and netherrack', () => {
@@ -41,6 +42,13 @@ describe('Nether portal gameplay additions', () => {
     assert(ITEMS.get('mc:flint_and_steel'));
     assert(ITEMS.get('mc:blaze_rod'));
     assertEqual(RECIPES.producing('mc:flint_and_steel').length, 1);
+  });
+
+  it('drops coal items rather than coal ore blocks', () => {
+    const state = BLOCKS.get('mc:coal_ore').defaultState;
+    const drops = blockDrops(state, { item: ITEMS.get('mc:iron_pickaxe') }, 'coal-drop-test', 1, 20, 1);
+    assertEqual(drops.length, 1);
+    assertEqual(drops[0].id, 'mc:coal');
   });
 
   it('creates a wide lava sea and a spawn-side fortress floor in the Nether', () => {

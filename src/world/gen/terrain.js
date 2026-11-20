@@ -387,6 +387,7 @@ export class TerrainGenerator {
     this.placeFossils(chunk, baseX, baseZ);
     this.placeVillages(chunk, baseX, baseZ);
     this.placeSurfaceStructures(chunk, baseX, baseZ);
+    this.placeRuinedPortal(chunk, baseX, baseZ);
     this.placeUndergroundStructures(chunk, baseX, baseZ, heights);
 
     chunk.rebuildHeightmap();
@@ -397,6 +398,26 @@ export class TerrainGenerator {
     return chunk;
   }
 
+
+  /** A deterministic damaged portal ruin near the default spawn area. */
+  placeRuinedPortal(chunk, baseX, baseZ) {
+    const x0=24, z0=24, lx=x0-baseX, lz=z0-baseZ;
+    if(lx>15||lx+3<0||lz>15||lz<0) return;
+    const S=this.states.byId, obsidian=S['mc:obsidian'], crying=S['mc:crying_obsidian']||obsidian;
+    const chest=S['mc:chest'], netherrack=S['mc:netherrack']||S['mc:stone'];
+    if(!obsidian) return;
+    const y=Math.max(4,Math.min(110,Math.floor(this._height(this._fields(x0+1,z0),x0+1,z0))));
+    const put=(wx,wy,wz,state)=>{const cx=wx-baseX,cz=wz-baseZ;if(state&&cx>=0&&cx<16&&cz>=0&&cz<16&&wy>=MIN_Y&&wy<MAX_Y)chunk.setBlock(cx,wy,cz,state);};
+    for(let dx=0;dx<4;dx++) {
+      put(x0+dx,y,z0,obsidian);
+      if(dx===0||dx===3) for(let dy=1;dy<=4;dy++) put(x0+dx,y+dy,z0,obsidian);
+      else if(dx===1) put(x0+dx,y+4,z0,obsidian);
+    }
+    put(x0+3,y+4,z0,crying);
+    put(x0-1,y,z0+1,netherrack);
+    put(x0+4,y,z0-1,netherrack);
+    put(x0+4,y+1,z0+1,chest);
+  }
 
   /** Classic Nether terrain, generated independently from the Overworld. */
   generateNetherChunk(chunk) {
