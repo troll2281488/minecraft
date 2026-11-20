@@ -104,6 +104,49 @@ export const RedstoneDevicesMixin = {
     }
 
     const activeNow = new Set();
+    const activatePlateAt = (x, y, z, allowItems = false) => {
+      const state = world.getBlock(x, y, z);
+      if (state.block.renderShape !== 'pressure_plate') return;
+      const key = `${x},${y},${z}`;
+      activeNow.add(key);
+      this._knownPressurePlates.add(key);
+      this._pressurePlateTimers.delete(key);
+      if (!state.get('powered')) {
+        writeState(this, x, y, z, state.with('powered', true));
+        this._applyAdjacentRedstonePower(x, y, z, true);
+      }
+    };
+
+    // Living entities press both wooden and stone plates. Dropped items only
+    // press wooden plates, matching the different vanilla plate sensitivities.
+    for (const mob of this.entities?.mobs || []) {
+      if (!mob || !Number.isFinite(mob.x) || !Number.isFinite(mob.y) || !Number.isFinite(mob.z)) continue;
+      const minX = Math.floor(mob.x - 0.3), maxX = Math.floor(mob.x + 0.3);
+      const minZ = Math.floor(mob.z - 0.3), maxZ = Math.floor(mob.z + 0.3);
+      const y = Math.floor(mob.y);
+      for (let x = minX; x <= maxX; x++) for (let z = minZ; z <= maxZ; z++) {
+        if (mob.x + 0.3 <= x || mob.x - 0.3 >= x + 1 || mob.z + 0.3 <= z || mob.z - 0.3 >= z + 1) continue;
+        for (const py of [y, y - 1]) {
+          const state = world.getBlock(x, py, z);
+          if (state.block.renderShape === 'pressure_plate' && mob.y <= py + 1.8 && mob.y + 1.8 > py) {
+            activatePlateAt(x, py, z);
+          }
+        }
+      }
+    }
+
+    for (const drop of this.entities?.droppedItems || []) {
+      if (!drop || !Number.isFinite(drop.x) || !Number.isFinite(drop.y) || !Number.isFinite(drop.z)) continue;
+      const x = Math.floor(drop.x), z = Math.floor(drop.z), y = Math.floor(drop.y);
+      for (const py of [y, y - 1]) {
+        const state = world.getBlock(x, py, z);
+        if (state.block.renderShape !== 'pressure_plate') continue;
+        const wooden = state.block.id.endsWith('_pressure_plate') &&
+          !['mc:stone_pressure_plate', 'mc:polished_blackstone_pressure_plate'].includes(state.block.id);
+        if (wooden && drop.x >= x && drop.x < x + 1 && drop.z >= z && drop.z < z + 1 &&
+            drop.y >= py && drop.y <= py + 0.25) activatePlateAt(x, py, z, true);
+      }
+    }
     // Pick up previously powered plates in the nearby loaded area as well, so
     // a save/reconnect cannot leave one latched after the player has moved off.
     if (player) {
