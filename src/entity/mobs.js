@@ -247,7 +247,8 @@ export class MobSystem {
         arrow.age++;
         const target = this.mobs.find((mob) => mob.id === arrow.stuckMobId);
         if (target) { arrow.x = target.x + (arrow.offsetX || 0); arrow.y = target.y + (arrow.offsetY || 0); arrow.z = target.z + (arrow.offsetZ || 0); }
-        if (arrow.age > 1200 || !target) this.arrows.splice(i, 1);
+        if (!target) { arrow.stuckMobId = null; arrow.stuck = true; arrow.vx = arrow.vy = arrow.vz = 0; }
+        if (arrow.age > 1200) this.arrows.splice(i, 1);
         continue;
       }
       const result = stepArrow(arrow,
