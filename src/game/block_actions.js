@@ -83,6 +83,7 @@ export const BlockActionsMixin = {
       if (spawned) this.ui.toast(`Spawned ${heldItem.spawnEggMob}`);
       return;
     }
+    if (this.entities?.tameFromPlayer()) return;
     if (this.entities?.useFishingRod()) return;
     if (this.entities?.shearFromPlayer()) return;
     if (this.entities?.feedAnimalFromPlayer()) return;
