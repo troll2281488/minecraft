@@ -6,6 +6,30 @@ import { forwardVector } from '../src/core/mat4.js';
 import { Player, GAMEMODE } from '../src/entity/player.js';
 import { World } from '../src/world/world.js';
 
+describe('cobweb movement', () => {
+  it('strongly slows horizontal and vertical movement while intersecting a web', () => {
+    const player = new Player(0.5, 65, 0.5);
+    player.vx = 0.4; player.vy = -0.8; player.vz = 0.2;
+    const world = { getBlock: (x, y, z) => ({ block:
+      x === 0 && y === 65 && z === 0 ? BLOCKS.get('mc:cobweb') : BLOCKS.get('mc:air'),
+    }) };
+    assertEqual(player._applyCobwebSlowdown(world), true);
+    assert(Math.abs(player.vx - 0.1) < 1e-9, 'horizontal X should be quartered');
+    assert(Math.abs(player.vy + 0.04) < 1e-9, 'vertical velocity should be reduced to 5%');
+    assert(Math.abs(player.vz - 0.05) < 1e-9, 'horizontal Z should be quartered');
+  });
+
+  it('does not alter movement when no cobweb intersects the player', () => {
+    const player = new Player(0.5, 65, 0.5);
+    player.vx = 0.4; player.vy = -0.8; player.vz = 0.2;
+    const world = { getBlock: () => ({ block: BLOCKS.get('mc:air') }) };
+    assertEqual(player._applyCobwebSlowdown(world), false);
+    assertEqual(player.vx, 0.4);
+    assertEqual(player.vy, -0.8);
+    assertEqual(player.vz, 0.2);
+  });
+});
+
 describe('survival fall damage', () => {
   it('takes no fall damage at or below three blocks', () => {
     const player = new Player();
