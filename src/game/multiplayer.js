@@ -32,6 +32,21 @@ export function electRoomHost(room, players) {
   return Object.keys(players || {}).sort()[0] || null;
 }
 
+/** Store bounded chat messages under stable IDs so reconnect retries cannot duplicate them. */
+export function queueChatMessage(queue, roomId, message, limit = 100) {
+  if (!(queue instanceof Map) || !roomId || !message || typeof message.id !== 'string' ||
+      !/^[a-zA-Z0-9_-]{1,80}$/.test(message.id) ||
+      typeof message.text !== 'string' || !message.text.trim()) return false;
+  queue.set(`${roomId}:${message.id}`, {
+    roomId, id: message.id,
+    sender: safeName(message.sender),
+    text: message.text.trim().slice(0, 240),
+    timestamp: Number.isFinite(message.timestamp) ? message.timestamp : Date.now(),
+  });
+  while (queue.size > limit) queue.delete(queue.keys().next().value);
+  return true;
+}
+
 /** Keep valid room records discoverable even when every player temporarily disconnects. */
 /** Extract only public visual equipment identifiers; never replicate full inventories. */
 export function remoteEquipmentSnapshot(inventory) {
@@ -137,6 +152,7 @@ export class Multiplayer {
     this.pendingBlocks = new Map();
     this.pendingBlockWrites = new Map();
     this.pendingContainerWrites = new Map();
+    this.pendingChatMessages = new Map();
     this.activeContainerLocks = new Map();
     this.containerFlushInFlight = false;
     this.containerFlushRequested = false;
@@ -178,7 +194,10 @@ export class Multiplayer {
           this.firebaseError = '';
           // Firebase executes onDisconnect handlers server-side. Re-register
           // presence and the room player node after every network restoration.
-          if (!wasConnected && this.roomId) void this._restoreRoomPresence();
+          if (!wasConnected && this.roomId) {
+            void this._restoreRoomPresence();
+            void this._flushPendingChatMessages();
+          }
         }
         this._updateRoomHud();
       }, (error) => {
@@ -954,9 +973,29 @@ export class Multiplayer {
       this.addChat(`<${this.nickname}> ${value}`);
       return;
     }
-    push(ref(this.db, `minecraft_game/rooms/${this.roomId}/chat`), {
-      sender: this.nickname, text: value, timestamp: Date.now(),
-    }).catch((error) => this.game.ui.toast(`Чат недоступен: ${error.message}`, { error: true }));
+    const id = (globalThis.crypto?.randomUUID?.() || `m${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`)
+      .replace(/[^a-z0-9_-]/gi, '').slice(0, 80);
+    queueChatMessage(this.pendingChatMessages, this.roomId, {
+      id, sender: this.nickname, text: value, timestamp: Date.now(),
+    });
+    if (this.firebaseConnected) void this._flushPendingChatMessages();
+    else this.game.ui.toast('Сообщение сохранено и отправится после восстановления связи.');
+  }
+
+  async _flushPendingChatMessages() {
+    if (!this.db || !this.firebaseConnected) return;
+    for (const [queueKey, message] of this.pendingChatMessages) {
+      if (message.roomId !== this.roomId) continue;
+      try {
+        await set(ref(this.db, `minecraft_game/rooms/${message.roomId}/chat/${message.id}`), {
+          sender: message.sender, text: message.text, timestamp: message.timestamp,
+        });
+        if (this.pendingChatMessages.get(queueKey) === message) this.pendingChatMessages.delete(queueKey);
+      } catch (error) {
+        console.warn('[multiplayer] chat queue:', error);
+        break;
+      }
+    }
   }
 
   addChat(text) {
@@ -978,6 +1017,7 @@ export class Multiplayer {
       // Try to persist this room's last edits before clearing the active room ID.
       await this._flushPendingBlockWrites();
       await this._flushPendingContainerWrites();
+      await this._flushPendingChatMessages();
       await remove(ref(this.db, `minecraft_game/rooms/${this.roomId}/players/${this.uid}`)).catch(() => {});
       await update(ref(this.db, `minecraft_game/players/${this.uid}`), { room: '' }).catch(() => {});
       await update(ref(this.db, `minecraft_game/users/${this.uid}`), { room: '', online: true, ts: Date.now() }).catch(() => {});
