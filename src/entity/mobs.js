@@ -265,6 +265,8 @@ export class MobSystem {
         arrow.done = false;
       } else if (result.hit === 'block') {
         arrow.stuck = true;
+        arrow.stuckYaw = Math.atan2(-arrow.vx, arrow.vz);
+        arrow.stuckPitch = Math.atan2(-arrow.vy, Math.hypot(arrow.vx, arrow.vz));
         arrow.vx = arrow.vy = arrow.vz = 0;
         arrow.done = false;
       }
