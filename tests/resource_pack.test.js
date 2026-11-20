@@ -20,6 +20,20 @@ describe('External item texture selection', () => {
   });
 });
 
+describe('Vanilla biome soil texture aliases', () => {
+  it('uses the exact classic dirt texture for all biome soil variants', () => {
+    const built = buildTextures();
+    const index = built.index;
+    const pixels = built.pixels;
+    const dirtLayer = index.get('dirt');
+    for (const key of ['plains_soil', 'forest_floor', 'birch_soil', 'jungle_soil',
+      'savanna_soil', 'taiga_soil', 'swamp_mud']) {
+      assertEqual(index.get(key), dirtLayer, `${key} must reuse dirt texture`);
+    }
+    assertEqual(index.get('alpine_gravel'), index.get('gravel'));
+  });
+});
+
 describe('Grass biome tint and missing texture safety', () => {
   it('tints the top and all four grass-block side faces', () => {
     const grass = BLOCKS.get('mc:grass_block');
