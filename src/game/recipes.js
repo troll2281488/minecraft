@@ -61,6 +61,12 @@ recipes.push({
 });
 
 recipes.push({
+  result: 'mc:glass_bottle', count: 3,
+  pattern: ['G G', ' G '],
+  key: { G: 'mc:glass' },
+});
+
+recipes.push({
   result: 'mc:bed', count: 1,
   pattern: ['WWW', 'PPP'],
   key: { W: 'mc:white_wool', P: '#mc:planks' },
