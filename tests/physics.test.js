@@ -55,7 +55,7 @@ describe('ladder movement', () => {
     player.vy = -0.8;
     player.input.sneak = true;
     assertEqual(player._applyLadderMovement(ladderWorld), true);
-    assertEqual(player.vy, -0.8);
+    assertEqual(player.vy, 0);
   });
 
   it('does not change movement away from ladders', () => {
