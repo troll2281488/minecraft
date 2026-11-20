@@ -110,6 +110,7 @@ export class Player {
 
     if (this.flying) {
       this._tickFlying();
+      this._applyCobwebSlowdown(world);
       this._move(world);
       this.vitals.tick(this, Math.hypot(this.x - oldX, this.z - oldZ), false, false);
       return;
@@ -122,6 +123,7 @@ export class Player {
       : PHYSICS.DEFAULT_SLIPPERINESS;
 
     this._applyInput(slipperiness);
+    this._applyCobwebSlowdown(world);
     this._move(world);
     const moved = Math.hypot(this.x - oldX, this.z - oldZ);
     if (this.inWater) this.walkPhase += 0.12;
@@ -142,6 +144,31 @@ export class Player {
     if (this.input.sneak) this.vy = -speed;
 
     this.fallDistance = 0;
+  }
+
+  /**
+   * Cobwebs strongly damp movement while any part of the player intersects
+   * their voxel. Java applies the web multiplier to the movement vector before
+   * collision resolution: horizontal movement is quartered and vertical motion
+   * is reduced to five percent.
+   */
+  _applyCobwebSlowdown(world) {
+    const box = this.boundingBox();
+    const minX = Math.floor(box.minX), maxX = Math.floor(box.maxX - 1e-7);
+    const minY = Math.floor(box.minY), maxY = Math.floor(box.maxY - 1e-7);
+    const minZ = Math.floor(box.minZ), maxZ = Math.floor(box.maxZ - 1e-7);
+    for (let y = minY; y <= maxY; y++) {
+      for (let z = minZ; z <= maxZ; z++) {
+        for (let x = minX; x <= maxX; x++) {
+          if (world.getBlock(x, y, z).block.id !== 'mc:cobweb') continue;
+          this.vx *= 0.25;
+          this.vy *= 0.05;
+          this.vz *= 0.25;
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /**
