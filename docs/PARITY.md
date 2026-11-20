@@ -137,6 +137,8 @@ Reference target for this compatibility track is **Minecraft: Java Edition 1.19.
 | Door geometry / collision | shared 1/16-thick model | 🟡 *(axis-aligned panel boxes; model is simplified)* |
 | Trapdoors (six wood types + iron) — open/closed shape, collision, hand toggle and recipes | yes | 🟡 *(iron requires redstone; attachment validation and exact orientation remain)* |
 | Buttons (wood, stone, polished blackstone), lever and pressure plates — placement, models and recipes | yes | 🟡 *(local toggles/pulses and player pressure plates; full dust propagation remains)* |
+| Fences (six wood types + Nether brick) — neighbour connections, rails and collision | yes | 🟡 *(connection state updates on nearby edits; exact 1.5-block collision and wall connections still need validation)* |
+| Fence gates — open/closed geometry, collision, hand toggle and redstone input | yes | 🟡 *(simplified axis rotation; exact hinge and wall insets remain)* |
 | Fence, gate, wall models | yes | ⬜ |
 | Cloud layer, weather, particles | yes | ⬜ |
 
