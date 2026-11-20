@@ -194,7 +194,9 @@ define('mc:white_wool', {
 ore('coal_ore', 0, 'coal_ore');
 ore('iron_ore', 1, 'iron_ore');
 ore('gold_ore', 2, 'gold_ore');
-ore('redstone_ore', 2, 'redstone_ore');
+stoneLike('mc:redstone_ore', 'redstone_ore', 3, 3, 2, {
+  properties: { lit: PROPS.lit }, defaultValues: { lit: false },
+});
 ore('lapis_ore', 1, 'lapis_ore');
 ore('diamond_ore', 2, 'diamond_ore');
 ore('emerald_ore', 2, 'emerald_ore');
