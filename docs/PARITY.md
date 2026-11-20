@@ -182,3 +182,8 @@ brewing, dimensions, structures, villagers and audio are not implemented. See
 | Meshing throughput | ~12 ms per chunk | Improved 2.3× by loading each section's 18³ neighbourhood into scratch once instead of making ~250,000 world lookups per chunk. Still the slowest part of loading; moving it to workers needs the SharedArrayBuffer refactor. |
 | Starting kit | New worlds grant stone tools, torches, and planks | Not vanilla. Phase 1 has no furnace or chest, so this makes the whole block catalog reachable in the first minute rather than the first hour. |
 | Tree canopies | Do not cross chunk borders | Phase 1 generation writes only into its own chunk; cross-chunk feature placement arrives in Phase 2. |
+
+
+### Java 1.19 structure loot progress
+
+- Desert and jungle temple chests now use separate seeded, weighted loot pools. The desert temple has three pools; the jungle temple has two. Both use only registered item IDs. This is an implementation approximation, not a byte-for-byte import of Mojang's loot JSON; temple dispenser loot and exact vanilla pool weights remain outstanding.
