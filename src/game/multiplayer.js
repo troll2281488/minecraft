@@ -932,6 +932,8 @@ export class Multiplayer {
   }
 
   async leaveRoom(markOffline = false) {
+    if (this.game._activeContainer) this.game._closeContainer?.();
+    await this.game._containerReleasePromise?.catch(() => {});
     for (const unsubscribe of this.unsubscribers.splice(0)) unsubscribe();
     if (this.db && this.roomId) {
       await this.releaseAllContainerLocks();
