@@ -12,7 +12,7 @@
  */
 
 /** Largest horizontal distance a tree block can be from its origin column. */
-export const TREE_MARGIN = 5;
+export const TREE_MARGIN = 8;
 
 function layer(leaves, y, radius, rng, trimCorners) {
   for (let dx = -radius; dx <= radius; dx++) {
@@ -67,7 +67,7 @@ function jungleTree(rng) {
   // irregular tiers; a minority are giant 2x2-trunk specimens.
   const giant = rng.nextInt(4) === 0;
   const h = giant ? 18 + rng.nextInt(7) : 13 + rng.nextInt(8);
-  const logs = [], leaves = [];
+  const logs = [], leaves = [], vines = [];
   const trunk = giant ? [[0,0],[1,0],[0,1],[1,1]] : [[0,0]];
   for (let y = 0; y < h; y++) for (const [tx,tz] of trunk) logs.push([tx,y,tz]);
   const crown = (y, radius) => {
@@ -85,7 +85,15 @@ function jungleTree(rng) {
   crown(h - 1, 4);
   crown(h, 3);
   crown(h + 1, 2);
-  return { logs, leaves };
+  // Hanging vine curtains on the shaded edges of jungle canopies.
+  for (const [cx, cz] of trunk) {
+    for (const [dx, dz] of [[-4,0],[4,0],[0,-4],[0,4],[-3,-3],[-3,3],[3,-3],[3,3]]) {
+      if (rng.nextInt(3) !== 0) continue;
+      const length = 2 + rng.nextInt(5);
+      for (let n = 1; n <= length; n++) vines.push([cx + dx, h - 2 - n, cz + dz]);
+    }
+  }
+  return { logs, leaves, vines };
 }
 
 function jungleBush(rng) {
@@ -144,10 +152,11 @@ function darkOakTree(rng) {
 }
 
 function iceSpike(rng) {
-  const h = 7 + rng.nextInt(14);
+  const h = 12 + rng.nextInt(19);
   const logs = [];
   for (let y = 0; y < h; y++) {
-    const r = y < h * 0.35 ? 1 : 0;
+    const progress = y / h;
+    const r = progress < 0.22 ? 2 : progress < 0.52 ? 1 : 0;
     for (let dx = -r; dx <= r; dx++) for (let dz = -r; dz <= r; dz++) {
       if (r === 1 && Math.abs(dx) + Math.abs(dz) > 1) continue;
       logs.push([dx, y, dz]);
