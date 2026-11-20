@@ -50,6 +50,7 @@ export const SessionMixin = {
     }
 
     this.player = new Player().loadFrom(playerJson);
+    this.player.name = meta.playerName || 'Игрок';
     this.inventory.loadFrom(playerJson?.inventory);
     this.inventory.selectedSlot = playerJson?.selectedSlot ?? 0;
     // Container inventories are block-entity state. Keep them out of online
