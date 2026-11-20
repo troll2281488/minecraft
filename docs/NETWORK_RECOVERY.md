@@ -30,9 +30,11 @@ Implementation branch: `feature/multiplayer-reconnect-stability`.
 - No browser game can guarantee zero lag when a participant has a poor network.
   These changes make room discovery and recovery more robust; they cannot repair
   packet loss, a disconnected device, or a completely unavailable service.
-- Block edits and chest/furnace snapshots are coalesced and queued while Firebase
+- Block edits, chest/furnace snapshots, and chat messages are queued while Firebase
   is offline. Container writes are bounded to 512 pending room/container records;
-  the newest snapshot or deletion marker for each container wins. Chat, combat
+  the newest snapshot or deletion marker for each container wins. Chat has a
+  bounded 100-message queue per client and stable message IDs, so retries write
+  to the same Firebase child instead of creating duplicate messages. Combat
   events, item drops, and other transient operations are not durable offline messages.
 - The shared world remains a deterministic seed plus room-level block and
   container-state overlays. Chest and furnace snapshots now replicate through
@@ -51,7 +53,7 @@ Implementation branch: `feature/multiplayer-reconnect-stability`.
 
 ## Verification
 
-Automated tests cover lease ownership, expiry, token matching, active remote lease detection, UI edit blocking while a lease is pending/busy/offline/lost, room host election and discoverability of empty rooms, coordinate-key validation, chest/furnace shift-click edge cases, save/restore validation, and container draining when blocks break.
+Automated tests cover offline chat queue bounds, room isolation and stable IDs, remote player pose/equipment snapshots, lease ownership, expiry, token matching, active remote lease detection, UI edit blocking while a lease is pending/busy/offline/lost, room host election and discoverability of empty rooms, coordinate-key validation, chest/furnace shift-click edge cases, save/restore validation, and container draining when blocks break.
 Run `npm test` (or `node tests/run-node.mjs`) from the repository root.
 Live multi-browser/network-loss testing still needs to be performed in browsers
 with two separate player sessions.
