@@ -103,8 +103,7 @@ describe('Pre-1.14 villager careers', () => {
     const sticks = offers.find((entry) => entry.id === 'sticks');
     assert(sticks);
     assertEqual(sticks.input, 'mc:stick');
-    assertEqual(sticks.minInput, 16);
-    assertEqual(sticks.maxInput, 20);
+    assertEqual(sticks.inputCount, 16);
     assertEqual(sticks.output, 'mc:emerald');
     assert(ITEMS.get('mc:bow'));
     assert(ITEMS.get('mc:arrow'));
