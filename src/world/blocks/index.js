@@ -502,11 +502,15 @@ ITEMS.define('mc:shears', { stackSize: 1, maxDamage: 238, tool: 'shears', attack
 ITEMS.define('mc:fishing_rod', { stackSize: 1, maxDamage: 64, tool: 'fishing_rod' });
 ITEMS.define('mc:bow', { stackSize: 1, maxDamage: 384, weapon: 'bow' });
 ITEMS.define('mc:arrow', { stackSize: 64 });
+ITEMS.define('mc:saddle', { stackSize: 1 });
+ITEMS.define('mc:iron_horse_armor', { stackSize: 1, horseArmor: 'iron' });
+ITEMS.define('mc:golden_horse_armor', { stackSize: 1, horseArmor: 'golden' });
+ITEMS.define('mc:diamond_horse_armor', { stackSize: 1, horseArmor: 'diamond' });
 
 // Creative-only spawn eggs for the mobs currently supported by the renderer.
 for (const mobType of [
   'cow','pig','sheep','chicken','zombie','skeleton','stray',
-  'creeper','enderman','spider','cave_spider','mooshroom','rabbit','wolf','polar_bear','villager',
+  'creeper','enderman','spider','cave_spider','mooshroom','rabbit','wolf','horse','polar_bear','villager',
 ]) {
   ITEMS.define(`mc:${mobType}_spawn_egg`, {
     stackSize: 64, spawnEggMob: mobType,
