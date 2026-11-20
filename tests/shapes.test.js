@@ -119,6 +119,14 @@ describe('shapes: box geometry', () => {
     assertEqual(collisionBoxes(plate).length, 0, 'pressure plates are non-solid controls');
   });
 
+  it('weighted pressure plates use a thin model and non-colliding geometry', () => {
+    const light = BLOCKS.get('mc:light_weighted_pressure_plate').defaultState;
+    assertDeepEqual(shapeBoxes(light), [[0, 0, 0, 1, 0.0625, 1]]);
+    assertDeepEqual(shapeBoxes(light.with('power', 9)), [[0, 0, 0, 1, 0.03125, 1]]);
+    assertEqual(collisionBoxes(light).length, 0);
+    assertEqual(isNonCube(light), true);
+  });
+
   it('all Java 1.19 button, lever and pressure plate blocks are registered', () => {
     for (const id of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) {
       assert(BLOCKS.get(`mc:${id}_button`), `${id} button missing`);
