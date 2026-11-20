@@ -151,7 +151,7 @@ Reference target for this compatibility track is **Minecraft: Java Edition 1.19.
 
 ## Multiplayer (experimental)
 
-Room-code joining, remote avatar rendering, chat, shared overworld block edits, player health/food status display, a host-synchronized day/night clock with deterministic handoff when the host leaves, and per-player local save persistence across reconnects are implemented. This is not yet a complete co-op survival session: each browser still simulates its own mobs and combat; mob damage, inventory/container contents, weather and dimensions are not shared/authoritative. Firebase access also depends on the configured Realtime Database being reachable and its deployed security rules allowing the intended operations.
+Room-code joining, remote avatar rendering, chat, shared overworld block edits, player health/food status display, sprint/sneak state and attack animation replication, a host-synchronized day/night clock with deterministic handoff when the host leaves, and per-player local save persistence across reconnects are implemented. This is not yet a complete co-op survival session: each browser still simulates its own mobs and combat; mob damage, inventory/container contents, weather and dimensions are not shared/authoritative. Firebase access also depends on the configured Realtime Database being reachable and its deployed security rules allowing the intended operations.
 
 ## Not yet started
 
@@ -169,7 +169,7 @@ brewing, dimensions, structures, villagers and audio are not implemented. See
 | System | How it differs | Why |
 |---|---|---|
 | Textures & sounds | Procedurally generated originals, not Minecraft's assets | Minecraft's assets are copyrighted. Mechanics are unaffected. |
-| Multiplayer | 🟡 Experimental rooms sync positions, health/food display, chat, block edits and world time; mobs, damage, inventory, containers and dimensions are not shared/authoritative yet | Co-op foundation exists; shared survival simulation remains incomplete |
+| Multiplayer | 🟡 Experimental rooms sync positions, health/food display, sprint/sneak and attack pose, chat, block edits and world time; mobs, damage, inventory, containers and dimensions are not shared/authoritative yet | Co-op foundation exists; shared survival simulation remains incomplete |
 | Bedrock-specific behavior | Absent | Java Edition is the reference |
 | Water | Static; renders and blocks movement but does not flow | Full fluid mechanics are Phase 5. Terrain needs oceans to look right before then. |
 | Lighting scope | Computed per chunk; cross-chunk light does not bleed through a chunk border | Exact for the common case, slightly wrong beside a tall overhang in a neighbouring chunk. Incremental cross-chunk relighting is Phase 3. |
