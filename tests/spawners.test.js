@@ -78,9 +78,14 @@ describe('Java monster spawner rules', () => {
       const state = placed.get(key(x,y,z));
       assertEqual(state?.block.id, 'mc:end_portal_frame');
       assertEqual(state.get('facing'), facing);
+      const expectedEye = positionalRandom('portal-room-regression', x, y, z, 0x454e4450).nextInt(10) === 0;
+      assertEqual(state.get('eye'), expectedEye, 'eye prefill must be deterministic per frame position');
       if (state.get('eye')) eyes++;
     }
     assert(eyes >= 0 && eyes <= 12, 'prefilled eyes stay within the twelve frame sockets');
+    assertEqual(BLOCKS.get('mc:mob_spawner')?.defaultState.get('spawner_type'), 'dungeon',
+      'ordinary dungeon spawners keep their existing default behavior');
+    assert(SPAWNER_MOB_TYPES.includes('silverfish'), 'silverfish spawner state must be accepted by saved spawner data');
     assertEqual(placed.get(key(px + 5, site.y + 2, pz + 1))?.get('spawner_type'), 'silverfish');
     assertEqual(placed.get(key(px + 5, site.y, pz + 5))?.block.id, 'mc:lava');
     assertEqual(placed.get(key(px + 2, site.y, pz + 5))?.block.id, 'mc:lava');
