@@ -14,6 +14,24 @@ import { isAction, bindKey } from './keybinds.js';
 import { findNearestStructure } from '../world/gen/terrain.js';
 
 export const InputMixin = {
+  _showTabList() {
+    const panel = document.getElementById('tab-player-list');
+    if (!panel) return;
+    const localName = this.worldMeta?.playerName || this.multiplayer?.nickname || 'Игрок';
+    const rows = [{ name: localName, local: true }, ...[...(this.multiplayer?.remotePlayers?.values?.() || [])].map((p) => ({ name: p.name, local: false }))];
+    const list = panel.querySelector('.tab-player-rows'); list.replaceChildren();
+    for (const player of rows) {
+      const row = document.createElement('div'); row.className = 'tab-player-row';
+      const name = document.createElement('span'); name.textContent = player.name + (player.local ? ' (ты)' : '');
+      const status = document.createElement('span');
+      if (player.local) { const ping = this.multiplayer?.serverPingMs; status.textContent = !this.multiplayer?.roomId ? 'Одиночный мир' : (Number.isFinite(ping) ? `${ping} мс до сервера` : (this.multiplayer?.firebaseConnected ? 'Подключено' : 'Нет соединения')); }
+      else status.textContent = 'В сети';
+      row.append(name, status); list.append(row);
+    }
+    panel.querySelector('.tab-player-summary').textContent = `${rows.length} игроков${this.multiplayer?.roomId ? ` · Комната ${this.multiplayer.roomId}` : ''}`;
+    panel.classList.remove('hidden');
+  },
+  _hideTabList() { document.getElementById('tab-player-list')?.classList.add('hidden'); },
   _setupInput() {
     const canvas = this.canvas;
 
@@ -72,7 +90,7 @@ export const InputMixin = {
     }, { passive: false, capture: true });
 
     document.addEventListener('keydown', (e) => this._onKeyDown(e));
-    document.addEventListener('keyup', (e) => this.keys.delete(e.code));
+    document.addEventListener('keyup', (e) => { this.keys.delete(e.code); if (e.code === 'Tab') this._hideTabList(); });
 
     // Clear held inputs when the tab loses focus; otherwise keys can stick.
     window.addEventListener('blur', () => {
@@ -118,6 +136,7 @@ export const InputMixin = {
       e.preventDefault();
       e.stopPropagation();
     }
+    if (e.code === 'Tab' && this.running && !this.paused) { e.preventDefault(); this._showTabList(); return; }
     if (e.repeat) return;
     this.keys.add(e.code);
 
