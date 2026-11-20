@@ -316,7 +316,9 @@ export const ContainerScreensMixin = {
     clearInterval(this._containerTimer);
     clearInterval(this._containerLockTimer);
     const active = this._activeContainer;
-    if (active?.lockToken) void this.multiplayer?.releaseContainerLock?.(active.key, active.lockToken);
+    this._containerReleasePromise = active?.lockToken
+      ? this.multiplayer?.releaseContainerLock?.(active.key, active.lockToken) || Promise.resolve(false)
+      : Promise.resolve(false);
     this._activeContainer = null;
     this.inventoryOpen = false;
     this._requestPointerLock?.();
