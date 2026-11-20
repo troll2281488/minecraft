@@ -761,6 +761,9 @@ export class MobSystem {
   _damagePlayer(amount) {
     const player = this.game.player;
     if (!player || player.gamemode !== 'survival' || amount <= 0) return 0;
+    const difficulty = this.game.worldMeta?.difficulty || 'normal';
+    if (difficulty === 'peaceful') return 0;
+    amount *= difficulty === 'easy' ? 0.5 : difficulty === 'hard' ? 1.5 : 1;
     const inventory = this.game.inventory;
     let armorPoints = 0;
     let toughness = 0;
@@ -880,7 +883,7 @@ export class MobSystem {
         const surfaceY = world.getHeight(x, z);
         const biome = chunk?.getBiome(localX, surfaceY, localZ) || 'mc:plains';
         let type;
-        if (night) {
+        if (night && this.game.worldMeta?.difficulty !== 'peaceful') {
           const snowy = ['mc:snowy_plains','mc:snowy_taiga','mc:ice_spikes','mc:frozen_ocean','mc:deep_frozen_ocean'].includes(biome);
           type = snowy
             ? (roll < 0.24 ? 'stray' : roll < 0.43 ? 'skeleton' : roll < 0.62 ? 'zombie' : roll < 0.76 ? 'spider' : roll < 0.86 ? 'creeper' : 'enderman')
@@ -950,7 +953,7 @@ export class MobSystem {
       }
 
       const profile = MOB_AI_PROFILES[mob.type] ?? null;
-      const hostileType = profile !== null;
+      const hostileType = profile !== null && this.game.worldMeta?.difficulty !== 'peaceful';
       const targeted = this.targetedMob(32) === mob;
       const endermanWater = mob.type === 'enderman' && (
         world.getBlock(Math.floor(mob.x), Math.floor(mob.y), Math.floor(mob.z)).block.id === 'mc:water' ||
