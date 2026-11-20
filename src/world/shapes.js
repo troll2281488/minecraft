@@ -74,6 +74,21 @@ function stairBoxes(state) {
 }
 
 // ---------------------------------------------------------------------------
+// Panes (iron bars)
+// ---------------------------------------------------------------------------
+
+// A thin central mullion with four arms. The five boxes share faces but never
+// extend beyond the block boundary, so the same profile is used for rendering
+// and collision without treating the bars as a full opaque cube.
+const PANE_BOXES = Object.freeze([
+  Object.freeze([0.4375, 0, 0.4375, 0.5625, 1, 0.5625]),
+  Object.freeze([0.4375, 0, 0, 0.5625, 1, 0.4375]),
+  Object.freeze([0.4375, 0, 0.5625, 0.5625, 1, 1]),
+  Object.freeze([0, 0, 0.4375, 0.4375, 1, 0.5625]),
+  Object.freeze([0.5625, 0, 0.4375, 1, 1, 0.5625]),
+]);
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -85,6 +100,7 @@ export function shapeBoxes(state) {
   switch (state.block.renderShape) {
     case 'slab': return slabBoxes(state);
     case 'stair': return stairBoxes(state);
+    case 'pane': return PANE_BOXES;
     default: return FULL_LIST;
   }
 }
@@ -101,8 +117,8 @@ export function collisionBoxes(state) {
 /** True if this block is anything other than a plain full cube. */
 export function isNonCube(state) {
   const shape = state.block.renderShape;
-  return shape === 'slab' || shape === 'stair';
+  return shape === 'slab' || shape === 'stair' || shape === 'pane';
 }
 
 /** The shapes the mesher must render with the box emitter rather than as a cube. */
-export const BOX_SHAPES = Object.freeze(new Set(['slab', 'stair']));
+export const BOX_SHAPES = Object.freeze(new Set(['slab', 'stair', 'pane']));
