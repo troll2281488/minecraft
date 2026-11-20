@@ -50,7 +50,7 @@ Implementation branch: `feature/multiplayer-reconnect-stability`.
 
 ## Verification
 
-Automated tests cover room host election and discoverability of empty rooms, coordinate-key validation for shared containers, chest/furnace shift-click edge cases, save/restore validation, and container draining when blocks break.
+Automated tests cover lease ownership, expiry, token matching, active remote lease detection, UI edit blocking while a lease is pending/busy/offline/lost, room host election and discoverability of empty rooms, coordinate-key validation, chest/furnace shift-click edge cases, save/restore validation, and container draining when blocks break.
 Run `npm test` (or `node tests/run-node.mjs`) from the repository root.
 Live multi-browser/network-loss testing still needs to be performed in browsers
 with two separate player sessions.
@@ -76,7 +76,8 @@ protections and live two-browser tests are added.
 A player opening a shared chest or furnace attempts a Firebase transaction at
 `minecraft_game/rooms/{code}/containerLocks/{x,y,z}`. The lease is tied to the
 player's per-tab UID and a unique token. It expires after 15 seconds and is
-renewed every 5 seconds while the screen remains open. Closing the screen or
+renewed every 5 seconds while the screen remains open. The elected host pauses
+that furnace's periodic simulation writes while a different player owns its lease. Closing the screen or
 leaving the room releases only the lease whose owner and token still match.
 If the browser closes unexpectedly, the expiry permits another player to open
 the container later. A failed acquisition, lost lease, or unavailable connection
