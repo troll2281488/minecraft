@@ -77,6 +77,7 @@ Reference target for this compatibility track is **Minecraft: Java Edition 1.19.
 | Fill partial stacks before empty slots | yes | ✅ |
 | Left-click take/swap, right-click half/one | yes | ✅ |
 | Shift-click transfer between hotbar and main | yes | ✅ |
+| Shift-click armor auto-equip (occupied slot falls back to storage) | yes | 🟡 *(empty-slot equip + occupied-slot fallback tested)* |
 | Left-drag distribute / right-drag one-each | yes | 🟡 *(left-drag distributes evenly across compatible player inventory slots; right-drag places one per slot)* |
 | Shaped matching (any offset + mirrored) | yes | ✅ |
 | Shapeless matching | yes | ✅ |

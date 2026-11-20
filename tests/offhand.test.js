@@ -1,7 +1,7 @@
 import '../src/world/blocks/index.js';
 import { describe, it, assert, assertEqual } from './framework.js';
 import { Inventory, SLOT } from '../src/game/inventory.js';
-import { ItemStack } from '../src/world/item.js';
+import { Item, ItemStack } from '../src/world/item.js';
 
 describe('Java offhand slot', () => {
   it('swaps the selected hotbar stack with offhand', () => {
@@ -32,5 +32,32 @@ describe('Java offhand slot', () => {
   it('rejects inventories without an offhand slot', () => {
     const inventory = new Inventory(9);
     assert(!inventory.swapHeldWithOffhand());
+  });
+});
+
+describe('Java armor shift-click', () => {
+  it('auto-equips armor when its target slot is empty', () => {
+    const inventory = new Inventory();
+    const helmet = new Item('test:helmet', { armorSlot: 'helmet', stackSize: 1 });
+    inventory.set(0, new ItemStack(helmet, 1));
+
+    inventory.shiftClickSlot(0);
+
+    assert(inventory.get(0).isEmpty, 'source slot should be cleared');
+    assertEqual(inventory.get(39).item.id, 'test:helmet');
+  });
+
+  it('does not replace already equipped armor; transfers to storage instead', () => {
+    const inventory = new Inventory();
+    const helmet = new Item('test:helmet', { armorSlot: 'helmet', stackSize: 1 });
+    const otherHelmet = new Item('test:other_helmet', { armorSlot: 'helmet', stackSize: 1 });
+    inventory.set(0, new ItemStack(helmet, 1));
+    inventory.set(39, new ItemStack(otherHelmet, 1));
+
+    inventory.shiftClickSlot(0);
+
+    assertEqual(inventory.get(39).item.id, 'test:other_helmet', 'equipped armor was displaced');
+    assert(inventory.get(0).isEmpty, 'source stack should transfer out');
+    assertEqual(inventory.get(9).item.id, 'test:helmet', 'incoming armor should go to main storage');
   });
 });

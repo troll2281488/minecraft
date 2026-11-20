@@ -243,10 +243,12 @@ export class Inventory {
 
     const armorTargets = { boots: 36, leggings: 37, chestplate: 38, helmet: 39 };
     const armorTarget = armorTargets[slot.item?.armorSlot];
-    if (armorTarget !== undefined && index < SLOT.ARMOR_START) {
-      const worn = this.slots[armorTarget];
+    if (armorTarget !== undefined && index < SLOT.ARMOR_START &&
+        this.slots[armorTarget].isEmpty) {
+      // Vanilla only auto-equips into an empty armor slot. If it is occupied,
+      // continue with the ordinary shift-transfer instead of swapping gear out.
       this.slots[armorTarget] = slot;
-      this.slots[index] = worn.isEmpty ? ItemStack.EMPTY.clone() : worn;
+      this.slots[index] = ItemStack.EMPTY.clone();
       this.version++;
       return;
     }
