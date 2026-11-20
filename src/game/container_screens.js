@@ -131,7 +131,84 @@ export function generatedChestKind(seed, x, y, z) {
   return null;
 }
 
+// Java 1.19 simple_dungeon loot table, represented as three independent pools.
+// The book entry remains a plain book until enchantment data is implemented.
+export const DUNGEON_LOOT_POOLS = Object.freeze([
+  {
+    rolls: [1, 3],
+    entries: [
+      ['mc:saddle', 20, 1, 1],
+      ['mc:golden_apple', 15, 1, 1],
+      ['mc:enchanted_golden_apple', 2, 1, 1],
+      ['mc:music_disc_otherside', 2, 1, 1],
+      ['mc:music_disc_13', 15, 1, 1],
+      ['mc:music_disc_cat', 15, 1, 1],
+      ['mc:name_tag', 20, 1, 1],
+      ['mc:golden_horse_armor', 10, 1, 1],
+      ['mc:iron_horse_armor', 15, 1, 1],
+      ['mc:diamond_horse_armor', 5, 1, 1],
+      ['mc:book', 10, 1, 1],
+    ],
+  },
+  {
+    rolls: [1, 4],
+    entries: [
+      ['mc:iron_ingot', 10, 1, 4],
+      ['mc:gold_ingot', 5, 1, 1],
+      ['mc:bread', 20, 1, 1],
+      ['mc:wheat', 20, 1, 4],
+      ['mc:bucket', 10, 1, 1],
+      ['mc:redstone', 15, 1, 4],
+      ['mc:coal', 15, 1, 4],
+      ['mc:melon_seeds', 10, 2, 4],
+      ['mc:pumpkin_seeds', 10, 2, 4],
+      ['mc:beetroot_seeds', 10, 2, 4],
+    ],
+  },
+  {
+    rolls: 3,
+    entries: [
+      ['mc:bone', 10, 1, 8],
+      ['mc:gunpowder', 10, 1, 8],
+      ['mc:rotten_flesh', 10, 1, 8],
+      ['mc:string', 10, 1, 8],
+    ],
+  },
+]);
+
+export function chooseWeightedLootEntry(entries, rng) {
+  if (!Array.isArray(entries) || entries.length === 0 || !rng?.nextInt) return null;
+  const totalWeight = entries.reduce((sum, entry) => sum + Math.max(0, entry[1] | 0), 0);
+  if (totalWeight <= 0) return null;
+  let roll = rng.nextInt(totalWeight);
+  for (const entry of entries) {
+    roll -= Math.max(0, entry[1] | 0);
+    if (roll < 0) return entry;
+  }
+  return entries[entries.length - 1];
+}
+
+function fillDungeonChest(seed, x, y, z, chest) {
+  const rng = positionalRandom(seed, x, y, z, 3301);
+  for (const pool of DUNGEON_LOOT_POOLS) {
+    const rolls = Array.isArray(pool.rolls)
+      ? pool.rolls[0] + rng.nextInt(pool.rolls[1] - pool.rolls[0] + 1)
+      : pool.rolls;
+    for (let i = 0; i < rolls; i++) {
+      const entry = chooseWeightedLootEntry(pool.entries, rng);
+      if (!entry) continue;
+      const [id, , minCount, maxCount] = entry;
+      const count = minCount + rng.nextInt(maxCount - minCount + 1);
+      chest.insert(ItemStack.of(id, count));
+    }
+  }
+}
+
 export function fillGeneratedChest(seed, x, y, z, chest, kind) {
+  if (kind === 'dungeon') {
+    fillDungeonChest(seed, x, y, z, chest);
+    return;
+  }
   const salt = kind === 'dungeon' ? 3301 : kind === 'village' ? 3302 : kind === 'stronghold' ? 3304 : kind === 'mineshaft' ? 3305 : 3303;
   const rng = positionalRandom(seed, x, y, z, salt);
   const villageLoot = [
