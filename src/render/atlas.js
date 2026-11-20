@@ -911,6 +911,11 @@ export function buildBlockTextureTable(blocks, textureIndex) {
       faces = [single, single, single, single, single, single];
     }
 
+    if (block.id === 'mc:redstone_ore' && states[i].get('lit')) {
+      const glow = layerFor('redstone_ore_lit');
+      faces = [glow, glow, glow, glow, glow, glow];
+    }
+
     // Logs rotate: an axis=x log shows its rings on the east and
     // west faces instead of top and bottom.
     const axis = states[i].values?.axis;
