@@ -123,6 +123,7 @@ export class Player {
       : PHYSICS.DEFAULT_SLIPPERINESS;
 
     this._applyInput(slipperiness);
+    this._applyLadderMovement(world);
     this._applyCobwebSlowdown(world);
     this._move(world);
     const moved = Math.hypot(this.x - oldX, this.z - oldZ);
@@ -169,6 +170,33 @@ export class Player {
       }
     }
     return false;
+  }
+
+  /**
+   * Ladder contact prevents fast falling and lets forward/jump input climb.
+   * The ladder is non-solid, so this is handled as movement state rather than
+   * collision geometry. Sneaking holds the player in place on the ladder.
+   */
+  _applyLadderMovement(world) {
+    const box = this.boundingBox();
+    const minX = Math.floor(box.minX), maxX = Math.floor(box.maxX - 1e-7);
+    const minY = Math.floor(box.minY), maxY = Math.floor(box.maxY - 1e-7);
+    const minZ = Math.floor(box.minZ), maxZ = Math.floor(box.maxZ - 1e-7);
+    let touching = false;
+    for (let y = minY; y <= maxY && !touching; y++) {
+      for (let z = minZ; z <= maxZ && !touching; z++) {
+        for (let x = minX; x <= maxX; x++) {
+          if (world.getBlock(x, y, z).block.id === 'mc:ladder') { touching = true; break; }
+        }
+      }
+    }
+    if (!touching) return false;
+    if (this.input.sneak) this.vy = Math.min(this.vy, 0);
+    else if (this.input.jump || this.input.forward > 0) this.vy = Math.max(this.vy, 0.2);
+    else this.vy = Math.max(this.vy, -0.15);
+    this.vx = Math.max(-0.15, Math.min(0.15, this.vx));
+    this.vz = Math.max(-0.15, Math.min(0.15, this.vz));
+    return true;
   }
 
   /**
