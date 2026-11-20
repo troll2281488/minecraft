@@ -16,6 +16,8 @@ import * as storage from '../save/storage.js';
 import { buildSave, exportWorld } from '../save/io.js';
 import { materializeChunk, decodeChunkBinary, encodeChunk } from '../save/format.js';
 
+const SAVE_DIMENSION = { overworld: 'mc:overworld', nether: 'mc:the_nether', end: 'mc:the_end' };
+
 export const SessionMixin = {
   async _enterWorld(meta, playerJson) {
     this.worldMeta = meta;
@@ -37,7 +39,7 @@ export const SessionMixin = {
     // in Firebase. Loading this browser's private cached chunks here would make
     // every participant see a different terrain snapshot.
     if (!this.multiplayer?.roomId) {
-      const saved = await storage.getAllChunks(meta.id, this.world.dimension);
+      const saved = await storage.getAllChunks(meta.id, SAVE_DIMENSION[this.world.dimension]);
       for (const record of saved) {
         const chunk = materializeChunk(
           ...record.key.split(',').map(Number),
@@ -116,7 +118,7 @@ export const SessionMixin = {
     this.entities?.reset();
     this.world.time = this.worldMeta.time ?? 0;
     if (!this.multiplayer?.roomId) {
-      const saved = await storage.getAllChunks(this.worldMeta.id, next);
+      const saved = await storage.getAllChunks(this.worldMeta.id, SAVE_DIMENSION[next]);
       for (const record of saved) {
         const [cx,cz] = record.key.split(',').map(Number);
         this.world.adoptChunk(materializeChunk(cx,cz,decodeChunkBinary(record.bytes)));
@@ -131,6 +133,7 @@ export const SessionMixin = {
     await this._waitForSpawnChunks(false);
     const safe = this.world.findSpawn(Math.floor(x),Math.floor(z),32);
     if (safe) this.player.teleport(safe.x,safe.y,safe.z);
+    await storage.putWorld({ ...this.worldMeta, dimension: next, time: this.world.time });
     this.ui.toast('Измерение: '+({overworld:'Обычный мир',nether:'Нижний мир',end:'Край'})[next]);
   },
 
@@ -241,7 +244,7 @@ export const SessionMixin = {
       chunk.dirty = false;
     }
 
-    await storage.putChunks(this.worldMeta.id, this.world.dimension, dirty);
+    await storage.putChunks(this.worldMeta.id, SAVE_DIMENSION[this.world.dimension], dirty);
     await storage.putPlayer(this.worldMeta.id, 'local', {
       ...this.player.toJSON(),
       inventory: this.inventory.toJSON(),
