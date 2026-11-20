@@ -76,18 +76,17 @@ describe('Java-style experience orb rules', () => {
 describe('experience commands', () => {
   function makeCommandGame() {
     const messages = [];
-    const sounds = [];
+    const playedSounds = [];
     const player = new Player();
     return {
       player,
       messages,
-      sounds,
+      playedSounds,
+      sounds: { play: (name) => playedSounds.push(name) },
       worldMeta: { cheatsEnabled: true, playerName: 'Tester' },
       multiplayer: { roomId: null, addChat: (message) => messages.push(message) },
       ui: { toast: (message) => messages.push(message) },
-      soundsApi: null,
       _run(raw) {
-        this.sounds = { play: (name) => sounds.push(name) };
         InputMixin._runCommand.call(this, raw);
       },
     };
@@ -98,7 +97,7 @@ describe('experience commands', () => {
     game._run('/xp add 7');
     assertEqual(game.player.experience.level, 1);
     assertEqual(game.player.experience.total, 7);
-    assertEqual(game.sounds[0], 'levelup');
+    assertEqual(game.playedSounds[0], 'levelup');
   });
 
   it('queries points and rejects invalid XP amounts', () => {
