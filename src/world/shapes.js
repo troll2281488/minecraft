@@ -162,6 +162,40 @@ function trapdoorBoxes(state) {
 }
 
 // ---------------------------------------------------------------------------
+// Buttons, levers and pressure plates
+// ---------------------------------------------------------------------------
+
+function buttonBoxes(state) {
+  const face = state.get('face') || 'wall';
+  const facing = state.get('facing') || 'north';
+  const depth = state.get('powered') ? 0.0625 : 0.125;
+  if (face === 'floor') return [[0.375, 0, 0.375, 0.625, depth, 0.625]];
+  if (face === 'ceiling') return [[0.375, 1 - depth, 0.375, 0.625, 1, 0.625]];
+  switch (facing) {
+    case 'north': return [[0.375, 0.375, 0, 0.625, 0.625, depth]];
+    case 'south': return [[0.375, 0.375, 1 - depth, 0.625, 0.625, 1]];
+    case 'east': return [[1 - depth, 0.375, 0.375, 1, 0.625, 0.625]];
+    default: return [[0, 0.375, 0.375, depth, 0.625, 0.625]];
+  }
+}
+
+function leverBoxes(state) {
+  const face = state.get('face') || 'wall';
+  const facing = state.get('facing') || 'north';
+  if (face === 'floor') return [[0.25, 0, 0.25, 0.75, 0.125, 0.75], [0.4375, 0.125, 0.4375, 0.5625, 0.75, 0.5625]];
+  if (face === 'ceiling') return [[0.25, 0.875, 0.25, 0.75, 1, 0.75], [0.4375, 0.25, 0.4375, 0.5625, 0.875, 0.5625]];
+  if (facing === 'north') return [[0.25, 0.25, 0, 0.75, 0.75, 0.125], [0.4375, 0.4375, 0.125, 0.5625, 0.5625, 0.75]];
+  if (facing === 'south') return [[0.25, 0.25, 0.875, 0.75, 0.75, 1], [0.4375, 0.4375, 0.25, 0.5625, 0.5625, 0.875]];
+  if (facing === 'east') return [[0.875, 0.25, 0.25, 1, 0.75, 0.75], [0.25, 0.4375, 0.4375, 0.875, 0.5625, 0.5625]];
+  return [[0, 0.25, 0.25, 0.125, 0.75, 0.75], [0.125, 0.4375, 0.4375, 0.75, 0.5625, 0.5625]];
+}
+
+function pressurePlateBoxes(state) {
+  const h = state.get('powered') ? 0.03125 : 0.0625;
+  return [[0, 0, 0, 1, h, 1]];
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -177,6 +211,9 @@ export function shapeBoxes(state) {
     case 'ladder': return ladderBoxes(state);
     case 'door': return doorBoxes(state);
     case 'trapdoor': return trapdoorBoxes(state);
+    case 'button': return buttonBoxes(state);
+    case 'lever': return leverBoxes(state);
+    case 'pressure_plate': return pressurePlateBoxes(state);
     default: return FULL_LIST;
   }
 }
@@ -193,8 +230,8 @@ export function collisionBoxes(state) {
 /** True if this block is anything other than a plain full cube. */
 export function isNonCube(state) {
   const shape = state.block.renderShape;
-  return shape === 'slab' || shape === 'stair' || shape === 'pane' || shape === 'ladder' || shape === 'door' || shape === 'trapdoor';
+  return shape === 'slab' || shape === 'stair' || shape === 'pane' || shape === 'ladder' || shape === 'door' || shape === 'trapdoor' || shape === 'button' || shape === 'lever' || shape === 'pressure_plate';
 }
 
 /** The shapes the mesher must render with the box emitter rather than as a cube. */
-export const BOX_SHAPES = Object.freeze(new Set(['slab', 'stair', 'pane', 'ladder', 'door', 'trapdoor']));
+export const BOX_SHAPES = Object.freeze(new Set(['slab', 'stair', 'pane', 'ladder', 'door', 'trapdoor', 'button', 'lever', 'pressure_plate']));
