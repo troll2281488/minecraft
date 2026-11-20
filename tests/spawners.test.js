@@ -103,7 +103,9 @@ describe('Java monster spawner rules', () => {
     placeStrongholdRoomNetwork(writer, states, site, 'stronghold-network-test');
     const at = (x,y,z) => placed.get(key(x,y,z));
     assertEqual(at(site.x + 7, site.y + 1, site.z - 24)?.block.id, 'mc:chest');
-    assertEqual(at(site.x + 7, site.y + 1, site.z - 12)?.block.id, 'mc:water');
+    const crossingDecoration = at(site.x + 7, site.y + 1, site.z - 12)?.block.id;
+    assert(crossingDecoration === 'mc:water' || crossingDecoration === 'mc:stone_bricks',
+      'crossing room gets its seeded fountain or pillar decoration');
     assertEqual(at(site.x + 19, site.y + 2, site.z - 13)?.block.id, 'mc:stone_bricks');
     assertEqual(at(site.x + 7, site.y + 1, site.z - 17)?.block.id, 'mc:stone_bricks');
     assertEqual(at(site.x - 2, site.y, site.z + 7)?.block.id, 'mc:stone_bricks');
@@ -201,6 +203,8 @@ describe('generated dungeon chest loot', () => {
     assertEqual(generatedChestKind(seed, site.x - 10, y, site.z + 8), 'stronghold_library');
     assertEqual(generatedChestKind(seed, site.x - 6, y, site.z + 8), 'stronghold_library');
     assertEqual(generatedChestKind(seed, site.x + 20, y, site.z + 10), 'stronghold_corridor');
+    assertEqual(generatedChestKind(seed, site.x + 7, y, site.z - 24), 'stronghold_crossing',
+      'the new storage-room chest receives the existing crossing loot pool');
   });
 
   it('uses separate registered weighted loot pools for all stronghold room types', () => {
