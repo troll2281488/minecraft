@@ -829,6 +829,10 @@ export class Multiplayer {
     if (!held || held.token !== token) return false;
     // Publish the final inventory snapshot before allowing another player in.
     await this._flushPendingContainerWrites();
+    // A fast close/reopen can acquire a new token while the old release waits
+    // for Firebase writes. Never delete or release that newer local lease.
+    const current = this.activeContainerLocks.get(key);
+    if (!current || current.token !== token) return false;
     const queueKey = `${held.roomId}:${key}`;
     if (this.pendingContainerWrites.has(queueKey)) {
       // Keep the lease until its normal expiry if the final write could not be sent.
