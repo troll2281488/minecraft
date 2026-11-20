@@ -285,8 +285,13 @@ export const ScreensMixin = {
     if (!world) return;
     const id = 'world-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
     const copy = await storage.putWorld({ ...world, id, name: world.name + ' (копия)', time: world.time ?? 0, createdWith: DATA_VERSION });
-    const chunks = await storage.getAllChunks(world.id, 'mc:overworld');
-    if (chunks.length) await storage.putChunks(id, 'mc:overworld', chunks.map((chunk) => { const parts = chunk.key.split(',').map(Number); return { cx: parts[0], cz: parts[1], bytes: chunk.bytes }; }));
+    for (const dim of ['mc:overworld','mc:the_nether','mc:the_end']) {
+      const chunks = await storage.getAllChunks(world.id, dim);
+      if (chunks.length) await storage.putChunks(id, dim, chunks.map((chunk) => {
+        const parts = chunk.key.split(',').map(Number);
+        return { cx: parts[0], cz: parts[1], bytes: chunk.bytes };
+      }));
+    }
     const player = await storage.getPlayer(world.id, 'local');
     if (player) await storage.putPlayer(id, 'local', player);
     this.ui.toast('Создана копия «' + copy.name + '»');
@@ -306,17 +311,20 @@ export const ScreensMixin = {
   async _exportSelectedWorld() {
     const meta = await storage.getWorld(this.selectedWorldId);
     if (!meta) return;
-    const records = await storage.getAllChunks(meta.id, 'mc:overworld');
     const player = await storage.getPlayer(meta.id, 'local');
-
-    const chunks = {};
-    for (const record of records) chunks[record.key] = record.bytes;
+    const dimensions = {};
+    for (const dim of ['mc:overworld','mc:the_nether','mc:the_end']) {
+      const records = await storage.getAllChunks(meta.id, dim);
+      const chunks = {};
+      for (const record of records) chunks[record.key] = record.bytes;
+      dimensions[dim] = { encodedChunks: chunks };
+    }
 
     const save = buildSave(
       { name: meta.name, seed: meta.seed, generatorVersion: meta.generatorVersion,
-        time: meta.time ?? 0, createdWith: meta.createdWith },
+        time: meta.time ?? 0, createdWith: meta.createdWith, dimension: meta.dimension ?? 'overworld' },
       player ? { local: player } : {},
-      { 'mc:overworld': { encodedChunks: chunks } },
+      dimensions,
     );
 
     const { filename, bytes } = await exportWorld(save);
@@ -348,16 +356,18 @@ export const ScreensMixin = {
       seed: level.seed ?? '0',
       generatorVersion: level.generatorVersion ?? GENERATOR_VERSION,
       time: level.time ?? 0,
+      dimension: ['overworld','nether','end'].includes(level.dimension) ? level.dimension : 'overworld',
       createdWith: level.createdWith ?? result.fromVersion,
     });
 
-    const dim = result.save.dimensions?.['mc:overworld'];
-    if (dim?.liveChunks) {
+    for (const dimId of ['mc:overworld','mc:the_nether','mc:the_end']) {
+      const dim = result.save.dimensions?.[dimId];
+      if (!dim?.liveChunks) continue;
       const entries = [];
       for (const [, chunk] of dim.liveChunks) {
         entries.push({ cx: chunk.cx, cz: chunk.cz, bytes: encodeChunk(chunk) });
       }
-      await storage.putChunks(meta.id, 'mc:overworld', entries);
+      await storage.putChunks(meta.id, dimId, entries);
     }
 
     const player = Object.values(result.save.players ?? {})[0];
