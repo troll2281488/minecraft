@@ -91,7 +91,7 @@ export function experienceForBlock(blockId, random = Math.random) {
     'mc:redstone_ore': [1, 5], 'mc:deepslate_redstone_ore': [1, 5],
     'mc:diamond_ore': [3, 7], 'mc:deepslate_diamond_ore': [3, 7],
     'mc:emerald_ore': [3, 7], 'mc:deepslate_emerald_ore': [3, 7],
-    'mc:nether_quartz_ore': [2, 5],
+    'mc:nether_quartz_ore': [2, 5], 'mc:nether_gold_ore': [0, 1],
   };
   const range = ranges[blockId];
   if (!range) return 0;
@@ -130,6 +130,6 @@ export function experienceForBreeding(random = Math.random) {
 }
 
 /** XP released for a completed villager trade (before any breeding bonus). */
-export function experienceForVillagerTrade(random = Math.random) {
-  return randomExperienceInRange(3, 6, random);
+export function experienceForVillagerTrade(random = Math.random, leveledUp = false) {
+  return randomExperienceInRange(3, 6, random) + (leveledUp ? 5 : 0);
 }
