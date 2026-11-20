@@ -29,7 +29,7 @@ import { hash01, seedToInt } from './hash.js';
 import { ChunkWriter, mineshaftPlan, placeMineshaftPlan, placeDungeonRoom, villagePlan, placeVillagePlan, villageStyleForBiome } from './structures.js';
 
 /** Bumped whenever generation output changes. Stored per world. */
-export const GENERATOR_VERSION = 14;
+export const GENERATOR_VERSION = 15;
 
 
 // ---------------------------------------------------------------------------
@@ -541,7 +541,7 @@ export class TerrainGenerator {
       for (let i = 0; i < count; i++) {
         if (y > MIN_Y && y < MAX_Y && x >= 0 && x < CHUNK_SIZE && z >= 0 && z < CHUNK_SIZE) {
           const existing = chunk.getBlock(x, y, z);
-          if (STONE_REPLACEABLE.has(existing.block.id)) {
+          if ((spec.block.endsWith('_ore') ? STONE_ORE_REPLACEABLE : STONE_REPLACEABLE).has(existing.block.id)) {
             let target = spec.block;
             const state = S.byId[target];
             if (state) chunk.setBlock(x, y, z, state);
@@ -1446,8 +1446,9 @@ function triangularY(rng, minY, maxY, peak) {
 }
 
 /** Blocks a vein or surface rule may overwrite. Never air, water, or wood. */
+const STONE_ORE_REPLACEABLE = new Set(['mc:stone', 'mc:granite', 'mc:diorite', 'mc:andesite']);
 const STONE_REPLACEABLE = new Set([
-  'mc:stone', 'mc:granite', 'mc:diorite', 'mc:andesite',
+  ...STONE_ORE_REPLACEABLE,
   'mc:dirt', 'mc:grass_block', 'mc:sand', 'mc:gravel', 'mc:coarse_dirt',
   'mc:snow_block', 'mc:podzol', 'mc:red_sand', 'mc:plains_soil', 'mc:forest_floor',
   'mc:birch_soil', 'mc:jungle_soil', 'mc:savanna_soil', 'mc:taiga_soil', 'mc:swamp_mud', 'mc:alpine_gravel',
