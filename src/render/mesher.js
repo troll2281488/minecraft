@@ -94,7 +94,7 @@ const AO_OFFSETS = FACE_GEOMETRY.map((geom, faceIndex) => {
   });
 });
 
-const TINT_KIND = { none: 0, grass: 1, foliage: 2, water: 3 };
+const TINT_KIND = { none: 0, grass: 1, foliage: 2, water: 3, leaves: 4 };
 
 // ---------------------------------------------------------------------------
 // Section scratch
