@@ -446,7 +446,7 @@ export class MobSystem {
         anim: { walk: 0, idle: 0, attack: 0, hurt: 0, fuse: 0 },
       });
     }
-    this.nextId = this.mobs.reduce((next, mob) => Math.max(next, mob.id + 1), 1);
+    this.nextId = [...this.mobs, ...this.experienceOrbs].reduce((next, entity) => Math.max(next, entity.id + 1), 1);
   }
 
   _spawn(type, x, z, extra = {}) {
@@ -899,6 +899,11 @@ export class MobSystem {
         orb.vx += dx / distance * pull;
         orb.vy += dy / distance * pull;
         orb.vz += dz / distance * pull;
+        const speed = Math.hypot(orb.vx, orb.vy, orb.vz);
+        if (speed > 0.45) {
+          const scale = 0.45 / speed;
+          orb.vx *= scale; orb.vy *= scale; orb.vz *= scale;
+        }
       }
       orb.vy = Math.max(-0.18, orb.vy - 0.012);
       const nx = orb.x + orb.vx, ny = orb.y + orb.vy, nz = orb.z + orb.vz;
