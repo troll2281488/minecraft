@@ -1,3 +1,5 @@
+import { AIR } from '../world/block.js';
+
 /**
  * Small redstone-device simulation for the Java 1.19 compatibility track.
  * Buttons, levers and player-triggered pressure plates power adjacent doors
@@ -29,6 +31,32 @@ export const RedstoneDevicesMixin = {
     for (const [dx, dy, dz] of NEIGHBORS) {
       const bx = x + dx, by = y + dy, bz = z + dz;
       applyMechanism(this, bx, by, bz, this.world.getBlock(bx, by, bz), powered);
+    }
+  },
+
+  _removeAttachedRedstoneDevices(supportX, supportY, supportZ) {
+    for (const [dx, dy, dz] of NEIGHBORS) {
+      const x = supportX + dx, y = supportY + dy, z = supportZ + dz;
+      const state = this.world.getBlock(x, y, z);
+      const shape = state.block.renderShape;
+      if (!['button', 'lever', 'pressure_plate'].includes(shape)) continue;
+      let sx = x, sy = y - 1, sz = z;
+      if (shape !== 'pressure_plate') {
+        const face = state.get('face'), facing = state.get('facing');
+        if (face === 'ceiling') sy = y + 1;
+        else if (face === 'wall') {
+          if (facing === 'north') sz = z + 1;
+          else if (facing === 'south') sz = z - 1;
+          else if (facing === 'east') sx = x - 1;
+          else sx = x + 1;
+          sy = y;
+        }
+      }
+      if (sx !== supportX || sy !== supportY || sz !== supportZ) continue;
+      const wasPowered = state.get('powered') === true;
+      writeState(this, x, y, z, AIR.defaultState);
+      if (this.player?.gamemode === 'survival') this.inventory?.addItem(state.block.id, 1);
+      if (wasPowered) this._applyAdjacentRedstonePower(x, y, z, false);
     }
   },
 
