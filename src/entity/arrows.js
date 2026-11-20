@@ -13,7 +13,7 @@ export const ARROW = Object.freeze({
   GRAVITY: 0.05,
   DRAG: 0.99,
   MAX_AGE: 1200,
-  MOB_RADIUS: 0.5,
+  MOB_RADIUS: 0.72,
   /** Vanilla full-draw arrow damage, used as the scale for partial draws. */
   FULL_DAMAGE: 9,
   /** Top speed in blocks per tick at full draw (vanilla: 3 blocks per tick). */
@@ -52,7 +52,7 @@ export function createArrow(x, y, z, dir, power) {
  * `mobs` is an array of { x, y, z, health }. Returns { hit: 'block'|'mob'|null, mob? }.
  */
 export function stepArrow(arrow, isSolid, mobs = []) {
-  if (arrow.done) return { hit: null };
+  if (arrow.done || arrow.stuck || arrow.stuckMobId) return { hit: null };
   arrow.age++;
   if (arrow.age > ARROW.MAX_AGE) { arrow.done = true; return { hit: null }; }
 
