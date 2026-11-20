@@ -746,7 +746,11 @@ export class Multiplayer {
   }
 
   async _flushPendingContainerWrites() {
-    if (!this.db || !this.roomId || !this.firebaseConnected || this.containerFlushInFlight) return;
+    if (!this.db || !this.roomId || !this.firebaseConnected) return;
+    if (this.containerFlushInFlight) {
+      this.containerFlushRequested = true;
+      return;
+    }
     this.containerFlushInFlight = true;
     try {
       for (const [queueKey, entry] of this.pendingContainerWrites) {
@@ -761,6 +765,10 @@ export class Multiplayer {
       }
     } finally {
       this.containerFlushInFlight = false;
+      if (this.containerFlushRequested && this.firebaseConnected) {
+        this.containerFlushRequested = false;
+        void this._flushPendingContainerWrites();
+      }
     }
   }
 
