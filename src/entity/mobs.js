@@ -1002,12 +1002,14 @@ export class MobSystem {
           for (let x = px - 16; x <= px + 16; x++) {
             const dx = x + 0.5 - player.x, dy = y - player.y, dz = z + 0.5 - player.z;
             if (dx * dx + dy * dy + dz * dz >= 256) continue;
-            if (world.getBlock(x, y, z).block.id !== 'mc:mob_spawner') continue;
+            const blockState = world.getBlock(x, y, z);
+            if (blockState.block.id !== 'mc:mob_spawner') continue;
             const key = `${x},${y},${z}`;
             if (!this.spawnerStates.has(key) && this.spawnerStates.size < 256) {
-              this.spawnerStates.set(key, {
-                x, y, z, mobType: spawnerMobType(world.seed, x, y, z), delay: 20,
-              });
+              const mobType = blockState.get('spawner_type') === 'silverfish'
+                ? 'silverfish'
+                : spawnerMobType(world.seed, x, y, z);
+              this.spawnerStates.set(key, { x, y, z, mobType, delay: 20 });
             }
           }
         }
