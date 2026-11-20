@@ -484,7 +484,15 @@ export const ContainerScreensMixin = {
     let sourceSlots;
     if (sourceEntry.type === 'furnace') {
       // A hopper below a furnace extracts only its finished output.
-      sourceSlots = [sourceEntry.data.output];
+      const source = sourceEntry.data.output;
+      if (!source || source.isEmpty) return false;
+      const destinationSlots = destinationEntry.data?.slots;
+      if (destinationEntry.type !== 'furnace') {
+        const moved = moveOneItem([source], destinationSlots);
+        if (moved && source.count <= 0) sourceEntry.data.output = ItemStack.EMPTY.clone();
+        return moved;
+      }
+      sourceSlots = [source];
     } else {
       sourceSlots = sourceEntry.data?.slots;
     }
@@ -569,10 +577,13 @@ export const ContainerScreensMixin = {
           destinationEntry = { type: 'hopper', data: this._hopperAt(tx, ty, tz) };
         }
         if (destinationEntry) {
-          moved = this._hopperTransferOne(hopperEntry, destinationEntry, dy < 0 ? 'top' : 'side');
-          if (moved && this.multiplayer?.roomId) {
-            this._hopperDirtyKeys ||= new Set();
-            this._hopperDirtyKeys.add(this._containerKey(tx, ty, tz));
+          const targetKey = this._containerKey(tx, ty, tz);
+          if (!this.multiplayer?.isContainerLockedByOther?.(targetKey)) {
+            moved = this._hopperTransferOne(hopperEntry, destinationEntry, dy < 0 ? 'top' : 'side');
+            if (moved && this.multiplayer?.roomId) {
+              this._hopperDirtyKeys ||= new Set();
+              this._hopperDirtyKeys.add(targetKey);
+            }
           }
         }
 
@@ -587,11 +598,12 @@ export const ContainerScreensMixin = {
           } else if (sourceId === 'mc:hopper') {
             sourceEntry = { type: 'hopper', data: this._hopperAt(x, y + 1, z) };
           }
-          if (sourceEntry) {
+          const sourceKey = this._containerKey(x, y + 1, z);
+          if (sourceEntry && !this.multiplayer?.isContainerLockedByOther?.(sourceKey)) {
             moved = this._hopperTransferOne(sourceEntry, hopperEntry, 'bottom');
             if (moved && this.multiplayer?.roomId) {
               this._hopperDirtyKeys ||= new Set();
-              this._hopperDirtyKeys.add(this._containerKey(x, y + 1, z));
+              this._hopperDirtyKeys.add(sourceKey);
             }
           }
         }
