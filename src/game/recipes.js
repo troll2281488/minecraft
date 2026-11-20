@@ -104,6 +104,18 @@ recipes.push({
 });
 
 recipes.push({
+  result: 'mc:bow', count: 1,
+  pattern: [' ST', 'S T', ' ST'],
+  key: { S: 'mc:stick', T: 'mc:string' },
+});
+
+recipes.push({
+  result: 'mc:arrow', count: 4,
+  pattern: ['F', 'S', 'G'],
+  key: { F: 'mc:flint', S: 'mc:stick', G: 'mc:feather' },
+});
+
+recipes.push({
   result: 'mc:bread', count: 1,
   pattern: ['WWW'],
   key: { W: 'mc:wheat' },
