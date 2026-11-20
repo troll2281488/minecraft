@@ -413,6 +413,16 @@ for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) p
 pressurePlate('stone', 'stone_pressure_plate');
 pressurePlate('polished_blackstone', 'polished_blackstone_pressure_plate');
 
+// Weighted plates report entity-count strength instead of a binary signal.
+for (const [id, texture] of [
+  ['light_weighted_pressure_plate', 'light_weighted_pressure_plate'],
+  ['heavy_weighted_pressure_plate', 'heavy_weighted_pressure_plate'],
+]) define(`mc:${id}`, {
+  hardness: 0.5, resistance: 0.5, soundGroup: 'stone', solid: false,
+  opaqueCube: false, opacity: 0, renderShape: 'weighted_pressure_plate', texture,
+  properties: { power: PROPS.power }, defaultValues: { power: 0 },
+});
+
 // Redstone dust is a flat, non-colliding wire with vanilla's 0..15 signal level.
 define('mc:redstone_torch', {
   hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
