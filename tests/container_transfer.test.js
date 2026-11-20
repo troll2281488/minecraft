@@ -6,11 +6,11 @@ import { ItemStack } from '../src/world/item.js';
 import { ContainerScreensMixin } from '../src/game/container_screens.js';
 
 function gameWith(spec) {
-  return {
+  return Object.assign({
     inventory: new Inventory(),
     _activeContainer: spec,
     _renderContainer() {},
-  };
+  }, ContainerScreensMixin);
 }
 
 describe('container shift-click transfers', () => {
