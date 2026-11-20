@@ -122,6 +122,7 @@ export const InputMixin = {
     this.keys.add(e.code);
 
     if (e.code === 'Escape') {
+      if (this.ui.current === 'settings') { this.ui.showScreen(this._settingsReturnScreen || (this.running ? 'pause' : 'title')); return; }
       if (this.tradeOpen) { this._closeVillagerTrade(); return; }
       if (this._activeContainer) this._closeContainer();
       else if (this.inventoryOpen) this._closeInventory();
