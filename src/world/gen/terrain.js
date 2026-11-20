@@ -304,54 +304,41 @@ export class TerrainGenerator {
     const baseZ = chunk.cz * CHUNK_SIZE;
     const S = this.states;
 
-    // Column heights, computed once and reused by every later stage.
+    // Sample each climate column once. The same fields drive height, biome and ravine placement.
     const heights = new Int32Array(CHUNK_SIZE * CHUNK_SIZE);
     const biomes = new Array(CHUNK_SIZE * CHUNK_SIZE);
-
-    for (let z = 0; z < CHUNK_SIZE; z++) {
-      for (let x = 0; x < CHUNK_SIZE; x++) {
-        const wx = baseX + x;
-        const wz = baseZ + z;
-        const h = Math.floor(this.heightAt(wx, wz));
-        const i = z * CHUNK_SIZE + x;
-        heights[i] = h;
-        biomes[i] = this.biomeAt(wx, wz, h);
-        chunk.setBiome(x, h, z, biomes[i]);
+    const ravines = new Float32Array(CHUNK_SIZE * CHUNK_SIZE).fill(-1);
+    for (let z = 0; z < CHUNK_SIZE; z++) for (let x = 0; x < CHUNK_SIZE; x++) {
+      const wx = baseX + x, wz = baseZ + z, col = this.column(wx, wz);
+      const i = z * CHUNK_SIZE + x;
+      heights[i] = col.h;
+      biomes[i] = col.biome;
+      if (col.h >= SEA_LEVEL + 2 && col.h > 36 && col.fields.mountM < 0.6 &&
+          this.ravineMask.sample2(wx, wz, 0.0018) > 0.24) {
+        ravines[i] = Math.abs(this.ravine.sample2(wx, wz, 0.0035));
       }
     }
 
-    // --- Stone shell, caves, water ---------------------------------------
-    for (let z = 0; z < CHUNK_SIZE; z++) {
-      for (let x = 0; x < CHUNK_SIZE; x++) {
-        const wx = baseX + x;
-        const wz = baseZ + z;
-        const height = heights[z * CHUNK_SIZE + x];
+    // Biome storage is 4x4x4; fill all vertical samples, not just the surface.
+    for (let bz = 0; bz < 4; bz++) for (let bx = 0; bx < 4; bx++) {
+      const biome = biomes[(bz * 4 + 2) * CHUNK_SIZE + bx * 4 + 2];
+      for (let y = MIN_Y; y < MAX_Y; y += 4) chunk.setBiome(bx * 4, y, bz * 4, biome);
+    }
 
-        for (let y = MIN_Y; y <= Math.max(height, SEA_LEVEL); y++) {
-          if (y === MIN_Y) {
-            chunk.setBlock(x, y, z, S.bedrock);
-            continue;
-          }
-          // A ragged bedrock floor rather than a flat slab, as in vanilla.
-          if (y < MIN_Y + 5) {
-            const r = positionalRandom(this.seed, wx, y, wz, 7);
-            if (r.nextInt(5) >= y - MIN_Y) {
-              chunk.setBlock(x, y, z, S.bedrock);
-              continue;
-            }
-          }
-
-          if (y <= height) {
-            if (this.isCave(wx, y, wz)) {
-              // Caves below sea level would otherwise flood the whole system.
-              if (y < 8) chunk.setBlock(x, y, z, S.air);
-              else chunk.setBlock(x, y, z, S.air);
-              continue;
-            }
-            chunk.setBlock(x, y, z, this.stoneFor(wx, y, wz));
-          } else if (y <= SEA_LEVEL) {
-            chunk.setBlock(x, y, z, S.water);
-          }
+    // --- Stone shell, caves, ravines, water and sea ice -------------------
+    for (let z = 0; z < CHUNK_SIZE; z++) for (let x = 0; x < CHUNK_SIZE; x++) {
+      const wx = baseX + x, wz = baseZ + z, i = z * CHUNK_SIZE + x;
+      const height = heights[i], frozen = COLD_BIOMES.has(biomes[i]) && height < SEA_LEVEL;
+      for (let y = MIN_Y; y <= Math.max(height, SEA_LEVEL); y++) {
+        if (y === MIN_Y) { chunk.setBlock(x, y, z, S.bedrock); continue; }
+        if (y < MIN_Y + 5) {
+          const r = positionalRandom(this.seed, wx, y, wz, 7);
+          if (r.nextInt(5) >= y - MIN_Y) { chunk.setBlock(x, y, z, S.bedrock); continue; }
+        }
+        if (y <= height) {
+          if (!this.isCave(wx, y, wz, height, ravines[i])) chunk.setBlock(x, y, z, this.stoneFor(wx, y, wz));
+        } else if (y <= SEA_LEVEL) {
+          chunk.setBlock(x, y, z, frozen && y === SEA_LEVEL ? (S.byId['mc:ice'] || S.water) : S.water);
         }
       }
     }
