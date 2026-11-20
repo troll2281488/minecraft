@@ -53,9 +53,9 @@ export function mineshaftPlan(seed, site) {
 export function placeMineshaftPlan(w,S,plan,heights) {
   const air=S['mc:air'],plank=S['mc:oak_planks'],log=S['mc:oak_log']||plank,torch=S['mc:torch'],chest=S['mc:chest'];
   if(!air||!plank) return;
-  const carve=(x,z,y0,y1)=> {
+  const carve=(x,z,y0,y1,minSurface)=> {
     if(!w.inside(x,z)) return false;
-    if(heights&&heights[(z-w.baseZ)*CHUNK_SIZE+(x-w.baseX)]<plan.surfaceY) return false;
+    if(heights&&heights[(z-w.baseZ)*CHUNK_SIZE+(x-w.baseX)]<minSurface) return false;
     for(let y=y0;y<=y1;y++) w.set(x,y,z,air);
     return true;
   };
@@ -73,7 +73,7 @@ export function placeMineshaftPlan(w,S,plan,heights) {
       const [dx,dz]=DIRS[p.d];
       for(let t=0;t<p.length;t++) for(let side=-1;side<=1;side++) {
         const x=p.sx+dx*t+(dz?side:0),z=p.sz+dz*t+(dx?side:0);
-        if(!carve(x,z,p.y+1,p.y+3)) continue;
+        if(!carve(x,z,p.y+1,p.y+3,p.y+6)) continue;
         if(w.id(x,p.y,z)==='mc:air'||w.id(x,p.y,z)==='mc:water') w.set(x,p.y,z,plank);
         if(t%4===0) { w.set(x,p.y+3,z,plank); if(side!==0) {w.set(x,p.y+1,z,log);w.set(x,p.y+2,z,log);} }
         if(torch&&side===0&&t%9===4) w.set(x,p.y+1,z,torch);
@@ -81,7 +81,7 @@ export function placeMineshaftPlan(w,S,plan,heights) {
       if(p.deadEnd&&p.chest) w.set(p.sx+dx*(p.length-1),p.y+1,p.sz+dz*(p.length-1),chest);
     } else if(p.kind==='crossing') {
       for(let z=p.z0;z<=p.z1;z++) for(let x=p.x0;x<=p.x1;x++) {
-        if(carve(x,z,p.y+1,p.y+3)&&(w.id(x,p.y,z)==='mc:air'||w.id(x,p.y,z)==='mc:water')) w.set(x,p.y,z,plank);
+        if(carve(x,z,p.y+1,p.y+3,p.y+6)&&(w.id(x,p.y,z)==='mc:air'||w.id(x,p.y,z)==='mc:water')) w.set(x,p.y,z,plank);
       }
     }
   }
@@ -93,6 +93,7 @@ export function placeDungeonRoom(w,S,room,seed,heights) {
   if(!air||!cobble) return;
   const {ix,iz}=dungeonDims(room),x1=room.x+ix+1,z1=room.z+iz+1;
   if(!w.touches(room.x,room.z,x1,z1)) return;
+  if(heights) for(const [x,z] of [[room.x,room.z],[x1,z1]]) if(w.inside(x,z)&&heights[(z-w.baseZ)*CHUNK_SIZE+(x-w.baseX)]<room.y+8) return;
   const rng=positionalRandom(seed,room.x,7301,room.z,7301), hs=seedToInt(normalizeSeed(seed));
   for(let z=room.z;z<=z1;z++) for(let x=room.x;x<=x1;x++) {
     const edge=x===room.x||x===x1||z===room.z||z===z1;
