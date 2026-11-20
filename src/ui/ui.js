@@ -171,6 +171,7 @@ export class UI {
   buildInventory(inventory, grid, handlers) {
     this.invHandlers = handlers;
     const screen = $('inventory-screen');
+    screen._leftDragHandler = (indices) => handlers.onDistribute?.(indices);
 
     const build = (container, count, indexOf, kind) => {
       container.innerHTML = '';
@@ -182,6 +183,11 @@ export class UI {
         el.oncontextmenu = (e) => e.preventDefault();
         el.onmousedown = (e) => {
           e.preventDefault();
+          if (e.button === 0 && kind === 'inventory' && !inventory.cursor.isEmpty) {
+            screen._leftDragActive = true;
+            screen._leftDragSeen = [index];
+            return;
+          }
           if (e.button === 2) {
             screen._rightDragActive = true;
             screen._rightDragSeen = new Set([kind + ':' + index]);
@@ -189,6 +195,10 @@ export class UI {
           handlers.onClick(kind, index, e.button, e.shiftKey);
         };
         el.addEventListener('mouseenter', () => {
+          if (screen._leftDragActive && kind === 'inventory') {
+            if (!screen._leftDragSeen.includes(index)) screen._leftDragSeen.push(index);
+            return;
+          }
           if (!screen._rightDragActive) return;
           const key = kind + ':' + index;
           if (screen._rightDragSeen && screen._rightDragSeen.has(key)) return;
@@ -204,6 +214,9 @@ export class UI {
     screen.oncontextmenu = (e) => e.preventDefault();
     if (!screen._rightDragReleaseBound) {
       document.addEventListener('mouseup', () => {
+        if (screen._leftDragActive) screen._leftDragHandler?.(screen._leftDragSeen || []);
+        screen._leftDragActive = false;
+        screen._leftDragSeen = null;
         screen._rightDragActive = false;
         screen._rightDragSeen = null;
       });
