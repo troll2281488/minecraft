@@ -68,6 +68,8 @@ recipes.push({ result: 'mc:redstone_torch', count: 1, pattern: ['R', 'S'], key: 
 recipes.push({ result: 'mc:glowstone', count: 1, pattern: ['DD', 'DD'], key: { D: 'mc:glowstone_dust' } });
 recipes.push({ result: 'mc:redstone_lamp', count: 1, pattern: [' R ', 'RGR', ' R '], key: { R: 'mc:redstone', G: 'mc:glowstone' } });
 recipes.push({ result: 'mc:hopper', count: 1, pattern: ['I I', 'ICI', ' I '], key: { I: 'mc:iron_ingot', C: 'mc:chest' } });
+recipes.push({ result: 'mc:piston', count: 1, pattern: ['PPP', 'CIC', 'CRC'], key: { P: '#mc:planks', C: 'mc:cobblestone', I: 'mc:iron_ingot', R: 'mc:redstone' } });
+recipes.push({ result: 'mc:sticky_piston', count: 1, ingredients: ['mc:piston', 'mc:slime_ball'] });
 recipes.push({ result: 'mc:dropper', count: 1, pattern: ['CCC', 'C C', 'CRC'], key: { C: 'mc:cobblestone', R: 'mc:redstone' } });
 recipes.push({ result: 'mc:observer', count: 1, pattern: ['CCC', 'RQR', 'CCC'], key: { C: 'mc:cobblestone', R: 'mc:redstone', Q: 'mc:quartz' } });
 recipes.push({ result: 'mc:target', count: 1, pattern: ['R R', ' H ', 'R R'], key: { R: 'mc:redstone', H: 'mc:hay_block' } });
