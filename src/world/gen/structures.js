@@ -128,12 +128,12 @@ export function villagePlan(seed,cx,cz,groundY,style) {
     roads.push({x0:cx+Math.min(0,dx*len)- (dz?1:0),x1:cx+Math.max(0,dx*len)+(dz?1:0),
       z0:cz+Math.min(0,dz*len)-(dx?1:0),z1:cz+Math.max(0,dz*len)+(dx?1:0)});
   }
-  buildings.push({type:'well',x:cx-2,z:cz-2,w:5,d:5});
-  for(let i=0;i<8;i++) {
-    const [dx,dz]=arms[i%4],side=i<4?-1:1,t=5+(i%4)*5;
-    const x=cx+dx*t+(dz?side*4:0),z=cz+dz*t+(dx?side*4:0);
-    buildings.push({type:i===7?'farm':i===5?'smithy':'house',x,z,w:i===7?8:7,d:i===7?9:7});
-  }
+  buildings.push({type:'well',x:cx-9,z:cz-9,w:5,d:5});
+  // A central smithy gives the settlement a recognizable landmark.
+  buildings.push({type:'smithy',x:cx,z:cz,w:7,d:7});
+  buildings.push({type:'house',x:cx-16,z:cz-3,w:7,d:7});
+  buildings.push({type:'house',x:cx+3,z:cz+15,w:7,d:7});
+  buildings.push({type:'farm',x:cx+16,z:cz-4,w:8,d:9});
   return {cx,cz,groundY,style,roads,buildings,x0:cx-42,x1:cx+42,z0:cz-42,z1:cz+42};
 }
 export function placeVillagePlan(w,S,plan) {
@@ -159,8 +159,8 @@ export function placeVillagePlan(w,S,plan) {
       if(glass&&edge&&!corner&&yWindow(x,z,b))w.set(b.x+x,gy+2,b.z+z,glass);
     }
     w.set(b.x+Math.floor(b.w/2),gy+1,b.z,air);w.set(b.x+Math.floor(b.w/2),gy+2,b.z,air);
-    for(let z=-1;z<=b.d;z++)for(let x=-1;x<=b.w;x++)w.set(b.x+x,gy+4+Math.min(x,b.w-1-x),b.z+z,roof||plank);
-    if(b.type==='smithy'&&S['mc:furnace'])w.set(b.x+1,gy+1,b.z+b.d-2,S['mc:furnace']);
+    for(let z=-1;z<=b.d;z++)for(let x=-1;x<=b.w;x++){const centre=x===Math.floor(b.w/2);w.set(b.x+x,gy+5+Math.min(x,b.w-1-x),b.z+z,centre?plank:(roof||plank));}
+    if(b.type==='smithy'&&S['mc:furnace'])w.set(b.x+2,gy+2,b.z+3,S['mc:furnace']);
   }
   const torch=S['mc:torch'];if(torch)for(const r of plan.roads){const x=Math.floor((r.x0+r.x1)/2),z=Math.floor((r.z0+r.z1)/2);if(w.inside(x,z)){w.set(x,gy+1,z,log);w.set(x,gy+2,z,log);w.set(x,gy+3,z,torch);}}
 }
