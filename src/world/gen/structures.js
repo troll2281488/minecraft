@@ -96,7 +96,7 @@ export function placeMineshaftPlan(w,S,plan,heights) {
 
 export function dungeonDims(room) { return {ix:5+2*(room.variant&1),iz:5+2*((room.variant>>1)&1)}; }
 export function placeDungeonRoom(w,S,room,seed,heights) {
-  const air=S['mc:air'],cobble=S['mc:cobblestone'],moss=S['mc:mossy_cobblestone']||cobble,chest=S['mc:chest'];
+  const air=S['mc:air'],cobble=S['mc:cobblestone'],moss=S['mc:mossy_cobblestone']||cobble,chest=S['mc:chest'],spawner=S['mc:mob_spawner'];
   if(!air||!cobble) return;
   const {ix,iz}=dungeonDims(room),x1=room.x+ix+1,z1=room.z+iz+1;
   if(!w.touches(room.x,room.z,x1,z1)) return;
@@ -112,6 +112,7 @@ export function placeDungeonRoom(w,S,room,seed,heights) {
     }
   }
   if(chest) { w.set(room.x+1,room.y+1,room.z+1,chest); if(rng.nextBoolean()) w.set(x1-1,room.y+1,z1-1,chest); }
+  if(spawner) w.set(room.x+3,room.y+1,room.z+3,spawner);
 }
 
 export const VILLAGE_STYLES={

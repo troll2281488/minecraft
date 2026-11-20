@@ -95,7 +95,8 @@ Reference target for this compatibility track is **Minecraft: Java Edition 1.19.
 | Creative inventory — all blocks, click to grab, search | tabbed + search | 🟡 *scrollable list + search; tabs are a later polish* |
 | Furnace smelting XP | Fractional XP is banked per completed recipe and awarded only when output is manually collected; pending XP persists and drops as orbs when the furnace is broken | 🟡 *(supported recipe subset only; blast furnace, smoker, hoppers and the complete 1.19 recipe catalogue remain incomplete)* |
 | Player death XP | Drop 7 × current level, capped at 100; `keepInventory` preserves XP | 🟡 *(Overworld Survival deaths with `keepInventory=false`; death-orb restoration across dimensions is not yet supported)* |
-| Monster spawner mining XP | Survival pickaxe break releases 15–43 XP; spawner itself never drops | 🟡 *(spawner block and mining reward are present; mob-spawning simulation and generated spawner structures remain incomplete)* |
+| Monster spawners | Active within 16 blocks; up to four mobs per cycle; 200–799 tick delay; six-mob local cap; dungeon rooms generate a spawner | 🟡 *(activation, delay, cap, local save state and zombie/skeleton/spider dungeon selection are implemented; light checks, exact vanilla collision rules, network authority and loot tables remain incomplete)* |
+| Monster spawner mining XP | Survival pickaxe break releases 15–43 XP; spawner itself never drops | 🟡 *(mining reward is implemented; Silk Touch is not implemented and spawners never drop as items)* |
 | Stonecutting / smithing / brewing | yes | ⬜ |
 
 ## World generation
@@ -113,7 +114,7 @@ Reference target for this compatibility track is **Minecraft: Java Edition 1.19.
 | Deepslate ore variants + ragged transition | yes | ✅ |
 | Trees per biome | 8 species incl. large variants | 🟡 *(oak, birch, spruce; canopies clipped at chunk borders)* |
 | Biome count | ~24 | 🟡 *(8)* |
-| Aquifers, lava lakes, structures | yes | ⬜ |
+| Aquifers, lava lakes, structures | yes | 🟡 *(dungeon rooms now include mob spawners; full Java structure palette and chest loot tables remain incomplete)* |
 
 ## Rendering
 

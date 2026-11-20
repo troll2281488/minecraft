@@ -1,4 +1,6 @@
 import { ItemStack } from '../world/item.js';
+import { positionalRandom } from '../core/rng.js';
+import { SPAWNER_MOB_TYPES, spawnerMobType, spawnerPlayerInRange, countSpawnerMobs, nextSpawnerDelay, spawnerSpawnPosition } from './spawners.js';
 import { experienceForMob, experienceForFishing, experienceForBreeding, splitExperienceIntoOrbs, mergeExperienceOrbState, isExperienceOrbHazard } from './experience.js';
 import { TerrainGenerator, villageCandidateForCell } from '../world/gen/terrain.js';
 import { createVillagerProfile } from './villager_trades.js';
@@ -141,6 +143,8 @@ export class MobSystem {
     this.droppedItems = [];
     this.experienceOrbs = [];
     this.experiencePickupCooldown = 0;
+    this.spawnerStates = new Map();
+    this.spawnerScanTicks = 0;
     this.spawnTicks = 0;
     this.nextId = 1;
     this.attackCooldown = 0;
@@ -159,6 +163,8 @@ export class MobSystem {
     this.droppedItems.length = 0;
     this.experienceOrbs.length = 0;
     this.experiencePickupCooldown = 0;
+    this.spawnerStates.clear();
+    this.spawnerScanTicks = 0;
     this.spawnTicks = 0;
     this.nextId = 1;
     this.fishing = null;
@@ -377,6 +383,10 @@ export class MobSystem {
       x: orb.x, y: orb.y, z: orb.z, vx: orb.vx, vy: orb.vy, vz: orb.vz,
       age: orb.age, pickupDelay: orb.pickupDelay, count: orb.count || 1,
     });
+    for (const state of [...this.spawnerStates.values()].slice(0, 256)) entries.push({
+      type: 'mob_spawner_state', x: state.x, y: state.y, z: state.z,
+      mobType: state.mobType, delay: state.delay,
+    });
     return entries;
   }
 
@@ -384,6 +394,8 @@ export class MobSystem {
   loadFrom(entries) {
     this.mobs.length = 0;
     this.experienceOrbs.length = 0;
+    this.spawnerStates.clear();
+    this.spawnerScanTicks = 0;
     this.populatedVillages = new Set();
     if (!Array.isArray(entries)) {
       this.nextId = 1;
@@ -404,6 +416,14 @@ export class MobSystem {
           age: entry.age, pickupDelay: Number.isFinite(entry.pickupDelay) ? Math.max(0, Math.min(100, entry.pickupDelay)) : 0,
           count: Number.isSafeInteger(entry.count) ? Math.max(1, Math.min(32767, entry.count)) : 1,
         });
+      }
+      if (entry?.type === 'mob_spawner_state' &&
+          Number.isSafeInteger(entry.x) && Number.isSafeInteger(entry.y) && Number.isSafeInteger(entry.z) &&
+          entry.y >= -64 && entry.y <= 320 && SPAWNER_MOB_TYPES.includes(entry.mobType) &&
+          Number.isSafeInteger(entry.delay) && entry.delay >= 0 && entry.delay <= 799 &&
+          this.spawnerStates.size < 256) {
+        const key = `${entry.x},${entry.y},${entry.z}`;
+        this.spawnerStates.set(key, { x: entry.x, y: entry.y, z: entry.z, mobType: entry.mobType, delay: entry.delay });
       }
       if (entry?.type === 'village_marker' && typeof entry.villageKey === 'string' && entry.villageKey.length <= 48) {
         this.populatedVillages.add(entry.villageKey);
@@ -965,6 +985,84 @@ export class MobSystem {
     }
   }
 
+
+  /**
+   * Tick nearby Java-style monster spawners. Scanning is throttled to once per
+   * second; already discovered spawners keep their delay and are saved with mobs.
+   */
+  _tickSpawners() {
+    const world = this.game.world, player = this.game.player;
+    if (!world || !player) return;
+
+    this.spawnerScanTicks++;
+    if (this.spawnerScanTicks >= 20) {
+      this.spawnerScanTicks = 0;
+      const px = Math.floor(player.x), py = Math.floor(player.y), pz = Math.floor(player.z);
+      for (let y = py - 16; y <= py + 16; y++) {
+        for (let z = pz - 16; z <= pz + 16; z++) {
+          for (let x = px - 16; x <= px + 16; x++) {
+            const dx = x + 0.5 - player.x, dy = y - player.y, dz = z + 0.5 - player.z;
+            if (dx * dx + dy * dy + dz * dz >= 256) continue;
+            if (world.getBlock(x, y, z).block.id !== 'mc:mob_spawner') continue;
+            const key = `${x},${y},${z}`;
+            if (!this.spawnerStates.has(key) && this.spawnerStates.size < 256) {
+              this.spawnerStates.set(key, {
+                x, y, z, mobType: spawnerMobType(world.seed, x, y, z), delay: 20,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    for (const [key, state] of this.spawnerStates) {
+      const chunk = world.getChunk(Math.floor(state.x / 16), Math.floor(state.z / 16));
+      // An unloaded chunk is not evidence that its spawner was removed.
+      if (!chunk) continue;
+      if (world.getBlock(state.x, state.y, state.z).block.id !== 'mc:mob_spawner') {
+        this.spawnerStates.delete(key);
+        continue;
+      }
+      if (!spawnerPlayerInRange(state, player)) continue;
+
+      if (state.delay > 0) {
+        state.delay--;
+        continue;
+      }
+
+      // Dungeon spawners contain hostile mobs; Peaceful activates the block but
+      // suppresses the spawn cycle, matching Java's difficulty rule.
+      if (this.game.worldMeta?.difficulty === 'peaceful') {
+        state.delay = nextSpawnerDelay();
+        continue;
+      }
+
+      let spawned = 0;
+      let reachedMobCap = false;
+      for (let attempt = 0; attempt < 4; attempt++) {
+        if (countSpawnerMobs(this.mobs, state, state.mobType) >= 6) {
+          reachedMobCap = true;
+          break;
+        }
+        const position = spawnerSpawnPosition(state);
+        if (!world.hasChunk(Math.floor(position.x / 16), Math.floor(position.z / 16))) continue;
+        const feet = world.getBlock(position.x, position.y, position.z).block;
+        const head = world.getBlock(position.x, position.y + 1, position.z).block;
+        const floor = world.getBlock(position.x, position.y - 1, position.z).block;
+        if (!floor.solid || feet.solid || head.solid || feet.liquid || head.liquid) continue;
+        if (!this._canOccupy(position.x + 0.5, position.y, position.z + 0.5)) continue;
+        if (this._spawn(state.mobType, position.x, position.z, { y: position.y })) spawned++;
+      }
+
+      if (spawned > 0 || reachedMobCap) {
+        state.delay = nextSpawnerDelay();
+        if (spawned > 0) this.spawnBlockParticles(state.x, state.y, state.z, 'mc:mob_spawner');
+      }
+      // If all four positions were invalid, delay remains zero and Java retries
+      // on the next tick instead of imposing a fresh 10–40 second wait.
+    }
+  }
+
   tick() {
     const world = this.game.world;
     const player = this.game.player;
@@ -1004,6 +1102,7 @@ export class MobSystem {
     this._tickArrows();
     this._tickBlockParticles();
     if (this.game.mobSimulationEnabled === false) return;
+    this._tickSpawners();
     if (world.dimension === 'nether' && !this.netherFortressWave &&
         Math.hypot(player.x - 52, player.z - 36) < 110) {
       let spawned = 0;
