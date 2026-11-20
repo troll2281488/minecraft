@@ -576,7 +576,7 @@ export const ContainerScreensMixin = {
       else if(targetId==='mc:furnace') destination={type:'furnace',data:this._furnaceAt(tx,ty,tz)};
       let moved=false;
       if(destination&&!this.multiplayer?.isContainerLockedByOther?.(this._containerKey(tx,ty,tz))) {
-        moved=this._hopperTransferOne({type:'dropper',data:dropper},destination,dy>0?'top':'side');
+        moved=this._hopperTransferOne({type:'dropper',data:dropper},destination,dy<0?'top':'side');
         if(moved&&this.multiplayer?.roomId){this._hopperDirtyKeys||=new Set();this._hopperDirtyKeys.add(this._containerKey(tx,ty,tz));}
       }
       if(!moved) {
