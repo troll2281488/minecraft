@@ -26,34 +26,6 @@ const BLOCK_TEXTURE_ALIASES = Object.freeze({
   water: 'water_still',
 });
 
-const ITEM_TEXTURE_ALIASES = Object.freeze({
-  raw_beef: 'beef',
-  raw_porkchop: 'porkchop',
-  raw_chicken: 'chicken',
-  raw_mutton: 'mutton',
-  raw_cod: 'cod',
-  raw_salmon: 'salmon',
-});
-
-const UI_TEXTURES = Object.freeze({
-  widgets: 'gui/widgets.png',
-  icons: 'gui/icons.png',
-  inventory: 'gui/container/inventory.png',
-  genericContainer: 'gui/container/generic_54.png',
-  furnace: 'gui/container/furnace.png',
-  craftingTable: 'gui/container/crafting_table.png',
-  titleLogo: 'gui/title/minecraft.png',
-  optionsBackground: 'gui/options_background.png',
-  creativeInventory: 'gui/container/creative_inventory/tab_items.png',
-  asciiFont: 'font/ascii.png',
-  europeanFont: 'font/nonlatin_european.png',
-});
-
-// Spawn eggs are generated from their mob's two vanilla colors by item_icons.js.
-export function shouldFetchExternalItemTexture(item) {
-  return Boolean(item && !item.block && !item.spawnEggMob);
-}
-
 async function fetchImage(path, base = SIMPLE_RP_RAW) {
   const response = await fetch(base + path, { signal: AbortSignal.timeout(4000) });
   if (!response.ok) return null;
