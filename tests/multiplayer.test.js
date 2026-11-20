@@ -1,5 +1,5 @@
 import { describe, it, assertEqual } from './framework.js';
-import { electRoomHost, isValidContainerKey, listJoinableRooms, queueContainerWrite } from '../src/game/multiplayer.js';
+import { canAcquireContainerLease, electRoomHost, isValidContainerKey, listJoinableRooms, ownsContainerLease, queueContainerWrite } from '../src/game/multiplayer.js';
 
 describe('multiplayer container key validation', () => {
   it('accepts signed integer coordinates only', () => {
@@ -33,6 +33,36 @@ describe('multiplayer container write queue', () => {
     assertEqual(queue.size, 2);
     assertEqual(queue.has('ABCDE:1,64,2'), false);
     assertEqual(queue.has('FGHIJ:1,64,2'), true);
+  });
+});
+
+
+describe('multiplayer container edit leases', () => {
+  it('allows a new lease when the container is unlocked', () => {
+    assertEqual(canAcquireContainerLease(null, 'player-a', 1000), true);
+  });
+
+  it('prevents another player taking an unexpired lease', () => {
+    assertEqual(canAcquireContainerLease({ owner: 'player-a', expiresAt: 2000 }, 'player-b', 1000), false);
+  });
+
+  it('allows takeover after a lease expires', () => {
+    assertEqual(canAcquireContainerLease({ owner: 'player-a', expiresAt: 999 }, 'player-b', 1000), true);
+  });
+
+  it('allows the current owner to renew its own lease', () => {
+    assertEqual(canAcquireContainerLease({ owner: 'player-a', expiresAt: 500 }, 'player-a', 1000), true);
+  });
+
+  it('requires both owner and unique token to release or renew a lease', () => {
+    const lease = { owner: 'player-a', token: 'tab-token' };
+    assertEqual(ownsContainerLease(lease, 'player-a', 'tab-token'), true);
+    assertEqual(ownsContainerLease(lease, 'player-a', 'other-token'), false);
+    assertEqual(ownsContainerLease(lease, 'player-b', 'tab-token'), false);
+  });
+
+  it('rejects attempts to create a lease without a player identity', () => {
+    assertEqual(canAcquireContainerLease(null, '', 1000), false);
   });
 });
 
