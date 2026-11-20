@@ -1,5 +1,5 @@
 import { describe, it, assertEqual } from './framework.js';
-import { applyRemotePlayerState, remoteEquipmentSnapshot, canAcquireContainerLease, electRoomHost, isContainerLeaseHeldByOther, isValidContainerKey, listJoinableRooms, ownsContainerLease, queueContainerWrite } from '../src/game/multiplayer.js';
+import { applyRemotePlayerState, remoteEquipmentSnapshot, queueChatMessage, canAcquireContainerLease, electRoomHost, isContainerLeaseHeldByOther, isValidContainerKey, listJoinableRooms, ownsContainerLease, queueContainerWrite } from '../src/game/multiplayer.js';
 
 describe('multiplayer container key validation', () => {
   it('accepts signed integer coordinates only', () => {
@@ -193,5 +193,44 @@ describe('multiplayer equipment snapshots', () => {
     applyRemotePlayerState(remote, { x: 0, y: 0, z: 0 });
     assertEqual(remote.heldItem, null);
     assertEqual(remote.armor.every((id) => id === null), true);
+  });
+});
+
+describe('multiplayer offline chat queue', () => {
+  it('queues messages by room and stable message ID', () => {
+    const queue = new Map();
+    assertEqual(queueChatMessage(queue, 'ROOM1', {
+      id: 'msg_1', sender: 'Alex', text: 'hello', timestamp: 123,
+    }), true);
+    assertEqual(queue.size, 1);
+    assertEqual(queue.get('ROOM1:msg_1').text, 'hello');
+  });
+
+  it('keeps room queues isolated and replaces retries with the same ID', () => {
+    const queue = new Map();
+    queueChatMessage(queue, 'ROOM1', { id: 'same', sender: 'Alex', text: 'old' });
+    queueChatMessage(queue, 'ROOM1', { id: 'same', sender: 'Alex', text: 'new' });
+    queueChatMessage(queue, 'ROOM2', { id: 'same', sender: 'Sam', text: 'other room' });
+    assertEqual(queue.size, 2);
+    assertEqual(queue.get('ROOM1:same').text, 'new');
+    assertEqual(queue.get('ROOM2:same').text, 'other room');
+  });
+
+  it('rejects invalid message IDs and empty messages', () => {
+    const queue = new Map();
+    assertEqual(queueChatMessage(queue, 'ROOM1', { id: '../x', text: 'bad' }), false);
+    assertEqual(queueChatMessage(queue, 'ROOM1', { id: 'empty', text: '  ' }), false);
+    assertEqual(queue.size, 0);
+  });
+
+  it('bounds pending messages and truncates oversized text', () => {
+    const queue = new Map();
+    queueChatMessage(queue, 'ROOM1', { id: 'a', sender: 'A', text: 'x'.repeat(500) }, 2);
+    queueChatMessage(queue, 'ROOM1', { id: 'b', sender: 'B', text: 'b' }, 2);
+    queueChatMessage(queue, 'ROOM1', { id: 'c', sender: 'C', text: 'c' }, 2);
+    assertEqual(queue.size, 2);
+    assertEqual(queue.has('ROOM1:a'), false);
+    assertEqual(queue.get('ROOM1:b').text, 'b');
+    assertEqual(queue.get('ROOM1:c').text, 'c');
   });
 });
