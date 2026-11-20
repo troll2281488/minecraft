@@ -183,6 +183,15 @@ export async function getAllChunks(worldId, dim) {
   return request(transaction.objectStore(STORE_CHUNKS).getAll(range));
 }
 
+/** Remove only one dimension's cached chunks when its terrain generator changes. */
+export async function clearDimensionChunks(worldId, dim) {
+  const db = await openDb();
+  const { transaction, done } = tx(db, [STORE_CHUNKS], 'readwrite');
+  const range = IDBKeyRange.bound([worldId, dim], [worldId, dim, '￿']);
+  transaction.objectStore(STORE_CHUNKS).delete(range);
+  await done;
+}
+
 export async function countChunks(worldId) {
   const db = await openDb();
   const { transaction } = tx(db, [STORE_CHUNKS], 'readonly');
