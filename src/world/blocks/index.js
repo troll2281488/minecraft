@@ -353,6 +353,8 @@ function door(id, texture, iron = false) {
     hardness: iron ? 5 : 3, resistance: iron ? 5 : 3,
     tool: iron ? 'pickaxe' : 'axe', soundGroup: iron ? 'metal' : 'wood',
     renderShape: 'door', texture, opaqueCube: false,
+    // The resource-pack loader fetches the matching Java 1.19 upper/lower tiles.
+    doorTextures: { lower: `${id}_door_bottom`, upper: `${id}_door_top` },
     properties: {
       facing: PROPS.facing, half: PROPS.doorHalf, hinge: PROPS.hinge,
       open: PROPS.open, powered: PROPS.powered,
