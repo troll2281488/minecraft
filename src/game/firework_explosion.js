@@ -39,3 +39,14 @@ export function fireworkBlastImpacts(mobs, center, options = {}) {
   }
   return impacts;
 }
+
+/** Nearby mob impacts for a creeper blast; the source creeper is excluded. */
+export function creeperBlastImpacts(mobs, creeper, charged = false) {
+  if (!creeper) return [];
+  const targets = Array.isArray(mobs) ? mobs.filter((mob) => mob !== creeper) : [];
+  const radius = charged ? 8 : 4;
+  return fireworkBlastImpacts(targets, { x: creeper.x, y: creeper.y, z: creeper.z }, {
+    radius,
+    maxDamage: radius * 3,
+  });
+}
