@@ -104,6 +104,8 @@ stoneLike('mc:polished_andesite', 'polished_andesite', 1.5, 6);
 stoneLike('mc:sandstone', 'sandstone', 0.8, 0.8);
 stoneLike('mc:obsidian', 'obsidian', 50, 1200, 3);
 stoneLike('mc:netherrack', 'netherrack', 0.4, 2);
+stoneLike('mc:blackstone', 'blackstone', 1.5, 6);
+stoneLike('mc:polished_blackstone', 'polished_blackstone', 1.5, 6);
 stoneLike('mc:nether_bricks', 'nether_bricks', 2, 6);
 stoneLike('mc:nether_brick_fence', 'nether_bricks', 2, 6);
 stoneLike('mc:nether_gold_ore', 'nether_gold_ore', 3, 3);
