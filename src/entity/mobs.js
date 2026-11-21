@@ -958,7 +958,7 @@ export class MobSystem {
     pig.boostCooldown = 100;
     this.game.inventory.damageHeld(1);
     this.game.ui?.updateHotbar(this.game.inventory);
-    this.game.sounds?.play('bow');
+    this.game.sounds?.play('reel');
     return true;
   }
 
