@@ -50,7 +50,7 @@ it has been verified against a documented vanilla value - "the number is typed i
 
 ## Development approach
 
-The long-term target is broad feature coverage through Java Edition 1.12.2, not a claim of complete parity today. The existing foundation contains some newer-version data; mechanics are being brought toward the requested 1.12.2 target incrementally.
+The active target for this development track is Minecraft Java Edition 1.19.x. Historical 1.12.2 compatibility notes remain as legacy audit material only; they do not define the active target. This project is still an incomplete browser voxel sandbox, not a complete Minecraft implementation.
 Work proceeds system by system: implement a real mechanic, add regression tests, then document
 what is working and what remains.
 
@@ -143,9 +143,9 @@ chunk, for a measured 2.3x speedup. Greedy meshing was considered and rejected: 
 quads cannot carry differing per-vertex ambient occlusion and light values.
 
 
-## 1.12.2 compatibility work
+## Historical 1.12.2 compatibility notes (legacy)
 
-The current compatibility pass targets the classic Java 1.12.2 world height (Y=0..255), removes registered deepslate/copper/netherite content, removes post-1.12 waterlogging states from stairs/slabs, restores classic ore height bands, adds jungle/acacia/dark-oak wood families, and adds additional 1.12.2 blocks including the 16-color wool, stained glass, terracotta and concrete families. This remains an actively incomplete voxel sandbox, not a complete Minecraft implementation; see [the compatibility audit](docs/VERSION_1_12_2_AUDIT.md) for what is and is not implemented.
+This section records a previous compatibility experiment and is not the active development target. The current target is Java Edition 1.19.x. See [the 1.12.2 compatibility audit](docs/VERSION_1_12_2_AUDIT.md) for historical context.
 
 ## Texture attribution
 

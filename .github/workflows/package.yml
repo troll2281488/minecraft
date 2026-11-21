@@ -33,10 +33,10 @@ jobs:
         run: node tests/run-node.mjs
       - name: Create ZIP
         run: |
-          zip -qr minecraft-1.12.2-prototype.zip . \
+          zip -qr minecraft-java-1.19-prototype.zip . \
             -x '.git/*' 'saves/*' 'node_modules/*'
       - uses: actions/upload-artifact@v4
         with:
-          name: minecraft-1.12.2-prototype
-          path: minecraft-1.12.2-prototype.zip
+          name: minecraft-java-1.19-prototype
+          path: minecraft-java-1.19-prototype.zip
           retention-days: 30

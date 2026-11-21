@@ -4,7 +4,7 @@
 file is where it gets checked — per system, honestly, including the places where this project
 deliberately differs.
 
-Reference target is **Minecraft: Java Edition 1.20.x**.
+Reference target for this compatibility track is **Minecraft: Java Edition 1.19.x**. Rows inherited from older project phases must be re-verified against 1.19 before being marked exact.
 
 **Legend**
 
