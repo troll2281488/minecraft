@@ -101,6 +101,7 @@ export const PROPS = {
   repeaterDelay: intProp('delay', 1, 4),
   layers: intProp('layers', 1, 8),
   honeyLevel: intProp('honey_level', 0, 5),
+  moisture: intProp('moisture', 0, 7),
   north: boolProp('north'),
   south: boolProp('south'),
   east: boolProp('east'),
