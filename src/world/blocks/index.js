@@ -783,6 +783,7 @@ const MATERIALS = [
   ['mc:enchanted_golden_apple', { stackSize: 1, food: { nutrition: 4, saturation: 9.6 } }],
   ['mc:bucket', { stackSize: 16 }],
   ['mc:melon_seeds', {}],
+  ['mc:sugar', {}],
   ['mc:pumpkin_seeds', {}],
   ['mc:melon_slice', { food: { nutrition: 2, saturation: 1.2 } }],
   ['mc:beetroot_seeds', {}],
