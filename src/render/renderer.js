@@ -772,6 +772,14 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
             const attackProgress = Math.max(0, Math.min(1, (8 - (pose.attackTime ?? 0)) / 8));
             swing = -1.45 * Math.sin(attackProgress * Math.PI);
           }
+          // Swimming must be resolved before the generic airborne pose:
+          // a player in water is usually not grounded, but should use the
+          // alternating swim stroke rather than the jump/fall limb pose.
+          else if (pose.swimming) {
+            const swimPose = bedrockHumanoidPose(pose, walkPhase);
+            if (isArm) swing = partIndex === 2 ? swimPose.leftArm : swimPose.rightArm;
+            else swing = partIndex === 4 ? swimPose.leftLeg : swimPose.rightLeg;
+          }
           else if (pose.airborne) swing = isArm ? (pose.jumping ? -0.72 : -0.18) : (pose.jumping ? 0.58 : 0.22);
           else {
             const humanoid = bedrockHumanoidPose(pose, walkPhase);
@@ -796,7 +804,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         } else if (!skin && pose.vanillaModel && /wing/i.test(partName ?? '')) {
           const flying = ['bee','bat','parrot','chicken','phantom','ender_dragon'].includes(pose.mobType);
           swing = flying ? Math.sin((pose.idle ?? 0) * (pose.mobType === 'bee' ? 3.2 : 2.4)) * (pose.mobType === 'bee' ? 0.48 : 0.34) : 0;
-        } else if (!skin && pose.mobType === 'spider' || (!skin && pose.mobType === 'cave_spider')) {
+        } else if (!skin && (pose.mobType === 'spider' || pose.mobType === 'cave_spider')) {
           if (partIndex >= 4) {
             const leg = partIndex - 4;
             const side = leg % 2 === 0 ? 1 : -1;
