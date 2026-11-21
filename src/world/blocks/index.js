@@ -317,6 +317,7 @@ define('mc:mycelium', {
 define('mc:campfire', {
   hardness: 2, resistance: 2, tool: 'axe', soundGroup: 'wood',
   flammability: 5, lightEmission: 15, texture: 'campfire',
+  properties: { lit: PROPS.lit }, defaultValues: { lit: true },
 });
 
 for (const id of ['mc:bee_nest', 'mc:beehive']) {
