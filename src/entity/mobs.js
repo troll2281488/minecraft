@@ -77,9 +77,11 @@ export function nextGoatRamState(mob, distance) {
   const cooldown = Math.max(0, (mob?.ramCooldown || 0) - 1);
   const previousWindup = Math.max(0, mob?.ramWindup || 0);
   let windup = Math.max(0, previousWindup - 1);
-  let active = Math.max(0, (mob?.ramTicks || 0) - 1);
+  const previousActive = Math.max(0, mob?.ramTicks || 0);
+  let active = Math.max(0, previousActive - 1);
   if (!mob || mob.type !== 'goat') return { cooldown, windup, active, start: false };
   if (previousWindup > 0 && windup === 0) active = 12;
+  if (previousActive > 0 && active === 0) cooldown = Math.max(cooldown, 600);
   const start = previousWindup === 0 && active === 0 && cooldown === 0 && distance >= 4 && distance <= 8;
   if (start) windup = 30;
   return { cooldown, windup, active, start };
