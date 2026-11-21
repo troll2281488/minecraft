@@ -306,6 +306,15 @@ define('mc:mycelium', {
 // Functional
 // ---------------------------------------------------------------------------
 
+for (const id of ['mc:bee_nest', 'mc:beehive']) {
+  define(id, {
+    hardness: 0.6, resistance: 0.6, tool: 'axe', soundGroup: 'wood',
+    flammability: 5, texture: id === 'mc:bee_nest' ? 'bee_nest' : 'beehive',
+    properties: { honey_level: PROPS.honeyLevel },
+    defaultValues: { honey_level: 0 },
+  });
+}
+
 define('mc:crafting_table', {
   hardness: 2.5, resistance: 2.5, tool: 'axe', soundGroup: 'wood', flammability: 5,
   textures: { top: 'crafting_table_top', bottom: 'oak_planks', side: 'crafting_table_side' },
@@ -691,6 +700,7 @@ const MATERIALS = [
   ['mc:quartz', {}],
   ['mc:slime_ball', {}],
   ['mc:honeycomb', {}],
+  ['mc:glass_bottle', {}],
   ['mc:glowstone_dust', {}],
   ['mc:bone', {}],
   ['mc:leather', {}],
@@ -739,6 +749,7 @@ const FOODS = [
   ['mc:raw_cod', 2, 0.2],
   ['mc:raw_salmon', 2, 0.2],
   ['mc:pufferfish', 1, 0.1],
+  ['mc:honey_bottle', 6, 0.1],
   ['mc:tropical_fish', 1, 0.1],
 ];
 for (const [id, nutrition, saturation] of FOODS) {
@@ -752,6 +763,7 @@ for (const [id, nutrition, saturation] of FOODS) {
  * exactly one place those numbers live. Attack damage and speed per tool type
  * come from the vanilla tables in the same file.
  */
+ITEMS.define('mc:honey_bottle', { stackSize: 16, food: { nutrition: 6, saturation: 0.1 } });
 ITEMS.define('mc:shears', { stackSize: 1, maxDamage: 238, tool: 'shears', attackDamage: 1 });
 ITEMS.define('mc:flint_and_steel', { stackSize: 1, maxDamage: 64, tool: 'flint_and_steel' });
 ITEMS.define('mc:fishing_rod', { stackSize: 1, maxDamage: 64, tool: 'fishing_rod' });
