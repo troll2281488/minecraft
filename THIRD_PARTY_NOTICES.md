@@ -12,3 +12,11 @@
 The permission is documented by the project maintainer's saved screenshot of the GitHub conversation. Keep that screenshot with the project's development records.
 
 This notice covers only the entity-model dataset by InventivetalentDev. It does not grant rights to unrelated Minecraft assets, textures, code, or trademarks.
+
+
+## Java 1.7 first-person animation adaptation
+
+- Source pack: **Java 1.7 Animations v2.5.1** by ambient.
+- Permission: user reports receiving permission from the author for use of the animation pack.
+- Adapted component in this change: first-person attack swing curve, translated from the pack's Bedrock animation expression into the game's renderer radians and 8-tick attack timer.
+- The original Bedrock pack is not redistributed in this repository; only the adapted behavior is implemented here.
