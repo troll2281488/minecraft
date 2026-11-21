@@ -2,7 +2,7 @@ import '../src/world/blocks/index.js';
 import { describe, it, assert, assertEqual } from './framework.js';
 import { BLOCKS } from '../src/world/block.js';
 import { ITEMS, ItemStack } from '../src/world/item.js';
-import { Chest, Hopper, moveOneItem, serializeContainer, deserializeContainer, drainContainer } from '../src/game/containers.js';
+import { Chest, Hopper, moveOneItem, serializeContainer, deserializeContainer, drainContainer, isItemInHopperIntake, insertDroppedStack } from '../src/game/containers.js';
 import { ContainerScreensMixin } from '../src/game/container_screens.js';
 import { RECIPES } from '../src/game/recipes.js';
 
@@ -32,6 +32,68 @@ describe('Java hopper inventory and automation primitives', () => {
     const destination = [ItemStack.of('mc:stick', 64)];
     assertEqual(moveOneItem(source, destination), false);
     assertEqual(source[0].count, 1);
+  });
+  it('collects item entities intersecting the hopper intake volume', () => {
+    assertEqual(isItemInHopperIntake({ x: 0.5, y: 1.08, z: 0.5 }, 0, 0, 0), true);
+    assertEqual(isItemInHopperIntake({ x: 0.02, y: 1.08, z: 0.5 }, 0, 0, 0), false);
+    assertEqual(isItemInHopperIntake({ x: 0.5, y: 1.5, z: 0.5 }, 0, 0, 0), false);
+    assertEqual(isItemInHopperIntake({ x: NaN, y: 1, z: 0 }, 0, 0, 0), false);
+  });
+  it('inserts a dropped stack and reports partial capacity accurately', () => {
+    const hopper = new Hopper();
+    hopper.insert(ItemStack.of('mc:coal', 60));
+    for (let i = 1; i < 5; i++) hopper.slots[i] = ItemStack.of('mc:stone', 64);
+    const result = insertDroppedStack(hopper, ItemStack.of('mc:coal', 9));
+    assertEqual(result.inserted, 4);
+    assertEqual(result.remaining, 5);
+    assertEqual(hopper.slots[0].count, 64);
+  });
+  it('does not change a hopper when a dropped stack cannot fit', () => {
+    const hopper = new Hopper();
+    for (let i = 0; i < 5; i++) hopper.slots[i] = ItemStack.of('mc:stone', 64);
+    const result = insertDroppedStack(hopper, ItemStack.of('mc:coal', 3));
+    assertEqual(result.inserted, 0);
+    assertEqual(result.remaining, 3);
+  });
+  it('collects a dropped item into a nearby hopper on the eight-tick cycle', () => {
+    const blocks = new Map([['0,0,0', BLOCKS.get('mc:hopper').defaultState]]);
+    const world = {
+      getBlock(x,y,z) { return blocks.get(`${x},${y},${z}`) || BLOCKS.get('mc:air').defaultState; },
+      setBlock(x,y,z,state) { blocks.set(`${x},${y},${z}`,state); return true; },
+    };
+    const hopper = new Hopper();
+    const drop = { stack: ItemStack.of('mc:melon_slice', 7), x: 0.5, y: 1.08, z: 0.5 };
+    const entities = { droppedItems: [drop] };
+    const game = {
+      world, entities, player:{x:0.5,y:0,z:0.5}, tickCount:8, _containers:new Map(),
+      ...ContainerScreensMixin,
+    };
+    game._hopperAt = () => hopper;
+    game._tickHoppers();
+    assertEqual(hopper.slots[0].item.id, 'mc:melon_slice');
+    assertEqual(hopper.slots[0].count, 7);
+    assertEqual(entities.droppedItems.length, 0);
+  });
+  it('keeps the uncollected remainder in the world when the hopper is almost full', () => {
+    const blocks = new Map([['0,0,0', BLOCKS.get('mc:hopper').defaultState]]);
+    const world = {
+      getBlock(x,y,z) { return blocks.get(`${x},${y},${z}`) || BLOCKS.get('mc:air').defaultState; },
+      setBlock(x,y,z,state) { blocks.set(`${x},${y},${z}`,state); return true; },
+    };
+    const hopper = new Hopper();
+    hopper.insert(ItemStack.of('mc:coal', 60));
+    for (let i = 1; i < 5; i++) hopper.slots[i] = ItemStack.of('mc:stone', 64);
+    const drop = { stack: ItemStack.of('mc:coal', 9), x: 0.5, y: 1.08, z: 0.5 };
+    const entities = { droppedItems: [drop] };
+    const game = {
+      world, entities, player:{x:0.5,y:0,z:0.5}, tickCount:8, _containers:new Map(),
+      ...ContainerScreensMixin,
+    };
+    game._hopperAt = () => hopper;
+    game._tickHoppers();
+    assertEqual(hopper.slots[0].count, 64);
+    assertEqual(entities.droppedItems.length, 1);
+    assertEqual(entities.droppedItems[0].stack.count, 5);
   });
   it('serializes and restores all five hopper slots', () => {
     const hopper = new Hopper();
