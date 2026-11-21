@@ -21,6 +21,7 @@ import { USABLE_BLOCKS } from './usable_blocks.js';
 import { drainContainer } from './containers.js';
 import { getVillagerOffers, executeVillagerTrade } from '../entity/villager_trades.js';
 import { pistonVector } from './pistons.js';
+import { hiveHarvestResult } from './bee_hives.js';
 
 export const BlockActionsMixin = {
   _breakBlock() {
@@ -123,6 +124,44 @@ export const BlockActionsMixin = {
       return;
     }
     const heldItem = this.inventory?.held?.item;
+    if (this.hit && ['mc:bee_nest', 'mc:beehive'].includes(this.hit.state.block.id)) {
+      const { x, y, z, state } = this.hit;
+      const smokeCalmed = (() => {
+        // A campfire must be directly below the hive or within two blocks,
+        // with an unobstructed vertical smoke column reaching the hive.
+        for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
+          const cx = x + dx, cz = z + dz;
+          if (this.world.getBlock(cx, y - 1, cz).block.id !== 'mc:campfire') continue;
+          let clear = true;
+          for (let sy = y - 2; sy > y - 6; sy--) {
+            const id = this.world.getBlock(cx, sy, cz).block.id;
+            if (id !== 'mc:air' && id !== 'mc:short_grass') { clear = false; break; }
+          }
+          if (clear) return true;
+        }
+        return false;
+      })();
+      const result = hiveHarvestResult(state, heldItem?.id, smokeCalmed);
+      if (result) {
+        if (!result.ok) {
+          this.ui.toast(result.reason === 'not_full' ? 'В улье пока недостаточно мёда'
+            : result.reason === 'bees_angry' ? 'Нужен дым от костра под ульем'
+            : 'Нужны ножницы или стеклянная бутылочка');
+          return;
+        }
+        if (this.player.gamemode === GAMEMODE.SURVIVAL) {
+          if (result.tool === 'shears') this.inventory.damageHeld(1);
+          else this.inventory.consumeHeld(1);
+          for (const drop of result.drops) this.inventory.addItem(drop.id, drop.count);
+        }
+        const next = state.with('honey_level', result.nextLevel);
+        this.world.setBlock(x, y, z, next);
+        this.multiplayer?.pushBlockChange(x, y, z, next);
+        this.sounds?.play('place', 'honey');
+        this.ui.toast(result.tool === 'shears' ? 'Собраны пчелиные соты' : 'Мёд собран в бутылочку');
+        return;
+      }
+    }
     if (this.hit?.state?.block?.id === 'mc:redstone_ore') {
       this._activateRedstoneOre?.(this.hit.x, this.hit.y, this.hit.z);
       return;
