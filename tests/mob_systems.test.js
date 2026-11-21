@@ -1,6 +1,6 @@
 import { describe, it, assert, assertEqual } from './framework.js';
 import {
-  MOB_TYPES_112, MOB_AI_PROFILES, chooseMobDetourYaw, shearSheep, rollFishingCatch, calculateArmorDamage, rollMobDrops, shouldBurnInSunlight, canSaddlePig, pigBoostImpulse, MobSystem, nextGoatRamState, canBreedAnimalWith, MOB_TYPES_112,
+  MOB_TYPES_112, MOB_AI_PROFILES, chooseMobDetourYaw, shearSheep, rollFishingCatch, calculateArmorDamage, rollMobDrops, shouldBurnInSunlight, canSaddlePig, pigBoostImpulse, MobSystem, nextGoatRamState, canBreedAnimalWith,
 } from '../src/entity/mobs.js';
 import { createArrow, stepArrow } from '../src/entity/arrows.js';
 
