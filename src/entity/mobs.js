@@ -7,7 +7,7 @@ import { createVillagerProfile } from './villager_trades.js';
 import { drawPower, canFire } from '../game/bow.js';
 import { aimVector, createArrow, stepArrow } from './arrows.js';
 import { tickBeeForaging } from '../game/bee_hives.js';
-import { enchantmentDamageBonus, enchantmentLevel } from '../game/enchantments.js';
+import { enchantmentDamageBonus, enchantmentLevel, repairWithMending } from '../game/enchantments.js';
 
 /**
  * Lightweight voxel creature simulation. Mobs use deterministic game ticks,
@@ -828,7 +828,7 @@ export class MobSystem {
       const approachDistance = 1.35 + Math.random() * 0.75;
       this.fishing = {
         ...target,
-        ticks: 110 + Math.floor(Math.random() * 100),
+        ticks: Math.max(20, 110 + Math.floor(Math.random() * 100) - enchantmentLevel(stack, 'lure') * 100),
         bite: false,
         window: 0,
         elapsed: 0,
@@ -1276,7 +1276,10 @@ export class MobSystem {
       if (orb.pickupDelay <= 0 && distance < 0.78 && this.experiencePickupCooldown <= 0 &&
           player.gamemode !== 'spectator' && player.health > 0) {
         const oldLevel = player.experience?.level ?? 0;
-        player.addExperience?.(orb.value);
+        const heldStack = this.game.inventory?.held;
+        const mending = repairWithMending(heldStack, orb.value);
+        if (mending.repaired > 0) this.game.inventory.version++;
+        if (mending.xpRemaining > 0) player.addExperience?.(mending.xpRemaining);
         orb.count = Math.max(1, orb.count || 1) - 1;
         if (orb.count <= 0) this.experienceOrbs.splice(i, 1);
         this.experiencePickupCooldown = 2;
