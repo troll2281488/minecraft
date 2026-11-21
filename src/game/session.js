@@ -117,6 +117,9 @@ export const SessionMixin = {
 
     this.ui.hideAllScreens();
     this.ui.setHudVisible(true);
+    // Start the locally supplied playlist; if browser autoplay is blocked,
+    // BackgroundMusic resumes on the player's next pointer/key gesture.
+    void this.sounds?.music?.start();
     this.running = true;
     this.paused = false;
     this.lastFrameTime = performance.now();
@@ -306,6 +309,7 @@ export const SessionMixin = {
     await this.multiplayer?.leaveRoom();
     this.running = false;
     this.paused = true;
+    this.sounds?.music?.stop();
     document.exitPointerLock?.();
     this.ui.setHudVisible(false);
     this.world?.dispose();
