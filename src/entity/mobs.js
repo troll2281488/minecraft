@@ -89,6 +89,19 @@ export function detachMobLead(mob, owner = 'player') {
   return true;
 }
 
+export const HORSE_FOOD_EFFECTS = Object.freeze({
+  'mc:sugar': Object.freeze({ heal: 1, growth: 0.10 }),
+  'mc:wheat': Object.freeze({ heal: 2, growth: 0.20 }),
+  'mc:apple': Object.freeze({ heal: 3, growth: 0.30 }),
+  'mc:golden_carrot': Object.freeze({ heal: 4, growth: 0.50, breeding: true }),
+  'mc:golden_apple': Object.freeze({ heal: 10, growth: 0.50, breeding: true }),
+  'mc:enchanted_golden_apple': Object.freeze({ heal: 10, growth: 0.50, breeding: true }),
+  'mc:hay_block': Object.freeze({ heal: 20, growth: 0.90 }),
+});
+
+export function horseFoodEffect(itemId) {
+  return HORSE_FOOD_EFFECTS[itemId] || null;
+}
 export const BREEDING_FOODS = Object.freeze({
   cow: Object.freeze(['mc:wheat']), sheep: Object.freeze(['mc:wheat']),
   pig: Object.freeze(['mc:carrot', 'mc:potato']),
@@ -875,7 +888,22 @@ export class MobSystem {
     const player = this.game.player;
     if (!animal || !player || !['survival', 'creative'].includes(player.gamemode)) return false;
     const creative = player.gamemode === 'creative';
-    if (!held?.item || !canBreedAnimalWith(animal.type, held.item.id)) return false;
+    if (animal.type === 'horse' && held?.item) {
+      const effect = horseFoodEffect(held.item.id);
+      if (effect && animal.health < 30) {
+        if (!creative) this.game.inventory.remove(held.item.id, 1);
+        animal.health = Math.min(30, animal.health + effect.heal);
+        this.game.ui?.toast('Лошадь восстановила здоровье');
+        return true;
+      }
+      if (effect && animal.ageTicks < 0) {
+        if (!creative) this.game.inventory.remove(held.item.id, 1);
+        animal.ageTicks = Math.min(0, Math.ceil(animal.ageTicks * (1 - effect.growth)));
+        this.game.ui?.toast('Жеребёнок быстрее взрослеет');
+        return true;
+      }
+      if (!effect?.breeding) return false;
+    }    if (!held?.item || !canBreedAnimalWith(animal.type, held.item.id)) return false;
     if (animal.ageTicks >= 0 && (animal.breedCooldown > 0 || animal.loveTicks > 0)) {
       this.game.ui?.toast('This animal is not ready to breed');
       return true;
