@@ -7,7 +7,7 @@ import { createVillagerProfile } from './villager_trades.js';
 import { drawPower, canFire } from '../game/bow.js';
 import { aimVector, createArrow, stepArrow } from './arrows.js';
 import { tickBeeForaging } from '../game/bee_hives.js';
-import { enchantmentDamageBonus, enchantmentLevel, repairWithMending } from '../game/enchantments.js';
+import { enchantmentDamageBonus, enchantmentLevel, repairWithMending, fishingWaitTicks } from '../game/enchantments.js';
 
 /**
  * Lightweight voxel creature simulation. Mobs use deterministic game ticks,
@@ -828,7 +828,7 @@ export class MobSystem {
       const approachDistance = 1.35 + Math.random() * 0.75;
       this.fishing = {
         ...target,
-        ticks: Math.max(20, 110 + Math.floor(Math.random() * 100) - enchantmentLevel(stack, 'lure') * 100),
+        ticks: fishingWaitTicks(110 + Math.floor(Math.random() * 100), stack),
         bite: false,
         window: 0,
         elapsed: 0,
