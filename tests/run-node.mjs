@@ -25,6 +25,7 @@ import './enchantments.test.js';
 import './enchanting_table.test.js';
 import './ranged_weapons_advancements.test.js';
 import './firework_explosion.test.js';
+import './expanded_survival_potions.test.js';
 import './trident_gameplay.test.js';
 import './mob_systems.test.js';
 import './composting.test.js';
