@@ -97,6 +97,7 @@ stoneLike('mc:mossy_cobblestone', 'mossy_cobblestone', 2, 6);
 stoneLike('mc:granite', 'granite', 1.5, 6);
 stoneLike('mc:polished_granite', 'polished_granite', 1.5, 6);
 stoneLike('mc:stone_bricks', 'stone_bricks', 1.5, 6);
+stoneLike('mc:bricks', 'bricks', 2, 6);
 stoneLike('mc:diorite', 'diorite', 1.5, 6);
 stoneLike('mc:polished_diorite', 'polished_diorite', 1.5, 6);
 stoneLike('mc:andesite', 'andesite', 1.5, 6);
