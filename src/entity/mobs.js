@@ -5,7 +5,7 @@ import { experienceForMob, experienceForFishing, experienceForBreeding, splitExp
 import { TerrainGenerator, villageCandidateForCell } from '../world/gen/terrain.js';
 import { createVillagerProfile } from './villager_trades.js';
 import { drawPower, canFire } from '../game/bow.js';
-import { aimVector, createArrow, stepArrow, createThrowable, stepThrowable } from './arrows.js';
+import { aimVector, createArrow, stepArrow, createThrowable, stepThrowable, eggHatchCount } from './arrows.js';
 import { tickBeeForaging } from '../game/bee_hives.js';
 
 /**
@@ -407,11 +407,10 @@ export class MobSystem {
         result.mob.anim.hurt = 1;
       }
       if (['block', 'mob'].includes(result.hit) && projectile.type === 'egg') {
-        const chance = Math.random();
-        if (chance < 0.125) {
+        const count = eggHatchCount();
+        if (count > 0) {
           const x = Math.floor(projectile.x), z = Math.floor(projectile.z);
           const y = world.getHeight(x, z) + 1;
-          const count = chance < (1 / 32) ? 4 : 1;
           for (let chick = 0; chick < count; chick++) {
             this._spawn('chicken', x, z, { y, ageTicks: -24000 });
           }
