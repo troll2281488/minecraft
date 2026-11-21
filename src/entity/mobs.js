@@ -575,7 +575,7 @@ export class MobSystem {
         if (lightning) {
           mob.fireTicks = Math.max(mob.fireTicks || 0, lightning.fireTicks);
           if (lightning.chargedCreeper) mob.charged = true;
-          if (lightning.transformTo) mob.type = lightning.transformTo;
+          if (lightning.transformTo && mob.health > 0) mob.type = lightning.transformTo;
           this.game.sounds?.play('thunder');
           this.spawnBlockParticles(mob.x, mob.y + 0.5, mob.z, 'mc:lightning');
           const channelAward = this.game.player?.recordAdvancementEvent?.('channelled_lightning', this.game.tickCount || 0);
