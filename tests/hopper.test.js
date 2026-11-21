@@ -274,6 +274,68 @@ describe('Java hopper inventory and automation primitives', () => {
     assertEqual(blocks.get('0,0,0').get('enabled'), false);
     assertEqual(game.entities.droppedItems.length, 1);
   });
+  it('routes only smeltable items from a hopper above into the furnace input', () => {
+    const hopper = new Hopper();
+    hopper.slots[0] = ItemStack.of('mc:stone', 2);
+    hopper.slots[1] = ItemStack.of('mc:iron_ore', 3);
+    const furnace = { input: ItemStack.EMPTY.clone(), fuel: ItemStack.EMPTY.clone() };
+    assertEqual(ContainerScreensMixin._hopperTransferOne(
+      { type: 'hopper', data: hopper }, { type: 'furnace', data: furnace }, 'top',
+    ), true);
+    assertEqual(hopper.slots[0].count, 2, 'non-smeltable first slot must be skipped');
+    assertEqual(hopper.slots[1].count, 2);
+    assertEqual(furnace.input.item.id, 'mc:iron_ore');
+    assertEqual(furnace.input.count, 1);
+  });
+  it('routes only valid fuel from a hopper beside the furnace into its fuel slot', () => {
+    const hopper = new Hopper();
+    hopper.slots[0] = ItemStack.of('mc:stone', 2);
+    hopper.slots[1] = ItemStack.of('mc:coal', 3);
+    const furnace = { input: ItemStack.EMPTY.clone(), fuel: ItemStack.EMPTY.clone() };
+    assertEqual(ContainerScreensMixin._hopperTransferOne(
+      { type: 'hopper', data: hopper }, { type: 'furnace', data: furnace }, 'side',
+    ), true);
+    assertEqual(hopper.slots[0].count, 2, 'non-fuel first slot must be skipped');
+    assertEqual(hopper.slots[1].count, 2);
+    assertEqual(furnace.fuel.item.id, 'mc:coal');
+    assertEqual(furnace.fuel.count, 1);
+  });
+  it('rejects fuel through the furnace top and smeltables through the side', () => {
+    const hopper = new Hopper();
+    hopper.insert(ItemStack.of('mc:coal', 2));
+    const furnace = { input: ItemStack.EMPTY.clone(), fuel: ItemStack.EMPTY.clone() };
+    assertEqual(ContainerScreensMixin._hopperTransferOne(
+      { type: 'hopper', data: hopper }, { type: 'furnace', data: furnace }, 'top',
+    ), false);
+    assertEqual(ContainerScreensMixin._hopperTransferOne(
+      { type: 'hopper', data: hopper }, { type: 'furnace', data: furnace }, 'side',
+    ), true);
+    assertEqual(furnace.input.isEmpty, true);
+    assertEqual(furnace.fuel.item.id, 'mc:coal');
+  });
+  it('does not overfill or replace an incompatible furnace slot', () => {
+    const hopper = new Hopper();
+    hopper.insert(ItemStack.of('mc:iron_ore', 2));
+    const furnace = {
+      input: ItemStack.of('mc:gold_ore', 64),
+      fuel: ItemStack.EMPTY.clone(),
+    };
+    assertEqual(ContainerScreensMixin._hopperTransferOne(
+      { type: 'hopper', data: hopper }, { type: 'furnace', data: furnace }, 'top',
+    ), false);
+    assertEqual(hopper.slots[0].count, 2);
+    assertEqual(furnace.input.item.id, 'mc:gold_ore');
+    assertEqual(furnace.input.count, 64);
+  });
+  it('does not insert into a furnace from its bottom face', () => {
+    const hopper = new Hopper();
+    hopper.insert(ItemStack.of('mc:coal', 2));
+    const furnace = { input: ItemStack.EMPTY.clone(), fuel: ItemStack.EMPTY.clone() };
+    assertEqual(ContainerScreensMixin._hopperTransferOne(
+      { type: 'hopper', data: hopper }, { type: 'furnace', data: furnace }, 'bottom',
+    ), false);
+    assertEqual(hopper.slots[0].count, 2);
+  });
   it('has the vanilla five-iron-and-chest crafting recipe', () => {
     assert(RECIPES.recipes.some((recipe) => recipe.result === 'mc:hopper' &&
       recipe.pattern?.join('|') === 'I I|ICI| I '), 'hopper recipe missing');
