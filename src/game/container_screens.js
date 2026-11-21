@@ -499,7 +499,8 @@ export const ContainerScreensMixin = {
     if (!sourceEntry || !destinationEntry) return false;
     let sourceSlots;
     if (sourceEntry.type === 'furnace') {
-      // A hopper below a furnace extracts only its finished output.
+      // A hopper below a furnace extracts its finished output. Fuel-container
+      // returns are intentionally not modeled until bucket/container items exist.
       const source = sourceEntry.data.output;
       if (!source || source.isEmpty) return false;
       const destinationSlots = destinationEntry.data?.slots;
@@ -515,22 +516,26 @@ export const ContainerScreensMixin = {
     if (!Array.isArray(sourceSlots)) return false;
 
     if (destinationEntry.type === 'furnace') {
+      // Java hopper faces have distinct furnace roles: top -> input,
+      // horizontal sides -> fuel, bottom -> output extraction only.
       const key = destinationFace === 'top' ? 'input'
         : destinationFace === 'side' ? 'fuel' : null;
       if (!key) return false;
-      const sourceIndex = sourceSlots.findIndex((stack) => stack && !stack.isEmpty);
+      const target = destinationEntry.data[key];
+      if (!target) return false;
+      const sourceIndex = sourceSlots.findIndex((stack) => {
+        if (!stack || stack.isEmpty) return false;
+        const item = stack.item;
+        if (key === 'input' ? !SMELTING.has(item.id) : item.fuelTicks <= 0) return false;
+        if (target.isEmpty) return true;
+        const one = ItemStack.of(item.id, 1, stack.damage, stack.data);
+        return target.canStackWith(one) && target.count < target.maxStackSize;
+      });
       if (sourceIndex < 0) return false;
       const source = sourceSlots[sourceIndex];
-      const target = destinationEntry.data[key];
       const one = ItemStack.of(source.item.id, 1, source.damage, source.data);
-      if (!target.isEmpty) {
-        if (!target.canStackWith(one) || target.count >= target.maxStackSize) return false;
-        target.count += 1;
-      } else {
-        if (key === 'input' && !SMELTING.has(one.item.id)) return false;
-        if (key === 'fuel' && one.item.fuelTicks <= 0) return false;
-        destinationEntry.data[key] = one;
-      }
+      if (target.isEmpty) destinationEntry.data[key] = one;
+      else target.count += 1;
       source.count -= 1;
       if (source.count <= 0) sourceSlots[sourceIndex] = ItemStack.EMPTY.clone();
       return true;
