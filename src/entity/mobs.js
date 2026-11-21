@@ -7,7 +7,7 @@ import { createVillagerProfile } from './villager_trades.js';
 import { drawPower, canFire } from '../game/bow.js';
 import { aimVector, createArrow, stepArrow } from './arrows.js';
 import { tickBeeForaging } from '../game/bee_hives.js';
-import { enchantmentDamageBonus, enchantmentLevel } from '../game/enchantments.js';
+import { enchantmentDamageBonus, enchantmentLevel, repairWithMending, fishingWaitTicks, protectionDamageMultiplier, unbreakingDamage } from '../game/enchantments.js';
 
 /**
  * Lightweight voxel creature simulation. Mobs use deterministic game ticks,
@@ -261,8 +261,9 @@ export function calculateHorseArmorDamage(damage, material = null) {
   return calculateArmorDamage(damage, points, 0);
 }
 
-export function rollMobDrops(type, random = Math.random) {
-  const amount = (min, max) => min + Math.floor(random() * (max - min + 1));
+export function rollMobDrops(type, random = Math.random, lootingLevel = 0) {
+  const looting = Math.max(0, Math.min(3, Math.floor(lootingLevel) || 0));
+  const amount = (min, max) => min + Math.floor(random() * (max - min + 1)) + (looting ? Math.floor(random() * (looting + 1)) : 0);
   if (type === 'pig') return [{ id: 'mc:raw_porkchop', count: amount(1, 3) }];
   if (type === 'cow') return [
     { id: 'mc:raw_beef', count: amount(1, 3) },
@@ -284,7 +285,7 @@ export function rollMobDrops(type, random = Math.random) {
     const count = amount(0, 2);
     const drops = count ? [{ id: 'mc:rotten_flesh', count }] : [];
     // Rare carrot/potato drops make both crops obtainable before farming exists.
-    if (random() < 0.025) drops.push({ id: random() < 0.5 ? 'mc:carrot' : 'mc:potato', count: 1 });
+    if (random() < 0.025 + looting * 0.01) drops.push({ id: random() < 0.5 ? 'mc:carrot' : 'mc:potato', count: 1 });
     return drops;
   }
   return [];
@@ -828,7 +829,7 @@ export class MobSystem {
       const approachDistance = 1.35 + Math.random() * 0.75;
       this.fishing = {
         ...target,
-        ticks: 110 + Math.floor(Math.random() * 100),
+        ticks: fishingWaitTicks(110 + Math.floor(Math.random() * 100), stack),
         bite: false,
         window: 0,
         elapsed: 0,
@@ -1132,12 +1133,14 @@ export class MobSystem {
       armorPoints += stack.item.armorPoints || 0;
       toughness += stack.item.armorToughness || 0;
       worn = true;
-      if (stack.item.isDamageable && stack.applyDamage(Math.max(1, Math.ceil(amount)))) {
+      const armorWear = unbreakingDamage(stack, Math.max(1, Math.ceil(amount)));
+      if (stack.item.isDamageable && armorWear > 0 && stack.applyDamage(armorWear)) {
         inventory.slots[36 + i] = ItemStack.EMPTY.clone();
       }
     }
     if (worn && inventory) inventory.version++;
-    const finalDamage = calculateArmorDamage(amount, armorPoints, toughness);
+    const armorStacks = expectedSlots.map((_, i) => inventory?.get(36 + i)).filter((stack) => stack && !stack.isEmpty);
+    const finalDamage = calculateArmorDamage(amount, armorPoints, toughness) * protectionDamageMultiplier(armorStacks);
     if (finalDamage > 0) {
       this.game.sounds?.play('hurt');
       // A restrained hit cue: a short red edge tint and sub-pixel camera shake.
@@ -1178,7 +1181,7 @@ export class MobSystem {
       mob.targetYaw = Math.atan2(mob.x - player.x, mob.z - player.z);
     }
     if (mob.health <= 0) {
-      for (const drop of rollMobDrops(mob.type)) {
+      for (const drop of rollMobDrops(mob.type, Math.random, enchantmentLevel(held, 'looting'))) {
         const leftover = this.game.inventory?.addItem(drop.id, drop.count) ?? drop.count;
         if (leftover > 0) this.game.ui?.toast('Inventory full: ' + leftover + ' ' + drop.id.replace('mc:', '') + ' not collected', { error: true });
       }
@@ -1276,7 +1279,10 @@ export class MobSystem {
       if (orb.pickupDelay <= 0 && distance < 0.78 && this.experiencePickupCooldown <= 0 &&
           player.gamemode !== 'spectator' && player.health > 0) {
         const oldLevel = player.experience?.level ?? 0;
-        player.addExperience?.(orb.value);
+        const heldStack = this.game.inventory?.held;
+        const mending = repairWithMending(heldStack, orb.value);
+        if (mending.repaired > 0) this.game.inventory.version++;
+        if (mending.xpRemaining > 0) player.addExperience?.(mending.xpRemaining);
         orb.count = Math.max(1, orb.count || 1) - 1;
         if (orb.count <= 0) this.experienceOrbs.splice(i, 1);
         this.experiencePickupCooldown = 2;

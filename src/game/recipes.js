@@ -32,6 +32,10 @@ recipes.push({ result: 'mc:powered_rail', count: 6, pattern: ['G G', 'GSG', 'GRG
 recipes.push({ result: 'mc:detector_rail', count: 6, pattern: ['I I', 'IPI', 'IRI'], key: { I: 'mc:iron_ingot', P: 'mc:stone_pressure_plate', R: 'mc:redstone' } });
 recipes.push({ result: 'mc:activator_rail', count: 6, pattern: ['ISI', 'IRI', 'ISI'], key: { I: 'mc:iron_ingot', S: 'mc:stick', R: 'mc:redstone_torch' } });
 
+// -- Enchanting and repair stations ---------------------------------------
+recipes.push({ result: 'mc:enchanting_table', count: 1, pattern: [' B ', 'ODO', 'OOO'], key: { B: 'mc:book', O: 'mc:obsidian', D: 'mc:diamond' } });
+recipes.push({ result: 'mc:anvil', count: 1, pattern: ['BBB', ' I ', 'III'], key: { B: 'mc:iron_block', I: 'mc:iron_ingot' } });
+
 // -- Processing stations --------------------------------------------------
 recipes.push({ result: 'mc:smoker', count: 1, pattern: [' L ', 'LFL', ' L '], key: { L: '#mc:logs', F: 'mc:furnace' } });
 recipes.push({ result: 'mc:blast_furnace', count: 1, pattern: ['III', 'IFI', 'SSS'], key: { I: 'mc:iron_ingot', F: 'mc:furnace', S: 'mc:smooth_stone' } });

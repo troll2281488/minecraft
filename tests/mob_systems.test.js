@@ -117,6 +117,8 @@ describe('Mob data and loot', () => {
     assertEqual(skeleton[0].id, 'mc:bone');
     assertEqual(skeleton[0].count, 2);
     assertEqual(rollMobDrops('bat').length, 0);
+    const lootingPig = rollMobDrops('pig', () => 0.99, 3);
+    assertEqual(lootingPig[0].count, 6);
   });
 
   it('can produce the rare zombie crop drop', () => {

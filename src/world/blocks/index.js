@@ -329,6 +329,15 @@ for (const id of ['mc:bee_nest', 'mc:beehive']) {
   });
 }
 
+define('mc:enchanting_table', {
+  hardness: 5, resistance: 1200, tool: 'pickaxe', harvestLevel: 0, requiresTool: true,
+  soundGroup: 'stone', texture: 'enchanting_table',
+});
+define('mc:anvil', {
+  hardness: 5, resistance: 1200, tool: 'pickaxe', harvestLevel: 0, requiresTool: true,
+  soundGroup: 'metal', texture: 'anvil',
+});
+
 define('mc:crafting_table', {
   hardness: 2.5, resistance: 2.5, tool: 'axe', soundGroup: 'wood', flammability: 5,
   textures: { top: 'crafting_table_top', bottom: 'oak_planks', side: 'crafting_table_side' },

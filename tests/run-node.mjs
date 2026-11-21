@@ -22,6 +22,7 @@ import './campfire_cooking.test.js';
 import './ender_pearl.test.js';
 import './railways.test.js';
 import './enchantments.test.js';
+import './enchanting_table.test.js';
 import './mob_systems.test.js';
 import './composting.test.js';
 import './hopper.test.js';
