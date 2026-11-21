@@ -284,4 +284,18 @@ describe('Java wall family geometry and crafting', () => {
     assertEqual(capped.get('up'), true);
   });
 
+
+  it('round-trips wall connection states through the canonical save string', () => {
+    const wall = BLOCKS.get('mc:cobblestone_wall').defaultState;
+    const connected = wallStateFromNeighbors(wall, (dx, dy, dz) =>
+      dx === 1 && dy === 0 && dz === 0 ? STONE : null);
+    const restored = BLOCKS.stateFromString(connected.stringId);
+    assertEqual(restored.stringId, connected.stringId);
+    assertEqual(restored.get('east'), 'low');
+    assertEqual(restored.get('up'), true);
+    const legacy = BLOCKS.stateFromString('mc:cobblestone_wall');
+    assertEqual(legacy.get('east'), 'none');
+    assertEqual(legacy.get('up'), true);
+  });
+
 });
