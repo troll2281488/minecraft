@@ -12,6 +12,10 @@ const NEIGHBORS = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
 const HORIZONTAL = [[1,0,0,'east','west'],[-1,0,0,'west','east'],[0,0,1,'south','north'],[0,0,-1,'north','south']];
 const FACING_VECTOR = { north: [0,0,-1], south: [0,0,1], east: [1,0,0], west: [-1,0,0], up:[0,1,0], down:[0,-1,0] };
 
+export function jukeboxComparatorOutput(record) {
+  return record && record !== 'none' ? 15 : 0;
+}
+
 export function comparatorOutput(rear, left = 0, right = 0, subtract = false) {
   const back = Math.max(0, Math.min(15, Math.floor(Number(rear) || 0)));
   const side = Math.max(Math.max(0, Math.min(15, Math.floor(Number(left) || 0))), Math.max(0, Math.min(15, Math.floor(Number(right) || 0))));
@@ -631,7 +635,7 @@ export const RedstoneDevicesMixin = {
           const hopper = this._hopperAt?.(rearX, rearY, rearZ);
           if (hopper?.slots) containerPower = comparatorContainerOutput(hopper.slots, hopper.slots.length);
         } else if (rearBlock.block.id === 'mc:jukebox') {
-          containerPower = rearBlock.get('record') && rearBlock.get('record') !== 'none' ? 15 : 0;
+          containerPower = jukeboxComparatorOutput(rearBlock.get('record'));
         } else if (rearBlock.block.id === 'mc:composter') {
           containerPower = composterComparatorOutput(rearBlock.get('level'));
         } else if (rearBlock.block.id === 'mc:dropper' || rearBlock.block.id === 'mc:dispenser') {
