@@ -821,7 +821,7 @@ export class Multiplayer {
         for (const [key, entry] of queued) if (this.pendingBlockWrites.get(key) === entry) this.pendingBlockWrites.delete(key);
       })
       .catch((error) => console.warn('[multiplayer] batched block update:', error));
-  },
+  }
 
   pushBlockChange(x, y, z, state) {
     if (!this.roomId || this.applyingRemoteBlock) return;
