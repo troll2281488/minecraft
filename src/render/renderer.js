@@ -127,7 +127,7 @@ function vanillaLayerParts(model, layerName = 'main') {
 }
 
 const MOB_TEXTURE_FILES = Object.freeze({
-  cow:'cow.png', pig:'pig.png', sheep:'sheep.png', sheep_fur:'sheep_fur.png', chicken:'chicken.png', wolf:'wolf.png', horse:'horse.png', rabbit:'rabbit.png', polar_bear:'polar_bear.png', mooshroom:'mooshroom.png',
+  cow:'cow.png', goat:'cow.png', pig:'pig.png', sheep:'sheep.png', sheep_fur:'sheep_fur.png', chicken:'chicken.png', wolf:'wolf.png', horse:'horse.png', rabbit:'rabbit.png', polar_bear:'polar_bear.png', mooshroom:'mooshroom.png',
   zombie:'zombie.png', skeleton:'skeleton.png', stray:'stray.png',
   bat:'bat.png', blaze:'blaze.png', ghast:'ghast.png', guardian:'guardian.png',
   elder_guardian:'guardian_elder.png', endermite:'endermite.png', magma_cube:'magmacube.png',
@@ -1003,7 +1003,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         : mob.type === 'creeper' ? creeper
         : mob.type === 'enderman' ? enderman
         : mob.type === 'spider' || mob.type === 'cave_spider' ? spider
-        : mob.type === 'pig' || mob.type === 'rabbit' ? pig : mob.type === 'cow' || mob.type === 'mooshroom' || mob.type === 'polar_bear' ? cow
+        : mob.type === 'pig' || mob.type === 'rabbit' ? pig : mob.type === 'cow' || mob.type === 'goat' || mob.type === 'mooshroom' || mob.type === 'polar_bear' ? cow
         : mob.type === 'chicken' ? chicken : sheep);
       const pulse = mob.type === 'creeper' && mob.anim?.fuse > 0
         ? 1 + Math.sin(mob.anim.fuse * Math.PI * 12) * 0.10 * mob.anim.fuse : 1;
@@ -1011,7 +1011,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         : mob.type === 'pig' ? [3, 6] : mob.type === 'cow' ? [2, 5]
         : mob.type === 'chicken' ? [4, 5] : mob.type === 'enderman' ? [4, 5] : [2, 5];
       const babyScale = mob.ageTicks < 0 ? 0.55 : 1;
-      const animal = ['sheep', 'pig', 'cow', 'chicken', 'mooshroom', 'rabbit', 'wolf', 'polar_bear', 'bee'].includes(mob.type);
+      const animal = ['sheep', 'pig', 'cow', 'goat', 'chicken', 'mooshroom', 'rabbit', 'wolf', 'polar_bear', 'bee'].includes(mob.type);
       const humanoid = ['zombie', 'skeleton', 'stray', 'villager'].includes(mob.type);
       // Mob movement advances along +sin(yaw), +cos(yaw); render the model on that same forward axis.
       draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
@@ -1019,6 +1019,12 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         mobType: mob.type, mobTextureKey: mob.type === 'villager' ? 'villager_' + (mob.villagerCareer === 'archer' ? 'fletcher' : (mob.villagerCareer || 'farmer')) : mob.type,
         idle: mob.anim?.idle ?? 0, walking: !!mob.anim?.walking,
       });
+      if (mob.type === 'goat' && !vanillaParts) {
+        draw(mob.x, mob.y, mob.z, mob.yaw, [
+          [[-0.27,1.30,0.68],[0.075,0.24,0.075],[0.78,0.72,0.58,1]],
+          [[0.27,1.30,0.68],[0.075,0.24,0.075],[0.78,0.72,0.58,1]],
+        ], mob.walkPhase, -1, -1, pulse * babyScale, {});
+      }
       if (mob.type === 'horse' && mob.horseArmor) {
         const armorColor = mob.horseArmor === 'diamond' ? [0.18,0.78,0.78,1]
           : mob.horseArmor === 'golden' ? [0.92,0.70,0.18,1] : [0.68,0.72,0.76,1];
