@@ -74,6 +74,48 @@ describe('Java hopper inventory and automation primitives', () => {
     assertEqual(hopper.slots[0].count, 7);
     assertEqual(entities.droppedItems.length, 0);
   });
+  it('claims a shared dropped stack atomically before inserting it into the hopper', async () => {
+    const blocks = new Map([['0,0,0', BLOCKS.get('mc:hopper').defaultState]]);
+    const world = {
+      getBlock(x,y,z) { return blocks.get(`${x},${y},${z}`) || BLOCKS.get('mc:air').defaultState; },
+      setBlock(x,y,z,state) { blocks.set(`${x},${y},${z}`,state); return true; },
+    };
+    const hopper = new Hopper();
+    const drop = { networkKey: 'drop-1', stack: ItemStack.of('mc:paper', 12), x: 0.5, y: 1.08, z: 0.5 };
+    const entities = { droppedItems: [drop], spawnItemStackAt() { throw new Error('no remainder expected'); } };
+    let claims = 0;
+    const multiplayer = {
+      roomId: 'ABCDE', isHost: true,
+      claimDroppedItem: async () => { claims++; return true; },
+    };
+    const game = {
+      world, entities, multiplayer, player:{x:0.5,y:0,z:0.5}, tickCount:8, _containers:new Map(),
+      ...ContainerScreensMixin,
+    };
+    game._hopperAt = () => hopper;
+    game._tickHoppers();
+    await Promise.resolve();
+    assertEqual(claims, 1);
+    assertEqual(hopper.slots[0].item.id, 'mc:paper');
+    assertEqual(hopper.slots[0].count, 12);
+    assertEqual(entities.droppedItems.length, 0);
+    assertEqual(game._hopperDirtyKeys.has('0,0,0'), true);
+  });
+  it('does not collect a shared item on a non-host client', () => {
+    const blocks = new Map([['0,0,0', BLOCKS.get('mc:hopper').defaultState]]);
+    const world = { getBlock(x,y,z) { return blocks.get(`${x},${y},${z}`) || BLOCKS.get('mc:air').defaultState; } };
+    const drop = { networkKey: 'drop-2', stack: ItemStack.of('mc:paper', 2), x: 0.5, y: 1.08, z: 0.5 };
+    const game = {
+      world, entities:{ droppedItems:[drop] },
+      multiplayer:{ roomId:'ABCDE', isHost:false },
+      player:{x:0.5,y:0,z:0.5}, tickCount:8, _containers:new Map(),
+      ...ContainerScreensMixin,
+    };
+    game._hopperAt = () => { throw new Error('non-host must not mutate hopper state'); };
+    game._tickHoppers();
+    assertEqual(game.entities.droppedItems.length, 1);
+    assertEqual(drop.stack.count, 2);
+  });
   it('keeps the uncollected remainder in the world when the hopper is almost full', () => {
     const blocks = new Map([['0,0,0', BLOCKS.get('mc:hopper').defaultState]]);
     const world = {
