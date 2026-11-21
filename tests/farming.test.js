@@ -78,7 +78,7 @@ describe('wheat farming and farmland hydration', () => {
     assert(ITEMS.get('mc:sugar_cane'), 'sugar cane item missing');
     assert(ITEMS.get('mc:sugar'), 'sugar item missing');
     assertEqual(RECIPES.producing('mc:sugar').length, 1);
-    assertEqual(RECIPES.producing('mc:paper').some(recipe => recipe.pattern?.join('/') === 'CCC/'), true);
+    assertEqual(RECIPES.producing('mc:paper').some(recipe => recipe.pattern?.join('/') === 'CCC'), true);
   });
 
   it('registers persisted farmland moisture from zero through seven', () => {
