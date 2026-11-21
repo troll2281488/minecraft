@@ -15,6 +15,7 @@ import './cobweb_drops.test.js';
 import './animal_lifecycle.test.js';
 import './rabbit_horse_breeding.test.js';
 import './fire_charge.test.js';
+import './fishing.test.js';
 import './farming.test.js';
 import './composting.test.js';
 import './hopper.test.js';
