@@ -104,6 +104,13 @@ function makeComparatorGame(rearBlock, inventory) {
   return { game, blocks };
 }
 
+describe('polished blackstone redstone ingredients', () => {
+  it('registers blackstone blocks required by polished blackstone controls', () => {
+    assertEqual(BLOCKS.get('mc:blackstone')?.id, 'mc:blackstone');
+    assertEqual(BLOCKS.get('mc:polished_blackstone')?.id, 'mc:polished_blackstone');
+  });
+});
+
 describe('comparator inventory signals', () => {
   it('calculates inventory fullness with a minimum signal of one', () => {
     assertEqual(comparatorContainerOutput([], 5), 0);
