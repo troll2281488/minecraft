@@ -78,6 +78,15 @@ describe('piston and sticky piston', () => {
     assertEqual(plan.some((move) => move.from.x === 1 && move.from.y === 1), true);
   });
 
+  it('counts side-attached blocks toward the twelve-block push cap', () => {
+    const entries = [['1,0,0', BLOCKS.get('mc:slime_block').defaultState], ['1,1,0', STONE]];
+    for (let x = 2; x <= 12; x++) entries.push([`${x},0,0`, STONE]);
+    const { world, blocks } = makeWorld(entries);
+    assertEqual(planPistonMove(world, 0, 0, 0, 'east'), null);
+    assertEqual(blocks.get('1,0,0').block.id, 'mc:slime_block');
+    assertEqual(blocks.get('1,1,0'), STONE);
+  });
+
   it('commits a slime push with attached blocks without losing either block', () => {
     const piston = BLOCKS.get('mc:piston').defaultState.with('facing', 'east');
     const source = BLOCKS.get('mc:redstone_block').defaultState;
