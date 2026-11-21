@@ -312,7 +312,11 @@ export class Furnace {
         this.fuel.item.fuelTicks > 0) {
       this.burnTotal = this.fuel.item.fuelTicks;
       this.burnLeft = this.burnTotal;
+      const consumedFuel = this.fuel.item;
       this.fuel = takeOne(this.fuel);
+      if (this.fuel.isEmpty && consumedFuel.containerItem) {
+        this.fuel = ItemStack.of(consumedFuel.containerItem, 1);
+      }
     }
 
     if (this.burnLeft > 0 && this.canSmelt) {
