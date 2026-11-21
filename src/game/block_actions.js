@@ -423,6 +423,8 @@ export const BlockActionsMixin = {
       'mc:carrot': 'mc:carrots',
       'mc:potato': 'mc:potatoes',
       'mc:beetroot_seeds': 'mc:beetroots',
+      'mc:pumpkin_seeds': 'mc:pumpkin_stem',
+      'mc:melon_seeds': 'mc:melon_stem',
     };
     const plantedCrop = cropForSeed[held.item?.id];
     if (plantedCrop && id === 'mc:farmland') {
