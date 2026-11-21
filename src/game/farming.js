@@ -15,7 +15,7 @@ export const FARMLAND_MAX_MOISTURE = 7;
 export const FARMLAND_TICK_INTERVAL = 20;
 export const WHEAT_GROWTH_INTERVAL = 600;
 export const DRY_WHEAT_GROWTH_INTERVAL = 1800;
-export const SUGAR_CANE_GROWTH_INTERVAL = 600;
+export const SUGAR_CANE_GROWTH_INTERVAL = 600;\nexport const SWEET_BERRY_GROWTH_INTERVAL = 600;\nexport const SWEET_BERRY_BUSH_ID = 'mc:sweet_berry_bush';
 export const SUGAR_CANE_MAX_HEIGHT = 3;
 const SUGAR_CANE_SOILS = new Set(['mc:sand', 'mc:dirt', 'mc:grass_block']);
 
@@ -35,7 +35,7 @@ export function canPlantSugarCane(world, x, y, z) {
   return false;
 }
 
-export function nextWheatAge(state) {
+export function nextSweetBerryBushAge(state) {\n  if (state?.block?.id !== SWEET_BERRY_BUSH_ID) return null;\n  const age = state.get('age');\n  return age >= 3 ? null : age + 1;\n}\n\nexport function sweetBerryHarvest(state, random = Math.random) {\n  if (state?.block?.id !== SWEET_BERRY_BUSH_ID) return null;\n  const age = state.get('age');\n  if (age < 2) return null;\n  const count = age === 3 ? 2 + Math.floor(random() * 2) : 1 + Math.floor(random() * 2);\n  return { count, state: state.with('age', 1) };\n}\n\nexport function nextWheatAge(state) {
   return state?.block?.id === WHEAT_CROP_ID ? nextCropAge(state) : null;
 }
 
