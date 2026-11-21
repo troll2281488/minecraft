@@ -936,7 +936,8 @@ for (const [id, nutrition, saturation] of FOODS) {
 }
 
 // Java survival foods added with their vanilla nutrition and container returns.
-ITEMS.define('mc:sweet_berries', { food: { nutrition: 2, saturation: 0.1 } });\nITEMS.define('mc:golden_carrot', { food: { nutrition: 6, saturation: 1.2 } });
+ITEMS.define('mc:sweet_berries', { food: { nutrition: 2, saturation: 0.1 } });
+ITEMS.define('mc:golden_carrot', { food: { nutrition: 6, saturation: 1.2 } });
 ITEMS.define('mc:mushroom_stew', { stackSize: 1, food: { nutrition: 6, saturation: 0.6 }, containerItem: 'mc:bowl' });
 ITEMS.define('mc:beetroot_soup', { stackSize: 1, food: { nutrition: 6, saturation: 0.6 }, containerItem: 'mc:bowl' });
 ITEMS.define('mc:rabbit_stew', { stackSize: 1, food: { nutrition: 10, saturation: 0.6 }, containerItem: 'mc:bowl' });
