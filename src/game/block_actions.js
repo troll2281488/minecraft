@@ -23,6 +23,7 @@ import { getVillagerOffers, executeVillagerTrade } from '../entity/villager_trad
 import { pistonVector } from './pistons.js';
 import { hiveHarvestResult, hasCampfireSmoke } from './bee_hives.js';
 import { compostChance, nextComposterLevel, boneMealAge, compostRoll, canApplyBoneMeal } from './composting.js';
+import { canPlantSugarCane } from './farming.js';
 
 export const BlockActionsMixin = {
   _breakBlock() {
@@ -427,6 +428,19 @@ export const BlockActionsMixin = {
       'mc:melon_seeds': 'mc:melon_stem',
     };
     const plantedCrop = cropForSeed[held.item?.id];
+    if (held.item?.id === 'mc:sugar_cane' && canPlantSugarCane(this.world, x, y, z)) {
+      const targetY = y + 1;
+      const above = this.world.getBlock(x, targetY, z);
+      if (above.block.id === 'mc:air' || above.block.replaceable) {
+        const cane = BLOCKS.get('mc:sugar_cane')?.defaultState;
+        if (cane && this.world.setBlock(x, targetY, z, cane)) {
+          this.multiplayer?.pushBlockChange(x, targetY, z, cane);
+          if (survival) this.inventory.consumeHeld(1);
+          this.ui.toast('Sugar cane planted');
+        }
+      }
+      return true;
+    }
     if (plantedCrop && id === 'mc:farmland') {
       const cropPos = { x, y: y + 1, z };
       const above = this.world.getBlock(cropPos.x, cropPos.y, cropPos.z);
