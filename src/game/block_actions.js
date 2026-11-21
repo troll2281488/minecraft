@@ -27,6 +27,9 @@ import { canPlantSugarCane } from './farming.js';
 import { refreshWallConnections } from './wall_updates.js';
 import { planBucketInteraction } from './bucket.js';
 import { planCauldronInteraction } from './cauldron.js';
+import { canSleepAt, hasNearbySleepHostile } from './sleep.js';
+import { weatherAt } from './weather.js';
+import { POTION_ITEMS } from '../entity/status_effects.js';
 
 export const BlockActionsMixin = {
   _refreshWallConnections(...positions) {
@@ -268,11 +271,16 @@ export const BlockActionsMixin = {
     }
 
     if (this.hit?.state?.block?.id === 'mc:bed') {
-      if (this.world.dimension !== 'overworld') {
-        this.ui.toast('В этом измерении нельзя спать.', { error: true });
+      const nearbyHostile = hasNearbySleepHostile(
+        this.entities?.mobs, this.player.x, this.player.y, this.player.z,
+      );
+      const sleep = canSleepAt(this.world.dimension, this.world.time, nearbyHostile,
+        weatherAt(this.world.seed, this.world.time));
+      if (!sleep.ok) {
+        this.ui.toast(sleep.reason, { error: true });
       } else {
         this.worldMeta.spawnPoint = { x: this.hit.x + 0.5, y: this.hit.y + 1, z: this.hit.z + 0.5 };
-        this.world.time = 1000;
+        this.world.time = 0;
         this._save(false).catch(() => {});
         this.ui.toast('Точка возрождения установлена. Ночь пропущена.');
       }
@@ -450,6 +458,7 @@ export const BlockActionsMixin = {
 
     // Eating takes priority over block placement, as using a food item does in
     // survival. A full food bar prevents ordinary food from being consumed.
+    if (!sneaking && this._drinkHeldPotion()) return;
     if (!sneaking && this._eatHeldFood()) return;
     this._placeBlock();
   },
@@ -569,6 +578,36 @@ export const BlockActionsMixin = {
       return true;
     }
     return false;
+  },
+
+  _drinkHeldPotion() {
+    const player = this.player;
+    const stack = this.inventory?.held;
+    if (!player || !stack || stack.isEmpty || player.gamemode === GAMEMODE.SPECTATOR) return false;
+    const itemId = stack.item.id;
+    if (itemId === 'mc:milk_bucket') {
+      player.effects?.clear();
+      if (player.gamemode === GAMEMODE.SURVIVAL) {
+        this.inventory.consumeHeld(1);
+        const leftover = this.inventory.addItem('mc:bucket', 1);
+        if (leftover > 0) this.entities?.spawnItemStackAt(new ItemStack(ITEMS.get('mc:bucket'), 1), player.x, player.y + 0.5, player.z);
+      }
+      this.sounds?.play('eat');
+      this.ui.toast('Эффекты сняты молоком');
+      return true;
+    }
+    const potion = POTION_ITEMS[itemId];
+    if (!potion) return false;
+    player.effects.apply(potion.effect, potion.duration, potion.amplifier ?? 0);
+    if (potion.instant === 'healing') player.health = Math.min(20, player.health + 4 * (potion.amplifier + 1));
+    if (player.gamemode === GAMEMODE.SURVIVAL) {
+      this.inventory.consumeHeld(1);
+      const leftover = this.inventory.addItem('mc:glass_bottle', 1);
+      if (leftover > 0) this.entities?.spawnItemStackAt(new ItemStack(ITEMS.get('mc:glass_bottle'), 1), player.x, player.y + 0.5, player.z);
+    }
+    this.sounds?.play('eat');
+    this.ui.toast('Выпито зелье: ' + itemId.replace('mc:potion_', '').replaceAll('_', ' '));
+    return true;
   },
 
   _eatHeldFood() {

@@ -931,7 +931,8 @@ export class MobSystem {
     if (this.attackCooldown > 0) return true;
     const player = this.game.player;
     const held = this.game.inventory?.held;
-    const damage = Math.max(1, held?.item?.attackDamage || 1);
+    const baseDamage = Math.max(1, held?.item?.attackDamage || 1);
+    const damage = baseDamage + (player.effects?.has('strength') ? 3 * (player.effects.amplifier('strength') + 1) : 0);
     const finalDamage = mob.type === 'horse' ? calculateHorseArmorDamage(damage, mob.horseArmor) : damage;
     mob.health = Math.max(0, mob.health - finalDamage);
     this.game.sounds?.play('hit');
