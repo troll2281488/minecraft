@@ -286,7 +286,7 @@ function repeaterBoxes() {
 function railBoxes(state) {
   const shape = state.get('shape') || 'north_south';
   const alongX = shape === 'east_west' || shape === 'ascending_east' || shape === 'ascending_west';
-  const curve = shape.includes('_');
+  const curve = ['south_east', 'south_west', 'north_west', 'north_east'].includes(shape);
   const boxes = [];
   const y = 0.0625;
   const railY = 0.095;
