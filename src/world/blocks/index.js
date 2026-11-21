@@ -981,6 +981,11 @@ ITEMS.define('mc:potion_strength', { stackSize: 1, rarity: 'uncommon' });
 ITEMS.define('mc:potion_regeneration', { stackSize: 1, rarity: 'uncommon' });
 ITEMS.define('mc:potion_fire_resistance', { stackSize: 1, rarity: 'uncommon' });
 ITEMS.define('mc:potion_healing', { stackSize: 1, rarity: 'uncommon' });
+ITEMS.define('mc:potion_poison', { stackSize: 1, rarity: 'uncommon' });
+ITEMS.define('mc:potion_water_breathing', { stackSize: 1, rarity: 'uncommon' });
+ITEMS.define('mc:potion_slow_falling', { stackSize: 1, rarity: 'uncommon' });
+ITEMS.define('mc:potion_leaping', { stackSize: 1, rarity: 'uncommon' });
+ITEMS.define('mc:potion_weakness', { stackSize: 1, rarity: 'uncommon' });
 
 ITEMS.define('mc:shield', { stackSize: 1, maxDamage: 336, weapon: 'shield' });
 ITEMS.define('mc:shears', { stackSize: 1, maxDamage: 238, tool: 'shears', attackDamage: 1 });
