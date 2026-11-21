@@ -24,6 +24,38 @@ describe('Java 1.19 dye materials and wool recolouring', () => {
     }
   });
 
+  it('crafts all stained-glass, terracotta and concrete-powder colour variants', () => {
+    for (const color of COLORS) {
+      const dye = `mc:${color}_dye`;
+      const glassGrid = [
+        ItemStack.of('mc:glass'), ItemStack.of('mc:glass'), ItemStack.of('mc:glass'),
+        ItemStack.of('mc:glass'), ItemStack.of(dye), ItemStack.of('mc:glass'),
+        ItemStack.of('mc:glass'), ItemStack.of('mc:glass'), ItemStack.of('mc:glass'),
+      ];
+      const glassRecipe = RECIPES.match(glassGrid, 3);
+      assertEqual(glassRecipe?.result, `mc:${color}_stained_glass`);
+      assertEqual(RECIPES.resultOf(glassRecipe).count, 8);
+
+      const terracottaGrid = [
+        ItemStack.of('mc:terracotta'), ItemStack.of('mc:terracotta'), ItemStack.of('mc:terracotta'),
+        ItemStack.of('mc:terracotta'), ItemStack.of(dye), ItemStack.of('mc:terracotta'),
+        ItemStack.of('mc:terracotta'), ItemStack.of('mc:terracotta'), ItemStack.of('mc:terracotta'),
+      ];
+      const terracottaRecipe = RECIPES.match(terracottaGrid, 3);
+      assertEqual(terracottaRecipe?.result, `mc:${color}_terracotta`);
+      assertEqual(RECIPES.resultOf(terracottaRecipe).count, 8);
+
+      const powderGrid = [
+        ItemStack.of('mc:sand'), ItemStack.of('mc:gravel'), ItemStack.of('mc:sand'),
+        ItemStack.of('mc:gravel'), ItemStack.of(dye), ItemStack.of('mc:gravel'),
+        ItemStack.of('mc:sand'), ItemStack.of('mc:gravel'), ItemStack.of('mc:sand'),
+      ];
+      const powderRecipe = RECIPES.match(powderGrid, 3);
+      assertEqual(powderRecipe?.result, `mc:${color}_concrete_powder`);
+      assertEqual(RECIPES.resultOf(powderRecipe).count, 8);
+    }
+  });
+
   it('provides dye recipes for the represented vanilla sources', () => {
     const sources = [
       ['mc:bone_meal', 'mc:white_dye'],
