@@ -1156,12 +1156,13 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           const attackProgress = Math.max(0, Math.min(1, (8 - (this.player.attackTime ?? 0)) / 8));
           const itemPose = bedrockItemPose(this.player.attackTime > 0 ? attackProgress : 0, itemKind, charge);
           const itemSize = [size[0], size[1] * itemPose.scaleY, size[2]];
-          const itemParts = [[[0, 0, 0], itemSize, [1, 1, 1, 1], null, null, itemPose.rotation]];
+          const itemRotation = [0.12 + itemPose.rotation[0], itemPose.rotation[1], -0.18 + itemPose.rotation[2]];
+          const itemParts = [[[0, 0, 0], itemSize, [1, 1, 1, 1], null, null, itemRotation]];
           // Translate the Bedrock pack's 1/16-block keyframe offsets into the
           // camera-relative item anchor used by this renderer.
           const itemX = handX + rightX * (0.018 + itemPose.offset[0]) + forwardX * itemPose.offset[2];
           const itemY = handY - 0.24 + itemPose.offset[1];
-          const itemZ = handZ + forwardZ * (0.025 + itemPose.offset[2]) + rightZ * 0.018;
+          const itemZ = handZ + forwardZ * (0.025 + itemPose.offset[2]) + rightZ * (0.018 + itemPose.offset[0]);
           const itemSwing = this.player.attackTime > 0 ? 0 : -0.12;
           draw(itemX, itemY, itemZ, yaw, itemParts, 0, -1, -1, 1,
             { itemModel: true, itemSprite: true, itemSwing });
