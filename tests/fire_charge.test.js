@@ -22,6 +22,15 @@ describe('Fire charge and material recipes', () => {
     assertEqual(recipe?.count, 3);
   });
 
+  it('also accepts charcoal for fire charge crafting', () => {
+    const recipe = RECIPES.match([
+      ItemStack.of('mc:gunpowder', 1), ItemStack.of('mc:blaze_powder', 1), ItemStack.of('mc:charcoal', 1),
+      ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY,
+      ItemStack.EMPTY, ItemStack.EMPTY, ItemStack.EMPTY,
+    ], 3);
+    assertEqual(recipe?.result, 'mc:fire_charge');
+    assertEqual(recipe?.count, 3);
+  });
   it('converts four rabbit hides into leather', () => {
     const recipe = RECIPES.match([
       ItemStack.of('mc:rabbit_hide', 1), ItemStack.EMPTY, ItemStack.EMPTY,
