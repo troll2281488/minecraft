@@ -280,6 +280,8 @@ recipes.push({
   key: { T: 'mc:stick', I: 'mc:iron_ingot', S: 'mc:string', H: 'mc:tripwire_hook' },
 });
 
+recipes.push({ result: 'mc:firework_rocket', count: 3, ingredients: ['mc:paper', 'mc:gunpowder'] });
+
 recipes.push({
   result: 'mc:arrow', count: 4,
   pattern: ['F', 'S', 'G'],
