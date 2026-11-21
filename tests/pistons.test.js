@@ -2,7 +2,7 @@ import '../src/world/blocks/index.js';
 import { describe, it, assert, assertEqual } from './framework.js';
 import { BLOCKS } from '../src/world/block.js';
 import { shapeBoxes, collisionBoxes } from '../src/world/shapes.js';
-import { planPistonMove, PISTON_MAX_PUSH } from '../src/game/pistons.js';
+import { planPistonMove, PISTON_MAX_PUSH, pistonBlocksStick } from '../src/game/pistons.js';
 import { RedstoneDevicesMixin } from '../src/game/redstone_devices.js';
 import { RECIPES } from '../src/game/recipes.js';
 import { ITEMS } from '../src/world/item.js';
@@ -35,6 +35,7 @@ describe('piston and sticky piston', () => {
     assertEqual(BLOCKS.get('mc:piston').defaultState.get('extended'), false);
     assertEqual(BLOCKS.get('mc:piston_head').defaultState.get('sticky'), false);
     assert(ITEMS.get('mc:slime_ball'), 'slime ball item missing');
+    assert(ITEMS.get('mc:slime_block'), 'slime block item missing');
   });
 
   it('renders the oriented head as two physical boxes', () => {
@@ -64,6 +65,13 @@ describe('piston and sticky piston', () => {
     ({ world, blocks } = makeWorld([['1,0,0', BLOCKS.get('mc:obsidian').defaultState]]));
     assertEqual(planPistonMove(world, 0, 0, 0, 'east'), null);
     assertEqual(blocks.get('1,0,0').block.id, 'mc:obsidian');
+  });
+
+  it('sticks slime blocks to ordinary blocks but not to unrelated ordinary blocks', () => {
+    const slime = BLOCKS.get('mc:slime_block').defaultState;
+    assertEqual(pistonBlocksStick(slime, STONE), true);
+    assertEqual(pistonBlocksStick(STONE, slime), true);
+    assertEqual(pistonBlocksStick(STONE, STONE), false);
   });
 
   it('slime blocks pull adjacent ordinary blocks as one push group', () => {
