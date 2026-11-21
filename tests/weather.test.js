@@ -1,5 +1,5 @@
 import { describe, it, assertEqual } from './framework.js';
-import { weatherAt, precipitationRoll, nextRainCauldronLevel, shouldRainExtinguishCampfire } from '../src/game/weather.js';
+import { weatherAt, precipitationRoll, nextRainCauldronLevel, shouldRainExtinguishCampfire, tickWeatherBlocks } from '../src/game/weather.js';
 
 describe('Seeded Overworld weather', () => {
   it('is deterministic within a weather period', () => {
@@ -26,5 +26,57 @@ describe('Seeded Overworld weather', () => {
     assertEqual(shouldRainExtinguishCampfire('clear', true, 0), false);
     assertEqual(shouldRainExtinguishCampfire('rain', false, 0), false);
     assertEqual(shouldRainExtinguishCampfire('rain', true, 0.05), false);
+  });
+});
+
+describe('Weather block integration', () => {
+  function state(id, values = {}) {
+    return {
+      block: { id, solid: false, opaqueCube: false },
+      values,
+      get(key) { return this.values[key]; },
+      with(key, value) { return state(id, { ...this.values, [key]: value }); },
+    };
+  }
+
+  function mockWorld(seed, entries = {}) {
+    const blocks = new Map(Object.entries(entries));
+    const key = (x, y, z) => x + ',' + y + ',' + z;
+    return {
+      seed,
+      blocks,
+      hasChunk: () => true,
+      getHeight: () => 64,
+      getBlock(x, y, z) { return blocks.get(key(x, y, z)) || state('mc:air'); },
+      setBlock(x, y, z, next) { blocks.set(key(x, y, z), next); return true; },
+    };
+  }
+
+  it('extinguishes exposed campfires and collects rain in exposed cauldrons', () => {
+    let campSeed = 'weather-campfire';
+    while (precipitationRoll(campSeed, 0, 64, 0, 20, 'campfire') >= 0.05) campSeed += 'x';
+    const campWorld = mockWorld(campSeed, { '0,64,0': state('mc:campfire', { lit: true }) });
+    const campChanges = tickWeatherBlocks(campWorld, { x: 0, z: 0 }, 'rain', 20);
+    assertEqual(campChanges.length, 1);
+    assertEqual(campWorld.getBlock(0, 64, 0).get('lit'), false);
+
+    let cauldronSeed = 'weather-cauldron';
+    while (precipitationRoll(cauldronSeed, 0, 64, 0, 20, 'cauldron') >= 0.001) cauldronSeed += 'x';
+    const cauldronWorld = mockWorld(cauldronSeed, { '0,64,0': state('mc:cauldron', { level: 1 }) });
+    const cauldronChanges = tickWeatherBlocks(cauldronWorld, { x: 0, z: 0 }, 'thunder', 20);
+    assertEqual(cauldronChanges.length, 1);
+    assertEqual(cauldronWorld.getBlock(0, 64, 0).get('level'), 2);
+  });
+
+  it('does not apply rain effects beneath a solid roof or during clear weather', () => {
+    let seed = 'covered-weather';
+    while (precipitationRoll(seed, 0, 64, 0, 20, 'campfire') >= 0.05) seed += 'x';
+    const covered = mockWorld(seed, {
+      '0,64,0': state('mc:campfire', { lit: true }),
+      '0,65,0': { block: { id: 'mc:stone', solid: true, opaqueCube: true } },
+    });
+    assertEqual(tickWeatherBlocks(covered, { x: 0, z: 0 }, 'rain', 20).length, 0);
+    const clear = mockWorld(seed, { '0,64,0': state('mc:campfire', { lit: true }) });
+    assertEqual(tickWeatherBlocks(clear, { x: 0, z: 0 }, 'clear', 20).length, 0);
   });
 });
