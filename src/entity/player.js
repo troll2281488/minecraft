@@ -17,6 +17,7 @@ import { AABB } from '../core/math.js';
 import { PlayerVitals } from './vitals.js';
 import { PlayerExperience } from './experience.js';
 import { PlayerStatusEffects } from './status_effects.js';
+import { createAdvancementState, processAdvancementEvent, serializeAdvancementState } from '../game/advancements.js';
 import { collisionBoxes } from '../world/shapes.js';
 
 /** Blocks per second converted to blocks per tick. */
@@ -60,6 +61,7 @@ export class Player {
     this.vitals = new PlayerVitals();
     this.experience = new PlayerExperience();
     this.effects = new PlayerStatusEffects();
+    this.advancements = createAdvancementState();
 
     this.fallDistance = 0;
 
@@ -563,6 +565,10 @@ export class Player {
     return this.experience.add(points);
   }
 
+  recordAdvancementEvent(event, timestamp = 0) {
+    return processAdvancementEvent(this.advancements, event, timestamp);
+  }
+
   toJSON() {
     return {
       pos: { x: this.x, y: this.y, z: this.z },
@@ -572,6 +578,7 @@ export class Player {
       vitals: this.vitals.toJSON(),
       experience: this.experience.toJSON(),
       effects: this.effects.toJSON(),
+      advancements: serializeAdvancementState(this.advancements),
       gamemode: this.gamemode,
       flying: this.flying,
     };
@@ -586,6 +593,7 @@ export class Player {
     this.vitals.loadFrom(json.vitals);
     this.experience.loadFrom(json.experience);
     this.effects.loadFrom(json.effects);
+    this.advancements = createAdvancementState(json.advancements);
     this.gamemode = json.gamemode ?? GAMEMODE.SURVIVAL;
     this.flying = json.flying ?? false;
     return this;

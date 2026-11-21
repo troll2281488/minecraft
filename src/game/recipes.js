@@ -275,6 +275,12 @@ recipes.push({
 });
 
 recipes.push({
+  result: 'mc:crossbow', count: 1,
+  pattern: ['SIS', 'THT', ' T '],
+  key: { T: 'mc:stick', I: 'mc:iron_ingot', S: 'mc:string', H: 'mc:tripwire_hook' },
+});
+
+recipes.push({
   result: 'mc:arrow', count: 4,
   pattern: ['F', 'S', 'G'],
   key: { F: 'mc:flint', S: 'mc:stick', G: 'mc:feather' },
