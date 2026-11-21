@@ -19,6 +19,7 @@ import { MS_PER_TICK, RENDER, TICKS_PER_DAY, SAVE } from './core/constants.js';
 import { Frustum } from './core/mat4.js';
 import { weatherAt, tickWeatherBlocks } from './game/weather.js';
 import { tickCampfireCooking } from './game/campfire_cooking.js';
+import { tickRailNetwork, MinecartSystem } from './game/railways.js';
 
 import './world/blocks/index.js';
 import { freezeRegistries } from './world/blocks/index.js';
@@ -130,6 +131,7 @@ class Game {
     this.sounds = new GameSounds();
     this.multiplayer = new Multiplayer(this);
     this.entities = new MobSystem(this);
+    this.minecarts = new MinecartSystem(this);
     this.frustum = new Frustum();
 
     this.world = null;
@@ -378,6 +380,10 @@ class Game {
       player.attackTime = 8;
     }
     player.tick(world);
+    if ((!this.multiplayer?.roomId || this.multiplayer.isHost) && this.tickCount % 10 === 0) {
+      tickRailNetwork(world, player, this.tickCount, this.multiplayer);
+    }
+    this.minecarts?.tick();
     const lavaAtFeet = world.getBlock(Math.floor(player.x), Math.floor(player.y + 0.05), Math.floor(player.z)).block.id === 'mc:lava';
     const lavaAtHead = world.getBlock(Math.floor(player.x), Math.floor(player.y + 1.2), Math.floor(player.z)).block.id === 'mc:lava';
     if (!player.flying && (lavaAtFeet || lavaAtHead) && !player.effects?.has('fire_resistance')) {
@@ -396,7 +402,7 @@ class Game {
       player.ridingHorse.z = player.z;
       player.ridingHorse.yaw = player.yaw * Math.PI / 180;
     }
-    if (player.onGround && Math.hypot(player.vx ?? 0, player.vz ?? 0) > 0.09) {
+    if (!player.ridingMinecart && player.onGround && Math.hypot(player.vx ?? 0, player.vz ?? 0) > 0.09) {
       const under = world.getBlock(Math.floor(player.x), Math.floor(player.y - 0.15), Math.floor(player.z)).block;
       this.sounds?.step(under.soundGroup || 'stone');
     }
