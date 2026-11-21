@@ -22,7 +22,7 @@ import { drainContainer } from './containers.js';
 import { getVillagerOffers, executeVillagerTrade } from '../entity/villager_trades.js';
 import { pistonVector } from './pistons.js';
 import { hiveHarvestResult, hasCampfireSmoke } from './bee_hives.js';
-import { compostChance, nextComposterLevel, boneMealAge, compostRoll } from './composting.js';
+import { compostChance, nextComposterLevel, boneMealAge, compostRoll, canApplyBoneMeal } from './composting.js';
 
 export const BlockActionsMixin = {
   _breakBlock() {
@@ -162,7 +162,7 @@ export const BlockActionsMixin = {
       return;
     }
     if (heldItem?.id === 'mc:bone_meal' && this.hit &&
-        ['mc:wheat', 'mc:carrots', 'mc:potatoes', 'mc:beetroots'].includes(this.hit.state.block.id)) {
+        canApplyBoneMeal(this.hit.state.block.id, this.hit.state.get('age'))) {
       const { x, y, z, state } = this.hit;
       const nextAge = boneMealAge(state.get('age'), this.world.seed, x, y, z, this.tickCount);
       if (nextAge === null) {
