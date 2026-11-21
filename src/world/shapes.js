@@ -225,6 +225,79 @@ function repeaterBoxes() {
   ];
 }
 
+
+// ---------------------------------------------------------------------------
+// Fences and fence gates
+// ---------------------------------------------------------------------------
+
+const FENCE_CACHE = new Map();
+const FENCE_GATE_CACHE = new Map();
+
+function gateConnectsFrom(direction, gateState) {
+  if (gateState.block.renderShape !== 'fence_gate') return false;
+  const facing = gateState.get('facing');
+  // A gate's fence line runs perpendicular to its horizontal facing.
+  return (direction === 'east' || direction === 'west')
+    ? (facing === 'north' || facing === 'south')
+    : (facing === 'east' || facing === 'west');
+}
+
+function fenceConnects(neighbor, direction) {
+  if (!neighbor?.block) return false;
+  if (neighbor.block.renderShape === 'fence') return true;
+  if (gateConnectsFrom(direction, neighbor)) return true;
+  return neighbor.block.solid === true && neighbor.block.opaqueCube === true;
+}
+
+function fenceBoxes(state, getNeighbor) {
+  const connected = {
+    north: fenceConnects(getNeighbor?.(0, 0, -1), 'north'),
+    south: fenceConnects(getNeighbor?.(0, 0, 1), 'south'),
+    west: fenceConnects(getNeighbor?.(-1, 0, 0), 'west'),
+    east: fenceConnects(getNeighbor?.(1, 0, 0), 'east'),
+  };
+  const mask = (connected.north ? 1 : 0) | (connected.south ? 2 : 0) |
+    (connected.west ? 4 : 0) | (connected.east ? 8 : 0);
+  if (FENCE_CACHE.has(mask)) return FENCE_CACHE.get(mask);
+  const boxes = [[0.375, 0, 0.375, 0.625, 1.5, 0.625]];
+  const arms = {
+    north: [0.375, 0, 0, 0.625, 0, 0.375],
+    south: [0.375, 0, 0.625, 0.625, 0, 1],
+    west: [0, 0, 0.375, 0.375, 0, 0.625],
+    east: [0.625, 0, 0.375, 1, 0, 0.625],
+  };
+  for (const direction of ['north', 'south', 'west', 'east']) {
+    if (!connected[direction]) continue;
+    const [x0, , z0, x1, , z1] = arms[direction];
+    boxes.push([x0, 0.375, z0, x1, 0.5625, z1]);
+    boxes.push([x0, 0.75, z0, x1, 0.9375, z1]);
+  }
+  const frozen = Object.freeze(boxes.map((box) => Object.freeze(box)));
+  FENCE_CACHE.set(mask, frozen);
+  return frozen;
+}
+
+function fenceGateBoxes(state) {
+  const facing = state.get('facing') || 'north';
+  const alongX = (facing === 'north' || facing === 'south') !== (state.get('open') === true);
+  const key = `${alongX ? 'x' : 'z'}`;
+  if (FENCE_GATE_CACHE.has(key)) return FENCE_GATE_CACHE.get(key);
+  const boxes = alongX ? [
+    [0, 0, 0.375, 0.1875, 1.5, 0.625],
+    [0.8125, 0, 0.375, 1, 1.5, 0.625],
+    [0.1875, 0.375, 0.375, 0.8125, 0.5625, 0.625],
+    [0.1875, 0.75, 0.375, 0.8125, 0.9375, 0.625],
+  ] : [
+    [0.375, 0, 0, 0.625, 1.5, 0.1875],
+    [0.375, 0, 0.8125, 0.625, 1.5, 1],
+    [0.375, 0.375, 0.1875, 0.625, 0.5625, 0.8125],
+    [0.375, 0.75, 0.1875, 0.625, 0.9375, 0.8125],
+  ];
+  const frozen = Object.freeze(boxes.map((box) => Object.freeze(box)));
+  FENCE_GATE_CACHE.set(key, frozen);
+  return frozen;
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -233,8 +306,10 @@ function repeaterBoxes() {
  * The boxes that make up a block's visible/physical shape, in 0..1 local space.
  * Used by the mesher for geometry.
  */
-export function shapeBoxes(state) {
+export function shapeBoxes(state, getNeighbor = null) {
   switch (state.block.renderShape) {
+    case 'fence': return fenceBoxes(state, getNeighbor);
+    case 'fence_gate': return fenceGateBoxes(state);
     case 'slab': return slabBoxes(state);
     case 'stair': return stairBoxes(state);
     case 'pane': return PANE_BOXES;
@@ -256,16 +331,17 @@ export function shapeBoxes(state) {
  * The boxes the player collides with. A non-solid block (air, plants, water)
  * has none; everything else uses its shape, defaulting to a full cube.
  */
-export function collisionBoxes(state) {
+export function collisionBoxes(state, getNeighbor = null) {
   if (!state.block.solid) return EMPTY_LIST;
-  return shapeBoxes(state);
+  if (state.block.renderShape === 'fence_gate' && state.get('open')) return EMPTY_LIST;
+  return shapeBoxes(state, getNeighbor);
 }
 
 /** True if this block is anything other than a plain full cube. */
 export function isNonCube(state) {
   const shape = state.block.renderShape;
-  return shape === 'slab' || shape === 'stair' || shape === 'pane' || shape === 'ladder' || shape === 'door' || shape === 'trapdoor' || shape === 'button' || shape === 'lever' || shape === 'pressure_plate' || shape === 'weighted_pressure_plate' || shape === 'redstone_wire' || shape === 'repeater' || shape === 'piston_head';
+  return shape === 'slab' || shape === 'stair' || shape === 'pane' || shape === 'ladder' || shape === 'door' || shape === 'trapdoor' || shape === 'fence' || shape === 'fence_gate' || shape === 'button' || shape === 'lever' || shape === 'pressure_plate' || shape === 'weighted_pressure_plate' || shape === 'redstone_wire' || shape === 'repeater' || shape === 'piston_head';
 }
 
 /** The shapes the mesher must render with the box emitter rather than as a cube. */
-export const BOX_SHAPES = Object.freeze(new Set(['slab', 'stair', 'pane', 'ladder', 'door', 'trapdoor', 'button', 'lever', 'pressure_plate', 'weighted_pressure_plate', 'redstone_wire', 'repeater', 'piston_head']));
+export const BOX_SHAPES = Object.freeze(new Set(['slab', 'stair', 'pane', 'ladder', 'door', 'trapdoor', 'fence', 'fence_gate', 'button', 'lever', 'pressure_plate', 'weighted_pressure_plate', 'redstone_wire', 'repeater', 'piston_head']));
