@@ -855,6 +855,16 @@ TEXTURES.honeycomb_block = () => {
   return tile;
 };
 
+TEXTURES.campfire = () => {
+  const tile = grainy(hex(0x70452b), 0.1, 'campfire');
+  const coal = hex(0x29252a), ember = hex(0xf28a24), hot = hex(0xffd34f);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    let c = y > 10 ? hex(0x9b7042) : ((x + y) % 5 === 0 ? ember : coal);
+    if (x >= 5 && x <= 10 && y >= 4 && y <= 10 && (x + y) % 3 === 0) c = hot;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
 TEXTURES.bee_nest = () => {
   const tile = grainy(hex(0xb98a4e), 0.14, 'bee_nest');
   const bark = hex(0x75502d), straw = hex(0xd5b06c), dark = hex(0x382a1c);
