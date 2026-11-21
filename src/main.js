@@ -17,6 +17,7 @@
 import { experienceDroppedOnDeath } from './entity/experience.js';
 import { MS_PER_TICK, RENDER, TICKS_PER_DAY, SAVE } from './core/constants.js';
 import { Frustum } from './core/mat4.js';
+import { weatherAt, tickWeatherBlocks } from './game/weather.js';
 
 import './world/blocks/index.js';
 import { freezeRegistries } from './world/blocks/index.js';
@@ -331,6 +332,14 @@ class Game {
     if (!world || !player) return;
 
     world.time = (world.time + 1) % (TICKS_PER_DAY * 8);
+    // Seeded weather is shared by every client without a polling channel.
+    if (world.dimension === 'overworld' && this.tickCount % 20 === 0 &&
+        (!this.multiplayer?.roomId || this.multiplayer.isHost)) {
+      const weather = weatherAt(world.seed, world.time);
+      for (const change of tickWeatherBlocks(world, player, weather, world.time)) {
+        this.multiplayer?.pushBlockChange(change.x, change.y, change.z, change.state);
+      }
+    }
     this._tickRedstoneDevices?.();
     this._tickFurnaces?.();
     this._tickHoppers?.();
