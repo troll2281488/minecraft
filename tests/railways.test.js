@@ -121,7 +121,7 @@ describe('Minecart movement and transport', () => {
 
   it('lets players break a targeted cart and returns the minecart item', () => {
     const drops = [];
-    const player = { x: 0.5, y: 64, z: 0.5, yaw: 0, pitch: 0, eyeY: 65.62 };
+    const player = { x: 0.5, y: 64, z: 0.5, yaw: 0, pitch: 32, eyeY: 65.62 };
     const system = new MinecartSystem({ player, entities: { spawnItemStackAt: (...args) => drops.push(args) }, sounds: { play() {} } });
     system.carts.push({ id: 1, x: 0.5, y: 64.12, z: 2.5, speed: 0, vx: 0, vz: 0, yaw: 0 });
     assertEqual(system.attackFromPlayer(), true);
