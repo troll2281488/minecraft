@@ -10,6 +10,7 @@ import './composting.test.js';
 import './hopper.test.js';
 import './fences.test.js';
 import './stairs.test.js';
+import './dye_crafting.test.js';
 import { applyRemotePlayerState, remoteEquipmentSnapshot, queueChatMessage, canAcquireContainerLease, electRoomHost, isContainerLeaseHeldByOther, isValidContainerKey, listJoinableRooms, ownsContainerLease, queueContainerWrite } from '../src/game/multiplayer.js';
 
 describe('multiplayer container key validation', () => {

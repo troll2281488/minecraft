@@ -191,6 +191,10 @@ define('mc:glass', {
   opaqueCube: false, opacity: 0, renderShape: 'cutout', texture: 'glass',
 });
 
+define('mc:terracotta', {
+  hardness: 1.25, resistance: 4.2, tool: 'pickaxe', soundGroup: 'stone', texture: 'terracotta',
+});
+
 define('mc:white_wool', {
   hardness: 0.8, resistance: 0.8, soundGroup: 'cloth', texture: 'white_wool',
 });
@@ -814,6 +818,22 @@ const MATERIALS = [
   ['mc:glowstone_dust', {}],
   ['mc:bone', {}],
   ['mc:bone_meal', {}],
+  ['mc:white_dye', {}],
+  ['mc:orange_dye', {}],
+  ['mc:magenta_dye', {}],
+  ['mc:light_blue_dye', {}],
+  ['mc:yellow_dye', {}],
+  ['mc:lime_dye', {}],
+  ['mc:pink_dye', {}],
+  ['mc:gray_dye', {}],
+  ['mc:light_gray_dye', {}],
+  ['mc:cyan_dye', {}],
+  ['mc:purple_dye', {}],
+  ['mc:blue_dye', {}],
+  ['mc:brown_dye', {}],
+  ['mc:green_dye', {}],
+  ['mc:red_dye', {}],
+  ['mc:black_dye', {}],
   ['mc:leather', {}],
   ['mc:feather', {}],
   ['mc:rabbit_hide', {}],
