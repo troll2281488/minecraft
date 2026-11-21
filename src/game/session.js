@@ -147,6 +147,7 @@ export const SessionMixin = {
       this.ui.toast('Нижний мир обновлён: старая генерация Незера заменена новой.', { duration: 6000 });
     }
     this.entities?.reset();
+    this.minecarts?.reset();
     this.world.time = this.worldMeta.time ?? 0;
     if (!this.multiplayer?.roomId) {
       const saved = await storage.getAllChunks(this.worldMeta.id, SAVE_DIMENSION[next]);
@@ -264,6 +265,7 @@ export const SessionMixin = {
 
   async _respawnAfterDeath() {
     if (!this.world || !this.player) return;
+    this.minecarts?.dismount();
     let spawn;
     const savedSpawn = this.worldMeta?.spawnPoint;
     if (this.world.dimension !== 'overworld') await this._switchDimension('overworld');
@@ -309,6 +311,7 @@ export const SessionMixin = {
     this.world?.dispose();
     this.world = null;
     this.entities?.reset();
+    this.minecarts?.reset();
     this.chunkRenderer.dispose();
     this.ui.showScreen('title');
     this._startTitlePreview?.();
