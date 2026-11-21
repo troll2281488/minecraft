@@ -518,6 +518,7 @@ const TEXTURES = {
   granite:            () => grainy(hex(0x9a6a5a), 0.24, 'granite', { clumps: 7 }),
   polished_granite:   () => grainy(hex(0xa2705f), 0.1, 'polished_granite'),
   stone_bricks:       () => grainy(hex(0x777777), 0.20, 'stone_bricks', { clumps: 5 }),
+  mossy_stone_bricks: () => mossyCobble('mossy_stone_bricks'),
   bricks:             () => grainy(hex(0x985044), 0.18, 'bricks', { clumps: 5, clumpColor: hex(0xb36a58) }),
   diorite:            () => grainy(hex(0xcfcfcf), 0.26, 'diorite', { clumps: 7, clumpColor: hex(0x9d9d9d) }),
   polished_diorite:   () => grainy(hex(0xd6d6d6), 0.1, 'polished_diorite'),
@@ -527,6 +528,7 @@ const TEXTURES = {
   obsidian:           () => grainy(hex(0x150c24), 0.55, 'obsidian', { clumps: 6, clumpColor: hex(0x2d1a4a) }),
   netherrack:         () => grainy(hex(0x713b35), 0.38, 'netherrack', { clumps: 11, clumpColor: hex(0x4c2828), clumpSize: 3 }),
   nether_bricks:      () => grainy(hex(0x321b20), 0.18, 'nether_bricks', { clumps: 7, clumpColor: hex(0x4c292c) }),
+  red_nether_bricks:  () => grainy(hex(0x5a2027), 0.20, 'red_nether_bricks', { clumps: 7, clumpColor: hex(0x78333a) }),
   soul_sand:          () => grainy(hex(0x55402e), 0.35, 'soul_sand', { clumps: 9, clumpColor: hex(0x33251d) }),
   nether_gold_ore:    () => oreTile(hex(0x713b35), hex(0xf2c43c), 'nether_gold_ore', 7),
   bed:                () => grainy(hex(0xb94b43), 0.12, 'bed', { clumps: 5, clumpColor: hex(0x8b302d) }),
@@ -855,6 +857,14 @@ TEXTURES.polished_blackstone = () => {
   for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
     if ((x + y) % 8 === 0) setPx(tile, x, y, light[0], light[1], light[2]);
     else if ((x * 3 + y * 5) % 23 === 0) setPx(tile, x, y, dark[0], dark[1], dark[2]);
+  }
+  return tile;
+};
+TEXTURES.polished_blackstone_bricks = () => {
+  const tile = grainy(hex(0x302f35), 0.18, 'polished_blackstone_bricks');
+  const seam = hex(0x211f25);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    if (x === 0 || x === 8 || y === 0 || y === 8) setPx(tile, x, y, seam[0], seam[1], seam[2]);
   }
   return tile;
 };
