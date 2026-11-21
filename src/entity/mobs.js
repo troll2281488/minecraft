@@ -6,6 +6,7 @@ import { TerrainGenerator, villageCandidateForCell } from '../world/gen/terrain.
 import { createVillagerProfile } from './villager_trades.js';
 import { drawPower, canFire } from '../game/bow.js';
 import { aimVector, createArrow, stepArrow } from './arrows.js';
+import { beginCrossbowLoad as beginCrossbowLoadData, finishCrossbowLoad, crossbowShotPlan, consumeCrossbowCharge } from '../game/crossbow.js';
 import { tickBeeForaging } from '../game/bee_hives.js';
 import { enchantmentDamageBonus, enchantmentLevel, repairWithMending, fishingWaitTicks, protectionDamageMultiplier, unbreakingDamage } from '../game/enchantments.js';
 
@@ -298,6 +299,7 @@ export class MobSystem {
     this.arrows = [];
     this.blockParticles = [];
     this.bowDrawStart = null;
+    this.crossbowLoadStart = null;
     this.droppedItems = [];
     this.experienceOrbs = [];
     this.experiencePickupCooldown = 0;
@@ -365,6 +367,54 @@ export class MobSystem {
       p.life--;
       if (p.life <= 0) this.blockParticles.splice(i, 1);
     }
+  }
+
+  beginCrossbowLoad() {
+    const held = this.game.inventory?.held;
+    if (held?.item?.id !== 'mc:crossbow' || !['survival', 'creative'].includes(this.game.player?.gamemode)) return false;
+    const tick = this.game.tickCount || 0;
+    const data = beginCrossbowLoadData(held, tick);
+    if (!data) return false;
+    held.data = data;
+    this.crossbowLoadStart = tick;
+    this.game.ui?.toast('Заряжаю арбалет…', { duration: 700 });
+    return true;
+  }
+
+  releaseCrossbowLoad() {
+    if (this.crossbowLoadStart === null) return false;
+    const held = this.game.inventory?.held;
+    const tick = this.game.tickCount || 0;
+    const started = this.crossbowLoadStart;
+    this.crossbowLoadStart = null;
+    if (held?.item?.id !== 'mc:crossbow') return true;
+    const quickCharge = enchantmentLevel(held, 'quick_charge');
+    const loaded = finishCrossbowLoad(held.data, tick, 'mc:arrow', quickCharge);
+    if (!loaded) { held.data = { ...(held.data || {}), loadingSince: null, charged: false, chargedProjectile: null }; return true; }
+    const inventory = this.game.inventory;
+    const creative = this.game.player?.gamemode === 'creative';
+    if (!creative && inventory.remove('mc:arrow', 1) !== 1) {
+      held.data = { ...loaded, charged: false, chargedProjectile: null };
+      this.game.ui?.toast('Для арбалета нужны стрелы!', { error: true });
+      return true;
+    }
+    held.data = loaded;
+    const multishot = enchantmentLevel(held, 'multishot');
+    const piercing = enchantmentLevel(held, 'piercing');
+    const shots = crossbowShotPlan(loaded, multishot, piercing) || [];
+    const player = this.game.player;
+    for (const shot of shots) {
+      const direction = aimVector(player.yaw + shot.yawOffsetDeg, player.pitch);
+      const arrow = createArrow(player.x + direction[0] * 0.45, player.eyeY + direction[1] * 0.45, player.z + direction[2] * 0.45, direction, 1);
+      arrow.damage = shot.damage;
+      arrow.piercingLevel = shot.piercingLevel;
+      this.arrows.push(arrow);
+    }
+    held.data = consumeCrossbowCharge(loaded);
+    if (!creative) inventory.damageHeld(1);
+    this.game.sounds?.play('bow');
+    this.game.ui?.toast(multishot > 0 ? 'Арбалет: тройной выстрел' : 'Арбалет выстрелил');
+    return true;
   }
 
   beginBowDraw() {
