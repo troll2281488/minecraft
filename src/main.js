@@ -18,6 +18,7 @@ import { experienceDroppedOnDeath } from './entity/experience.js';
 import { MS_PER_TICK, RENDER, TICKS_PER_DAY, SAVE } from './core/constants.js';
 import { Frustum } from './core/mat4.js';
 import { weatherAt, tickWeatherBlocks } from './game/weather.js';
+import { tickCampfireCooking } from './game/campfire_cooking.js';
 
 import './world/blocks/index.js';
 import { freezeRegistries } from './world/blocks/index.js';
@@ -333,6 +334,11 @@ class Game {
 
     world.time = (world.time + 1) % (TICKS_PER_DAY * 8);
     // Seeded weather is shared by every client without a polling channel.
+    if (this.tickCount % 20 === 0 && (!this.multiplayer?.roomId || this.multiplayer.isHost)) {
+      for (const change of tickCampfireCooking(world, player)) {
+        this.multiplayer?.pushBlockChange(change.x, change.y, change.z, change.state);
+      }
+    }
     if (world.dimension === 'overworld' && this.tickCount % 20 === 0 &&
         (!this.multiplayer?.roomId || this.multiplayer.isHost)) {
       const weather = weatherAt(world.seed, world.time);
