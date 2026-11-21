@@ -97,6 +97,7 @@ stoneLike('mc:mossy_cobblestone', 'mossy_cobblestone', 2, 6);
 stoneLike('mc:granite', 'granite', 1.5, 6);
 stoneLike('mc:polished_granite', 'polished_granite', 1.5, 6);
 stoneLike('mc:stone_bricks', 'stone_bricks', 1.5, 6);
+stoneLike('mc:mossy_stone_bricks', 'mossy_stone_bricks', 1.5, 6);
 stoneLike('mc:bricks', 'bricks', 2, 6);
 stoneLike('mc:diorite', 'diorite', 1.5, 6);
 stoneLike('mc:polished_diorite', 'polished_diorite', 1.5, 6);
@@ -107,7 +108,9 @@ stoneLike('mc:obsidian', 'obsidian', 50, 1200, 3);
 stoneLike('mc:netherrack', 'netherrack', 0.4, 2);
 stoneLike('mc:blackstone', 'blackstone', 1.5, 6);
 stoneLike('mc:polished_blackstone', 'polished_blackstone', 1.5, 6);
+stoneLike('mc:polished_blackstone_bricks', 'polished_blackstone_bricks', 1.5, 6);
 stoneLike('mc:nether_bricks', 'nether_bricks', 2, 6);
+stoneLike('mc:red_nether_bricks', 'red_nether_bricks', 2, 6);
 stoneLike('mc:nether_gold_ore', 'nether_gold_ore', 3, 3);
 define('mc:glowstone', {
   hardness: 0.3, resistance: 0.3, tool: 'pickaxe', soundGroup: 'glass',
