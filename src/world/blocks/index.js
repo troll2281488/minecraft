@@ -315,8 +315,8 @@ for (const id of ['mc:bee_nest', 'mc:beehive']) {
   define(id, {
     hardness: 0.6, resistance: 0.6, tool: 'axe', soundGroup: 'wood',
     flammability: 5, texture: id === 'mc:bee_nest' ? 'bee_nest' : 'beehive',
-    properties: { honey_level: PROPS.honeyLevel },
-    defaultValues: { honey_level: 0 },
+    properties: { facing: PROPS.facing, honey_level: PROPS.honeyLevel },
+    defaultValues: { facing: 'north', honey_level: 0 },
   });
 }
 
