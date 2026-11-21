@@ -596,6 +596,11 @@ for (const [id, texture] of [
   properties: { age: PROPS.age7 }, defaultValues: { age: 0 }, texture,
 });
 
+define('mc:sugar_cane', {
+  hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
+  replaceable: true, renderShape: 'cross', soundGroup: 'grass', texture: 'sugar_cane',
+});
+
 define('mc:pumpkin', {
   hardness: 1, resistance: 1, tool: 'axe', soundGroup: 'wood',
   texture: 'pumpkin',
@@ -772,6 +777,7 @@ const MATERIALS = [
   ['mc:melon_seeds', {}],
   ['mc:pumpkin_seeds', {}],
   ['mc:melon_slice', { food: { nutrition: 2, saturation: 1.2 } }],
+  ['mc:sugar_cane', {}],
   ['mc:beetroot_seeds', {}],
   ['mc:beetroot', { food: { nutrition: 1, saturation: 0.6 } }],
 ];
