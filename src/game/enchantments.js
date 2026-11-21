@@ -157,3 +157,69 @@ export function eligibleEnchantments(item, { treasure = false } = {}) {
       (def.applies.includes('all') || def.applies.some((category) => categories.includes(category))))
     .map(([id, def]) => ({ id, maxLevel: def.max, weight: def.weight }));
 }
+
+
+/** Deterministic Java-style offer seed mixer; avoids global RNG and network chatter. */
+function offerRandom(seed) {
+  let state = (Number(seed) >>> 0) || 1;
+  return () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 0x100000000;
+  };
+}
+
+/** Count the 15 valid bookshelf positions around a table, ignoring blocked gaps. */
+export function countEnchantingBookshelves(world, x, y, z) {
+  if (!world || typeof world.getBlock !== 'function') return 0;
+  let count = 0;
+  for (const dy of [0, 1]) {
+    for (let offset = -1; offset <= 1; offset++) {
+      for (const [dx, dz] of [[-2, offset], [2, offset], [offset, -2], [offset, 2]]) {
+        const gap = world.getBlock(x + Math.sign(dx), y + dy, z + Math.sign(dz));
+        if (gap.block.id !== 'mc:air') continue;
+        if (world.getBlock(x + dx, y + dy, z + dz).block.id === 'mc:bookshelf') count++;
+      }
+    }
+  }
+  return Math.min(15, count);
+}
+
+/** Generate the three selectable Java 1.19 enchanting offers for an item. */
+export function generateEnchantingOffers(item, bookshelfCount = 0, seed = 1) {
+  const random = offerRandom(seed);
+  const shelves = Math.max(0, Math.min(15, Math.floor(bookshelfCount) || 0));
+  const candidates = eligibleEnchantments(item);
+  const offers = [1, 2, 3].map((slot) => {
+    const base = 1 + Math.floor(random() * 8) + Math.floor(shelves / 2) + Math.floor(random() * (shelves + 1));
+    const level = slot === 0 ? Math.max(1, Math.floor(base / 3)) :
+      slot === 1 ? Math.max(1, Math.floor((base * 2) / 3) + 1) : Math.max(1, base);
+    const pool = candidates.filter((entry) => entry.maxLevel >= 1);
+    if (!pool.length) return { slot, levelCost: slot + 1, lapisCost: slot + 1, enchantment: null, enchantmentLevel: 0 };
+    let ticket = random() * pool.reduce((sum, entry) => sum + entry.weight, 0);
+    let chosen = pool[0];
+    for (const entry of pool) {
+      ticket -= entry.weight;
+      if (ticket <= 0) { chosen = entry; break; }
+    }
+    const enchantmentLevel = Math.min(chosen.maxLevel, Math.max(1, Math.ceil(level / 10)));
+    return {
+      slot, levelCost: slot + 1, lapisCost: slot + 1,
+      enchantment: chosen.id, enchantmentLevel,
+      power: level,
+    };
+  });
+  return offers;
+}
+
+/** Validate an enchanting-table payment and return a new enchanted stack. */
+export function applyEnchantingOffer(stack, offer, { playerLevel = 0, lapis = 0 } = {}) {
+  if (!stack || stack.isEmpty || !offer?.enchantment) return { ok: false, reason: 'invalid_offer' };
+  if (playerLevel < offer.levelCost || lapis < offer.lapisCost) return { ok: false, reason: 'insufficient_payment' };
+  const output = withEnchantment(stack, offer.enchantment, offer.enchantmentLevel);
+  if (!output) return { ok: false, reason: 'incompatible_enchantment' };
+  return {
+    ok: true, output,
+    levelsSpent: offer.levelCost,
+    lapisSpent: offer.lapisCost,
+  };
+}
