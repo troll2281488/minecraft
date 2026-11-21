@@ -946,7 +946,8 @@ ITEMS.define('mc:flint_and_steel', { stackSize: 1, maxDamage: 64, tool: 'flint_a
 ITEMS.define('mc:fishing_rod', { stackSize: 1, maxDamage: 64, tool: 'fishing_rod' });
 ITEMS.define('mc:bow', { stackSize: 1, maxDamage: 384, weapon: 'bow' });
 ITEMS.define('mc:arrow', { stackSize: 64 });
-ITEMS.define('mc:saddle', { stackSize: 1 });\nITEMS.define('mc:lead', { stackSize: 64 });
+ITEMS.define('mc:saddle', { stackSize: 1 });
+ITEMS.define('mc:lead', { stackSize: 64 });
 ITEMS.define('mc:iron_horse_armor', { stackSize: 1, horseArmor: 'iron' });
 ITEMS.define('mc:golden_horse_armor', { stackSize: 1, horseArmor: 'golden' });
 ITEMS.define('mc:diamond_horse_armor', { stackSize: 1, horseArmor: 'diamond' });
