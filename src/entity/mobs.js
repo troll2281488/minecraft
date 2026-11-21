@@ -320,6 +320,7 @@ export class MobSystem {
     this.arrows.length = 0;
     this.blockParticles.length = 0;
     this.bowDrawStart = null;
+    this.crossbowLoadStart = null;
     this.droppedItems.length = 0;
     this.experienceOrbs.length = 0;
     this.experiencePickupCooldown = 0;
