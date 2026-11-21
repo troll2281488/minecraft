@@ -1,12 +1,12 @@
 import { describe, it, assert, assertEqual } from './framework.js';
 import {
   deriveRailShape, refreshRailNetwork, railDirection, advanceMinecart,
-  MinecartSystem, isRailBlock,
+  MinecartSystem, isRailBlock, railHasRedstonePower, tickRailNetwork,
 } from '../src/game/railways.js';
 
 function state(id, values = {}) {
   return {
-    block: { id },
+    block: { id, renderShape: id === 'mc:lever' ? 'lever' : id === 'mc:redstone_wire' ? 'redstone_wire' : undefined },
     values: { shape: 'north_south', powered: false, ...values },
     get(key) { return this.values[key]; },
     with(key, value) { return state(id, { ...this.values, [key]: value }); },
@@ -86,6 +86,18 @@ describe('Minecart movement and transport', () => {
     assertEqual(next.y > cart.y, true);
   });
 
+  it('powers powered and activator rails from adjacent redstone sources', () => {
+    const blocks = new Map([
+      ['0,64,0', state('mc:powered_rail', { powered: false })],
+      ['1,64,0', state('mc:lever', { powered: true })],
+    ]);
+    const world = worldWith(blocks);
+    assertEqual(railHasRedstonePower(world, 0, 64, 0), true);
+    const changes = tickRailNetwork(world, { x: 0.5, y: 64, z: 0.5 }, 10);
+    assertEqual(changes > 0, true);
+    assertEqual(world.getBlock(0,64,0).get('powered'), true);
+  });
+
   it('places and mounts carts, then persists bounded cart state', () => {
     const blocks = new Map([['0,64,0', state('mc:rail')]]);
     const world = worldWith(blocks);
@@ -104,6 +116,16 @@ describe('Minecart movement and transport', () => {
     assertEqual(restored.carts[0].speed, cart.speed);
     restored.loadFrom([{ x: NaN, y: 64, z: 0, vx: 0, vz: 0, speed: 0, yaw: 0 }]);
     assertEqual(restored.carts.length, 0);
+  });
+
+  it('ejects riders when a powered activator rail is crossed', () => {
+    const activator = state('mc:activator_rail', { powered: true });
+    const world = worldWith(new Map([['0,64,0', activator]]));
+    const player = { x: 0.5, y: 64, z: 0.5, yaw: 0, input: { forward: 0, sneak: false }, onGround: true };
+    const system = new MinecartSystem({ world, player, multiplayer: null });
+    assert(system.placeAt({ x: 0, y: 64, z: 0, state: activator }));
+    system.tick();
+    assertEqual(player.ridingMinecart, null);
   });
 
   it('powers a detector rail while a cart occupies it and clears it afterward', () => {
