@@ -163,14 +163,36 @@ export function shearMooshroom(mob) {
   return Array.from({ length: 5 }, () => ({ id: 'mc:red_mushroom', count: 1 }));
 }
 
+const FISHING_LOOT = Object.freeze({
+  junk: Object.freeze([
+    'mc:lily_pad', 'mc:leather_boots', 'mc:rotten_flesh', 'mc:stick',
+    'mc:string', 'mc:water_bottle', 'mc:bone', 'mc:ink_sac',
+    'mc:tripwire_hook',
+  ]),
+  treasure: Object.freeze([
+    'mc:bow', 'mc:enchanted_book', 'mc:fishing_rod',
+    'mc:name_tag', 'mc:nautilus_shell', 'mc:saddle',
+  ]),
+});
+
+/**
+ * Java 1.19 fishing loot categories (unenchanted rod, open water):
+ * 85% fish, 10% junk and 5% treasure. Fish are selected from their
+ * category with the vanilla relative weights. The injected RNG keeps this
+ * deterministic for regression tests.
+ */
 export function rollFishingCatch(random = Math.random) {
-  const roll = random();
-  if (roll < 0.60) return { id: 'mc:raw_cod', count: 1 };
-  if (roll < 0.85) return { id: 'mc:raw_salmon', count: 1 };
-  if (roll < 0.90) return { id: 'mc:pufferfish', count: 1 };
-  if (roll < 0.95) return { id: 'mc:tropical_fish', count: 1 };
-  if (roll < 0.98) return { id: 'mc:bone', count: 1 };
-  return { id: 'mc:leather', count: 1 };
+  const categoryRoll = random();
+  if (categoryRoll < 0.85) {
+    const fishRoll = random();
+    if (fishRoll < 0.60) return { id: 'mc:raw_cod', count: 1 };
+    if (fishRoll < 0.85) return { id: 'mc:raw_salmon', count: 1 };
+    if (fishRoll < 0.98) return { id: 'mc:pufferfish', count: 1 };
+    return { id: 'mc:tropical_fish', count: 1 };
+  }
+  const loot = categoryRoll < 0.95 ? FISHING_LOOT.junk : FISHING_LOOT.treasure;
+  const index = Math.min(loot.length - 1, Math.floor(random() * loot.length));
+  return { id: loot[index], count: 1 };
 }
 
 /** Apply the Java 1.12 armour formula and return health damage after reduction. */
