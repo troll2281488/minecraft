@@ -329,3 +329,4 @@ describe('crossbow firework rocket impact', () => {
   assertEqual(entities.arrows.length, 0);
   assertEqual(entities.blockParticles.length > 0, true);
 });
+});
