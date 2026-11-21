@@ -7,14 +7,16 @@ export function beginCrossbowLoad(stack, tick) {
   return { ...stack.data, loadingSince: tick, charged: false };
 }
 
-export function crossbowLoadProgress(data, tick) {
+export function crossbowLoadProgress(data, tick, quickChargeLevel = 0) {
   if (!Number.isInteger(data?.loadingSince) || !Number.isFinite(tick)) return 0;
-  return Math.max(0, Math.min(1, (tick - data.loadingSince) / CROSSBOW.LOAD_TICKS));
+  const quickCharge = Math.max(0, Math.min(3, Math.floor(quickChargeLevel || 0)));
+  const loadTicks = Math.max(5, CROSSBOW.LOAD_TICKS - quickCharge * 5);
+  return Math.max(0, Math.min(1, (tick - data.loadingSince) / loadTicks));
 }
 
-export function finishCrossbowLoad(data, tick, ammoId = 'mc:arrow') {
+export function finishCrossbowLoad(data, tick, ammoId = 'mc:arrow', quickChargeLevel = 0) {
   if (!['mc:arrow', 'mc:firework_rocket'].includes(ammoId)) return null;
-  if (crossbowLoadProgress(data, tick) < 1) return null;
+  if (crossbowLoadProgress(data, tick, quickChargeLevel) < 1) return null;
   return { ...(data || {}), loadingSince: null, charged: true, chargedProjectile: ammoId };
 }
 
