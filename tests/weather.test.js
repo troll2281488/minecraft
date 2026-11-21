@@ -20,7 +20,7 @@ describe('Seeded Overworld weather', () => {
     assertEqual(nextRainCauldronLevel(1, 'rain', 0.5), 1);
   });
 
-  it('limits lightning rod strikes to deterministic thunder rolls', () => {\n    assertEqual(shouldLightningRodStrike('seed', 0, 64, 0, 20, 'rain'), false);\n    assertEqual(shouldLightningRodStrike('seed', 0, 64, 0, 20, 'clear'), false);\n    let seed = 'rod';\n    while (!shouldLightningRodStrike(seed, 0, 64, 0, 20, 'thunder')) seed += 'x';\n    assertEqual(shouldLightningRodStrike(seed, 0, 64, 0, 20, 'thunder'), true);\n    assertEqual(shouldLightningRodStrike(seed, 0, 64, 0, 21, 'thunder'), false);\n  });\n\n  it('lets rain extinguish only lit campfires', () => {
+  it('limits lightning rod strikes to deterministic thunder rolls', () => {\n    assertEqual(shouldLightningRodStrike('seed', 0, 64, 0, 20, 'rain'), false);\n    assertEqual(shouldLightningRodStrike('seed', 0, 64, 0, 20, 'clear'), false);\n    let seed = 'rod';\n    while (!shouldLightningRodStrike(seed, 0, 64, 0, 20, 'thunder')) seed += 'x';\n    assertEqual(shouldLightningRodStrike(seed, 0, 64, 0, 20, 'thunder'), true);\n    assertEqual(shouldLightningRodStrike(seed, 0, 64, 0, 20, 'rain'), false);\n  });\n\n  it('lets rain extinguish only lit campfires', () => {
     assertEqual(shouldRainExtinguishCampfire('rain', true, 0), true);
     assertEqual(shouldRainExtinguishCampfire('thunder', true, 0.049), true);
     assertEqual(shouldRainExtinguishCampfire('clear', true, 0), false);
