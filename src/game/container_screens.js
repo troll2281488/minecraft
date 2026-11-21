@@ -446,12 +446,12 @@ export const ContainerScreensMixin = {
     return this._containers.get(key).data;
   },
 
-  _furnaceAt(x, y, z) {
+  _furnaceAt(x, y, z, kind = 'furnace') {
     this._containers ??= new Map();
     const key = this._containerKey(x, y, z);
     const entry = this._containers.get(key);
-    if (entry?.type !== 'furnace' || !(entry.data instanceof Furnace)) {
-      this._containers.set(key, { type: 'furnace', data: new Furnace() });
+    if (entry?.type !== kind || !(entry.data instanceof Furnace) || entry.data.kind !== kind) {
+      this._containers.set(key, { type: kind, data: new Furnace(kind) });
     }
     return this._containers.get(key).data;
   },
@@ -471,10 +471,14 @@ export const ContainerScreensMixin = {
     this._openContainer({ title: 'Воронка', slots: hopper.slots, kind: 'hopper', key: this._containerKey(x, y, z) });
   },
 
-  _openFurnace(x, y, z) {
-    const furnace = this._furnaceAt(x, y, z);
-    this._openContainer({ title: 'Печь', furnace, kind: 'furnace', key: this._containerKey(x, y, z), x, y, z });
+  _openFurnace(x, y, z, kind = 'furnace') {
+    const furnace = this._furnaceAt(x, y, z, kind);
+    const title = kind === 'smoker' ? 'Коптильня' : kind === 'blast_furnace' ? 'Плавильная печь' : 'Печь';
+    this._openContainer({ title, furnace, kind: 'furnace', containerType: kind, key: this._containerKey(x, y, z), x, y, z });
   },
+
+  _openSmoker(x, y, z) { return this._openFurnace(x, y, z, 'smoker'); },
+  _openBlastFurnace(x, y, z) { return this._openFurnace(x, y, z, 'blast_furnace'); },
 
   /** Advance every furnace that exists in the world. Called from the fixed tick. */
   _tickFurnaces() {
@@ -483,7 +487,7 @@ export const ContainerScreensMixin = {
     // client would simulate and publish competing copies of the same timers.
     if (this.multiplayer?.roomId && !this.multiplayer.isHost) return;
     for (const [key, { type, data }] of this._containers) {
-      if (type !== 'furnace') continue;
+      if (!['furnace', 'smoker', 'blast_furnace'].includes(type)) continue;
       // If a non-host player owns the advisory edit lease, pause host writes
       // until that screen closes so the furnace snapshot cannot overwrite it.
       if (this.multiplayer?.isContainerLockedByOther?.(key)) continue;
@@ -498,13 +502,13 @@ export const ContainerScreensMixin = {
   _hopperTransferOne(sourceEntry, destinationEntry, destinationFace = 'side') {
     if (!sourceEntry || !destinationEntry) return false;
     let sourceSlots;
-    if (sourceEntry.type === 'furnace') {
+    if (['furnace', 'smoker', 'blast_furnace'].includes(sourceEntry.type)) {
       // A hopper below a furnace extracts its finished output. Fuel-container
       // returns are intentionally not modeled until bucket/container items exist.
       const source = sourceEntry.data.output;
       if (!source || source.isEmpty) return false;
       const destinationSlots = destinationEntry.data?.slots;
-      if (destinationEntry.type !== 'furnace') {
+      if (!['furnace', 'smoker', 'blast_furnace'].includes(destinationEntry.type)) {
         const moved = moveOneItem([source], destinationSlots);
         if (moved && source.count <= 0) sourceEntry.data.output = ItemStack.EMPTY.clone();
         return moved;
@@ -515,7 +519,7 @@ export const ContainerScreensMixin = {
     }
     if (!Array.isArray(sourceSlots)) return false;
 
-    if (destinationEntry.type === 'furnace') {
+    if (['furnace', 'smoker', 'blast_furnace'].includes(destinationEntry.type)) {
       // Java hopper faces have distinct furnace roles: top -> input,
       // horizontal sides -> fuel, bottom -> output extraction only.
       const key = destinationFace === 'top' ? 'input'
@@ -526,7 +530,7 @@ export const ContainerScreensMixin = {
       const sourceIndex = sourceSlots.findIndex((stack) => {
         if (!stack || stack.isEmpty) return false;
         const item = stack.item;
-        if (key === 'input' ? !SMELTING.has(item.id) : item.fuelTicks <= 0) return false;
+        if (key === 'input' ? !destinationEntry.data.acceptsInput(item.id) : item.fuelTicks <= 0) return false;
         if (target.isEmpty) return true;
         const one = ItemStack.of(item.id, 1, stack.damage, stack.data);
         return target.canStackWith(one) && target.count < target.maxStackSize;
@@ -706,8 +710,9 @@ export const ContainerScreensMixin = {
         let destinationEntry = null;
         if (targetBlock === 'mc:chest' || targetBlock === 'mc:trapped_chest') {
           destinationEntry = { type: 'chest', data: this._chestAt(tx, ty, tz) };
-        } else if (targetBlock === 'mc:furnace') {
-          destinationEntry = { type: 'furnace', data: this._furnaceAt(tx, ty, tz) };
+        } else if (['mc:furnace', 'mc:smoker', 'mc:blast_furnace'].includes(targetBlock)) {
+          const stationType = targetBlock.slice(3);
+          destinationEntry = { type: stationType, data: this._furnaceAt(tx, ty, tz, stationType) };
         } else if (targetBlock === 'mc:hopper') {
           destinationEntry = { type: 'hopper', data: this._hopperAt(tx, ty, tz) };
         }
@@ -749,8 +754,9 @@ export const ContainerScreensMixin = {
           let sourceEntry = null;
           if (sourceId === 'mc:chest' || sourceId === 'mc:trapped_chest') {
             sourceEntry = { type: 'chest', data: this._chestAt(x, y + 1, z) };
-          } else if (sourceId === 'mc:furnace') {
-            sourceEntry = { type: 'furnace', data: this._furnaceAt(x, y + 1, z) };
+          } else if (['mc:furnace', 'mc:smoker', 'mc:blast_furnace'].includes(sourceId)) {
+            const stationType = sourceId.slice(3);
+            sourceEntry = { type: stationType, data: this._furnaceAt(x, y + 1, z, stationType) };
           } else if (sourceId === 'mc:hopper') {
             sourceEntry = { type: 'hopper', data: this._hopperAt(x, y + 1, z) };
           }
@@ -875,7 +881,7 @@ export const ContainerScreensMixin = {
       body += '</div>';
     } else {
       const f = spec.furnace;
-      const pct = f.cookProgress / SMELT_TICKS;
+      const pct = f.cookProgress / f.smeltTicks;
       const burn = f.burnTotal > 0 ? f.burnLeft / f.burnTotal : 0;
       body += `<h3>${spec.title}</h3>`;
       body += `<div class="row furnace-slots"><div class="slot-group"><span>Сырьё</span>${this._slotHtml('furnace-in', 0, f.input)}</div>`;
@@ -996,7 +1002,7 @@ export const ContainerScreensMixin = {
     const f = spec.furnace;
     if (kind === 'furnace-in') return {
       get: () => f.input, set: (v) => { f.input = v; },
-      accepts: (item) => SMELTING.has(item.id),
+      accepts: (item) => f.acceptsInput(item.id),
     };
     if (kind === 'furnace-fuel') return {
       get: () => f.fuel, set: (v) => { f.fuel = v; },
@@ -1058,7 +1064,7 @@ export const ContainerScreensMixin = {
   /** Move a stack to the furnace input or fuel slot; preserve any remainder. */
   _moveToFurnace(spec, stack) {
     const furnace = spec.furnace;
-    const key = SMELTING.has(stack.item.id) ? 'input' :
+    const key = furnace.acceptsInput(stack.item.id) ? 'input' :
       stack.item.fuelTicks > 0 ? 'fuel' : null;
     if (!key) return false;
     const current = furnace[key];

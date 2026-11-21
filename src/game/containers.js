@@ -17,7 +17,7 @@ export const SMELT_TICKS = 200;
 export const SMELTING_XP = new Map([
   ['mc:oak_log', 0.1], ['mc:birch_log', 0.1], ['mc:spruce_log', 0.1],
   ['mc:jungle_log', 0.1], ['mc:acacia_log', 0.1], ['mc:dark_oak_log', 0.1],
-  ['mc:iron_ore', 0.7], ['mc:gold_ore', 1.0],
+  ['mc:iron_ore', 0.7], ['mc:gold_ore', 1.0], ['mc:stone', 0.1],
   ['mc:sand', 0.1], ['mc:cobblestone', 0.1],
   ['mc:raw_beef', 0.35], ['mc:raw_porkchop', 0.35],
   ['mc:raw_chicken', 0.35], ['mc:raw_mutton', 0.35],
@@ -39,6 +39,7 @@ export const SMELTING = new Map([
   ['mc:gold_ore',     { result: 'mc:gold_ingot', count: 1 }],
   ['mc:sand',         { result: 'mc:glass', count: 1 }],
   ['mc:cobblestone',  { result: 'mc:stone', count: 1 }],
+  ['mc:stone',        { result: 'mc:smooth_stone', count: 1 }],
   ['mc:raw_beef',     { result: 'mc:cooked_beef', count: 1 }],
   ['mc:raw_porkchop', { result: 'mc:cooked_porkchop', count: 1 }],
   ['mc:raw_chicken',  { result: 'mc:cooked_chicken', count: 1 }],
@@ -47,6 +48,24 @@ export const SMELTING = new Map([
   ['mc:raw_cod',      { result: 'mc:cooked_cod', count: 1 }],
   ['mc:raw_salmon',   { result: 'mc:cooked_salmon', count: 1 }],
   ['mc:raw_rabbit',   { result: 'mc:cooked_rabbit', count: 1 }],
+]);
+
+
+
+/** Smoker accepts food inputs only; blast furnace accepts metal ores only. */
+export const SMOKING = new Map([
+  ['mc:raw_beef', { result: 'mc:cooked_beef', count: 1 }],
+  ['mc:raw_porkchop', { result: 'mc:cooked_porkchop', count: 1 }],
+  ['mc:raw_chicken', { result: 'mc:cooked_chicken', count: 1 }],
+  ['mc:raw_mutton', { result: 'mc:cooked_mutton', count: 1 }],
+  ['mc:raw_cod', { result: 'mc:cooked_cod', count: 1 }],
+  ['mc:raw_salmon', { result: 'mc:cooked_salmon', count: 1 }],
+  ['mc:raw_rabbit', { result: 'mc:cooked_rabbit', count: 1 }],
+  ['mc:potato', { result: 'mc:baked_potato', count: 1 }],
+]);
+export const BLASTING = new Map([
+  ['mc:iron_ore', { result: 'mc:iron_ingot', count: 1 }],
+  ['mc:gold_ore', { result: 'mc:gold_ingot', count: 1 }],
 ]);
 
 /** Remove one item from a stack, returning the stack or the empty stack. */
@@ -170,9 +189,10 @@ export function serializeContainer(type, data) {
   if (type === 'dropper' && data instanceof Dropper) {
     return { type, slots: data.slots.map((stack) => stack.toJSON()) };
   }
-  if (type === 'furnace' && data instanceof Furnace) {
+  if (['furnace', 'smoker', 'blast_furnace'].includes(type) && data instanceof Furnace) {
     return {
       type,
+      kind: data.kind,
       input: data.input.toJSON(),
       fuel: data.fuel.toJSON(),
       output: data.output.toJSON(),
@@ -207,8 +227,8 @@ export function deserializeContainer(record) {
     dropper.slots = record.slots.map((stack) => ItemStack.fromJSON(stack));
     return { type: 'dropper', data: dropper };
   }
-  if (record.type === 'furnace') {
-    const furnace = new Furnace();
+  if (['furnace', 'smoker', 'blast_furnace'].includes(record.type)) {
+    const furnace = new Furnace(record.type);
     furnace.input = ItemStack.fromJSON(record.input);
     furnace.fuel = ItemStack.fromJSON(record.fuel);
     furnace.output = ItemStack.fromJSON(record.output);
@@ -245,7 +265,7 @@ export function drainContainer(type, data) {
     data.slots = Array.from({ length: DROPPER_SLOTS }, () => ItemStack.EMPTY.clone());
     return drops;
   }
-  if (type === 'furnace' && data instanceof Furnace) {
+  if (['furnace', 'smoker', 'blast_furnace'].includes(type) && data instanceof Furnace) {
     const drops = [data.input, data.fuel, data.output]
       .filter((stack) => !stack.isEmpty)
       .map((stack) => stack.clone());
@@ -263,7 +283,8 @@ export function drainContainer(type, data) {
 }
 
 export class Furnace {
-  constructor() {
+  constructor(kind = 'furnace') {
+    this.kind = ['furnace', 'smoker', 'blast_furnace'].includes(kind) ? kind : 'furnace';
     this.input = ItemStack.EMPTY.clone();
     this.fuel = ItemStack.EMPTY.clone();
     this.output = ItemStack.EMPTY.clone();
@@ -288,10 +309,20 @@ export class Furnace {
     return share;
   }
 
-  /** The smelting result for the current input, or null. */
+  /** Recipe map and accepted input for this processing station. */
+  get recipes() {
+    return this.kind === 'smoker' ? SMOKING
+      : this.kind === 'blast_furnace' ? BLASTING : SMELTING;
+  }
+
+  acceptsInput(itemId) { return this.recipes.has(itemId); }
+
+  get smeltTicks() { return this.kind === 'furnace' ? SMELT_TICKS : SMELT_TICKS / 2; }
+
+  /** The processing result for the current input, or null. */
   get recipe() {
     if (this.input.isEmpty) return null;
-    return SMELTING.get(this.input.item.id) ?? null;
+    return this.recipes.get(this.input.item.id) ?? null;
   }
 
   /** Whether the current input can be placed into the output slot right now. */
@@ -321,7 +352,7 @@ export class Furnace {
 
     if (this.burnLeft > 0 && this.canSmelt) {
       this.cookProgress += 1;
-      if (this.cookProgress >= SMELT_TICKS) {
+      if (this.cookProgress >= this.smeltTicks) {
         this._finishSmelt();
         this.cookProgress = 0;
       }

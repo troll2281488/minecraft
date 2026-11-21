@@ -92,6 +92,7 @@ function plant(id, texture, tint = null) {
 // ---------------------------------------------------------------------------
 
 stoneLike('mc:stone', 'stone', 1.5, 6);
+stoneLike('mc:smooth_stone', 'stone', 2, 6);
 stoneLike('mc:cobblestone', 'cobblestone', 2, 6);
 stoneLike('mc:mossy_cobblestone', 'mossy_cobblestone', 2, 6);
 stoneLike('mc:granite', 'granite', 1.5, 6);
@@ -338,6 +339,16 @@ define('mc:chest', {
   textures: { top: 'chest_top', bottom: 'chest_side', side: 'chest_side' },
 });
 define('mc:furnace', {
+  hardness: 3.5, resistance: 3.5, tool: 'pickaxe', harvestLevel: 0,
+  requiresTool: true, soundGroup: 'stone',
+  textures: { top: 'furnace_top', bottom: 'furnace_side', side: 'furnace_front' },
+});
+define('mc:smoker', {
+  hardness: 3.5, resistance: 3.5, tool: 'pickaxe', harvestLevel: 0,
+  requiresTool: true, soundGroup: 'stone',
+  textures: { top: 'furnace_top', bottom: 'furnace_side', side: 'furnace_front' },
+});
+define('mc:blast_furnace', {
   hardness: 3.5, resistance: 3.5, tool: 'pickaxe', harvestLevel: 0,
   requiresTool: true, soundGroup: 'stone',
   textures: { top: 'furnace_top', bottom: 'furnace_side', side: 'furnace_front' },
@@ -884,7 +895,9 @@ const FOODS = [
   ['mc:rotten_flesh', 4, 0.1],
   ['mc:cooked_mutton', 6, 0.8],
   ['mc:raw_cod', 2, 0.2],
+  ['mc:cooked_cod', 5, 0.6],
   ['mc:raw_salmon', 2, 0.2],
+  ['mc:cooked_salmon', 6, 0.8],
   ['mc:pufferfish', 1, 0.1],
   ['mc:tropical_fish', 1, 0.1],
 ];
