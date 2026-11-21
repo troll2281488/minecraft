@@ -29,7 +29,7 @@ export function nextCropAge(state) {
 export function canPlantSugarCane(world, x, y, z) {
   if (!world?.getBlock || !SUGAR_CANE_SOILS.has(world.getBlock(x, y, z)?.block?.id)) return false;
   for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-    const water = world.getBlock(x + dx, y, z + dz);
+    const water = world.getBlock(x + dx, y + 1, z + dz);
     if (water?.block?.id === 'mc:water' && (water.get?.('level') ?? 0) === 0) return true;
   }
   return false;
