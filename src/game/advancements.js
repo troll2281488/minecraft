@@ -12,6 +12,10 @@ export const ADVANCEMENTS = Object.freeze({
   husbandry_fish: { criteria: ['fish'], title: 'A Fishy Business' },
   nether_obtain_blaze_rod: { criteria: ['blaze_rod'], title: 'Into Fire' },
   end_enter: { criteria: ['end'], title: 'The End?' },
+  adventure_throw_trident: { criteria: ['trident'], title: 'A Throwaway Joke' },
+  adventure_shoot_crossbow: { criteria: ['crossbow'], title: "Ol' Betsy" },
+  adventure_channeling: { criteria: ['lightning'], title: 'Channeling' },
+  adventure_very_very_frightening: { criteria: ['lightning_villager'], title: 'Very Very Frightening' },
 });
 
 export function createAdvancementState(saved = {}) {
@@ -43,6 +47,9 @@ export function processAdvancementEvent(state, event, timestamp = 0) {
     traded_with_villager: ['adventure_trade', 'trade'], bred_animal: ['husbandry_breed_animal', 'breed'],
     tamed_animal: ['husbandry_tame_animal', 'tame'], caught_fish: ['husbandry_fish', 'fish'],
     acquired_blaze_rod: ['nether_obtain_blaze_rod', 'blaze_rod'], entered_end: ['end_enter', 'end'],
+    threw_trident: ['adventure_throw_trident', 'trident'], shot_crossbow: ['adventure_shoot_crossbow', 'crossbow'],
+    channelled_lightning: ['adventure_channeling', 'lightning'],
+    struck_villager_with_lightning: ['adventure_very_very_frightening', 'lightning_villager'],
   };
   const route = routes[event];
   return route ? awardAdvancementCriterion(state, route[0], route[1], timestamp) : { awarded: false, completed: false };

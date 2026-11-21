@@ -66,3 +66,15 @@ export function impalingBonusDamage(level, target, inWater) {
 export function canChannelLightning({ thunder, skyVisible, targetExposed }) {
   return thunder === true && skyVisible === true && targetExposed === true;
 }
+
+
+/** Return the gameplay payload for a Java-style Channeling lightning strike. */
+export function channelingLightningEffect({ channeling, thunder, skyVisible, targetExposed, targetType } = {}) {
+  if (channeling !== true || !canChannelLightning({ thunder, skyVisible, targetExposed })) return null;
+  return Object.freeze({
+    damage: 5,
+    fireTicks: 160,
+    chargedCreeper: targetType === 'creeper',
+    transformTo: targetType === 'villager' ? 'witch' : null,
+  });
+}

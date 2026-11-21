@@ -8,6 +8,8 @@ import { drawPower, canFire } from '../game/bow.js';
 import { aimVector, createArrow, stepArrow } from './arrows.js';
 import { beginCrossbowLoad as beginCrossbowLoadData, finishCrossbowLoad, crossbowShotPlan, consumeCrossbowCharge } from '../game/crossbow.js';
 import { tickBeeForaging } from '../game/bee_hives.js';
+import { weatherAt } from '../game/weather.js';
+import { channelingLightningEffect } from '../game/trident.js';
 import { enchantmentDamageBonus, enchantmentLevel, repairWithMending, fishingWaitTicks, protectionDamageMultiplier, unbreakingDamage } from '../game/enchantments.js';
 
 /**
@@ -405,6 +407,8 @@ export class MobSystem {
     trident.impalingLevel = enchantmentLevel(held, 'impaling');
     trident.channeling = enchantmentLevel(held, 'channeling') > 0;
     this.arrows.push(trident);
+    const award = player.recordAdvancementEvent?.('threw_trident', this.game.tickCount || 0);
+    if (award?.completed) this.game.ui?.toast('Достижение: A Throwaway Joke');
     if (!creative) this.game.inventory.damageHeld(1);
     const riptide = enchantmentLevel(held, 'riptide');
     if (riptide > 0 && (player.inWater || this.game.world?.isRainingAt?.(player.x, player.y, player.z))) {
@@ -438,13 +442,18 @@ export class MobSystem {
     this.crossbowLoadStart = null;
     if (held?.item?.id !== 'mc:crossbow') return true;
     const quickCharge = enchantmentLevel(held, 'quick_charge');
-    const loaded = finishCrossbowLoad(held.data, tick, 'mc:arrow', quickCharge);
-    if (!loaded) { held.data = { ...(held.data || {}), loadingSince: null, charged: false, chargedProjectile: null }; return true; }
+    const ammoId = this.game.player?.gamemode === 'creative' ? 'mc:arrow' : (this.game.inventory?.countOf('mc:arrow') > 0 ? 'mc:arrow' : (this.game.inventory?.countOf('mc:firework_rocket') > 0 ? 'mc:firework_rocket' : null));
+    const loaded = ammoId ? finishCrossbowLoad(held.data, tick, ammoId, quickCharge) : null;
+    if (!loaded) {
+      held.data = { ...(held.data || {}), loadingSince: null, charged: false, chargedProjectile: null };
+      if (!ammoId) this.game.ui?.toast('Для арбалета нужны стрелы или ракеты!', { error: true });
+      return true;
+    }
     const inventory = this.game.inventory;
     const creative = this.game.player?.gamemode === 'creative';
-    if (!creative && inventory.remove('mc:arrow', 1) !== 1) {
+    if (!creative && inventory.remove(ammoId, 1) !== 1) {
       held.data = { ...loaded, charged: false, chargedProjectile: null };
-      this.game.ui?.toast('Для арбалета нужны стрелы!', { error: true });
+      this.game.ui?.toast('Для арбалета нужны стрелы или ракеты!', { error: true });
       return true;
     }
     held.data = loaded;
@@ -457,11 +466,14 @@ export class MobSystem {
       const arrow = createArrow(player.x + direction[0] * 0.45, player.eyeY + direction[1] * 0.45, player.z + direction[2] * 0.45, direction, 1);
       arrow.damage = shot.damage;
       arrow.piercingLevel = shot.piercingLevel;
+      arrow.isFireworkRocket = shot.ammoId === 'mc:firework_rocket';
       this.arrows.push(arrow);
     }
     held.data = consumeCrossbowCharge(loaded);
     if (!creative) inventory.damageHeld(1);
     this.game.sounds?.play('bow');
+    const award = this.game.player?.recordAdvancementEvent?.('shot_crossbow', tick);
+    if (award?.completed) this.game.ui?.toast("Достижение: Ol' Betsy");
     this.game.ui?.toast(multishot > 0 ? 'Арбалет: тройной выстрел' : 'Арбалет выстрелил');
     return true;
   }
@@ -540,17 +552,43 @@ export class MobSystem {
         if (arrow.age > 1200) this.arrows.splice(i, 1);
         continue;
       }
+      if (arrow.isFireworkRocket) arrow.vy += 0.05;
       const result = stepArrow(arrow,
         (x, y, z) => world.getBlock(x, y, z).block.solid,
         this.mobs,
       );
       if (result.hit === 'mob' && result.mob) {
+        if (arrow.isFireworkRocket) {
+          this.spawnBlockParticles(arrow.x, arrow.y, arrow.z, 'mc:firework');
+          this.game.sounds?.play('explode');
+          this.arrows.splice(i, 1);
+          continue;
+        }
         const mob = result.mob;
         const previousHealth = mob.health;
         const aquatic = ['guardian', 'elder_guardian', 'drowned', 'squid'].includes(mob.type);
         const impalingBonus = arrow.isTrident && aquatic ? Math.max(0, arrow.impalingLevel || 0) * 2.5 : 0;
         const hitDamage = arrow.damage + impalingBonus;
-        mob.health = Math.max(0, mob.health - (mob.type === 'horse' ? calculateHorseArmorDamage(hitDamage, mob.horseArmor) : hitDamage));
+        const surfaceY = world.getHeight?.(Math.floor(mob.x), Math.floor(mob.z));
+        const skyVisible = Number.isFinite(surfaceY) && surfaceY < Math.floor(mob.y + 1);
+        const lightning = arrow.isTrident && arrow.channeling && world.dimension === 'overworld'
+          ? channelingLightningEffect({ channeling: true, thunder: weatherAt(world.seed, world.time) === 'thunder', skyVisible, targetExposed: skyVisible, targetType: mob.type })
+          : null;
+        const totalDamage = hitDamage + (lightning?.damage || 0);
+        mob.health = Math.max(0, mob.health - (mob.type === 'horse' ? calculateHorseArmorDamage(totalDamage, mob.horseArmor) : totalDamage));
+        if (lightning) {
+          mob.fireTicks = Math.max(mob.fireTicks || 0, lightning.fireTicks);
+          if (lightning.chargedCreeper) mob.charged = true;
+          if (lightning.transformTo && mob.health > 0) mob.type = lightning.transformTo;
+          this.game.sounds?.play('thunder');
+          this.spawnBlockParticles(mob.x, mob.y + 0.5, mob.z, 'mc:lightning');
+          const channelAward = this.game.player?.recordAdvancementEvent?.('channelled_lightning', this.game.tickCount || 0);
+          if (channelAward?.completed) this.game.ui?.toast('Достижение: Channeling');
+          if (lightning.transformTo === 'witch' && mob.health > 0) {
+            const witchAward = this.game.player?.recordAdvancementEvent?.('struck_villager_with_lightning', this.game.tickCount || 0);
+            if (witchAward?.completed) this.game.ui?.toast('Достижение: Very Very Frightening');
+          }
+        }
         if (previousHealth > 0 && mob.health <= 0 && ['zombie','skeleton','stray','creeper','spider','enderman','witch','slime','magma_cube','ghast','blaze','wither_skeleton','drowned','phantom','guardian','elder_guardian','silverfish','cave_spider'].includes(mob.type)) this.game.player?.recordAdvancementEvent?.('killed_hostile', this.game.tickCount || 0);
         mob.hurtTicks = 10;
         mob.anim.hurt = 1;
@@ -575,6 +613,12 @@ export class MobSystem {
         arrow.offsetX = arrow.x - mob.x; arrow.offsetY = arrow.y - mob.y; arrow.offsetZ = arrow.z - mob.z;
         arrow.done = false;
       } else if (result.hit === 'block') {
+        if (arrow.isFireworkRocket) {
+          this.spawnBlockParticles(arrow.x, arrow.y, arrow.z, 'mc:firework');
+          this.game.sounds?.play('explode');
+          this.arrows.splice(i, 1);
+          continue;
+        }
         if (arrow.isTrident && arrow.loyaltyLevel > 0) { arrow.returning = true; continue; }
         if (arrow.isTrident) { this.arrows.splice(i, 1); continue; }
         arrow.stuck = true;
@@ -582,6 +626,12 @@ export class MobSystem {
         arrow.stuckPitch = Math.atan2(-arrow.vy, Math.hypot(arrow.vx, arrow.vz));
         arrow.vx = arrow.vy = arrow.vz = 0;
         arrow.done = false;
+      }
+      if (arrow.isFireworkRocket && arrow.age >= 20) {
+        this.spawnBlockParticles(arrow.x, arrow.y, arrow.z, 'mc:firework');
+        this.game.sounds?.play('explode');
+        this.arrows.splice(i, 1);
+        continue;
       }
       if (arrow.done) this.arrows.splice(i, 1);
     }
@@ -1704,10 +1754,11 @@ export class MobSystem {
         mob.anim.fuse = mob.fuseTicks / 30;
         mob.targetYaw = Math.atan2(dx, dz);
         if (mob.fuseTicks >= profile.fuseTicks) {
-          if (distance < profile.blastRange) {
-            const damage = Math.max(0, Math.ceil((profile.blastRange - distance) * 3));
+          const blastRange = mob.charged ? profile.blastRange * 2 : profile.blastRange;
+          if (distance < blastRange) {
+            const damage = Math.max(0, Math.ceil((blastRange - distance) * 3) * (mob.charged ? 2 : 1));
             this._damagePlayer(damage, mob.x, mob.z);
-            const knock = 0.11 / Math.max(distance, 0.2);
+            const knock = (mob.charged ? 0.22 : 0.11) / Math.max(distance, 0.2);
             player.vx += dx * knock; player.vz += dz * knock;
           }
           mob.health = 0;
@@ -1881,3 +1932,5 @@ export class MobSystem {
     }
   }
 }
+
+// Channeling and crossbow projectile integrations are validated in ranged_weapons_advancements.test.js.

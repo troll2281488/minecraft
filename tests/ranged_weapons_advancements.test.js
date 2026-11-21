@@ -8,7 +8,8 @@ import { Inventory } from '../src/game/inventory.js';
 import { MobSystem } from '../src/entity/mobs.js';
 import { createArrow, stepArrow } from '../src/entity/arrows.js';
 import { beginCrossbowLoad, crossbowLoadProgress, finishCrossbowLoad, crossbowShotPlan, consumeCrossbowCharge, canPierceAdditionalTarget } from '../src/game/crossbow.js';
-import { createTridentProjectile, stepTrident, tridentReturnVelocity, riptideImpulse, impalingBonusDamage, canChannelLightning } from '../src/game/trident.js';
+import { createTridentProjectile, stepTrident, tridentReturnVelocity, riptideImpulse, impalingBonusDamage, canChannelLightning, channelingLightningEffect } from '../src/game/trident.js';
+import { weatherAt } from '../src/game/weather.js';
 import { ADVANCEMENTS, createAdvancementState, awardAdvancementCriterion, processAdvancementEvent, serializeAdvancementState } from '../src/game/advancements.js';
 
 describe('crossbow loading and firing', () => {
@@ -221,4 +222,110 @@ describe('bow enchantment gameplay integration', () => {
     entities.releaseBow();
     assertEqual(entities.arrows.length, 0);
   });
+});
+
+
+describe('Channeling lightning gameplay effects', () => {
+  it('strikes only during exposed thunderstorms and carries vanilla target effects', () => {
+    assertEqual(channelingLightningEffect({ channeling: true, thunder: false, skyVisible: true, targetExposed: true, targetType: 'creeper' }), null);
+    assertEqual(channelingLightningEffect({ channeling: true, thunder: true, skyVisible: false, targetExposed: false, targetType: 'creeper' }), null);
+    const creeper = channelingLightningEffect({ channeling: true, thunder: true, skyVisible: true, targetExposed: true, targetType: 'creeper' });
+    assertEqual(creeper.damage, 5);
+    assertEqual(creeper.fireTicks, 160);
+    assertEqual(creeper.chargedCreeper, true);
+    const villager = channelingLightningEffect({ channeling: true, thunder: true, skyVisible: true, targetExposed: true, targetType: 'villager' });
+    assertEqual(villager.transformTo, 'witch');
+  });
+});
+
+describe('crossbow firework rocket ammunition', () => {
+  it('registers craftable rockets and chooses them when no arrows are available', () => {
+    assertEqual(ITEMS.get('mc:firework_rocket').stackSize, 64);
+    assertEqual(RECIPES.producing('mc:firework_rocket').length, 1);
+    const inventory = new Inventory();
+    inventory.addItem('mc:crossbow', 1);
+    inventory.addItem('mc:firework_rocket', 1);
+    const player = new Player(0, 64, 0);
+    const game = { inventory, player, tickCount: 0, ui: { toast() {} }, sounds: { play() {} } };
+    const entities = new MobSystem(game);
+    assertEqual(entities.beginCrossbowLoad(), true);
+    game.tickCount = 25;
+    assertEqual(entities.releaseCrossbowLoad(), true);
+    assertEqual(entities.arrows.length, 1);
+    assertEqual(entities.arrows[0].isFireworkRocket, true);
+    assertEqual(inventory.countOf('mc:firework_rocket'), 0);
+    assertEqual(inventory.held.data.charged, false);
+  });
+  it('prefers regular arrows when both ammunition types are available', () => {
+    const inventory = new Inventory();
+    inventory.addItem('mc:crossbow', 1);
+    inventory.addItem('mc:firework_rocket', 1);
+    inventory.addItem('mc:arrow', 1);
+    const player = new Player(0, 64, 0);
+    const game = { inventory, player, tickCount: 0, ui: { toast() {} }, sounds: { play() {} } };
+    const entities = new MobSystem(game);
+    entities.beginCrossbowLoad();
+    game.tickCount = 25;
+    entities.releaseCrossbowLoad();
+    assertEqual(entities.arrows[0].isFireworkRocket, false);
+    assertEqual(inventory.countOf('mc:arrow'), 0);
+    assertEqual(inventory.countOf('mc:firework_rocket'), 1);
+  });
+});
+
+
+describe('Channeling mob integration', () => {
+  it('damages and charges an exposed creeper only during a thunderstorm', () => {
+    let seed = 0;
+    while (weatherAt(seed, 0) !== 'thunder') seed++;
+    const player = new Player(0, 64, 0);
+    const game = {
+      inventory: new Inventory(), player, tickCount: 1,
+      world: { dimension: 'overworld', seed, time: 0, getHeight: () => -64, getBlock: () => ({ block: { solid: false } }) },
+      ui: { toast() {} }, sounds: { play() {} },
+    };
+    const entities = new MobSystem(game);
+    const creeper = { id: 7, type: 'creeper', x: 0, y: player.eyeY - 0.5, z: 2.5, health: 20, anim: {} };
+    entities.mobs.push(creeper);
+    const trident = createArrow(0, player.eyeY, 0.55, [0, 0, 1], 0.9);
+    Object.assign(trident, { isTrident: true, channeling: true, damage: 8, vx: 0, vy: 0, vz: 2.5 });
+    entities.arrows.push(trident);
+    entities._tickArrows();
+    assertEqual(creeper.health, 7);
+    assertEqual(creeper.charged, true);
+    assertEqual(creeper.fireTicks, 160);
+    assertEqual(player.advancements.adventure_channeling.done, true);
+  });
+});
+
+describe('new ranged weapon advancements', () => {
+  it('awards throw-trident and crossbow achievements once', () => {
+    const player = new Player();
+    assertEqual(player.recordAdvancementEvent('threw_trident', 10).completed, true);
+    assertEqual(player.recordAdvancementEvent('shot_crossbow', 20).completed, true);
+    assertEqual(player.advancements.adventure_throw_trident.done, true);
+    assertEqual(player.advancements.adventure_shoot_crossbow.done, true);
+    assertEqual(player.recordAdvancementEvent('shot_crossbow', 30).awarded, false);
+  });
+});
+
+
+describe('crossbow firework rocket impact', () => {
+  it('detonates without arrow damage on entity impact', () => {
+  const game = {
+    inventory: new Inventory(), player: new Player(0, 64, 0), tickCount: 1,
+    world: { seed: 1, time: 0, getHeight: () => -64, getBlock: () => ({ block: { solid: false } }) },
+    ui: { toast() {} }, sounds: { play() {} },
+  };
+  const entities = new MobSystem(game);
+  const target = { id: 3, type: 'zombie', x: 0, y: game.player.eyeY - 0.5, z: 2.5, health: 20, anim: {} };
+  entities.mobs.push(target);
+  const rocket = createArrow(0, game.player.eyeY, 0.55, [0, 0, 1], 1);
+  rocket.isFireworkRocket = true;
+  entities.arrows.push(rocket);
+  entities._tickArrows();
+  assertEqual(target.health, 20);
+  assertEqual(entities.arrows.length, 0);
+  assertEqual(entities.blockParticles.length > 0, true);
+});
 });
