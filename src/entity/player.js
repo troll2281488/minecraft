@@ -16,6 +16,7 @@ import { PHYSICS, SPEED, SLIPPERINESS, TICKS_PER_SECOND, MAX_HEALTH, MIN_Y } fro
 import { AABB } from '../core/math.js';
 import { PlayerVitals } from './vitals.js';
 import { PlayerExperience } from './experience.js';
+import { PlayerStatusEffects } from './status_effects.js';
 import { collisionBoxes } from '../world/shapes.js';
 
 /** Blocks per second converted to blocks per tick. */
@@ -58,6 +59,7 @@ export class Player {
     this.health = MAX_HEALTH;
     this.vitals = new PlayerVitals();
     this.experience = new PlayerExperience();
+    this.effects = new PlayerStatusEffects();
 
     this.fallDistance = 0;
 
@@ -133,6 +135,7 @@ export class Player {
     if (this.attackTime > 0) this.attackTime--;
     this._applyGravityAndFriction(slipperiness);
     this.vitals.tick(this, Math.hypot(this.x - oldX, this.z - oldZ), this.sprinting, jumped);
+    this.effects.tick(this);
   }
 
   _tickFlying() {
@@ -248,13 +251,14 @@ export class Player {
    * sliding, rather than simply moving faster.
    */
   _applyInput(slipperiness) {
-    const target = perTick(
+    const speedMultiplier = this.effects?.has('swiftness') ? 1 + 0.2 * (this.effects.amplifier('swiftness') + 1) : 1;
+    const target = perTick((
       this.ridingHorse ? SPEED.SPRINT * 1.35
         : this.inWater ? (this.onGround ? SPEED.SNEAK : SPEED.SWIM)
         : this.sneaking ? SPEED.SNEAK
         : this.sprinting ? SPEED.SPRINT
-        : SPEED.WALK,
-    );
+        : SPEED.WALK
+    ) * speedMultiplier);
 
     let acceleration;
     if (this.onGround) {
@@ -566,6 +570,7 @@ export class Player {
       air: this.air,
       vitals: this.vitals.toJSON(),
       experience: this.experience.toJSON(),
+      effects: this.effects.toJSON(),
       gamemode: this.gamemode,
       flying: this.flying,
     };
@@ -579,6 +584,7 @@ export class Player {
     this.air = Math.max(0, Math.min(300, json.air ?? 300));
     this.vitals.loadFrom(json.vitals);
     this.experience.loadFrom(json.experience);
+    this.effects.loadFrom(json.effects);
     this.gamemode = json.gamemode ?? GAMEMODE.SURVIVAL;
     this.flying = json.flying ?? false;
     return this;
