@@ -48,3 +48,46 @@ export function bedrockChargeProgress(startTick, tickNow, durationTicks = 20) {
   if (!Number.isFinite(startTick)) return 0;
   return clamp01(((Number(tickNow) || 0) - startTick) / Math.max(1, durationTicks));
 }
+
+
+/**
+ * Humanoid motion curves adapted from Ambient's player.animation and
+ * player.swim_crawl animation sets. Values are radians for the WebGL cuboid rig.
+ */
+export function bedrockHumanoidPose(pose = {}, walkPhase = 0) {
+  const rad = degrees => degrees * Math.PI / 180;
+  const moving = !!pose.walking;
+  const phase = Number(walkPhase) || 0;
+  let leftArm = 0, rightArm = 0, leftLeg = 0, rightLeg = 0;
+  if (pose.attack) {
+    const t = clamp01((8 - (pose.attackTime ?? 0)) / 8);
+    const attack = Math.sin(Math.pow(t, 0.85) * Math.PI) * rad(68.7549);
+    rightArm = -attack;
+    leftArm = rad(4) * Math.sin(t * Math.PI);
+  } else if (pose.riding) {
+    leftArm = rightArm = rad(-36);
+    leftLeg = rightLeg = rad(-72);
+  } else if (pose.swimming) {
+    const swim = phase * 1.7;
+    // Bedrock's full swim arm cycle is a 0.0 → 0.6 → 1.1 → 1.6
+    // keyframe loop. A sinusoidal approximation keeps both strokes fluid.
+    leftArm = Math.sin(swim) * 0.82 - 0.25;
+    rightArm = Math.sin(swim + Math.PI) * 0.82 - 0.25;
+    leftLeg = Math.cos(swim + Math.PI) * rad(17.1887);
+    rightLeg = Math.cos(swim) * rad(17.1887);
+  } else if (pose.sneaking) {
+    leftArm = rightArm = rad(-5.7);
+    leftLeg = rightLeg = rad(-28);
+  } else if (moving) {
+    const stride = Math.cos(phase);
+    leftArm = stride * 0.58;
+    rightArm = -stride * 0.58;
+    leftLeg = -stride * 1.4;
+    rightLeg = stride * 1.4;
+  } else {
+    const breath = Math.sin((pose.idle ?? phase) * 1.2) * 0.05;
+    leftArm = breath;
+    rightArm = -breath;
+  }
+  return { leftArm, rightArm, leftLeg, rightLeg };
+}
