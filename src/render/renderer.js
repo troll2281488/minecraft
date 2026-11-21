@@ -880,6 +880,19 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         [[0,0,0],size,[1,1,1,1]],
       ], 0, -1, -1, 1, { itemModel: true, itemSprite: true, itemTexture: entry.texture, itemReady: true, itemSwing: 0 });
     }
+    // Minecarts are compact block-built entities; their world state is saved locally.
+    for (const cart of this.minecarts?.carts ?? []) {
+      const wheel = [0.16, 0.16, 0.16];
+      const parts = [
+        [[0,0.30,0],[0.92,0.22,0.92],[0.30,0.31,0.34,1]],
+        [[0,0.48,0],[0.78,0.18,0.78],[0.48,0.50,0.53,1]],
+        [[-0.34,0.13,-0.32],wheel,[0.10,0.10,0.11,1]],
+        [[0.34,0.13,-0.32],wheel,[0.10,0.10,0.11,1]],
+        [[-0.34,0.13,0.32],wheel,[0.10,0.10,0.11,1]],
+        [[0.34,0.13,0.32],wheel,[0.10,0.10,0.11,1]],
+      ];
+      draw(cart.x, cart.y - 0.08, cart.z, cart.yaw || 0, parts, 0, -1, -1, 1, {});
+    }
     // XP orbs use small bright voxel sprites; larger-value orbs have a warm core.
     for (const orb of this.entities?.experienceOrbs ?? []) {
       const phase = (orb.age || 0) * 0.075;
@@ -891,7 +904,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     }
     if (this.thirdPerson) {
       document.getElementById('held-item-view')?.classList.add('hidden');
-      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.ridingHorse && !this.player.onGround, jumping: !this.player.ridingHorse && !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking || !!this.player.ridingHorse, riding: !!this.player.ridingHorse, walking: !this.player.ridingHorse && this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035, attack: this.player.attackTime > 0, attackTime: this.player.attackTime }, true);
+      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : this.player.ridingMinecart ? 0.42 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround, jumping: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking || !!this.player.ridingHorse || !!this.player.ridingMinecart, riding: !!this.player.ridingHorse || !!this.player.ridingMinecart, walking: !this.player.ridingHorse && !this.player.ridingMinecart && this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035, attack: this.player.attackTime > 0, attackTime: this.player.attackTime }, true);
       draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, outerHuman, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.ridingHorse && !this.player.onGround, sneaking: this.player.sneaking || !!this.player.ridingHorse, riding: !!this.player.ridingHorse, skinLayer: true }, true);
       const armorColors = ['#b8b8b8','#8f8f9b','#b17a45','#6c778a'];
       const armorParts = [];
