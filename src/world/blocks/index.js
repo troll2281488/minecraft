@@ -401,6 +401,13 @@ define('mc:target', {
   texture: 'target', properties: { power: PROPS.power }, defaultValues: { power: 0 },
 });
 
+define('mc:lightning_rod', {
+  hardness: 3, resistance: 3, tool: 'pickaxe', soundGroup: 'copper',
+  texture: 'lightning_rod',
+  properties: { axis: PROPS.axis, powered: PROPS.powered },
+  defaultValues: { axis: 'y', powered: false },
+});
+
 define('mc:mob_spawner', {
   hardness: 5, resistance: 5, tool: 'pickaxe', harvestLevel: -1,
   requiresTool: true, soundGroup: 'stone', texture: 'mob_spawner',
