@@ -259,7 +259,7 @@ describe('wheat farming and farmland hydration', () => {
       assertEqual(canApplyBoneMeal(id, 6), true, id + ' should accept bone meal before maturity');
       assertEqual(canApplyBoneMeal(id, 7), false, id + ' should reject bone meal when mature');
       const age = boneMealAge(2, 123, 4, 65, 8, 600);
-      assert(age >= 4 && age <= 6, 'bone meal growth must advance by 2–4? bounded stages');
+      assert(age >= 4 && age <= 7, 'bone meal must advance by 2–5 stages');
     }
     assertEqual(canApplyBoneMeal('mc:pumpkin', 0), false);
     assertEqual(canApplyBoneMeal('mc:stone', 0), false);
