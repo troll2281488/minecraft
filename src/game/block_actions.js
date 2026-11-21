@@ -249,6 +249,11 @@ export const BlockActionsMixin = {
       let target = null;
       if (heldItem.id !== 'mc:bucket') target = placementTarget(this.world, this.hit);
       const targetState = target ? this.world.getBlock(target.x, target.y, target.z) : null;
+      if (heldItem.block && BLOCKS.get(heldItem.block)?.renderShape === 'rail' &&
+          !this.world.getBlock(target.x, target.y - 1, target.z).block.solid) {
+        this.ui.toast('Рельсам нужна твёрдая опора снизу', { error: true });
+        return;
+      }
       const plan = planBucketInteraction(
         heldItem.id, hitState.block.id, hitState.get('level'), targetState?.block,
       );
