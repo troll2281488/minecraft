@@ -147,6 +147,9 @@ describe('wheat farming and farmland hydration', () => {
     }
     assert(BLOCKS.get('mc:pumpkin'), 'pumpkin block missing');
     assert(BLOCKS.get('mc:melon'), 'melon block missing');
+    for (const id of ['mc:pumpkin', 'mc:melon', 'mc:pumpkin_seeds', 'mc:melon_seeds']) {
+      assert(ITEMS.get(id), id + ' item missing');
+    }
     assertEqual(ITEMS.get('mc:melon_slice').food.nutrition, 2);
   });
 
@@ -214,6 +217,24 @@ describe('wheat farming and farmland hydration', () => {
     }
   });
 
+  it('does not spawn fruit on the same tick a stem reaches maturity', () => {
+    const entries = [
+      ['0,64,0', BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)],
+      ['0,65,0', BLOCKS.get('mc:pumpkin_stem').defaultState.with('age', 6)],
+      ['1,64,0', BLOCKS.get('mc:dirt').defaultState],
+      ['-1,64,0', BLOCKS.get('mc:dirt').defaultState],
+      ['0,64,1', BLOCKS.get('mc:dirt').defaultState],
+      ['0,64,-1', BLOCKS.get('mc:dirt').defaultState],
+    ];
+    const world = makeWorld(entries);
+    world.seed = 3;
+    tickFarming(world, { x: 0, y: 65, z: 0 }, 600);
+    assertEqual(world.getBlock(0, 65, 0).get('age'), 7);
+    for (const [x, z] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+      assertEqual(world.getBlock(x, 65, z).block.id, 'mc:air');
+    }
+  });
+
   it('does not spawn fruit when all adjacent soil is unsuitable or spaces are blocked', () => {
     const entries = [
       ['0,64,0', BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)],
@@ -260,6 +281,8 @@ describe('wheat farming and farmland hydration', () => {
       assertEqual(canApplyBoneMeal(id, 7), false, id + ' should reject bone meal when mature');
       const age = boneMealAge(2, 123, 4, 65, 8, 600);
       assert(age >= 4 && age <= 7, 'bone meal must advance by 2–5 stages');
+      assertEqual(boneMealAge(2, 123, 4, 65, 8, 600), age, 'bone meal result must be deterministic');
+      assertEqual(boneMealAge(7, 123, 4, 65, 8, 600), null, 'mature crop must not grow further');
     }
     assertEqual(canApplyBoneMeal('mc:pumpkin', 0), false);
     assertEqual(canApplyBoneMeal('mc:stone', 0), false);
