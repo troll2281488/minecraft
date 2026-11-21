@@ -137,7 +137,7 @@ Reference target for this compatibility track is **Minecraft: Java Edition 1.19.
 | Door geometry / collision | shared 1/16-thick model | 🟡 *(axis-aligned panel boxes; model is simplified)* |
 | Trapdoors (six wood types + iron) — open/closed shape, collision, hand toggle and recipes | yes | 🟡 *(iron requires redstone; attachment validation and exact orientation remain)* |
 | Buttons (wood, stone, polished blackstone), lever, standard and weighted pressure plates, daylight detector, note block, redstone wire, redstone torch (floor-mounted inversion), repeater, comparator (compare/subtract modes, directional 0–15 output, 2-tick delay), redstone lamp and glowstone, hopper (five-slot inventory, eight-tick item transfer), observer, dropper, target, piston and sticky piston | 🟡 | *(local active-area simulation; piston push/retract is transactional and capped at 12 blocks; slime- and honey-block adhesion are implemented, while block entities, quasi-connectivity, exact Java update scheduling and moving-block animation remain incomplete)* |
-| Fence, gate, wall models | yes | ⬜ |
+| Wooden fences (six wood types), nether-brick fence and wooden fence gates — shared render/collision geometry, neighbour connections, open state and recipes | yes | 🟡 *(connections cover fences, gates and opaque full cubes; walls, redstone-powered gates and exact vanilla model profiles remain incomplete)* |
 | Cloud layer, weather, particles | yes | ⬜ |
 
 ## Saves
@@ -222,6 +222,10 @@ Slime blocks can be crafted from nine slime balls. A piston pushing a slime bloc
 
 Normal and sticky pistons now react to adjacent local redstone signals. Extension validates the complete push line before mutating anything, moves up to 12 movable blocks from farthest to nearest, creates an oriented internal piston head, and records the extended blockstate. Retraction removes the head; sticky pistons pull one movable block from two blocks ahead when the front cell is clear. Slime blocks pull adjacent ordinary blocks into the same transactional push group; the 12-block cap counts the entire group. Bedrock, obsidian, portal blocks, piston parts, containers, spawners and other registered immovable IDs block movement. Piston base and head face textures now follow the six-way facing state. The piston head has a shared render/collision box model. This remains a deliberately bounded implementation: moving-block entity interpolation, quasi-connectivity, block-entity movement, fragile-block destruction rules, gravity updates and complete Java neighbor-update scheduling remain incomplete.
 
+
+### Fences and fence gates
+
+Six wooden fence families and nether-brick fences use a shared post-and-rail model. Fence arms connect dynamically to neighbouring fences, correctly aligned gates, and opaque full cubes. The same neighbour-aware boxes drive rendering and player collision; the collision scan checks the block below for the 1.5-block-tall fence overhang. Six wooden fence gates can be opened and closed by hand; open gates no longer collide. Fences and gates have their Java-shaped crafting patterns and procedural fallback textures. Remaining differences: wall variants, redstone-powered gate behavior, and fine details of the vanilla connection/model rules are not implemented.
 
 ### Hopper item pickup
 
