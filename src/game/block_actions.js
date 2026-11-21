@@ -278,7 +278,34 @@ export const BlockActionsMixin = {
       }
       return;
     }
+    if (this.hit?.state?.block?.id === 'mc:campfire' && heldItem?.id === 'mc:water_bucket') {
+      const { x, y, z, state } = this.hit;
+      if (state.get('lit') !== false) {
+        const extinguished = state.with('lit', false);
+        this.world.setBlock(x, y, z, extinguished);
+        this.multiplayer?.pushBlockChange(x, y, z, extinguished);
+        if (this.player.gamemode === GAMEMODE.SURVIVAL) {
+          this.inventory.consumeHeld(1);
+          this.inventory.addItem('mc:bucket', 1);
+        }
+        this.sounds?.play('water');
+        this.ui.toast('Костёр потушен');
+      } else {
+        this.ui.toast('Костёр уже потушен');
+      }
+      return;
+    }
     if (heldItem?.id === 'mc:flint_and_steel' && this.hit) {
+      if (this.hit.state.block.id === 'mc:campfire') {
+        const lit = this.hit.state.with('lit', true);
+        if (this.world.setBlock(this.hit.x, this.hit.y, this.hit.z, lit)) {
+          this.multiplayer?.pushBlockChange(this.hit.x, this.hit.y, this.hit.z, lit);
+          this.inventory.damageHeld(1);
+          this.sounds?.play('furnace');
+          this.ui.toast('Костёр разожжён');
+        }
+        return;
+      }
       if (this.hit.state.block.id === 'mc:portal') {
         const target = this.world.dimension === 'nether' ? 'overworld' : 'nether';
         this._switchDimension(target).catch((error) => this.ui.toast('Портал: ' + error.message, { error: true }));
