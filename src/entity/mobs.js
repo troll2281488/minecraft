@@ -479,7 +479,9 @@ export class MobSystem {
       );
       if (result.hit === 'mob' && result.mob) {
         const mob = result.mob;
+        const previousHealth = mob.health;
         mob.health = Math.max(0, mob.health - (mob.type === 'horse' ? calculateHorseArmorDamage(arrow.damage, mob.horseArmor) : arrow.damage));
+        if (previousHealth > 0 && mob.health <= 0 && ['zombie','skeleton','stray','creeper','spider','enderman','witch','slime','magma_cube','ghast','blaze','wither_skeleton','drowned','phantom','guardian','elder_guardian','silverfish','cave_spider'].includes(mob.type)) this.game.player?.recordAdvancementEvent?.('killed_hostile', this.game.tickCount || 0);
         mob.hurtTicks = 10;
         mob.anim.hurt = 1;
         mob.playerDamageTicks = 100;
@@ -912,6 +914,7 @@ export class MobSystem {
     if (player.gamemode === 'survival') {
       this.spawnExperienceOrbs(experienceForFishing(), player.x, player.y + 0.65, player.z);
     }
+    player.recordAdvancementEvent?.('caught_fish', this.game.tickCount || 0);
     this.game.sounds?.play('reel');
     this.game.sounds?.play('catch');
     this.fishing = null;
@@ -1082,6 +1085,7 @@ export class MobSystem {
     if (partner) {
       const baby = this._spawnBaby(animal, partner);
       if (baby) {
+        player.recordAdvancementEvent?.('bred_animal', this.game.tickCount || 0);
         animal.loveTicks = 0;
         partner.loveTicks = 0;
         animal.breedCooldown = 6000;
@@ -1211,7 +1215,9 @@ export class MobSystem {
     const damage = baseDamage + enchantmentDamageBonus(held, mob.type) +
       (player.effects?.has('strength') ? 3 * (player.effects.amplifier('strength') + 1) : 0);
     const finalDamage = mob.type === 'horse' ? calculateHorseArmorDamage(damage, mob.horseArmor) : damage;
+    const previousHealth = mob.health;
     mob.health = Math.max(0, mob.health - finalDamage);
+    if (previousHealth > 0 && mob.health <= 0 && ['zombie','skeleton','stray','creeper','spider','enderman','witch','slime','magma_cube','ghast','blaze','wither_skeleton','drowned','phantom','guardian','elder_guardian','silverfish','cave_spider'].includes(mob.type)) player.recordAdvancementEvent?.('killed_hostile', this.game.tickCount || 0);
     this.game.sounds?.play('hit');
     mob.hurtTicks = 10;
     mob.anim.hurt = 1;
