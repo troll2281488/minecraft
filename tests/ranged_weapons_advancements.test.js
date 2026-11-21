@@ -13,6 +13,8 @@ describe('crossbow loading and firing', () => {
     assertEqual(crossbowLoadProgress(state, 112.5), 0.5);
     assertEqual(finishCrossbowLoad(state, 124), null);
     assertEqual(finishCrossbowLoad(state, 125).charged, true);
+    assertEqual(finishCrossbowLoad(state, 115, 'mc:arrow', 2).charged, true);
+    assertEqual(finishCrossbowLoad(state, 115, 'mc:arrow', 1), null);
   });
   it('supports three-bolt Multishot and one-projectile fireworks', () => {
     const loaded = finishCrossbowLoad({ loadingSince: 0 }, 25);
@@ -50,7 +52,8 @@ describe('trident flight and enchantments', () => {
     assertEqual(riptideImpulse(0, 0, 2, true).z, 3);
     assertEqual(impalingBonusDamage(3, { type: 'guardian' }, false), 7.5);
     assertEqual(impalingBonusDamage(3, { type: 'zombie' }, false), 0);
-    assertEqual(impalingBonusDamage(3, { type: 'zombie' }, true), 7.5);
+    assertEqual(impalingBonusDamage(3, { type: 'zombie' }, true), 0);
+    assertEqual(impalingBonusDamage(3, { type: 'axolotl' }, false), 7.5);
   });
   it('requires thunder and exposed sky for Channeling', () => {
     assertEqual(canChannelLightning({ thunder: true, skyVisible: true, targetExposed: true }), true);
