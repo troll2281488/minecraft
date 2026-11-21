@@ -26,6 +26,7 @@ import { compostChance, nextComposterLevel, boneMealAge, compostRoll, canApplyBo
 import { canPlantSugarCane } from './farming.js';
 import { refreshWallConnections } from './wall_updates.js';
 import { planBucketInteraction } from './bucket.js';
+import { planCauldronInteraction } from './cauldron.js';
 
 export const BlockActionsMixin = {
   _refreshWallConnections(...positions) {
@@ -133,6 +134,28 @@ export const BlockActionsMixin = {
       return;
     }
     const heldItem = this.inventory?.held?.item;
+    if (this.hit?.state?.block?.id === 'mc:cauldron' && heldItem) {
+      const { x, y, z, state } = this.hit;
+      const plan = planCauldronInteraction(heldItem.id, state.get('level'));
+      if (plan) {
+        const next = state.with('level', plan.nextLevel);
+        this.world.setBlock(x, y, z, next);
+        this.multiplayer?.pushBlockChange(x, y, z, next);
+        if (this.player.gamemode === GAMEMODE.SURVIVAL) {
+          this.inventory.consumeHeld(1);
+          const leftover = this.inventory.addItem(plan.resultItem, 1);
+          if (leftover > 0) {
+            const item = ITEMS.get(plan.resultItem);
+            if (item) this.entities?.spawnItemStackAt(new ItemStack(item, 1), this.player.x, this.player.y + 0.5, this.player.z);
+          }
+        }
+        this.sounds?.play('place', 'water');
+        this.ui.toast(plan.message);
+        return;
+      }
+      this.ui.toast('Котёл не может принять этот предмет или уровень воды не подходит');
+      return;
+    }
     if (heldItem && this.hit) {
       const hitState = this.hit.state;
       let target = null;
