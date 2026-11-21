@@ -1,5 +1,8 @@
 import { describe, it, assertEqual } from './framework.js';
-import { ItemStack, ITEMS } from '../src/world/item.js';
+import { ItemStack } from '../src/world/item.js';
+import '../src/world/blocks/index.js';
+import { BLOCKS } from '../src/world/block.js';
+import { breakTicks, blockDrops } from '../src/game/interaction.js';
 import {
   ENCHANTMENTS, enchantmentLevel, getEnchantments, canApplyEnchantment,
   areEnchantmentsCompatible, withEnchantment, unbreakingDamage,
@@ -58,6 +61,22 @@ describe('Java 1.19 enchantment data and anvil core', () => {
     const applied = combineOnAnvil(sword, bookSharp);
     assertEqual(applied.ok, true);
     assertEqual(enchantmentLevel(applied.output, 'sharpness'), 2);
+  });
+  it('applies Efficiency to real block-breaking time', () => {
+    const stone = BLOCKS.get('mc:stone');
+    const plainTicks = breakTicks(stone, pickaxe);
+    const efficient = withEnchantment(pickaxe, 'efficiency', 4);
+    assertEqual(breakTicks(stone, efficient) < plainTicks, true);
+  });
+  it('uses Silk Touch and Fortune in block drop calculations', () => {
+    const glass = BLOCKS.get('mc:glass').defaultState;
+    const silk = withEnchantment(pickaxe, 'silk_touch', 1);
+    assertEqual(blockDrops(glass, silk, 1, 0, 0, 0)[0].id, 'mc:glass');
+    const coal = BLOCKS.get('mc:coal_ore').defaultState;
+    const fortune = withEnchantment(pickaxe, 'fortune', 3);
+    const drop = blockDrops(coal, fortune, 123, 2, 64, 2)[0];
+    assertEqual(drop.id, 'mc:coal');
+    assertEqual(drop.count >= 1 && drop.count <= 4, true);
   });
   it('returns bounded eligible enchantment candidates for item categories', () => {
     const eligible = eligibleEnchantments(pickaxe);
