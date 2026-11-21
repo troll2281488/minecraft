@@ -897,6 +897,7 @@ for (const [id, nutrition, saturation] of FOODS) {
  * come from the vanilla tables in the same file.
  */
 ITEMS.define('mc:honey_bottle', { stackSize: 16, food: { nutrition: 6, saturation: 0.1 } });
+ITEMS.define('mc:milk_bucket', { stackSize: 1 });
 ITEMS.define('mc:shears', { stackSize: 1, maxDamage: 238, tool: 'shears', attackDamage: 1 });
 ITEMS.define('mc:flint_and_steel', { stackSize: 1, maxDamage: 64, tool: 'flint_and_steel' });
 ITEMS.define('mc:fishing_rod', { stackSize: 1, maxDamage: 64, tool: 'fishing_rod' });
