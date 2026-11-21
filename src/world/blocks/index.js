@@ -823,7 +823,8 @@ const MATERIALS = [
   ['mc:stick', { fuelTicks: 100 }],
   ['mc:coal', { fuelTicks: 1600 }],
   ['mc:charcoal', { fuelTicks: 1600 }],
-    ['mc:iron_ingot', {}],\n  ['mc:copper_ingot', {}],
+    ['mc:iron_ingot', {}],
+  ['mc:copper_ingot', {}],
   ['mc:gold_ingot', {}],
   ['mc:gold_nugget', {}],
   ['mc:diamond', {}],
@@ -1074,7 +1075,9 @@ const tagProblems = [
   ...ITEM_TAGS.validate((id) => ITEMS.get(id) !== undefined),
 ];
 if (tagProblems.length > 0) {
-  throw new Error('Tag validation failed:\n  - ' + tagProblems.join('\n  - '));
+  throw new Error('Tag validation failed:
+  - ' + tagProblems.join('
+  - '));
 }
 
 export const BLOCK_COUNT = BLOCKS.blockCount;
