@@ -140,6 +140,13 @@ Reference target for this compatibility track is **Minecraft: Java Edition 1.19.
 | Fence, gate, wall models | yes | ⬜ |
 | Cloud layer, weather, particles | yes | ⬜ |
 
+## Additional farming
+
+| Item | Vanilla behavior | Status |
+|---|---|---|
+| Sugar cane | Place on eligible soil beside source water; grows to three blocks; harvested as cane | 🟡 *(source-water placement, deterministic 0–15 age counter, three-block cap, drops, sugar and paper recipes; random-tick probability and exact growth timing are approximated)* |
+| Cactus | Place on sand/red sand with clear horizontal neighbors; grows to three blocks | 🟡 *(sand support, four-side placement checks, deterministic age counter, three-block cap and drops; contact damage and exact random-tick timing are not implemented)* |
+
 ## Saves
 
 | Item | Requirement | Status |
