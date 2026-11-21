@@ -115,6 +115,7 @@ export class Player {
       this._applyCobwebSlowdown(world);
       this._move(world);
       this.vitals.tick(this, Math.hypot(this.x - oldX, this.z - oldZ), false, false);
+      this.effects.tick(this);
       return;
     }
 
