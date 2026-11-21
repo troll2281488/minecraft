@@ -636,6 +636,7 @@ export const ContainerScreensMixin = {
 
         const hopper = this._hopperAt(x, y, z);
         const hopperEntry = { type: 'hopper', data: hopper };
+        let collectedDroppedItem = false;
 
         // Collect item entities from the open top. Only the room host mutates
         // shared drops; multiplayer claims use the same atomic transaction as
@@ -646,7 +647,9 @@ export const ContainerScreensMixin = {
             const drop = drops[dropIndex];
             if (drop.hopperClaiming || drop.claiming ||
                 !isItemInHopperIntake(drop, x, y, z)) continue;
-            const preview = insertDroppedStack(hopper, drop.stack);
+            const previewHopper = new Hopper();
+            previewHopper.slots = hopper.slots.map((slot) => slot.clone());
+            const preview = insertDroppedStack(previewHopper, drop.stack);
             if (preview.inserted <= 0) continue;
 
             if (drop.networkKey && this.multiplayer?.roomId) {
@@ -683,7 +686,7 @@ export const ContainerScreensMixin = {
             if (inserted > 0) {
               if (remaining <= 0) drops.splice(dropIndex, 1);
               else drop.stack.count = remaining;
-              moved = true;
+              collectedDroppedItem = true;
               if (this.multiplayer?.roomId) {
                 this._hopperDirtyKeys ||= new Set();
                 this._hopperDirtyKeys.add(key);
@@ -694,7 +697,7 @@ export const ContainerScreensMixin = {
         const [dx, dy, dz] = directions[state.get('facing')] || directions.down;
         const tx = x + dx, ty = y + dy, tz = z + dz;
         const targetBlock = world.getBlock(tx, ty, tz).block.id;
-        let moved = false;
+        let moved = collectedDroppedItem;
         let destinationEntry = null;
         if (targetBlock === 'mc:chest' || targetBlock === 'mc:trapped_chest') {
           destinationEntry = { type: 'chest', data: this._chestAt(tx, ty, tz) };
