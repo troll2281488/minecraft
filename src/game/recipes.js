@@ -24,6 +24,10 @@ const recipes = [];
 // -- Buckets and fluids ---------------------------------------------------
 recipes.push({ result: 'mc:bucket', count: 1, pattern: ['I I', ' I '], key: { I: 'mc:iron_ingot' } });
 
+// -- Processing stations --------------------------------------------------
+recipes.push({ result: 'mc:smoker', count: 1, pattern: [' L ', 'LFL', ' L '], key: { L: '#mc:logs', F: 'mc:furnace' } });
+recipes.push({ result: 'mc:blast_furnace', count: 1, pattern: ['III', 'IFI', 'SSS'], key: { I: 'mc:iron_ingot', F: 'mc:furnace', S: 'mc:smooth_stone' } });
+
 // -- Wood ------------------------------------------------------------------
 
 for (const wood of WOODS) {
