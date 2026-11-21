@@ -41,27 +41,39 @@ async function readZip(file) {
   return entries;
 }
 function soundBucket(path) {
-  const name = path.toLowerCase().replace(/\\/g, '/').split('/').pop().replace(/\.ogg$/, '');
-  // Most Bedrock packs number variants directly (break1.ogg, step3.ogg,
-  // explode2.ogg). Accept an optional numeric suffix or the variants silently
-  // decode without ever being assigned to a playable event bucket.
-  const variant = '(?:\\d+)?';
+  // Classify by the complete archive path, not only the final filename.
+  // Bedrock packs commonly store sounds under category folders such as
+  // sounds/blocks, sounds/mob, sounds/player, sounds/item and sounds/ambient.
+  const full = String(path).toLowerCase().replace(/\\\\/g, '/').replace(/\.ogg$/i, '');
+  const name = full.split('/').pop();
+  const has = (...words) => words.some(word => new RegExp('(^|[._/-])' + word + '(?:[0-9]+)?($|[._/-])').test(full));
   const rules = [
-    ['break', new RegExp('(^|[._-])(break|destroy)' + variant + '([._-]|$)')],
-    ['place', new RegExp('(^|[._-])(place|put_down)' + variant + '([._-]|$)')],
-    ['hit', new RegExp('(^|[._-])(hit|impact)' + variant + '([._-]|$)')],
-    ['step', new RegExp('(^|[._-])(step|footstep)' + variant + '([._-]|$)')],
-    ['hurt', new RegExp('(^|[._-])(hurt|damage)' + variant + '([._-]|$)')],
-    ['death', new RegExp('(^|[._-])(death|die)' + variant + '([._-]|$)')],
-    ['ambient', new RegExp('(^|[._-])(ambient|ambience|idle|living)' + variant + '([._-]|$)')],
-    ['open', new RegExp('(^|[._-])open' + variant + '([._-]|$)')],
-    ['close', new RegExp('(^|[._-])close' + variant + '([._-]|$)')],
-    ['pickup', new RegExp('(^|[._-])(pickup|pop)' + variant + '([._-]|$)')],
-    ['eat', new RegExp('(^|[._-])(eat|burp)' + variant + '([._-]|$)')],
-    ['shoot', new RegExp('(^|[._-])(shoot|fire)' + variant + '([._-]|$)')],
-    ['explode', new RegExp('(^|[._-])(explode|explosion)' + variant + '([._-]|$)')],
+    ['step', () => has('step','footstep','walk','walking','run','running','swim','splash')],
+    ['break', () => has('break','destroy','dig','mine')],
+    ['place', () => has('place','put_down','build')],
+    ['hit', () => has('hit','impact','attack','punch')],
+    ['hurt', () => has('hurt','damage','injured')],
+    ['death', () => has('death','die','dying')],
+    ['ambient', () => has('ambient','ambience','idle','living','cave','environment','weather')],
+    ['open', () => has('open','unlock','activate')],
+    ['close', () => has('close','lock','deactivate')],
+    ['pickup', () => has('pickup','pop','collect','take')],
+    ['eat', () => has('eat','burp','chew','drink','gulp')],
+    ['shoot', () => has('shoot','fire','launch','bow','crossbow','arrow')],
+    ['explode', () => has('explode','explosion','blast')],
+    ['water', () => has('water','underwater','bubble','fishing')],
+    ['lava', () => has('lava','fire','burn')],
+    ['rain', () => has('rain','drip','weather')],
+    ['thunder', () => has('thunder','lightning')],
+    ['xp', () => has('experience','orb','levelup','level_up')],
+    ['trade', () => has('trade','villager','merchant')],
+    ['equip', () => has('equip','armor','armour','wear')],
+    ['note', () => has('note','instrument','harp','pling','bell','chime')],
+    ['furnace', () => has('furnace','smelt','fire_crackle')],
+    ['click', () => has('click','button','ui','menu')],
+    ['toast', () => has('toast','notification')],
   ];
-  return rules.find(([, re]) => re.test(name))?.[0] ?? null;
+  return rules.find(([, match]) => match())?.[0] ?? null;
 }
 export class BedrockSoundPack {
   constructor(context) { this.context = context; this.sounds = new Map(); this.fileCount = 0; }
@@ -94,8 +106,15 @@ export class BedrockSoundPack {
     const aliases = {
       'block.break':'break','block.place':'place','block.hit':'hit','block.step':'step',
       'block.door.open':'open','block.door.close':'close','block.chest.open':'open','block.chest.close':'close',
-      'entity.player.hurt':'hurt','entity.mob.hurt':'hurt','entity.mob.death':'death','entity.mob.ambient':'ambient',
-      'entity.item.pickup':'pickup','item.eat':'eat','entity.arrow.shoot':'shoot','entity.generic.explode':'explode',
+      'block.furnace.start':'furnace','block.note':'note',
+      'entity.player.hurt':'hurt','entity.player.levelup':'xp',
+      'entity.mob.hurt':'hurt','entity.mob.death':'death','entity.mob.ambient':'ambient',
+      'entity.item.pickup':'pickup','entity.item.drop':'pickup','entity.experience_orb.pickup':'xp',
+      'item.eat':'eat','item.drink':'eat','entity.arrow.shoot':'shoot','entity.arrow.hit':'hit',
+      'entity.generic.explode':'explode','entity.villager.trade':'trade',
+      'item.equip':'equip','item.cast':'shoot','item.reel':'water','item.fishing.bite':'water','item.fishing.catch':'water',
+      'weather.rain':'rain','weather.thunder':'thunder','fluid.water':'water','fluid.lava':'lava',
+      'ui.click':'click','ui.toast':'toast'
     };
     const choices = this.sounds.get(aliases[String(eventId).toLowerCase()]);
     if (!choices?.length) return false;
