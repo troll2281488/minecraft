@@ -33,8 +33,6 @@ export const ENCHANTMENTS = Object.freeze({
   curse_of_binding: { max: 1, weight: 1, applies: ['armor'], treasure: true },
   curse_of_vanishing: { max: 1, weight: 1, applies: ['all'], treasure: true },
 });
-
-const BOOK_ONLY = new Set(Object.keys(ENCHANTMENTS));
 const CATEGORY = (item) => {
   if (!item) return [];
   const result = [];
