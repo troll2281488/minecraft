@@ -80,6 +80,13 @@ export function shearSheep(mob, random = Math.random) {
   return [{ id: 'mc:white_wool', count }];
 }
 
+export function shearMooshroom(mob) {
+  if (!mob || mob.type !== 'mooshroom') return [];
+  mob.type = 'cow';
+  mob.sheared = true;
+  return Array.from({ length: 5 }, () => ({ id: 'mc:red_mushroom', count: 1 }));
+}
+
 export function rollFishingCatch(random = Math.random) {
   const roll = random();
   if (roll < 0.60) return { id: 'mc:raw_cod', count: 1 };
@@ -822,14 +829,33 @@ export class MobSystem {
   shearFromPlayer() {
     const mob = this.targetedMob();
     const held = this.game.inventory?.held;
-    if (!mob || mob.type !== 'sheep' || mob.sheared || held?.item?.tool !== 'shears') return false;
-    const drops = shearSheep(mob);
+    if (!mob || held?.item?.tool !== 'shears') return false;
+    let drops = [];
+    if (mob.type === 'sheep' && !mob.sheared) drops = shearSheep(mob);
+    else if (mob.type === 'mooshroom') drops = shearMooshroom(mob);
+    else return false;
     for (const drop of drops) {
       const leftover = this.game.inventory.addItem(drop.id, drop.count);
-      if (leftover > 0) this.game.ui?.toast('Inventory full: ' + leftover + ' wool not collected', { error: true });
+      if (leftover > 0) this.game.ui?.toast('Inventory full: ' + leftover + ' items not collected', { error: true });
     }
     if (this.game.player?.gamemode !== 'creative') this.game.inventory.damageHeld(1);
-    this.game.ui?.toast('Sheep sheared');
+    this.game.ui?.toast(mob.type === 'cow' ? 'Mooshroom converted into a cow' : 'Sheep sheared');
+    return true;
+  }
+
+  milkCowFromPlayer() {
+    const mob = this.targetedMob();
+    const held = this.game.inventory?.held;
+    const player = this.game.player;
+    if (!mob || mob.type !== 'cow' || !held || held.isEmpty || held.item?.id !== 'mc:bucket') return false;
+    if (!player || !['survival', 'creative'].includes(player.gamemode)) return false;
+    const leftover = this.game.inventory.addItem('mc:milk_bucket', 1);
+    if (leftover > 0) {
+      this.game.ui?.toast('Нужно свободное место для ведра молока', { error: true });
+      return true;
+    }
+    if (player.gamemode !== 'creative') this.game.inventory.consumeHeld(1);
+    this.game.ui?.toast('Получено ведро молока');
     return true;
   }
 
