@@ -298,11 +298,10 @@ function railBoxes(state) {
     return boxes;
   }
   const slope = shape.startsWith('ascending_');
-  const riseAxis = shape === 'ascending_east' || shape === 'ascending_west' ? 'x' : 'z';
   const riseSign = shape === 'ascending_east' || shape === 'ascending_south' ? 1 : -1;
   for (let i = 0; i < 4; i++) {
     const t = (i + 0.5) / 4;
-    const step = slope ? (riseSign > 0 ? t : 1 - t) * 0.125 : 0;
+    const step = slope ? (riseSign > 0 ? t : 1 - t) * 0.75 : 0;
     if (alongX) {
       const x0 = i * 0.25;
       boxes.push([x0, 0.0125, 0.08, x0 + 0.20, 0.06, 0.92]);
