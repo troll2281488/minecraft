@@ -4,6 +4,7 @@ import { BLOCKS } from '../src/world/block.js';
 import { ITEMS } from '../src/world/item.js';
 import {
   tickFarming, nextWheatAge, nextCropAge, hasNearbyWaterSource,
+  chooseStemFruitTarget, STEM_IDS,
   FARMLAND_MAX_MOISTURE, DRY_WHEAT_GROWTH_INTERVAL,
 } from '../src/game/farming.js';
 import { RECIPES } from '../src/game/recipes.js';
@@ -136,7 +137,99 @@ describe('wheat farming and farmland hydration', () => {
     assertEqual(drops[1].id, 'mc:wheat_seeds');
   });
 
+  it('registers pumpkin and melon stems as seven-stage crops and fruit as harvestable blocks', () => {
+    for (const id of STEM_IDS) {
+      const stem = BLOCKS.get(id);
+      assert(stem, id + ' missing');
+      assertEqual(nextCropAge(stem.defaultState), 1);
+      assertEqual(nextCropAge(stem.defaultState.with('age', 7)), null);
+    }
+    assert(BLOCKS.get('mc:pumpkin'), 'pumpkin block missing');
+    assert(BLOCKS.get('mc:melon'), 'melon block missing');
+    assertEqual(ITEMS.get('mc:melon_slice').food.nutrition, 2);
+  });
+
+  it('grows pumpkin and melon stems on hydrated farmland and slows dry stems', () => {
+    for (const id of STEM_IDS) {
+      const hydrated = makeWorld([
+        ['0,64,0', BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)],
+        ['0,65,0', BLOCKS.get(id).defaultState],
+      ]);
+      tickFarming(hydrated, { x: 0, y: 65, z: 0 }, 600);
+      assertEqual(hydrated.getBlock(0, 65, 0).get('age'), 1, id + ' did not grow');
+      const dry = makeWorld([
+        ['0,64,0', BLOCKS.get('mc:farmland').defaultState],
+        ['0,65,0', BLOCKS.get(id).defaultState],
+      ]);
+      tickFarming(dry, { x: 0, y: 65, z: 0 }, 600);
+      assertEqual(dry.getBlock(0, 65, 0).get('age'), 0, id + ' grew too quickly on dry soil');
+      tickFarming(dry, { x: 0, y: 65, z: 0 }, DRY_WHEAT_GROWTH_INTERVAL);
+      assertEqual(dry.getBlock(0, 65, 0).get('age'), 1, id + ' did not grow on dry interval');
+    }
+  });
+
+  it('places mature stem fruit only in adjacent air above suitable soil, deterministically', () => {
+    const entries = [
+      ['0,64,0', BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)],
+      ['0,65,0', BLOCKS.get('mc:pumpkin_stem').defaultState.with('age', 7)],
+      ['1,64,0', BLOCKS.get('mc:dirt').defaultState],
+      ['-1,64,0', BLOCKS.get('mc:dirt').defaultState],
+      ['0,64,1', BLOCKS.get('mc:dirt').defaultState],
+      ['0,64,-1', BLOCKS.get('mc:dirt').defaultState],
+    ];
+    let seed = 0, expected = null;
+    for (; seed < 100; seed++) {
+      expected = chooseStemFruitTarget(makeWorld(entries), 0, 65, 0, seed, 600, 'mc:pumpkin_stem');
+      if (expected) break;
+    }
+    assert(expected, 'could not find deterministic valid fruit roll');
+    const world = makeWorld(entries);
+    world.seed = seed;
+    const changed = tickFarming(world, { x: 0, y: 65, z: 0 }, 600);
+    assertEqual(world.getBlock(expected.x, expected.y, expected.z).block.id, 'mc:pumpkin');
+    assert(changed.some((change) => change.x === expected.x && change.z === expected.z), 'fruit change was not returned for replication');
+  });
+
+  it('does not spawn fruit when all adjacent soil is unsuitable or spaces are blocked', () => {
+    const entries = [
+      ['0,64,0', BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)],
+      ['0,65,0', BLOCKS.get('mc:melon_stem').defaultState.with('age', 7)],
+      ['1,64,0', BLOCKS.get('mc:stone').defaultState],
+      ['-1,64,0', BLOCKS.get('mc:stone').defaultState],
+      ['0,64,1', BLOCKS.get('mc:stone').defaultState],
+      ['0,64,-1', BLOCKS.get('mc:stone').defaultState],
+    ];
+    const world = makeWorld(entries);
+    world.seed = 0;
+    tickFarming(world, { x: 0, y: 65, z: 0 }, 600);
+    for (const [x, z] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+      assertEqual(world.getBlock(x, 65, z).block.id, 'mc:air');
+    }
+  });
+
+  it('drops melon slices and matching seeds from stems', () => {
+    const melon = blockDrops(BLOCKS.get('mc:melon').defaultState, null, 4, 0, 64, 0);
+    assertEqual(melon[0].id, 'mc:melon_slice');
+    assert(melon[0].count >= 3 && melon[0].count <= 7);
+    const pumpkinStem = blockDrops(BLOCKS.get('mc:pumpkin_stem').defaultState, null, 5, 0, 64, 0);
+    assert(pumpkinStem.length <= 1);
+    if (pumpkinStem.length) assertEqual(pumpkinStem[0].id, 'mc:pumpkin_seeds');
+    const melonStem = blockDrops(BLOCKS.get('mc:melon_stem').defaultState, null, 6, 0, 64, 0);
+    assert(melonStem.length <= 1);
+    if (melonStem.length) assertEqual(melonStem[0].id, 'mc:melon_seeds');
+  });
+
+  it('adds pumpkin seed, melon seed and melon block recipes', () => {
+    assertEqual(RECIPES.producing('mc:pumpkin_seeds').length, 1);
+    assertEqual(RECIPES.producing('mc:melon_seeds').length, 1);
+    assertEqual(RECIPES.producing('mc:melon').length, 1);
+    assertEqual(RECIPES.producing('mc:melon')[0].pattern.join('/'), 'MMM/MMM/MMM');
+  });
+
   it('retains bread and wooden hoe crafting recipes', () => {
+    assertEqual(RECIPES.producing('mc:bread').length, 1);
+    assertEqual(RECIPES.producing('mc:wooden_hoe').length, 1);
+  });  it('retains bread and wooden hoe crafting recipes', () => {
     assertEqual(RECIPES.producing('mc:bread').length, 1);
     assertEqual(RECIPES.producing('mc:wooden_hoe').length, 1);
   });
