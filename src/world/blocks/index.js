@@ -564,7 +564,7 @@ define('mc:farmland', {
 
 define('mc:composter', {
   hardness: 0.6, resistance: 0.6, tool: 'axe', soundGroup: 'wood',
-  renderShape: 'slab', opaqueCube: false, texture: 'composter',
+  texture: 'composter',
   properties: { level: PROPS.composterLevel }, defaultValues: { level: 0 },
 });
 
