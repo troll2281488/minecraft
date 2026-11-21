@@ -859,6 +859,9 @@ const MATERIALS = [
   ['mc:sugar', {}],
   ['mc:beetroot_seeds', {}],
   ['mc:beetroot', { food: { nutrition: 1, saturation: 0.6 } }],
+  ['mc:bowl', { stackSize: 64 }],
+  ['mc:cocoa_beans', {}],
+  ['mc:egg', {}],
 ];
 for (const [id, opts] of MATERIALS) ITEMS.define(id, opts);
 
@@ -889,6 +892,14 @@ for (const [id, nutrition, saturation] of FOODS) {
   ITEMS.define(id, { food: { nutrition, saturation } });
 }
 
+// Java survival foods added with their vanilla nutrition and container returns.
+ITEMS.define('mc:cookie', { food: { nutrition: 2, saturation: 0.4 } });
+ITEMS.define('mc:pumpkin_pie', { food: { nutrition: 8, saturation: 0.3 } });
+ITEMS.define('mc:golden_carrot', { food: { nutrition: 6, saturation: 1.2 } });
+ITEMS.define('mc:mushroom_stew', { stackSize: 1, food: { nutrition: 6, saturation: 0.6 }, containerItem: 'mc:bowl' });
+ITEMS.define('mc:beetroot_soup', { stackSize: 1, food: { nutrition: 6, saturation: 0.6 }, containerItem: 'mc:bowl' });
+ITEMS.define('mc:rabbit_stew', { stackSize: 1, food: { nutrition: 10, saturation: 0.6 }, containerItem: 'mc:bowl' });
+
 /**
  * Tools.
  *
@@ -898,6 +909,7 @@ for (const [id, nutrition, saturation] of FOODS) {
  */
 ITEMS.define('mc:honey_bottle', { stackSize: 16, food: { nutrition: 6, saturation: 0.1 } });
 ITEMS.define('mc:milk_bucket', { stackSize: 1 });
+ITEMS.define('mc:shield', { stackSize: 1, maxDamage: 336, weapon: 'shield' });
 ITEMS.define('mc:shears', { stackSize: 1, maxDamage: 238, tool: 'shears', attackDamage: 1 });
 ITEMS.define('mc:flint_and_steel', { stackSize: 1, maxDamage: 64, tool: 'flint_and_steel' });
 ITEMS.define('mc:fishing_rod', { stackSize: 1, maxDamage: 64, tool: 'fishing_rod' });
