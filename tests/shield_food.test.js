@@ -1,8 +1,9 @@
 import { describe, it, assertEqual } from './framework.js';
 import '../src/world/blocks/index.js';
-import { ITEMS } from '../src/world/item.js';
+import { ITEMS, ItemStack } from '../src/world/item.js';
+import { Inventory } from '../src/game/inventory.js';
 import { RECIPES } from '../src/game/recipes.js';
-import { shieldBlocksAttack } from '../src/entity/mobs.js';
+import { MobSystem, shieldBlocksAttack } from '../src/entity/mobs.js';
 
 describe('Java shield blocking', () => {
   it('blocks attacks from the front and rejects attacks from behind', () => {
@@ -16,6 +17,23 @@ describe('Java shield blocking', () => {
     assertEqual(shieldBlocksAttack(player, 3, 0, true), false);
     assertEqual(shieldBlocksAttack(player, 0, 3, false), false);
   });
+
+  it('actually cancels a frontal mob hit and spends shield durability', () => {
+    const inventory = new Inventory();
+    inventory.set(0, ItemStack.of('mc:shield', 1));
+    const player = { x: 0, z: 0, yaw: 0, gamemode: 'survival', health: 20 };
+    const game = {
+      player, inventory, mouseButtons: new Set([2]), worldMeta: { difficulty: 'normal' },
+      ui: { updateHotbar() {} }, sounds: { play() {} },
+    };
+    const mobs = new MobSystem(game);
+    assertEqual(mobs._damagePlayer(4, 0, 3), 0);
+    assertEqual(player.health, 20);
+    assertEqual(inventory.held.damage, 1);
+    assertEqual(mobs._damagePlayer(4, 0, -3), 4);
+    assertEqual(player.health, 16);
+  });
+
   it('registers a non-stackable shield with Java durability and recipe', () => {
     assertEqual(ITEMS.get('mc:shield')?.stackSize, 1);
     assertEqual(ITEMS.get('mc:shield')?.maxDamage, 336);
