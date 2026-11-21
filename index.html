@@ -698,6 +698,13 @@
 .villager-trade-empty{text-align:center;padding:1rem}
 @media(max-width:520px){.villager-trade-row{align-items:flex-start;flex-direction:column}.villager-trade-row button{align-self:stretch;width:100%}}
 
+
+  /* Keep long settings panels reachable on short screens and show scrollable content. */
+  #settings-screen { overflow-y:auto; align-items:flex-start; justify-content:center; padding:12px 0; }
+  #settings-screen .panel { max-height:none; overflow:visible; margin:0 auto; }
+  #bedrock-sound-settings { padding-bottom:18px; }
+  #bedrock-sound-status { min-height:1.4em; margin:.5rem 0 0; color:#dce8c8; font-size:.8rem; line-height:1.4; overflow-wrap:anywhere; }
+
 </style>
 </head>
 <body>
