@@ -221,3 +221,8 @@ Slime blocks can be crafted from nine slime balls. A piston pushing a slime bloc
 ### Pistons
 
 Normal and sticky pistons now react to adjacent local redstone signals. Extension validates the complete push line before mutating anything, moves up to 12 movable blocks from farthest to nearest, creates an oriented internal piston head, and records the extended blockstate. Retraction removes the head; sticky pistons pull one movable block from two blocks ahead when the front cell is clear. Slime blocks pull adjacent ordinary blocks into the same transactional push group; the 12-block cap counts the entire group. Bedrock, obsidian, portal blocks, piston parts, containers, spawners and other registered immovable IDs block movement. Piston base and head face textures now follow the six-way facing state. The piston head has a shared render/collision box model. This remains a deliberately bounded implementation: moving-block entity interpolation, quasi-connectivity, block-entity movement, fragile-block destruction rules, gravity updates and complete Java neighbor-update scheduling remain incomplete.
+
+
+### Hopper item pickup
+
+Enabled hoppers now collect dropped item stacks whose entity bounds intersect the top intake volume. Insertion fills matching stacks before empty slots; if capacity is insufficient, the uncollected remainder stays as a world item. In multiplayer, only the room host attempts collection and uses the existing atomic dropped-item claim transaction, while container state remains batched through the existing dirty-container queue. This is an implementation approximation: intake bounds are simplified, item pickup is sampled on the existing eight-tick hopper cycle, and the vanilla per-hopper transfer cooldown is not yet modeled.
