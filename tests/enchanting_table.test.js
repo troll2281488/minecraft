@@ -5,14 +5,14 @@ import { ITEMS, ItemStack } from '../src/world/item.js';
 import { RECIPES } from '../src/game/recipes.js';
 import {
   withEnchantment, enchantmentLevel, generateEnchantingOffers,
-  applyEnchantingOffer, countEnchantingBookshelves, repairWithMending,
+  applyEnchantingOffer, countEnchantingBookshelves, repairWithMending, fishingWaitTicks,
 } from '../src/game/enchantments.js';
 
 describe('Java 1.19 enchanting table, Mending and Lure', () => {
   it('registers enchanting and repair stations with craft recipes', () => {
     assertEqual(Boolean(BLOCKS.get('mc:enchanting_table')), true);
     assertEqual(Boolean(BLOCKS.get('mc:anvil')), true);
-    assertEqual(RECIPES.all().some((recipe) => recipe.result === 'mc:enchanting_table'), true);
+    assertEqual(RECIPES.recipes.some((recipe) => recipe.result === 'mc:enchanting_table'), true);
     assertEqual(RECIPES.all().some((recipe) => recipe.result === 'mc:anvil'), true);
     assertEqual(Boolean(ITEMS.get('mc:enchanting_table')), true);
     assertEqual(Boolean(ITEMS.get('mc:anvil')), true);
@@ -51,6 +51,14 @@ describe('Java 1.19 enchanting table, Mending and Lure', () => {
     blocks.set(key(1, 0, 1), 'mc:stone');
     const world = { getBlock: (x, y, z) => ({ block: { id: blocks.get(key(x, y, z)) || 'mc:air' } }) };
     assertEqual(countEnchantingBookshelves(world, 0, 0, 0), 2);
+  });
+  it('reduces fishing wait by 100 ticks per Lure level', () => {
+    const rod = ItemStack.of('mc:fishing_rod');
+    assertEqual(fishingWaitTicks(180, rod), 180);
+    const lure = withEnchantment(rod, 'lure', 2);
+    assertEqual(fishingWaitTicks(350, lure), 150);
+    const maxLure = withEnchantment(rod, 'lure', 3);
+    assertEqual(fishingWaitTicks(100, maxLure), 20);
   });
   it('repairs damaged Mending tools and returns unused XP to the player', () => {
     const pick = ItemStack.of('mc:diamond_pickaxe');
