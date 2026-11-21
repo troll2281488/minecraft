@@ -5,16 +5,21 @@
  * reloads and multiplayer block-state replication without a side database.
  */
 export const WHEAT_CROP_ID = 'mc:wheat';
+export const CROP_IDS = Object.freeze(['mc:wheat', 'mc:carrots', 'mc:potatoes', 'mc:beetroots']);
 export const FARMLAND_ID = 'mc:farmland';
 export const FARMLAND_MAX_MOISTURE = 7;
 export const FARMLAND_TICK_INTERVAL = 20;
 export const WHEAT_GROWTH_INTERVAL = 600;
 export const DRY_WHEAT_GROWTH_INTERVAL = 1800;
 
-export function nextWheatAge(state) {
-  if (state?.block?.id !== WHEAT_CROP_ID) return null;
+export function nextCropAge(state) {
+  if (!CROP_IDS.includes(state?.block?.id)) return null;
   const age = state.get('age');
   return age >= 7 ? null : age + 1;
+}
+
+export function nextWheatAge(state) {
+  return state?.block?.id === WHEAT_CROP_ID ? nextCropAge(state) : null;
 }
 
 /**
@@ -88,7 +93,7 @@ export function tickFarming(world, player, tickCount) {
       for (let z = pz - 8; z <= pz + 8; z++) {
         for (let y = py - 3; y <= py + 4; y++) {
           const crop = world.getBlock(x, y, z);
-          const nextAge = nextWheatAge(crop);
+          const nextAge = nextCropAge(crop);
           if (nextAge === null) continue;
           const soilKey = `${x},${y - 1},${z}`;
           const soil = world.getBlock(x, y - 1, z);
