@@ -263,7 +263,7 @@ recipes.push({
 });
 
 // Expanded Java food crafting: each recipe is reachable from registered items.
-recipes.push({ result: 'mc:cookie', count: 8, pattern: ['W C W'], key: { W: 'mc:wheat', C: 'mc:cocoa_beans' } });
+recipes.push({ result: 'mc:cookie', count: 8, pattern: ['WCW'], key: { W: 'mc:wheat', C: 'mc:cocoa_beans' } });
 recipes.push({ result: 'mc:pumpkin_pie', count: 1, pattern: ['P', 'S', 'E'], key: { P: 'mc:pumpkin', S: 'mc:sugar', E: 'mc:egg' } });
 recipes.push({ result: 'mc:golden_carrot', count: 1, pattern: ['NNN', 'NCN', 'NNN'], key: { N: 'mc:gold_nugget', C: 'mc:carrot' } });
 recipes.push({ result: 'mc:mushroom_stew', count: 1, ingredients: ['mc:bowl', 'mc:red_mushroom', 'mc:brown_mushroom'] });
