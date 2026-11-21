@@ -2,6 +2,8 @@ import { describe, it, assertEqual } from './framework.js';
 import '../src/world/blocks/index.js';
 import { ITEMS } from '../src/world/item.js';
 import { Player } from '../src/entity/player.js';
+import { Inventory } from '../src/game/inventory.js';
+import { MobSystem } from '../src/entity/mobs.js';
 import { PlayerStatusEffects, POTION_ITEMS } from '../src/entity/status_effects.js';
 
 describe('expanded survival potion effects', () => {
@@ -39,9 +41,7 @@ describe('expanded survival potion effects', () => {
     assertEqual(player.air, 300);
   });
 
-  it('Weakness reduces player melee damage while Strength remains independently applied', async () => {
-    const { Inventory } = await import('../src/game/inventory.js');
-    const { MobSystem } = await import('../src/entity/mobs.js');
+  it('Weakness reduces player melee damage while Strength remains independently applied', () => {
     const player = new Player();
     const inventory = new Inventory();
     const game = { player, inventory, ui: { toast() {} }, sounds: { play() {} } };
