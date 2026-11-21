@@ -64,7 +64,12 @@ describe('sugar cane farming', () => {
 });
 
 describe('wheat farming and farmland hydration', () => {
-  it('registers sugar cane as a placeable item block', () => {\n    assert(BLOCKS.get('mc:sugar_cane'), 'sugar cane block missing');\n    assert(ITEMS.get('mc:sugar_cane'), 'sugar cane item missing');\n  });\n\n  it('registers persisted farmland moisture from zero through seven', () => {
+  it('registers sugar cane as a placeable item block', () => {
+    assert(BLOCKS.get('mc:sugar_cane'), 'sugar cane block missing');
+    assert(ITEMS.get('mc:sugar_cane'), 'sugar cane item missing');
+  });
+
+  it('registers persisted farmland moisture from zero through seven', () => {
     const farmland = BLOCKS.get('mc:farmland');
     assert(farmland, 'farmland missing');
     assertEqual(farmland.defaultState.get('moisture'), 0);
