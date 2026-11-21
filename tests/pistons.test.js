@@ -127,6 +127,23 @@ describe('piston and sticky piston', () => {
     assertEqual(plan.some((move) => move.from.x === 1 && move.from.y === 1), true);
   });
 
+  it('moves honey-attached ordinary blocks as one transactional group', () => {
+    const honey = BLOCKS.get('mc:honey_block').defaultState;
+    const { world } = makeWorld([['1,0,0', honey], ['1,1,0', STONE]]);
+    const plan = planPistonMove(world, 0, 0, 0, 'east');
+    assertEqual(plan.length, 2);
+    assertEqual(plan.some((move) => move.from.x === 1 && move.from.y === 1), true);
+  });
+
+  it('does not pull a slime block attached to a honey block', () => {
+    const honey = BLOCKS.get('mc:honey_block').defaultState;
+    const slime = BLOCKS.get('mc:slime_block').defaultState;
+    const { world } = makeWorld([['1,0,0', honey], ['1,1,0', slime]]);
+    const plan = planPistonMove(world, 0, 0, 0, 'east');
+    assertEqual(plan.length, 1);
+    assertEqual(plan[0].state.block.id, 'mc:honey_block');
+  });
+
   it('counts side-attached blocks toward the twelve-block push cap', () => {
     const entries = [['1,0,0', BLOCKS.get('mc:slime_block').defaultState], ['1,1,0', STONE]];
     for (let x = 2; x <= 12; x++) entries.push([`${x},0,0`, STONE]);
