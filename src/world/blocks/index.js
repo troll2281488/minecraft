@@ -229,6 +229,7 @@ for (const [id, hardness, resistance, tool, texture, soundGroup] of [
   ['mc:purpur_block', 1.5, 6, 'pickaxe', 'stone', 'stone'],
   ['mc:purpur_pillar', 1.5, 6, 'pickaxe', 'stone', 'stone'],
   ['mc:slime_block', 0, 0, null, 'slime_block', 'slime'],
+  ['mc:honey_block', 0, 0, null, 'honey_block', 'honey'],
   ['mc:magma_block', 0.5, 0.5, 'pickaxe', 'stone', 'stone'],
   ['mc:bone_block', 2, 2, 'pickaxe', 'white_wool', 'stone'],
   ['mc:packed_ice', 0.5, 0.5, 'pickaxe', 'ice', 'glass'],
@@ -240,6 +241,7 @@ for (const [id, hardness, resistance, tool, texture, soundGroup] of [
     hardness, resistance, tool, soundGroup, texture,
     ...(id === 'mc:sea_lantern' ? { lightEmission: 15 } : {}),
     ...(id === 'mc:slime_block' ? { slipperiness: 0.8 } : {}),
+    ...(id === 'mc:honey_block' ? { slipperiness: 0.4 } : {}),
   });
 }
 
