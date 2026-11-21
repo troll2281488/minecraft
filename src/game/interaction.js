@@ -386,7 +386,8 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
 
   if (id === 'mc:gravel') {
     const fortune = enchantmentLevel(heldStack, 'fortune');
-    return rng.nextDouble() < Math.min(1, 0.10 + fortune * 0.10)
+    const flintChance = [0.10, 0.14, 0.25, 1][fortune];
+    return rng.nextDouble() < flintChance
       ? [{ id: 'mc:flint', count: 1 }]
       : [{ id: 'mc:gravel', count: 1 }];
   }
