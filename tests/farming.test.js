@@ -42,6 +42,8 @@ describe('sugar cane farming', () => {
       ['0,64,0', sand], ['1,64,0', water],
       ['0,65,0', cane],
     ]);
+    tickFarming(world, { x: 0, y: 65, z: 0 }, 599);
+    assertEqual(world.getBlock(0, 66, 0).block.id, 'mc:air');
     const first = tickFarming(world, { x: 0, y: 65, z: 0 }, 600);
     assertEqual(world.getBlock(0, 66, 0).block.id, 'mc:sugar_cane');
     assertEqual(first.filter(c => c.state.block.id === 'mc:sugar_cane').length, 1);
@@ -50,6 +52,13 @@ describe('sugar cane farming', () => {
     tickFarming(world, { x: 0, y: 67, z: 0 }, 1800);
     assertEqual(world.getBlock(0, 68, 0).block.id, 'mc:air');
     assertEqual(SUGAR_CANE_MAX_HEIGHT, 3);
+  });
+
+  it('drops one sugar cane item when harvested', () => {
+    const drops = blockDrops(BLOCKS.get('mc:sugar_cane').defaultState, null, 9, 0, 65, 0);
+    assertEqual(drops.length, 1);
+    assertEqual(drops[0].id, 'mc:sugar_cane');
+    assertEqual(drops[0].count, 1);
   });
 
   it('does not grow through a blocked top or without valid water', () => {
