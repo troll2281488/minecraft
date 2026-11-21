@@ -2,7 +2,7 @@ import '../src/world/blocks/index.js';
 import { describe, it, assert, assertEqual, assertDeepEqual } from './framework.js';
 import { BLOCKS } from '../src/world/block.js';
 import { shapeBoxes, collisionBoxes, isNonCube, wallStateFromNeighbors } from '../src/world/shapes.js';
-import { refreshWallConnections } from '../src/game/wall_updates.js';
+import { refreshWallConnections, refreshWallConnectionsInChunk } from '../src/game/wall_updates.js';
 import { orientPlacement } from '../src/game/interaction.js';
 import { yawToFacing } from '../src/core/math.js';
 import { RECIPES } from '../src/game/recipes.js';
@@ -298,4 +298,44 @@ describe('Java wall family geometry and crafting', () => {
     assertEqual(legacy.get('up'), true);
   });
 
+});
+
+
+describe('wall connection rebuild on chunk load', () => {
+  it('recomputes saved wall states and touching neighbour walls when a chunk is adopted', () => {
+    const wall = BLOCKS.get('mc:cobblestone_wall').defaultState;
+    const air = BLOCKS.get('mc:air').defaultState;
+    const changed = new Map([
+      ['0,0,0', wall],
+      ['1,0,0', wall],
+    ]);
+    const writes = [];
+    const world = {
+      getChunk(cx, cz) {
+        if (cx === 0 && cz === 0) return chunk;
+        return null;
+      },
+      getBlock(x, y, z) {
+        return changed.get(`${x},${y},${z}`) ?? air;
+      },
+      setBlock(x, y, z, state, options) {
+        writes.push({ x, y, z, state, options });
+        changed.set(`${x},${y},${z}`, state);
+        return true;
+      },
+    };
+    const section = {
+      yOffset: 0,
+      blocks: {
+        palette: [wall, air],
+        get(index) { return index === 0 ? wall : air; },
+      },
+    };
+    const chunk = { cx: 0, cz: 0, sections: [section] };
+    const updated = refreshWallConnectionsInChunk(world, chunk);
+    assert(updated.length > 0, 'chunk-load rebuild did not update the connected wall');
+    assert(writes.every((write) => write.options?.relight === false),
+      'wall-only state changes should not trigger a full chunk relight');
+    assertEqual(changed.get('0,0,0').get('east'), 'tall');
+  });
 });
