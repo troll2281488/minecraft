@@ -92,11 +92,14 @@ function plant(id, texture, tint = null) {
 // ---------------------------------------------------------------------------
 
 stoneLike('mc:stone', 'stone', 1.5, 6);
+stoneLike('mc:smooth_stone', 'stone', 2, 6);
 stoneLike('mc:cobblestone', 'cobblestone', 2, 6);
 stoneLike('mc:mossy_cobblestone', 'mossy_cobblestone', 2, 6);
 stoneLike('mc:granite', 'granite', 1.5, 6);
 stoneLike('mc:polished_granite', 'polished_granite', 1.5, 6);
 stoneLike('mc:stone_bricks', 'stone_bricks', 1.5, 6);
+stoneLike('mc:mossy_stone_bricks', 'mossy_stone_bricks', 1.5, 6);
+stoneLike('mc:bricks', 'bricks', 2, 6);
 stoneLike('mc:diorite', 'diorite', 1.5, 6);
 stoneLike('mc:polished_diorite', 'polished_diorite', 1.5, 6);
 stoneLike('mc:andesite', 'andesite', 1.5, 6);
@@ -104,10 +107,16 @@ stoneLike('mc:polished_andesite', 'polished_andesite', 1.5, 6);
 stoneLike('mc:sandstone', 'sandstone', 0.8, 0.8);
 stoneLike('mc:obsidian', 'obsidian', 50, 1200, 3);
 stoneLike('mc:netherrack', 'netherrack', 0.4, 2);
+stoneLike('mc:blackstone', 'blackstone', 1.5, 6);
+stoneLike('mc:polished_blackstone', 'polished_blackstone', 1.5, 6);
+stoneLike('mc:polished_blackstone_bricks', 'polished_blackstone_bricks', 1.5, 6);
 stoneLike('mc:nether_bricks', 'nether_bricks', 2, 6);
-stoneLike('mc:nether_brick_fence', 'nether_bricks', 2, 6);
+stoneLike('mc:red_nether_bricks', 'red_nether_bricks', 2, 6);
 stoneLike('mc:nether_gold_ore', 'nether_gold_ore', 3, 3);
-stoneLike('mc:glowstone', 'sea_lantern', 0.3, 0.3);
+define('mc:glowstone', {
+  hardness: 0.3, resistance: 0.3, tool: 'pickaxe', soundGroup: 'glass',
+  lightEmission: 15, texture: 'glowstone',
+});
 define('mc:soul_sand', { hardness: 0.5, resistance: 0.5, tool: 'shovel', soundGroup: 'sand', texture: 'soul_sand' });
 define('mc:bed', { hardness: 0.2, resistance: 0.2, tool: 'axe', soundGroup: 'wood', texture: 'bed', renderShape: 'slab', opaqueCube: false, properties: { type: PROPS.slabType }, defaultValues: { type: 'bottom' } });
 
@@ -183,6 +192,10 @@ define('mc:glass', {
   opaqueCube: false, opacity: 0, renderShape: 'cutout', texture: 'glass',
 });
 
+define('mc:terracotta', {
+  hardness: 1.25, resistance: 4.2, tool: 'pickaxe', soundGroup: 'stone', texture: 'terracotta',
+});
+
 define('mc:white_wool', {
   hardness: 0.8, resistance: 0.8, soundGroup: 'cloth', texture: 'white_wool',
 });
@@ -194,7 +207,9 @@ define('mc:white_wool', {
 ore('coal_ore', 0, 'coal_ore');
 ore('iron_ore', 1, 'iron_ore');
 ore('gold_ore', 2, 'gold_ore');
-ore('redstone_ore', 2, 'redstone_ore');
+stoneLike('mc:redstone_ore', 'redstone_ore', 3, 3, 2, {
+  properties: { lit: PROPS.lit }, defaultValues: { lit: false },
+});
 ore('lapis_ore', 1, 'lapis_ore');
 ore('diamond_ore', 2, 'diamond_ore');
 ore('emerald_ore', 2, 'emerald_ore');
@@ -221,7 +236,9 @@ for (const [id, hardness, resistance, tool, texture, soundGroup] of [
   ['mc:end_bricks', 3, 9, 'pickaxe', 'sandstone', 'stone'],
   ['mc:purpur_block', 1.5, 6, 'pickaxe', 'stone', 'stone'],
   ['mc:purpur_pillar', 1.5, 6, 'pickaxe', 'stone', 'stone'],
-  ['mc:slime_block', 0, 0, null, 'white_wool', 'slime'],
+  ['mc:slime_block', 0, 0, null, 'slime_block', 'slime'],
+  ['mc:honey_block', 0, 0, null, 'honey_block', 'honey'],
+  ['mc:honeycomb_block', 0.6, 0.6, 'axe', 'honeycomb_block', 'grass'],
   ['mc:magma_block', 0.5, 0.5, 'pickaxe', 'stone', 'stone'],
   ['mc:bone_block', 2, 2, 'pickaxe', 'white_wool', 'stone'],
   ['mc:packed_ice', 0.5, 0.5, 'pickaxe', 'ice', 'glass'],
@@ -233,6 +250,7 @@ for (const [id, hardness, resistance, tool, texture, soundGroup] of [
     hardness, resistance, tool, soundGroup, texture,
     ...(id === 'mc:sea_lantern' ? { lightEmission: 15 } : {}),
     ...(id === 'mc:slime_block' ? { slipperiness: 0.8 } : {}),
+    ...(id === 'mc:honey_block' ? { slipperiness: 0.4 } : {}),
   });
 }
 
@@ -296,6 +314,30 @@ define('mc:mycelium', {
 // Functional
 // ---------------------------------------------------------------------------
 
+define('mc:campfire', {
+  hardness: 2, resistance: 2, tool: 'axe', soundGroup: 'wood',
+  flammability: 5, lightEmission: 15, texture: 'campfire',
+  properties: { lit: PROPS.lit, food: PROPS.campfireFood, cook_time: PROPS.campfireCookTime }, defaultValues: { lit: true, food: 'none', cook_time: 0 },
+});
+
+for (const id of ['mc:bee_nest', 'mc:beehive']) {
+  define(id, {
+    hardness: 0.6, resistance: 0.6, tool: 'axe', soundGroup: 'wood',
+    flammability: 5, texture: id === 'mc:bee_nest' ? 'bee_nest' : 'beehive',
+    properties: { facing: PROPS.facing, honey_level: PROPS.honeyLevel },
+    defaultValues: { facing: 'north', honey_level: 0 },
+  });
+}
+
+define('mc:enchanting_table', {
+  hardness: 5, resistance: 1200, tool: 'pickaxe', harvestLevel: 0, requiresTool: true,
+  soundGroup: 'stone', texture: 'enchanting_table',
+});
+define('mc:anvil', {
+  hardness: 5, resistance: 1200, tool: 'pickaxe', harvestLevel: 0, requiresTool: true,
+  soundGroup: 'metal', texture: 'anvil',
+});
+
 define('mc:crafting_table', {
   hardness: 2.5, resistance: 2.5, tool: 'axe', soundGroup: 'wood', flammability: 5,
   textures: { top: 'crafting_table_top', bottom: 'oak_planks', side: 'crafting_table_side' },
@@ -311,10 +353,322 @@ define('mc:furnace', {
   requiresTool: true, soundGroup: 'stone',
   textures: { top: 'furnace_top', bottom: 'furnace_side', side: 'furnace_front' },
 });
+define('mc:smoker', {
+  hardness: 3.5, resistance: 3.5, tool: 'pickaxe', harvestLevel: 0,
+  requiresTool: true, soundGroup: 'stone',
+  textures: { top: 'furnace_top', bottom: 'furnace_side', side: 'furnace_front' },
+});
+define('mc:blast_furnace', {
+  hardness: 3.5, resistance: 3.5, tool: 'pickaxe', harvestLevel: 0,
+  requiresTool: true, soundGroup: 'stone',
+  textures: { top: 'furnace_top', bottom: 'furnace_side', side: 'furnace_front' },
+});
+
+define('mc:hopper', {
+  hardness: 3, resistance: 4.8, tool: 'pickaxe', harvestLevel: 0,
+  requiresTool: true, soundGroup: 'metal', texture: 'hopper',
+  properties: { facing: PROPS.hopperFacing, enabled: PROPS.enabled },
+  defaultValues: { facing: 'down', enabled: true },
+});
+
+define('mc:dropper', {
+  hardness: 3.5, resistance: 3.5, tool: 'pickaxe', harvestLevel: 0,
+  requiresTool: true, soundGroup: 'stone', texture: 'dropper',
+  properties: { facing: PROPS.facingAll }, defaultValues: { facing: 'north' },
+});
+
+define('mc:piston', {
+  hardness: 1.5, resistance: 1.5, tool: 'pickaxe', soundGroup: 'wood',
+  textures: { top: 'piston_top', bottom: 'piston_bottom', side: 'piston_side' },
+  properties: { facing: PROPS.facingAll, extended: PROPS.extended },
+  defaultValues: { facing: 'north', extended: false },
+});
+define('mc:sticky_piston', {
+  hardness: 1.5, resistance: 1.5, tool: 'pickaxe', soundGroup: 'slime',
+  textures: { top: 'sticky_piston_top', bottom: 'piston_bottom', side: 'piston_side' },
+  properties: { facing: PROPS.facingAll, extended: PROPS.extended },
+  defaultValues: { facing: 'north', extended: false },
+});
+// The head is an internal moving part, not a placeable inventory block.
+define('mc:piston_head', {
+  hardness: 0, resistance: 0, soundGroup: 'wood', texture: 'piston_top',
+  renderShape: 'piston_head', solid: true, opaqueCube: false, opacity: 0,
+  properties: { facing: PROPS.facingAll, sticky: PROPS.sticky },
+  defaultValues: { facing: 'north', sticky: false },
+  notInCreative: true,
+});
+
+define('mc:observer', {
+  hardness: 3, resistance: 3, tool: 'pickaxe', harvestLevel: 0,
+  requiresTool: true, soundGroup: 'stone', texture: 'observer',
+  properties: { facing: PROPS.facingAll, powered: PROPS.powered },
+  defaultValues: { facing: 'south', powered: false },
+});
+
+define('mc:target', {
+  hardness: 0.5, resistance: 0.5, tool: 'hoe', soundGroup: 'wood',
+  texture: 'target', properties: { power: PROPS.power }, defaultValues: { power: 0 },
+});
+
+define('mc:lightning_rod', {
+  hardness: 3, resistance: 3, tool: 'pickaxe', soundGroup: 'copper',
+  texture: 'lightning_rod',
+  properties: { axis: PROPS.axis, powered: PROPS.powered },
+  defaultValues: { axis: 'y', powered: false },
+});
+
+define('mc:mob_spawner', {
+  hardness: 5, resistance: 5, tool: 'pickaxe', harvestLevel: -1,
+  requiresTool: true, soundGroup: 'stone', texture: 'mob_spawner',
+  properties: { spawner_type: PROPS.spawnerType },
+  defaultValues: { spawner_type: 'dungeon' },
+  notInCreative: true,
+});
+
+// Stronghold portal frames retain their inward-facing orientation and the
+// per-frame eye-of-ender state in the saved blockstate palette.
+define('mc:iron_bars', {
+  hardness: 5, resistance: 6, tool: 'pickaxe', harvestLevel: 0,
+  solid: true, opaqueCube: false, opacity: 0,
+  renderShape: 'pane', soundGroup: 'metal', texture: 'iron_bars',
+});
+
+// Stronghold library and passage blocks. The ladder is a non-colliding
+// wall-mounted model; cobweb slowdown is a later movement-physics refinement.
+define('mc:bookshelf', {
+  hardness: 1.5, resistance: 1.5, tool: 'axe', soundGroup: 'wood', flammability: 5,
+  texture: 'bookshelf',
+});
+
+define('mc:cobweb', {
+  hardness: 4, resistance: 4, solid: false, opaqueCube: false, opacity: 0,
+  renderShape: 'cross', soundGroup: 'cloth', texture: 'cobweb',
+});
+
+define('mc:ladder', {
+  hardness: 0.4, resistance: 0.4, solid: false, opaqueCube: false, opacity: 0,
+  renderShape: 'ladder', soundGroup: 'wood', texture: 'ladder',
+  properties: { facing: PROPS.facing }, defaultValues: { facing: 'north' },
+});
+
+// Two-block Java-style doors. Both halves carry the same orientation/open
+// state so a click or save/load never leaves the upper half out of sync.
+function door(id, texture, iron = false) {
+  define(`mc:${id}_door`, {
+    hardness: iron ? 5 : 3, resistance: iron ? 5 : 3,
+    tool: iron ? 'pickaxe' : 'axe', soundGroup: iron ? 'metal' : 'wood',
+    renderShape: 'door', texture, opaqueCube: false,
+    // The resource-pack loader fetches the matching Java 1.19 upper/lower tiles.
+    doorTextures: { lower: `${id}_door_bottom`, upper: `${id}_door_top` },
+    properties: {
+      facing: PROPS.facing, half: PROPS.doorHalf, hinge: PROPS.hinge,
+      open: PROPS.open, powered: PROPS.powered,
+    },
+    defaultValues: { facing: 'north', half: 'lower', hinge: 'left', open: false, powered: false },
+  });
+}
+for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) {
+  door(wood, `${wood}_door`);
+}
+door('iron', 'iron_door', true);
+
+// Trapdoors occupy one block and share their open state with collision geometry.
+function trapdoor(id, texture, iron = false) {
+  define(`mc:${id}_trapdoor`, {
+    hardness: iron ? 5 : 3, resistance: iron ? 5 : 3,
+    tool: iron ? 'pickaxe' : 'axe', soundGroup: iron ? 'metal' : 'wood',
+    renderShape: 'trapdoor', texture, opaqueCube: false,
+    properties: { facing: PROPS.facing, half: PROPS.half, open: PROPS.open, powered: PROPS.powered },
+    defaultValues: { facing: 'north', half: 'bottom', open: false, powered: false },
+  });
+}
+for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) {
+  trapdoor(wood, `${wood}_trapdoor`);
+}
+trapdoor('iron', 'iron_trapdoor', true);
+
+
+// Wood fences and gates use shared box geometry; connections are resolved from
+// neighbouring blocks at render/collision time, so remote edits and old saves
+// do not need a neighbour-state migration.
+function fenceBlock(id, texture, material = 'wood') {
+  const wood = material === 'wood';
+  define(`mc:${id}`, {
+    hardness: 2, resistance: wood ? 3 : 6,
+    tool: wood ? 'axe' : 'pickaxe', harvestLevel: wood ? -1 : 0,
+    requiresTool: !wood, soundGroup: wood ? 'wood' : 'stone',
+    flammability: wood ? 5 : 0, texture,
+    solid: true, opaqueCube: false, opacity: 0, renderShape: 'fence',
+  });
+}
+function fenceGateBlock(wood) {
+  define(`mc:${wood}_fence_gate`, {
+    hardness: 2, resistance: 3, tool: 'axe', soundGroup: 'wood',
+    flammability: 5, texture: `${wood}_fence_gate`,
+    solid: true, opaqueCube: false, opacity: 0, renderShape: 'fence_gate',
+    properties: { facing: PROPS.facing, open: PROPS.open, powered: PROPS.powered },
+    defaultValues: { facing: 'north', open: false, powered: false },
+  });
+}
+for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) {
+  fenceBlock(`${wood}_fence`, `${wood}_fence`);
+  fenceGateBlock(wood);
+}
+fenceBlock('nether_brick_fence', 'nether_bricks', 'stone');
+
+// Stone walls from the Java 1.19 block set. The wall profile is shared; each
+// family keeps its own material texture and the same pickaxe harvest rules.
+function wallBlock(name, texture, hardness = 2) {
+  define(`mc:${name}_wall`, {
+    hardness, resistance: 6, tool: 'pickaxe', harvestLevel: 0,
+    requiresTool: true, soundGroup: 'stone', texture,
+    solid: true, opaqueCube: false, opacity: 0, renderShape: 'wall',
+    properties: {
+      north: PROPS.wallConnection, south: PROPS.wallConnection,
+      east: PROPS.wallConnection, west: PROPS.wallConnection, up: PROPS.up,
+    },
+    defaultValues: { north: 'none', south: 'none', east: 'none', west: 'none', up: true },
+  });
+}
+for (const [name, texture] of [
+  ['cobblestone', 'cobblestone'], ['mossy_cobblestone', 'mossy_cobblestone'],
+  ['brick', 'stone_bricks'], ['prismarine', 'stone'],
+  ['red_sandstone', 'red_sandstone'], ['mossy_stone_brick', 'mossy_stone_bricks'],
+  ['granite', 'granite'], ['stone_brick', 'stone_bricks'],
+  ['nether_brick', 'nether_bricks'], ['andesite', 'andesite'],
+  ['red_nether_brick', 'red_nether_bricks'], ['sandstone', 'sandstone'],
+  ['end_stone_brick', 'end_bricks'], ['diorite', 'diorite'],
+  ['blackstone', 'blackstone'], ['polished_blackstone_brick', 'polished_blackstone_bricks'],
+  ['polished_blackstone', 'polished_blackstone'],
+]) wallBlock(name, texture);
+
+
+// Jukebox: stores the inserted Java music disc in block state so it survives saves and sync.
+define('mc:jukebox', {
+  hardness: 2, resistance: 2, tool: 'axe', soundGroup: 'wood', texture: 'jukebox',
+  properties: { record: PROPS.record }, defaultValues: { record: 'none' },
+});
+
+// Note block: 25 semitone pitches, tuned by right-click and triggered by redstone.
+define('mc:note_block', {
+  hardness: 0.8, resistance: 0.8, tool: 'axe', soundGroup: 'wood', texture: 'note_block',
+  properties: { note: PROPS.note, powered: PROPS.powered },
+  defaultValues: { note: 0, powered: false },
+});
+
+// Daylight detector: analogue output follows the world's 24,000-tick day clock.
+define('mc:daylight_detector', {
+  hardness: 0.2, resistance: 0.2, tool: 'axe', soundGroup: 'wood',
+  texture: 'daylight_detector',
+  properties: { power: PROPS.power, inverted: PROPS.inverted },
+  defaultValues: { power: 0, inverted: false },
+});
+
+// Comparator: directional analogue transmission with compare/subtract modes.
+define('mc:comparator', {
+  hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
+  soundGroup: 'stone', renderShape: 'comparator', texture: 'comparator',
+  properties: { facing: PROPS.facing, mode: PROPS.comparatorMode, power: PROPS.power, powered: PROPS.powered },
+  defaultValues: { facing: 'north', mode: 'compare', power: 0, powered: false },
+});
+
+// Redstone lamp: the lit state controls both its appearance and block-light emission.
+define('mc:redstone_lamp', {
+  hardness: 0.3, resistance: 0.3, tool: 'pickaxe', soundGroup: 'glass',
+  lightEmission: 15, texture: 'redstone_lamp',
+  properties: { lit: PROPS.lit }, defaultValues: { lit: false },
+});
+
+// Redstone power sources from the Java 1.19 block set.
+function button(id, texture, wood = false) {
+  define(`mc:${id}_button`, {
+    hardness: 0.5, resistance: 0.5, solid: false, opaqueCube: false, opacity: 0,
+    soundGroup: wood ? 'wood' : 'stone', renderShape: 'button', texture,
+    properties: { face: PROPS.face, facing: PROPS.facing, powered: PROPS.powered },
+    defaultValues: { face: 'wall', facing: 'north', powered: false },
+  });
+}
+for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) button(wood, `${wood}_button`, true);
+button('stone', 'stone_button');
+button('polished_blackstone', 'polished_blackstone_button');
+
+define('mc:lever', {
+  hardness: 0.5, resistance: 0.5, solid: false, opaqueCube: false, opacity: 0,
+  soundGroup: 'stone', renderShape: 'lever', texture: 'lever',
+  properties: { face: PROPS.face, facing: PROPS.facing, powered: PROPS.powered },
+  defaultValues: { face: 'wall', facing: 'north', powered: false },
+});
+
+function pressurePlate(id, texture, wood = false) {
+  define(`mc:${id}_pressure_plate`, {
+    hardness: 0.5, resistance: 0.5, solid: false, opaqueCube: false, opacity: 0,
+    soundGroup: wood ? 'wood' : 'stone', renderShape: 'pressure_plate', texture,
+    properties: { powered: PROPS.powered }, defaultValues: { powered: false },
+  });
+}
+for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) pressurePlate(wood, `${wood}_pressure_plate`, true);
+pressurePlate('stone', 'stone_pressure_plate');
+pressurePlate('polished_blackstone', 'polished_blackstone_pressure_plate');
+
+// Weighted plates report entity-count strength instead of a binary signal.
+for (const [id, texture] of [
+  ['light_weighted_pressure_plate', 'light_weighted_pressure_plate'],
+  ['heavy_weighted_pressure_plate', 'heavy_weighted_pressure_plate'],
+]) define(`mc:${id}`, {
+  hardness: 0.5, resistance: 0.5, soundGroup: 'stone', solid: false,
+  opaqueCube: false, opacity: 0, renderShape: 'weighted_pressure_plate', texture,
+  properties: { power: PROPS.power }, defaultValues: { power: 0 },
+});
+
+// Redstone dust is a flat, non-colliding wire with vanilla's 0..15 signal level.
+define('mc:redstone_torch', {
+  hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
+  lightEmission: 7, renderShape: 'torch', soundGroup: 'wood', texture: 'redstone_torch',
+  properties: { lit: PROPS.lit }, defaultValues: { lit: true },
+});
+
+define('mc:repeater', {
+  hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
+  soundGroup: 'stone', renderShape: 'repeater', texture: 'repeater',
+  properties: { facing: PROPS.facing, delay: PROPS.repeaterDelay, powered: PROPS.powered },
+  defaultValues: { facing: 'north', delay: 1, powered: false },
+});
+
+define('mc:redstone_wire', {
+  hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
+  replaceable: true, soundGroup: 'stone', renderShape: 'redstone_wire', texture: 'redstone_wire',
+  properties: {
+    power: PROPS.power, north: PROPS.north, south: PROPS.south,
+    east: PROPS.east, west: PROPS.west,
+  },
+  defaultValues: { power: 0, north: false, south: false, east: false, west: false },
+});
+
+define('mc:end_portal_frame', {
+  hardness: -1, resistance: 3600000, soundGroup: 'stone',
+  texture: 'end_portal_frame',
+  properties: { facing: PROPS.facing, eye: PROPS.eye },
+  defaultValues: { facing: 'south', eye: false },
+  notInCreative: true,
+});
 
 define('mc:farmland', {
   hardness: 0.6, resistance: 0.6, tool: 'shovel', soundGroup: 'grass',
   texture: 'farmland',
+  properties: { moisture: PROPS.moisture },
+  defaultValues: { moisture: 0 },
+});
+
+define('mc:composter', {
+  hardness: 0.6, resistance: 0.6, tool: 'axe', soundGroup: 'wood',
+  texture: 'composter',
+  properties: { level: PROPS.composterLevel }, defaultValues: { level: 0 },
+});
+
+define('mc:cauldron', {
+  hardness: 2, resistance: 2, tool: 'pickaxe', soundGroup: 'stone',
+  texture: 'cauldron',
+  properties: { level: PROPS.level }, defaultValues: { level: 0 },
 });
 
 define('mc:wheat', {
@@ -323,6 +677,46 @@ define('mc:wheat', {
   properties: { age: PROPS.age7 },
   defaultValues: { age: 0 },
   texture: 'wheat_crop',
+});
+
+for (const [id, texture] of [
+  ['mc:carrots', 'carrots_crop'], ['mc:potatoes', 'potatoes_crop'],
+  ['mc:beetroots', 'beetroots_crop'],
+]) define(id, {
+  hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
+  replaceable: true, renderShape: 'cross', soundGroup: 'grass',
+  properties: { age: PROPS.age7 }, defaultValues: { age: 0 }, texture,
+});
+
+// Pumpkin and melon stems are age-tracked crops; their fruit grows in an adjacent
+// open block above suitable soil rather than replacing the stem.
+for (const [id, texture] of [
+  ['mc:pumpkin_stem', 'pumpkin_stem'],
+  ['mc:melon_stem', 'melon_stem'],
+]) define(id, {
+  hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
+  replaceable: true, renderShape: 'cross', soundGroup: 'grass',
+  properties: { age: PROPS.age7 }, defaultValues: { age: 0 }, texture,
+});
+
+define('mc:sweet_berry_bush', {
+  hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
+  replaceable: true, renderShape: 'cross', soundGroup: 'grass', texture: 'sweet_berry_bush',
+  properties: { age: PROPS.age7 }, defaultValues: { age: 0 },
+});
+
+define('mc:sugar_cane', {
+  hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
+  replaceable: true, renderShape: 'cross', soundGroup: 'grass', texture: 'sugar_cane',
+});
+
+define('mc:pumpkin', {
+  hardness: 1, resistance: 1, tool: 'axe', soundGroup: 'wood',
+  texture: 'pumpkin',
+});
+define('mc:melon', {
+  hardness: 1, resistance: 1, tool: 'axe', soundGroup: 'wood',
+  texture: 'melon',
 });
 
 define('mc:torch', {
@@ -347,6 +741,20 @@ define('mc:water', {
 
 define('mc:lava', { hardness: 100, resistance: 100, solid: false, opaqueCube: false, opacity: 0, replaceable: true, renderShape: 'translucent', lightEmission: 15, soundGroup: 'none', texture: 'lava' });
 define('mc:portal', { hardness: -1, resistance: 0, solid: false, opaqueCube: false, opacity: 0, replaceable: false, renderShape: 'translucent', soundGroup: 'none', texture: 'purple_stained_glass', notInCreative: true });
+
+// ---------------------------------------------------------------------------
+// Rail transport blocks (Java 1.19)
+// ---------------------------------------------------------------------------
+for (const [id, properties, defaults] of [
+  ['mc:rail', { shape: PROPS.railShape }, { shape: 'north_south' }],
+  ['mc:powered_rail', { shape: PROPS.railShape, powered: PROPS.powered }, { shape: 'north_south', powered: false }],
+  ['mc:detector_rail', { shape: PROPS.railShape, powered: PROPS.powered }, { shape: 'north_south', powered: false }],
+  ['mc:activator_rail', { shape: PROPS.railShape, powered: PROPS.powered }, { shape: 'north_south', powered: false }],
+]) define(id, {
+  hardness: 0.7, resistance: 0.7, tool: 'pickaxe', soundGroup: 'metal',
+  solid: false, opaqueCube: false, opacity: 0, renderShape: 'rail',
+  texture: 'iron_block', properties, defaultValues: defaults,
+});
 
 // ---------------------------------------------------------------------------
 // Slabs and stairs (Phase 2 box-model shapes)
@@ -424,6 +832,10 @@ ITEM_TAGS.define('#mc:logs', [
   'mc:jungle_log', 'mc:acacia_log', 'mc:dark_oak_log',
 ]);
 ITEM_TAGS.define('#mc:stone_tool_materials', ['mc:cobblestone']);
+ITEM_TAGS.define('#mc:wooden_slabs', [
+  'mc:oak_slab', 'mc:birch_slab', 'mc:spruce_slab', 'mc:jungle_slab',
+  'mc:acacia_slab', 'mc:dark_oak_slab',
+]);
 ITEM_TAGS.define('#mc:coals', ['mc:coal', 'mc:charcoal']);
 
 // ---------------------------------------------------------------------------
@@ -431,7 +843,7 @@ ITEM_TAGS.define('#mc:coals', ['mc:coal', 'mc:charcoal']);
 // ---------------------------------------------------------------------------
 
 /** Every block gets an item form unless it is unobtainable. */
-const NO_ITEM = new Set(['mc:air', 'mc:water', 'mc:lava', 'mc:portal', 'mc:wheat']);
+const NO_ITEM = new Set(['mc:air', 'mc:water', 'mc:lava', 'mc:portal', 'mc:wheat', 'mc:carrots', 'mc:potatoes', 'mc:beetroots', 'mc:sweet_berry_bush', 'mc:pumpkin_stem', 'mc:melon_stem', 'mc:redstone_wire', 'mc:piston_head']);
 for (const block of BLOCKS.blocks.values()) {
   if (NO_ITEM.has(block.id)) continue;
   ITEMS.defineBlockItem(block.id, {
@@ -448,18 +860,46 @@ const MATERIALS = [
   ['mc:coal', { fuelTicks: 1600 }],
   ['mc:charcoal', { fuelTicks: 1600 }],
     ['mc:iron_ingot', {}],
+  ['mc:copper_ingot', {}],
   ['mc:gold_ingot', {}],
   ['mc:gold_nugget', {}],
   ['mc:diamond', {}],
   ['mc:emerald', {}],
   ['mc:lapis_lazuli', {}],
-  ['mc:redstone', {}],
+  ['mc:goat_horn', { stackSize: 1, rarity: 'uncommon' }],
+  ['mc:minecart', { stackSize: 1 }],
+  ['mc:redstone', { block: 'mc:redstone_wire' }],
   ['mc:flint', {}],
+  ['mc:blaze_powder', {}],
+  ['mc:egg', { stackSize: 16 }],
   ['mc:blaze_rod', {}],
   ['mc:snowball', {}],
   ['mc:clay_ball', {}],
   ['mc:string', {}],
+  ['mc:quartz', {}],
+  ['mc:slime_ball', {}],
+  ['mc:honeycomb', {}],
+  ['mc:glass_bottle', {}],
+  ['mc:water_bottle', {}],
+  ['mc:glowstone_dust', {}],
   ['mc:bone', {}],
+  ['mc:bone_meal', {}],
+  ['mc:white_dye', {}],
+  ['mc:orange_dye', {}],
+  ['mc:magenta_dye', {}],
+  ['mc:light_blue_dye', {}],
+  ['mc:yellow_dye', {}],
+  ['mc:lime_dye', {}],
+  ['mc:pink_dye', {}],
+  ['mc:gray_dye', {}],
+  ['mc:light_gray_dye', {}],
+  ['mc:cyan_dye', {}],
+  ['mc:purple_dye', {}],
+  ['mc:blue_dye', {}],
+  ['mc:brown_dye', {}],
+  ['mc:green_dye', {}],
+  ['mc:red_dye', {}],
+  ['mc:black_dye', {}],
   ['mc:leather', {}],
   ['mc:feather', {}],
   ['mc:rabbit_hide', {}],
@@ -467,8 +907,29 @@ const MATERIALS = [
   ['mc:wheat', {}],
   ['mc:paper', {}],
   ['mc:book', {}],
+  ['mc:compass', { stackSize: 1 }],
+  ['mc:map', { stackSize: 1 }],
+  ['mc:ender_pearl', { stackSize: 16 }],
+  ['mc:enchanted_book', { stackSize: 1, rarity: 'uncommon' }],
+  ['mc:gunpowder', {}],
+  ['mc:name_tag', { stackSize: 1 }],
+  ['mc:music_disc_13', { stackSize: 1 }],
+  ['mc:music_disc_cat', { stackSize: 1 }],
+  ['mc:music_disc_otherside', { stackSize: 1 }],
+  ['mc:golden_apple', { food: { nutrition: 4, saturation: 9.6 } }],
+  ['mc:enchanted_golden_apple', { stackSize: 1, food: { nutrition: 4, saturation: 9.6 } }],
+  ['mc:bucket', { stackSize: 16 }],
+  ['mc:melon_seeds', {}],
+  ['mc:pumpkin_seeds', {}],
+  ['mc:melon_slice', { food: { nutrition: 2, saturation: 1.2 } }],
+  ['mc:sugar', {}],
+  ['mc:beetroot_seeds', {}],
+  ['mc:beetroot', { food: { nutrition: 1, saturation: 0.6 } }],
+  ['mc:bowl', { stackSize: 64 }],
 ];
 for (const [id, opts] of MATERIALS) ITEMS.define(id, opts);
+ITEMS.define('mc:water_bucket', { stackSize: 1, containerItem: 'mc:bucket' });
+ITEMS.define('mc:lava_bucket', { stackSize: 1, fuelTicks: 20000, containerItem: 'mc:bucket' });
 
 // Food: nutrition restores food points; saturation is nutrition * modifier * 2.
 const FOODS = [
@@ -489,13 +950,22 @@ const FOODS = [
   ['mc:rotten_flesh', 4, 0.1],
   ['mc:cooked_mutton', 6, 0.8],
   ['mc:raw_cod', 2, 0.2],
+  ['mc:cooked_cod', 5, 0.6],
   ['mc:raw_salmon', 2, 0.2],
+  ['mc:cooked_salmon', 6, 0.8],
   ['mc:pufferfish', 1, 0.1],
   ['mc:tropical_fish', 1, 0.1],
 ];
 for (const [id, nutrition, saturation] of FOODS) {
   ITEMS.define(id, { food: { nutrition, saturation } });
 }
+
+// Java survival foods added with their vanilla nutrition and container returns.
+ITEMS.define('mc:sweet_berries', { food: { nutrition: 2, saturation: 0.1 } });
+ITEMS.define('mc:golden_carrot', { food: { nutrition: 6, saturation: 1.2 } });
+ITEMS.define('mc:mushroom_stew', { stackSize: 1, food: { nutrition: 6, saturation: 0.6 }, containerItem: 'mc:bowl' });
+ITEMS.define('mc:beetroot_soup', { stackSize: 1, food: { nutrition: 6, saturation: 0.6 }, containerItem: 'mc:bowl' });
+ITEMS.define('mc:rabbit_stew', { stackSize: 1, food: { nutrition: 10, saturation: 0.6 }, containerItem: 'mc:bowl' });
 
 /**
  * Tools.
@@ -504,12 +974,36 @@ for (const [id, nutrition, saturation] of FOODS) {
  * exactly one place those numbers live. Attack damage and speed per tool type
  * come from the vanilla tables in the same file.
  */
+ITEMS.define('mc:honey_bottle', { stackSize: 16, food: { nutrition: 6, saturation: 0.1 } });
+ITEMS.define('mc:milk_bucket', { stackSize: 1 });
+ITEMS.define('mc:potion_swiftness', { stackSize: 1, rarity: 'uncommon' });
+ITEMS.define('mc:potion_strength', { stackSize: 1, rarity: 'uncommon' });
+ITEMS.define('mc:potion_regeneration', { stackSize: 1, rarity: 'uncommon' });
+ITEMS.define('mc:potion_fire_resistance', { stackSize: 1, rarity: 'uncommon' });
+ITEMS.define('mc:potion_healing', { stackSize: 1, rarity: 'uncommon' });
+ITEMS.define('mc:potion_poison', { stackSize: 1, rarity: 'uncommon' });
+ITEMS.define('mc:potion_water_breathing', { stackSize: 1, rarity: 'uncommon' });
+ITEMS.define('mc:potion_slow_falling', { stackSize: 1, rarity: 'uncommon' });
+ITEMS.define('mc:potion_leaping', { stackSize: 1, rarity: 'uncommon' });
+ITEMS.define('mc:potion_weakness', { stackSize: 1, rarity: 'uncommon' });
+
+ITEMS.define('mc:shield', { stackSize: 1, maxDamage: 336, weapon: 'shield' });
 ITEMS.define('mc:shears', { stackSize: 1, maxDamage: 238, tool: 'shears', attackDamage: 1 });
 ITEMS.define('mc:flint_and_steel', { stackSize: 1, maxDamage: 64, tool: 'flint_and_steel' });
+ITEMS.define('mc:fire_charge', { stackSize: 64 });
 ITEMS.define('mc:fishing_rod', { stackSize: 1, maxDamage: 64, tool: 'fishing_rod' });
+ITEMS.define('mc:ink_sac', {});
+ITEMS.define('mc:tripwire_hook', {});
+ITEMS.define('mc:nautilus_shell', { stackSize: 16 });
+ITEMS.define('mc:lily_pad', { stackSize: 64 });
 ITEMS.define('mc:bow', { stackSize: 1, maxDamage: 384, weapon: 'bow' });
+ITEMS.define('mc:crossbow', { stackSize: 1, maxDamage: 465, weapon: 'crossbow' });
+ITEMS.define('mc:trident', { stackSize: 1, maxDamage: 250, weapon: 'trident', attackDamage: 9 });
 ITEMS.define('mc:arrow', { stackSize: 64 });
+ITEMS.define('mc:firework_rocket', { stackSize: 64, rarity: 'common' });
 ITEMS.define('mc:saddle', { stackSize: 1 });
+ITEMS.define('mc:carrot_on_a_stick', { stackSize: 1, maxDamage: 25, tool: 'carrot_on_a_stick' });
+ITEMS.define('mc:lead', { stackSize: 64 });
 ITEMS.define('mc:iron_horse_armor', { stackSize: 1, horseArmor: 'iron' });
 ITEMS.define('mc:golden_horse_armor', { stackSize: 1, horseArmor: 'golden' });
 ITEMS.define('mc:diamond_horse_armor', { stackSize: 1, horseArmor: 'diamond' });
@@ -518,7 +1012,7 @@ ITEMS.define('mc:diamond_horse_armor', { stackSize: 1, horseArmor: 'diamond' });
 for (const mobType of [
   'cow','pig','sheep','chicken','zombie','husk','zombie_villager','skeleton','stray','wither_skeleton',
   'creeper','enderman','spider','cave_spider','silverfish','endermite','slime','magma_cube','vex','vindicator','evoker','witch','blaze','ghast','guardian','elder_guardian','wither',
-  'mooshroom','rabbit','wolf','horse','polar_bear','villager',
+  'mooshroom','rabbit','wolf','horse','polar_bear','villager','bee',
 ]) {
   ITEMS.define(`mc:${mobType}_spawn_egg`, {
     stackSize: 64, spawnEggMob: mobType,

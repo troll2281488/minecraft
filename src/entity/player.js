@@ -15,6 +15,9 @@
 import { PHYSICS, SPEED, SLIPPERINESS, TICKS_PER_SECOND, MAX_HEALTH, MIN_Y } from '../core/constants.js';
 import { AABB } from '../core/math.js';
 import { PlayerVitals } from './vitals.js';
+import { PlayerExperience } from './experience.js';
+import { PlayerStatusEffects } from './status_effects.js';
+import { createAdvancementState, processAdvancementEvent, serializeAdvancementState } from '../game/advancements.js';
 import { collisionBoxes } from '../world/shapes.js';
 
 /** Blocks per second converted to blocks per tick. */
@@ -56,6 +59,9 @@ export class Player {
     this.gamemode = GAMEMODE.SURVIVAL;
     this.health = MAX_HEALTH;
     this.vitals = new PlayerVitals();
+    this.experience = new PlayerExperience();
+    this.effects = new PlayerStatusEffects();
+    this.advancements = createAdvancementState();
 
     this.fallDistance = 0;
 
@@ -108,8 +114,10 @@ export class Player {
 
     if (this.flying) {
       this._tickFlying();
+      this._applyCobwebSlowdown(world);
       this._move(world);
       this.vitals.tick(this, Math.hypot(this.x - oldX, this.z - oldZ), false, false);
+      this.effects.tick(this);
       return;
     }
 
@@ -120,6 +128,9 @@ export class Player {
       : PHYSICS.DEFAULT_SLIPPERINESS;
 
     this._applyInput(slipperiness);
+    this._applyLadderMovement(world);
+    this._applyCobwebSlowdown(world);
+    this._applyHoneyBlockSlide(world);
     this._move(world);
     const moved = Math.hypot(this.x - oldX, this.z - oldZ);
     if (this.inWater) this.walkPhase += 0.12;
@@ -127,6 +138,7 @@ export class Player {
     if (this.attackTime > 0) this.attackTime--;
     this._applyGravityAndFriction(slipperiness);
     this.vitals.tick(this, Math.hypot(this.x - oldX, this.z - oldZ), this.sprinting, jumped);
+    this.effects.tick(this);
   }
 
   _tickFlying() {
@@ -140,6 +152,91 @@ export class Player {
     if (this.input.sneak) this.vy = -speed;
 
     this.fallDistance = 0;
+  }
+
+  /**
+   * Cobwebs strongly damp movement while any part of the player intersects
+   * their voxel. Java applies the web multiplier to the movement vector before
+   * collision resolution: horizontal movement is quartered and vertical motion
+   * is reduced to five percent.
+   */
+  _applyCobwebSlowdown(world) {
+    const box = this.boundingBox();
+    const minX = Math.floor(box.minX), maxX = Math.floor(box.maxX - 1e-7);
+    const minY = Math.floor(box.minY), maxY = Math.floor(box.maxY - 1e-7);
+    const minZ = Math.floor(box.minZ), maxZ = Math.floor(box.maxZ - 1e-7);
+    for (let y = minY; y <= maxY; y++) {
+      for (let z = minZ; z <= maxZ; z++) {
+        for (let x = minX; x <= maxX; x++) {
+          if (world.getBlock(x, y, z).block.id !== 'mc:cobweb') continue;
+          this.vx *= 0.25;
+          this.vy *= 0.05;
+          this.vz *= 0.25;
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Honey blocks let a falling player slide slowly down an adjacent vertical
+   * face. Check only the four horizontal faces; standing on top of honey is
+   * handled by its slipperiness and does not trigger wall sliding.
+   */
+  _applyHoneyBlockSlide(world) {
+    if (this.vy >= 0) return false;
+    const box = this.boundingBox();
+    const epsilon = 0.055;
+    const minX = Math.floor(box.minX) - 1, maxX = Math.floor(box.maxX) + 1;
+    const minY = Math.floor(box.minY), maxY = Math.floor(box.maxY - 1e-7);
+    const minZ = Math.floor(box.minZ) - 1, maxZ = Math.floor(box.maxZ) + 1;
+
+    for (let y = minY; y <= maxY; y++) {
+      for (let z = minZ; z <= maxZ; z++) {
+        for (let x = minX; x <= maxX; x++) {
+          if (world.getBlock(x, y, z).block.id !== 'mc:honey_block') continue;
+          const overlapsY = box.maxY > y + 1e-5 && box.minY < y + 1 - 1e-5;
+          const overlapsX = box.maxX > x + 1e-5 && box.minX < x + 1 - 1e-5;
+          const overlapsZ = box.maxZ > z + 1e-5 && box.minZ < z + 1 - 1e-5;
+          const touchesX = Math.abs(box.maxX - x) <= epsilon || Math.abs(box.minX - (x + 1)) <= epsilon;
+          const touchesZ = Math.abs(box.maxZ - z) <= epsilon || Math.abs(box.minZ - (z + 1)) <= epsilon;
+          if (overlapsY && ((touchesX && overlapsZ) || (touchesZ && overlapsX))) {
+            this.vy = Math.max(this.vy, -0.05);
+            this.fallDistance = 0;
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Ladder contact prevents fast falling and lets forward/jump input climb.
+   * The ladder is non-solid, so this is handled as movement state rather than
+   * collision geometry. Sneaking holds the player in place on the ladder.
+   */
+  _applyLadderMovement(world) {
+    const box = this.boundingBox();
+    const minX = Math.floor(box.minX), maxX = Math.floor(box.maxX - 1e-7);
+    const minY = Math.floor(box.minY), maxY = Math.floor(box.maxY - 1e-7);
+    const minZ = Math.floor(box.minZ), maxZ = Math.floor(box.maxZ - 1e-7);
+    let touching = false;
+    for (let y = minY; y <= maxY && !touching; y++) {
+      for (let z = minZ; z <= maxZ && !touching; z++) {
+        for (let x = minX; x <= maxX; x++) {
+          if (world.getBlock(x, y, z).block.id === 'mc:ladder') { touching = true; break; }
+        }
+      }
+    }
+    if (!touching) return false;
+    if (this.input.sneak) this.vy = 0;
+    else if (this.input.jump || this.input.forward > 0) this.vy = Math.max(this.vy, 0.2);
+    else this.vy = Math.max(this.vy, -0.15);
+    this.vx = Math.max(-0.15, Math.min(0.15, this.vx));
+    this.vz = Math.max(-0.15, Math.min(0.15, this.vz));
+    return true;
   }
 
   /**
@@ -157,13 +254,14 @@ export class Player {
    * sliding, rather than simply moving faster.
    */
   _applyInput(slipperiness) {
-    const target = perTick(
+    const speedMultiplier = this.effects?.has('swiftness') ? 1 + 0.2 * (this.effects.amplifier('swiftness') + 1) : 1;
+    const target = perTick((
       this.ridingHorse ? SPEED.SPRINT * 1.35
         : this.inWater ? (this.onGround ? SPEED.SNEAK : SPEED.SWIM)
         : this.sneaking ? SPEED.SNEAK
         : this.sprinting ? SPEED.SPRINT
-        : SPEED.WALK,
-    );
+        : SPEED.WALK
+    ) * speedMultiplier);
 
     let acceleration;
     if (this.onGround) {
@@ -189,7 +287,7 @@ export class Player {
       if (this.input.jump) this.vy = Math.max(this.vy, 0.15);
       if (this.input.sneak) this.vy = Math.min(this.vy, -0.045);
     } else if (this.input.jump && this.onGround) {
-      this.vy = PHYSICS.JUMP_VELOCITY;
+      this.vy = PHYSICS.JUMP_VELOCITY * (this.effects?.has('jump_boost') ? 1 + 0.1 * (this.effects.amplifier('jump_boost') + 1) : 1);
       if (this.sprinting) {
         const yaw = (this.yaw * Math.PI) / 180;
         this.vx += -Math.sin(yaw) * 0.2;
@@ -208,7 +306,7 @@ export class Player {
       this.vy -= 0.02;              // buoyant: much weaker than real gravity
       this.vx *= 0.8; this.vy *= 0.8; this.vz *= 0.8;
     } else {
-      this.vy -= PHYSICS.GRAVITY;
+      this.vy -= this.effects?.has('slow_falling') && this.vy < 0 ? PHYSICS.GRAVITY * 0.125 : PHYSICS.GRAVITY;
       this.vy *= PHYSICS.DRAG_VERTICAL;
       const friction = this.onGround
         ? slipperiness * GROUND_FRICTION_MULT
@@ -274,7 +372,7 @@ export class Player {
       this.airDamageTicks = 0;
       return;
     }
-    if (this.underwater) {
+    if (this.underwater && !this.effects?.has('water_breathing')) {
       this.air = Math.max(0, this.air - 1);
       if (this.air === 0) {
         this.airDamageTicks++;
@@ -284,7 +382,7 @@ export class Player {
         }
       }
     } else {
-      this.air = Math.min(300, this.air + 4);
+      this.air = Math.min(300, this.air + (this.underwater ? 0 : 4));
       this.airDamageTicks = 0;
     }
   }
@@ -410,7 +508,7 @@ export class Player {
     // Vanilla fall damage starts after three blocks; each additional block
     // deals one half-heart (one health point). Apply before clearing distance.
     if (this.gamemode === GAMEMODE.SURVIVAL && this.fallDistance > 3) {
-      const damage = Math.floor(this.fallDistance - 3);
+      const damage = this.effects?.has('slow_falling') ? 0 : Math.floor(this.fallDistance - 3);
       this.health = Math.max(0, this.health - damage);
     }
     this.fallDistance = 0;
@@ -423,7 +521,7 @@ export class Player {
   _boxIntersectsSolid(world, box) {
     const minX = Math.floor(box.minX);
     const maxX = Math.floor(box.maxX - 1e-7);
-    const minY = Math.floor(box.minY);
+    const minY = Math.floor(box.minY) - 1; // include overhanging fence/gate shapes from the block below
     const maxY = Math.floor(box.maxY - 1e-7);
     const minZ = Math.floor(box.minZ);
     const maxZ = Math.floor(box.maxZ - 1e-7);
@@ -435,7 +533,8 @@ export class Player {
           // Per-shape boxes: a full cube returns one box, a slab a half box, a
           // stair two -- the same boxes the mesher draws, so what you see is
           // what you collide with. Non-solid blocks return none.
-          const boxes = collisionBoxes(state);
+          const neighborAt = (dx, dy, dz) => world.getBlock(x + dx, y + dy, z + dz);
+          const boxes = collisionBoxes(state, neighborAt);
           for (let i = 0; i < boxes.length; i++) {
             const b = boxes[i];
             if (box.intersects(new AABB(x + b[0], y + b[1], z + b[2], x + b[3], y + b[4], z + b[5]))) {
@@ -462,6 +561,14 @@ export class Player {
     this.fallDistance = 0;
   }
 
+  addExperience(points) {
+    return this.experience.add(points);
+  }
+
+  recordAdvancementEvent(event, timestamp = 0) {
+    return processAdvancementEvent(this.advancements, event, timestamp);
+  }
+
   toJSON() {
     return {
       pos: { x: this.x, y: this.y, z: this.z },
@@ -469,6 +576,9 @@ export class Player {
       health: this.health,
       air: this.air,
       vitals: this.vitals.toJSON(),
+      experience: this.experience.toJSON(),
+      effects: this.effects.toJSON(),
+      advancements: serializeAdvancementState(this.advancements),
       gamemode: this.gamemode,
       flying: this.flying,
     };
@@ -481,6 +591,9 @@ export class Player {
     this.health = json.health ?? MAX_HEALTH;
     this.air = Math.max(0, Math.min(300, json.air ?? 300));
     this.vitals.loadFrom(json.vitals);
+    this.experience.loadFrom(json.experience);
+    this.effects.loadFrom(json.effects);
+    this.advancements = createAdvancementState(json.advancements);
     this.gamemode = json.gamemode ?? GAMEMODE.SURVIVAL;
     this.flying = json.flying ?? false;
     return this;

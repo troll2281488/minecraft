@@ -96,7 +96,7 @@ export function placeMineshaftPlan(w,S,plan,heights) {
 
 export function dungeonDims(room) { return {ix:5+2*(room.variant&1),iz:5+2*((room.variant>>1)&1)}; }
 export function placeDungeonRoom(w,S,room,seed,heights) {
-  const air=S['mc:air'],cobble=S['mc:cobblestone'],moss=S['mc:mossy_cobblestone']||cobble,chest=S['mc:chest'];
+  const air=S['mc:air'],cobble=S['mc:cobblestone'],moss=S['mc:mossy_cobblestone']||cobble,chest=S['mc:chest'],spawner=S['mc:mob_spawner'];
   if(!air||!cobble) return;
   const {ix,iz}=dungeonDims(room),x1=room.x+ix+1,z1=room.z+iz+1;
   if(!w.touches(room.x,room.z,x1,z1)) return;
@@ -112,6 +112,286 @@ export function placeDungeonRoom(w,S,room,seed,heights) {
     }
   }
   if(chest) { w.set(room.x+1,room.y+1,room.z+1,chest); if(rng.nextBoolean()) w.set(x1-1,room.y+1,z1-1,chest); }
+  if(spawner) w.set(room.x+3,room.y+1,room.z+3,spawner);
+}
+
+/**
+ * Java 1.19 stronghold portal chamber: a 5x5 frame ring, 15 lava sources,
+ * a staircase spawner, and deterministic 10% eye prefill per frame.
+ */
+
+/**
+ * Deterministic connected side-room network for the Java 1.19 stronghold.
+ * The existing entry/library/portal rooms keep their established loot anchors;
+ * this adds the branch grammar around them without chunk-order dependencies.
+ */
+export function placeStrongholdRoomNetwork(w, S, site, seed) {
+  const brick = S['mc:stone_bricks'] || S['mc:cobblestone'];
+  const moss = S['mc:mossy_stone_bricks'] || S['mc:mossy_cobblestone'] || brick;
+  const air = S['mc:air'];
+  if (!brick || !air) return;
+  const y = site.y, x = site.x, z = site.z;
+  const put = (wx, wy, wz, state) => w.set(wx, wy, wz, state);
+  const shell = (x0, z0, width, depth, doors = {}) => {
+    for (let dx = 0; dx < width; dx++) for (let dz = 0; dz < depth; dz++) {
+      const wx = x0 + dx, wz = z0 + dz;
+      const edge = dx === 0 || dx === width - 1 || dz === 0 || dz === depth - 1;
+      put(wx, y, wz, hash01(seedToInt(normalizeSeed(seed)), wx, y, wz, 7401) < 0.24 ? moss : brick);
+      put(wx, y + 5, wz, brick);
+      for (let dy = 1; dy <= 4; dy++) {
+        let doorway = false;
+        if (dz === 0 && doors.north?.includes(dx)) doorway = true;
+        if (dz === depth - 1 && doors.south?.includes(dx)) doorway = true;
+        if (dx === 0 && doors.west?.includes(dz)) doorway = true;
+        if (dx === width - 1 && doors.east?.includes(dz)) doorway = true;
+        if (!edge || doorway) put(wx, y + dy, wz, air);
+        else put(wx, y + dy, wz, hash01(seedToInt(normalizeSeed(seed)), wx, y + dy, wz, 7402) < 0.16 ? moss : brick);
+      }
+    }
+  };
+  const hallX = (x0, x1, z0, z1) => {
+    for (let wx = x0; wx <= x1; wx++) for (let wz = z0; wz <= z1; wz++) {
+      put(wx, y, wz, brick); put(wx, y + 4, wz, brick);
+      for (let dy = 1; dy < 4; dy++) put(wx, y + dy, wz, air);
+    }
+    for (let wx = x0; wx <= x1; wx++) {
+      put(wx, y + 1, z0 - 1, brick); put(wx, y + 1, z1 + 1, brick);
+      put(wx, y + 2, z0 - 1, brick); put(wx, y + 2, z1 + 1, brick);
+    }
+    if (S['mc:torch']) put(Math.floor((x0 + x1) / 2), y + 3, z0, S['mc:torch']);
+  };
+  const hallZ = (x0, x1, z0, z1) => {
+    for (let wx = x0; wx <= x1; wx++) for (let wz = z0; wz <= z1; wz++) {
+      put(wx, y, wz, brick); put(wx, y + 4, wz, brick);
+      for (let dy = 1; dy < 4; dy++) put(wx, y + dy, wz, air);
+    }
+    for (let wz = z0; wz <= z1; wz++) {
+      put(x0 - 1, y + 1, wz, brick); put(x1 + 1, y + 1, wz, brick);
+      put(x0 - 1, y + 2, wz, brick); put(x1 + 1, y + 2, wz, brick);
+    }
+    if (S['mc:torch']) put(x0, y + 3, Math.floor((z0 + z1) / 2), S['mc:torch']);
+  };
+
+  // Connect the original library wing to the entry hall with a proper passage.
+  hallX(x - 3, x - 1, z + 6, z + 8);
+  for (let dy = 1; dy <= 3; dy++) {
+    put(x, y + dy, z + 6, air); put(x, y + dy, z + 7, air); put(x, y + dy, z + 8, air);
+    put(x - 4, y + dy, z + 6, air); put(x - 4, y + dy, z + 7, air); put(x - 4, y + dy, z + 8, air);
+  }
+
+  // A bent dead-end corridor branches off the library's western wall.
+  hallX(x - 15, x - 13, z + 6, z + 8);
+  hallZ(x - 15, x - 13, z - 3, z + 5);
+  for (let dy = 1; dy <= 3; dy++) {
+    for (let dz = z + 6; dz <= z + 8; dz++) put(x - 12, y + dy, dz, air);
+  }
+
+  // Main north passage leads to a four-exit crossing room.
+  hallZ(x + 6, x + 8, z - 7, z - 1);
+  for (let dy = 1; dy <= 3; dy++) {
+    for (let dx = x + 6; dx <= x + 8; dx++) put(dx, y + dy, z, air);
+  }
+  shell(x + 3, z - 16, 9, 9, {
+    north: [3, 4, 5], south: [3, 4, 5], west: [3, 4, 5], east: [3, 4, 5],
+  });
+
+  // The crossing has a seed-selected fountain or central pillar decoration.
+  const crossingStyle = positionalRandom(seed, x + 7, y, z - 12, 7403).nextInt(2);
+  if (crossingStyle === 0 && S['mc:water']) {
+    for (let dx = 6; dx <= 8; dx++) for (let dz = -13; dz <= -11; dz++) {
+      put(x + dx, y + 1, z + dz, S['mc:water']);
+    }
+    if (S['mc:stone_bricks_slab']) {
+      for (let dx = 5; dx <= 9; dx++) {
+        put(x + dx, y + 1, z - 14, S['mc:stone_bricks_slab']);
+        put(x + dx, y + 1, z - 10, S['mc:stone_bricks_slab']);
+      }
+    }
+  } else {
+    for (let dy = 1; dy <= 3; dy++) put(x + 7, y + dy, z - 12, brick);
+    if (S['mc:torch']) {
+      put(x + 6, y + 3, z - 12, S['mc:torch']);
+      put(x + 8, y + 3, z - 12, S['mc:torch']);
+    }
+  }
+
+  // Storage room with a raised timber shelf and a deterministic loot chest.
+  hallZ(x + 6, x + 8, z - 19, z - 17);
+  shell(x + 3, z - 28, 9, 9, { south: [3, 4, 5] });
+  if (S['mc:oak_planks']) {
+    for (let dx = 4; dx <= 10; dx++) {
+      put(x + dx, y + 3, z - 27, S['mc:oak_planks']);
+      put(x + dx, y + 3, z - 21, S['mc:oak_planks']);
+    }
+    for (let dz = -27; dz <= -21; dz++) put(x + 4, y + 3, z + dz, S['mc:oak_planks']);
+  }
+  if (S['mc:chest']) put(x + 7, y + 1, z - 24, S['mc:chest']);
+  if (S['mc:torch']) {
+    put(x + 4, y + 3, z - 26, S['mc:torch']);
+    put(x + 10, y + 3, z - 22, S['mc:torch']);
+  }
+
+  // Prison hall joins the crossing through its eastern exit. Two cells are
+  // separated by stone-brick partitions with narrow entrances.
+  hallX(x + 12, x + 14, z - 13, z - 11);
+  shell(x + 15, z - 16, 9, 9, { west: [3, 4, 5] });
+  for (let dz = -15; dz <= -9; dz++) {
+    if (dz === -12) continue;
+    const divider = S['mc:iron_bars'] || brick;
+    for (let dy = 1; dy <= 3; dy++) put(x + 19, y + dy, z + dz, divider);
+  }
+  for (let dx = 20; dx <= 22; dx++) {
+    put(x + dx, y + 1, z - 13, brick);
+    put(x + dx, y + 2, z - 13, brick);
+  }
+  if (S['mc:torch']) {
+    put(x + 17, y + 3, z - 14, S['mc:torch']);
+    put(x + 21, y + 3, z - 10, S['mc:torch']);
+  }
+
+  // Library wing: a deterministic compact/duplex variant. The large room has
+  // a second gallery, wooden balcony, ladder access and two loot chests; the
+  // compact room keeps one floor and one chest. Both connect to the west hall.
+  const largeLibrary = hash01(seedToInt(normalizeSeed(seed)), x, y, z, 7419) >= 0.22;
+  const lx = x - (largeLibrary ? 32 : 28), lz = z - (largeLibrary ? 7 : 5);
+  const size = largeLibrary ? 15 : 11, top = largeLibrary ? 10 : 5;
+  const bookshelf = S['mc:bookshelf'], planks = S['mc:oak_planks'];
+  const fence = S['mc:oak_fence'] || S['mc:fence'];
+  const ladder = S['mc:ladder'];
+  const cobweb = S['mc:cobweb'];
+  const chest = S['mc:chest'];
+  for (let dx = 0; dx < size; dx++) for (let dz = 0; dz < size; dz++) {
+    const wx = lx + dx, wz = lz + dz;
+    put(wx, y, wz, brick);
+    put(wx, y + top, wz, brick);
+    for (let dy = 1; dy < top; dy++) {
+      const edge = dx === 0 || dx === size - 1 || dz === 0 || dz === size - 1;
+      const eastDoor = dx === size - 1 && dz >= Math.floor(size / 2) - 1 && dz <= Math.floor(size / 2) + 1 && dy <= 3;
+      if (!edge || eastDoor) put(wx, y + dy, wz, air);
+      else put(wx, y + dy, wz, hash01(seedToInt(normalizeSeed(seed)), wx, y + dy, wz, 7420) < 0.12 ? moss : brick);
+    }
+  }
+  // Entry corridor joins the library doorway to the bent western passage.
+  hallX(lx + size - 1, x - 16, z - 2, z);
+  for (let dy = 1; dy <= 3; dy++) put(lx + size - 1, y + dy, z - 1, air);
+
+  // Dense bookcases form the perimeter shelves and paired interior rows.
+  if (bookshelf) {
+    for (let dx = 2; dx < size - 2; dx++) {
+      for (const dz of [2, size - 3]) {
+        for (let dy = 1; dy <= 3; dy++) put(lx + dx, y + dy, lz + dz, bookshelf);
+      }
+    }
+    for (let dz = 3; dz < size - 3; dz++) {
+      for (const dx of [2, size - 3]) {
+        for (let dy = 1; dy <= 3; dy++) put(lx + dx, y + dy, lz + dz, bookshelf);
+      }
+    }
+    for (let dx = 4; dx <= size - 5; dx += 2) {
+      for (let dy = 1; dy <= 3; dy++) put(lx + dx, y + dy, lz + Math.floor(size / 2), bookshelf);
+    }
+  }
+  if (largeLibrary && planks) {
+    // Upper gallery floor, oak-fence railings and a ladder on the western wall.
+    for (let dx = 1; dx < size - 1; dx++) for (let dz = 1; dz < size - 1; dz++) {
+      if (dx === 1 || dx === size - 2 || dz === 1 || dz === size - 2) continue;
+      put(lx + dx, y + 5, lz + dz, planks);
+    }
+    if (fence) {
+      for (let dx = 2; dx < size - 2; dx++) {
+        put(lx + dx, y + 6, lz + 1, fence);
+        put(lx + dx, y + 6, lz + size - 2, fence);
+      }
+      for (let dz = 2; dz < size - 2; dz++) {
+        put(lx + 1, y + 6, lz + dz, fence);
+        put(lx + size - 2, y + 6, lz + dz, fence);
+      }
+    }
+    if (ladder) for (let dy = 1; dy <= 7; dy++) put(lx + 1, y + dy, lz + 1, ladder.with('facing', 'east'));
+    if (bookshelf) {
+      for (let dx = 3; dx < size - 3; dx++) for (let dy = 6; dy <= 8; dy++) {
+        put(lx + dx, y + dy, lz + 2, bookshelf);
+        put(lx + dx, y + dy, lz + size - 3, bookshelf);
+      }
+    }
+  }
+  if (chest) {
+    if (largeLibrary) {
+      put(lx + 2, y + 1, lz + 2, chest);
+      put(lx + 2, y + 6, lz + size - 3, chest);
+    } else put(lx + 2, y + 1, lz + 2, chest);
+  }
+  if (S['mc:torch']) {
+    put(lx + size - 2, y + 4, lz + 1, S['mc:torch']);
+    if (largeLibrary) put(lx + size - 2, y + 9, lz + size - 2, S['mc:torch']);
+  }
+  // Vanilla libraries replace eligible low-ceiling air with cobwebs at 7%.
+  if (cobweb) for (let dx = 1; dx < size - 1; dx++) for (let dz = 1; dz < size - 1; dz++) {
+    for (let dy = 1; dy <= 4; dy++) {
+      const wx = lx + dx, wy = y + dy, wz = lz + dz;
+      if (w.id(wx, wy, wz) === 'mc:air' && hash01(seedToInt(normalizeSeed(seed)), wx, wy, wz, 7421) < 0.07) put(wx, wy, wz, cobweb);
+    }
+  }
+}
+
+export function placeStrongholdPortalRoom(w, S, site, seed) {
+  const brick = S['mc:stone_bricks'] || S['mc:cobblestone'];
+  const mossy = S['mc:mossy_stone_bricks'] || S['mc:mossy_cobblestone'] || brick;
+  const frame = S['mc:end_portal_frame'];
+  if (!brick || !frame) return;
+  const y0 = site.y, px = site.x + 18, pz = site.z + 5;
+  for (let dx = 0; dx < 11; dx++) for (let dz = 0; dz < 11; dz++) {
+    w.set(px + dx, y0, pz + dz, brick);
+    if (dx === 0 || dx === 10 || dz === 0 || dz === 10) {
+      for (let dy = 1; dy <= 5; dy++) {
+        const wall = hash01(seedToInt(normalizeSeed(seed)), px + dx, y0 + dy, pz + dz, 7311) < 0.18 ? mossy : brick;
+        w.set(px + dx, y0 + dy, pz + dz, wall);
+      }
+    }
+  }
+  const bars = S['mc:iron_bars'];
+  if (bars) for (let dz = 4; dz <= 6; dz++) for (let dy = 1; dy <= 3; dy++) {
+    w.set(px, y0 + dy, pz + dz, bars);
+  }
+  const lava = S['mc:lava'];
+  if (lava) {
+    for (let dz = 4; dz <= 6; dz++) {
+      for (let dx = 4; dx <= 6; dx++) w.set(px + dx, y0, pz + dz, lava);
+      w.set(px + 2, y0, pz + dz, lava);
+      w.set(px + 8, y0, pz + dz, lava);
+    }
+  }
+  const framePositions = [];
+  for (let i = 0; i < 3; i++) {
+    framePositions.push([px + 4 + i, pz + 2, 'south']);
+    framePositions.push([px + 4 + i, pz + 8, 'north']);
+    framePositions.push([px + 2, pz + 4 + i, 'east']);
+    framePositions.push([px + 8, pz + 4 + i, 'west']);
+  }
+  for (const [x, z, facing] of framePositions) {
+    const rng = positionalRandom(seed, x, y0 + 1, z, 0x454e4450);
+    let state = frame.with('facing', facing);
+    if (rng.nextInt(10) === 0) state = state.with('eye', true);
+    w.set(x, y0 + 1, z, state);
+  }
+  const stairs = S['mc:stone_bricks_stairs'];
+  if (stairs) w.set(px + 5, y0 + 1, pz + 1, stairs.with('facing', 'south'));
+  const spawner = S['mc:mob_spawner'];
+  if (spawner) w.set(px + 5, y0 + 2, pz + 1, spawner.with('spawner_type', 'silverfish'));
+  const bookshelf = S['mc:bookshelf'];
+  if (bookshelf) {
+    for (let dx = 1; dx < 8; dx++) {
+      w.set(site.x - 11 + dx, y0 + 1, site.z + 4, bookshelf);
+      w.set(site.x - 11 + dx, y0 + 2, site.z + 4, bookshelf);
+    }
+  }
+  const chest = S['mc:chest'];
+  if (chest) {
+    w.set(site.x + 2, y0 + 1, site.z + 2, chest);
+    w.set(site.x - 10, y0 + 1, site.z + 8, chest);
+    w.set(site.x - 6, y0 + 1, site.z + 8, chest);
+    w.set(site.x + 20, y0 + 1, site.z + 10, chest);
+  }
 }
 
 export const VILLAGE_STYLES={

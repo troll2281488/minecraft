@@ -14,8 +14,12 @@
  * that time is strictly better than either.
  */
 
+import { experienceDroppedOnDeath } from './entity/experience.js';
 import { MS_PER_TICK, RENDER, TICKS_PER_DAY, SAVE } from './core/constants.js';
 import { Frustum } from './core/mat4.js';
+import { weatherAt, tickWeatherBlocks } from './game/weather.js';
+import { tickCampfireCooking } from './game/campfire_cooking.js';
+import { tickRailNetwork, MinecartSystem } from './game/railways.js';
 
 import './world/blocks/index.js';
 import { freezeRegistries } from './world/blocks/index.js';
@@ -51,7 +55,8 @@ import { SessionMixin } from './game/session.js';
 import { Multiplayer } from './game/multiplayer.js';
 import { MobSystem } from './entity/mobs.js';
 import { GameSounds } from './game/sounds.js';
-import { growNearbyWheat } from './game/farming.js';
+import { tickFarming } from './game/farming.js';
+import { RedstoneDevicesMixin } from './game/redstone_devices.js';
 import { isDown } from './game/keybinds.js';
 
 const AUTOSAVE_TICKS = SAVE.AUTOSAVE_INTERVAL_TICKS;
@@ -126,6 +131,7 @@ class Game {
     this.sounds = new GameSounds();
     this.multiplayer = new Multiplayer(this);
     this.entities = new MobSystem(this);
+    this.minecarts = new MinecartSystem(this);
     this.frustum = new Frustum();
 
     this.world = null;
@@ -329,7 +335,23 @@ class Game {
     if (!world || !player) return;
 
     world.time = (world.time + 1) % (TICKS_PER_DAY * 8);
+    // Seeded weather is shared by every client without a polling channel.
+    if (this.tickCount % 20 === 0 && (!this.multiplayer?.roomId || this.multiplayer.isHost)) {
+      for (const change of tickCampfireCooking(world, player)) {
+        this.multiplayer?.pushBlockChange(change.x, change.y, change.z, change.state);
+      }
+    }
+    if (world.dimension === 'overworld' && this.tickCount % 20 === 0 &&
+        (!this.multiplayer?.roomId || this.multiplayer.isHost)) {
+      const weather = weatherAt(world.seed, world.time);
+      for (const change of tickWeatherBlocks(world, player, weather, world.time)) {
+        this.multiplayer?.pushBlockChange(change.x, change.y, change.z, change.state);
+      }
+    }
+    this._tickRedstoneDevices?.();
     this._tickFurnaces?.();
+    this._tickHoppers?.();
+    this._tickDroppers?.();
 
     if (!this.inventoryOpen && !this.tradeOpen) {
       player.input.forward =
@@ -358,9 +380,13 @@ class Game {
       player.attackTime = 8;
     }
     player.tick(world);
+    if ((!this.multiplayer?.roomId || this.multiplayer.isHost) && this.tickCount % 10 === 0) {
+      tickRailNetwork(world, player, this.tickCount, this.multiplayer);
+    }
+    this.minecarts?.tick();
     const lavaAtFeet = world.getBlock(Math.floor(player.x), Math.floor(player.y + 0.05), Math.floor(player.z)).block.id === 'mc:lava';
     const lavaAtHead = world.getBlock(Math.floor(player.x), Math.floor(player.y + 1.2), Math.floor(player.z)).block.id === 'mc:lava';
-    if (!player.flying && (lavaAtFeet || lavaAtHead)) {
+    if (!player.flying && (lavaAtFeet || lavaAtHead) && !player.effects?.has('fire_resistance')) {
       this._lavaDamageTicks = (this._lavaDamageTicks || 0) + 1;
       if (this._lavaDamageTicks % 20 === 1) player.health = Math.max(0, player.health - 2);
     } else this._lavaDamageTicks = 0;
@@ -376,12 +402,22 @@ class Game {
       player.ridingHorse.z = player.z;
       player.ridingHorse.yaw = player.yaw * Math.PI / 180;
     }
-    if (player.onGround && Math.hypot(player.vx ?? 0, player.vz ?? 0) > 0.09) {
+    if (!player.ridingMinecart && player.onGround && Math.hypot(player.vx ?? 0, player.vz ?? 0) > 0.09) {
       const under = world.getBlock(Math.floor(player.x), Math.floor(player.y - 0.15), Math.floor(player.z)).block;
       this.sounds?.step(under.soundGroup || 'stone');
     }
     this.entities?.tick();
     if (player.health <= 0 && !this.deathScreenOpen) {
+      // Java 1.19: keepInventory preserves XP; otherwise drop 7 × level (max 100).
+      // This prototype currently handles death XP in the Overworld, where respawn
+      // does not switch dimensions and the orbs can remain at the actual death site.
+      if (player.gamemode === 'survival' && this.world?.dimension === 'overworld' && this.worldMeta?.keepInventory === false) {
+        const points = experienceDroppedOnDeath(player.experience?.level);
+        this._pendingDeathExperience = points > 0 ? {
+          points, x: player.x, y: player.y + 0.5, z: player.z, dimension: this.world.dimension,
+        } : null;
+        player.experience?.loadFrom({ level: 0, progress: 0, total: 0 });
+      }
       this.deathScreenOpen = true;
       this.paused = true;
       this.keys.clear();
@@ -390,7 +426,7 @@ class Game {
       document.getElementById('death-screen')?.classList.remove('hidden');
       document.body.classList.add('menu-active');
     }
-    for (const change of growNearbyWheat(world, player, this.tickCount)) {
+    for (const change of tickFarming(world, player, this.tickCount)) {
       this.multiplayer?.pushBlockChange(change.x, change.y, change.z, change.state);
     }
     this.multiplayer?.tick(MS_PER_TICK / 1000);
@@ -401,7 +437,8 @@ class Game {
 
     if (this.mouseButtons.has(0) && !this.inventoryOpen && !this.tradeOpen) {
       // Entity hits take priority over mining blocks behind the creature.
-      const hitMob = this.entities?.attackFromPlayer();
+      const hitCart = this.minecarts?.attackFromPlayer();
+      const hitMob = hitCart || this.entities?.attackFromPlayer();
       if (!hitMob && this.hit) {
         const conditions = {
           underwater: player.inWater,
@@ -492,6 +529,7 @@ Object.assign(
   ContainerScreensMixin,
   RendererMixin,
   DebugOverlayMixin,
+  RedstoneDevicesMixin,
 );
 
 // Exported so the class and its methods can be exercised without booting a real

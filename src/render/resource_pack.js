@@ -100,6 +100,9 @@ export async function loadItsBrianTextures(blocks, items, { signal } = {}) {
         if (name) blockNames.add(name);
       }
     } else if (state.block.texture) blockNames.add(state.block.texture);
+    if (state.block.doorTextures) {
+      for (const name of Object.values(state.block.doorTextures)) if (name) blockNames.add(name);
+    }
   }
 
   const blockEntries = await mapWithLimit([...blockNames], 24, async (name) => {

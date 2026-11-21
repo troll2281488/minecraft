@@ -433,6 +433,78 @@ const WOOD = {
   dark_oak: { bark: hex(0x30251b), inner: hex(0x49331f), planks: hex(0x49331f), leaves: hex(0x3e6530), sapling: hex(0x3e6530) },
 };
 
+function buttonTile(base, seed) {
+  const tile = planks(base, seed), edge = shade(base, 0.5), center = shade(base, 0.82);
+  for (let y = 4; y <= 11; y++) for (let x = 4; x <= 11; x++) {
+    const c = (x === 4 || x === 11 || y === 4 || y === 11) ? edge : center;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+}
+
+function pressurePlateTile(base, seed) {
+  const tile = planks(base, seed), edge = shade(base, 0.55);
+  for (let i = 1; i < TILE_SIZE - 1; i++) {
+    for (const [x, y] of [[i, 1], [i, 14], [1, i], [14, i]]) setPx(tile, x, y, edge[0], edge[1], edge[2]);
+  }
+  return tile;
+}
+
+/** Simple procedural door fallback; the community Java 1.19 tiles override it. */
+function doorPanelTile(base, seed, upper) {
+  const tile = planks(base, seed);
+  const frame = shade(base, 0.48), inset = shade(base, 0.72), handle = hex(0x6b542c);
+  for (let y = 0; y < TILE_SIZE; y++) {
+    for (const x of [1, 2, 13, 14]) setPx(tile, x, y, frame[0], frame[1], frame[2]);
+  }
+  for (let x = 3; x <= 12; x++) {
+    for (const y of [upper ? 1 : 2, upper ? 13 : 14]) setPx(tile, x, y, inset[0], inset[1], inset[2]);
+  }
+  if (!upper) for (let y = 7; y <= 9; y++) setPx(tile, 11, y, handle[0], handle[1], handle[2]);
+  return tile;
+}
+
+function trapdoorPanelTile(base, seed) {
+  const tile = planks(base, seed);
+  const frame = shade(base, 0.48), inset = shade(base, 0.72);
+  for (let i = 0; i < TILE_SIZE; i++) {
+    for (const p of [[i, 0], [i, 1], [i, 14], [i, 15], [0, i], [1, i], [14, i], [15, i]]) {
+      setPx(tile, p[0], p[1], frame[0], frame[1], frame[2]);
+    }
+  }
+  for (let i = 3; i <= 12; i++) {
+    for (const p of [[i, 4], [i, 11], [4, i], [11, i]]) setPx(tile, p[0], p[1], inset[0], inset[1], inset[2]);
+  }
+  return tile;
+}
+
+/** Pixel fallback for a wooden fence gate: framed rails with a clear slatted centre. */
+function fenceGateTile(base, seed) {
+  const tile = planks(base, seed);
+  const dark = shade(base, 0.48), light = shade(base, 1.18);
+  const set = (x, y, c) => setPx(tile, x, y, c[0], c[1], c[2]);
+  for (let x = 1; x < 15; x++) {
+    set(x, 1, dark); set(x, 2, light);
+    set(x, 13, dark); set(x, 14, light);
+  }
+  for (const x of [1, 2, 5, 6, 9, 10, 13, 14]) {
+    for (let y = 2; y < 14; y++) set(x, y, x === 1 || x === 14 ? dark : light);
+  }
+  for (const y of [5, 6, 10, 11]) for (let x = 2; x < 14; x++) set(x, y, dark);
+  return tile;
+}
+
+function ironDoorPanelTile(upper) {
+  const tile = grainy(hex(0x999999), 0.18, upper ? 'iron_door_top' : 'iron_door_bottom');
+  const dark = hex(0x555555), light = hex(0xc9c9c9);
+  for (let y = 1; y < 15; y++) for (const x of [2, 6, 9, 13]) {
+    const c = (x === 2 || x === 13) ? dark : light;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  for (let x = 2; x < 14; x++) for (const y of [1, 7, 8, 14]) setPx(tile, x, y, dark[0], dark[1], dark[2]);
+  return tile;
+}
+
 /**
  * Every texture, keyed by the name blocks refer to.
  *
@@ -446,6 +518,8 @@ const TEXTURES = {
   granite:            () => grainy(hex(0x9a6a5a), 0.24, 'granite', { clumps: 7 }),
   polished_granite:   () => grainy(hex(0xa2705f), 0.1, 'polished_granite'),
   stone_bricks:       () => grainy(hex(0x777777), 0.20, 'stone_bricks', { clumps: 5 }),
+  mossy_stone_bricks: () => mossyCobble('mossy_stone_bricks'),
+  bricks:             () => grainy(hex(0x985044), 0.18, 'bricks', { clumps: 5, clumpColor: hex(0xb36a58) }),
   diorite:            () => grainy(hex(0xcfcfcf), 0.26, 'diorite', { clumps: 7, clumpColor: hex(0x9d9d9d) }),
   polished_diorite:   () => grainy(hex(0xd6d6d6), 0.1, 'polished_diorite'),
   andesite:           () => grainy(hex(0x8a8a8a), 0.22, 'andesite', { clumps: 6 }),
@@ -454,6 +528,7 @@ const TEXTURES = {
   obsidian:           () => grainy(hex(0x150c24), 0.55, 'obsidian', { clumps: 6, clumpColor: hex(0x2d1a4a) }),
   netherrack:         () => grainy(hex(0x713b35), 0.38, 'netherrack', { clumps: 11, clumpColor: hex(0x4c2828), clumpSize: 3 }),
   nether_bricks:      () => grainy(hex(0x321b20), 0.18, 'nether_bricks', { clumps: 7, clumpColor: hex(0x4c292c) }),
+  red_nether_bricks:  () => grainy(hex(0x5a2027), 0.20, 'red_nether_bricks', { clumps: 7, clumpColor: hex(0x78333a) }),
   soul_sand:          () => grainy(hex(0x55402e), 0.35, 'soul_sand', { clumps: 9, clumpColor: hex(0x33251d) }),
   nether_gold_ore:    () => oreTile(hex(0x713b35), hex(0xf2c43c), 'nether_gold_ore', 7),
   bed:                () => grainy(hex(0xb94b43), 0.12, 'bed', { clumps: 5, clumpColor: hex(0x8b302d) }),
@@ -487,6 +562,7 @@ const TEXTURES = {
   water:              () => waterTile('water'),
   torch:              () => torchTile('torch'),
   farmland:           () => grainy(hex(0x765638), 0.12, 'farmland', { clumps: 18, clumpColor: hex(0x4d3828) }),
+  composter:          () => grainy(hex(0x8b6238), 0.1, 'composter', { clumps: 12, clumpColor: hex(0x5c3e25) }),
   wheat_crop:         () => crossPlant('wheat_crop', (t, r) => {
     grassBlades(t, r, hex(0x91a83a));
     for (let y = 3; y < 15; y += 3) {
@@ -495,6 +571,33 @@ const TEXTURES = {
       setPx(t, x + 1, y - 1, 225, 203, 97);
     }
   }),
+  pumpkin_stem:       () => crossPlant('pumpkin_stem', (t) => {
+    for (let y = 4; y < 15; y++) {
+      setPx(t, 7, y, 73, 133, 48);
+      setPx(t, 8, y, 104, 160, 59);
+    }
+    for (let x = 5; x < 11; x++) setPx(t, x, 4, 94, 151, 52);
+    setPx(t, 6, 3, 227, 179, 56); setPx(t, 9, 3, 227, 179, 56);
+  }),
+  melon_stem:         () => crossPlant('melon_stem', (t) => {
+    for (let y = 4; y < 15; y++) {
+      setPx(t, 7, y, 66, 128, 49);
+      setPx(t, 8, y, 92, 153, 59);
+    }
+    for (let x = 5; x < 11; x++) setPx(t, x, 4, 83, 144, 54);
+    setPx(t, 6, 3, 196, 174, 68); setPx(t, 9, 3, 196, 174, 68);
+  }),
+  sugar_cane:         () => crossPlant('sugar_cane', (t) => {
+    for (let y = 1; y < 16; y++) {
+      const stripe = y % 4 === 0;
+      setPx(t, 6, y, stripe ? 190 : 91, stripe ? 218 : 166, stripe ? 139 : 83);
+      setPx(t, 7, y, stripe ? 166 : 73, stripe ? 202 : 145, stripe ? 112 : 68);
+      setPx(t, 8, y, stripe ? 190 : 91, stripe ? 218 : 166, stripe ? 139 : 83);
+    }
+    setPx(t, 7, 0, 116, 176, 84);
+  }),
+  pumpkin:            () => grainy(hex(0xe58a22), 0.13, 'pumpkin', { clumps: 7, clumpColor: hex(0xc66a18) }),
+  melon:              () => grainy(hex(0x4d8b3c), 0.18, 'melon', { clumps: 9, clumpColor: hex(0x2f672e) }),
 
   coal_ore:           () => oreTile(STONE_GREY, hex(0x1b1b1b), 'coal_ore', 6),
   iron_ore:           () => oreTile(STONE_GREY, hex(0xd8a582), 'iron_ore', 5),
@@ -519,9 +622,27 @@ const TEXTURES = {
   furnace_top:         () => furnaceSideTile('furnace_top'),
   furnace_side:        () => furnaceSideTile('furnace_side'),
   furnace_front:       () => furnaceFrontTile('furnace_front'),
+  mob_spawner:         () => {
+    const tile = grainy(hex(0x343434), 0.2, 'mob_spawner', { clumps: 5 });
+    const iron = hex(0x999999), dark = hex(0x242424), ember = hex(0x9b633b);
+    // Pixel-art cage bars with a small warm core; the block remains decorative
+    // until the spawner simulation is implemented.
+    for (let p = 2; p < 14; p += 3) {
+      for (let y = 1; y < 15; y++) setPx(tile, p, y, iron[0], iron[1], iron[2]);
+      for (let x = 1; x < 15; x++) setPx(tile, x, p, iron[0], iron[1], iron[2]);
+    }
+    for (let y = 5; y <= 10; y++) for (let x = 5; x <= 10; x++) {
+      setPx(tile, x, y, dark[0], dark[1], dark[2]);
+    }
+    for (const [x, y] of [[7, 6], [8, 6], [6, 8], [9, 8], [8, 9]]) {
+      setPx(tile, x, y, ember[0], ember[1], ember[2]);
+    }
+    return tile;
+  },
 
   short_grass:        () => crossPlant('short_grass', (t, r) => grassBlades(t, r, GRASS_GREEN)),
   fern:               () => crossPlant('fern', (t, r) => grassBlades(t, r, hex(0x5f9440))),
+  sweet_berry_bush:   () => crossPlant('sweet_berry_bush', (t, r) => { grassBlades(t, r, hex(0x477b35)); for (const [x, y] of [[5, 6], [10, 8], [7, 11], [11, 12]]) { setPx(t, x, y, 180, 35, 45); setPx(t, x + 1, y, 215, 55, 61); } }),
   dead_bush:          () => crossPlant('dead_bush', (t, r) => grassBlades(t, r, hex(0x8a6a35))),
   red_mushroom:       () => crossPlant('red_mushroom', (t) => { for (let y=3;y<13;y++) for (let x=4;x<12;x++) if ((x-8)**2+(y-7)**2<19) setPx(t,x,y,190,48,42); setPx(t,8,12,224,210,184); }),
   brown_mushroom:     () => crossPlant('brown_mushroom', (t) => { for (let y=4;y<12;y++) for (let x=4;x<12;x++) if ((x-8)**2+(y-7)**2<20) setPx(t,x,y,126,83,54); setPx(t,8,12,224,210,184); }),
@@ -539,6 +660,8 @@ const DYE_PALETTE = {
   light_gray: 0x9a9a91, cyan: 0x2e8b86, purple: 0x7d3fb2, blue: 0x3546a5,
   brown: 0x68452b, green: 0x536b2f, red: 0x9f302b, black: 0x242424,
 };
+TEXTURES.terracotta = () => grainy(hex(0x985e45), 0.05, 'terracotta');
+
 for (const [color, rgb] of Object.entries(DYE_PALETTE)) {
   const tint = hex(rgb);
   if (color !== 'white') TEXTURES[`${color}_wool`] = () => grainy(tint, 0.08, `${color}_wool`);
@@ -556,7 +679,304 @@ for (const [species, c] of Object.entries(WOOD)) {
   TEXTURES[`${species}_leaves`] = () => leaves(c.leaves, `${species}_leaves`);
   TEXTURES[`${species}_sapling`] = () =>
     crossPlant(`${species}_sapling`, (t, r) => grassBlades(t, r, c.sapling));
+  // Offline fallback tiles; Java 1.19 resource-pack images override these.
+  TEXTURES[`${species}_door_bottom`] = () => doorPanelTile(c.planks, `${species}_door_bottom`, false);
+  TEXTURES[`${species}_door_top`] = () => doorPanelTile(c.planks, `${species}_door_top`, true);
+  TEXTURES[`${species}_trapdoor`] = () => trapdoorPanelTile(c.planks, `${species}_trapdoor`);
+  TEXTURES[`${species}_button`] = () => buttonTile(c.planks, `${species}_button`);
+  TEXTURES[`${species}_pressure_plate`] = () => pressurePlateTile(c.planks, `${species}_pressure_plate`);
+  TEXTURES[`${species}_fence`] = () => planks(c.planks, `${species}_fence`);
+  TEXTURES[`${species}_fence_gate`] = () => fenceGateTile(c.planks, `${species}_fence_gate`);
 }
+
+TEXTURES.iron_door_bottom = () => ironDoorPanelTile(false);
+TEXTURES.iron_door_top = () => ironDoorPanelTile(true);
+TEXTURES.iron_trapdoor = () => ironDoorPanelTile(false);
+TEXTURES.stone_button = () => buttonTile(hex(0x858585), 'stone_button');
+TEXTURES.polished_blackstone_button = () => buttonTile(hex(0x38333a), 'polished_blackstone_button');
+TEXTURES.stone_pressure_plate = () => pressurePlateTile(hex(0x858585), 'stone_pressure_plate');
+TEXTURES.polished_blackstone_pressure_plate = () => pressurePlateTile(hex(0x38333a), 'polished_blackstone_pressure_plate');
+TEXTURES.redstone_torch = () => {
+  const tile = torchTile(0x7ed51);
+  const red = hex(0xe52a2a), bright = hex(0xff5555);
+  for (const [x,y] of [[7,4],[8,4],[6,5],[9,5],[7,6],[8,6]]) {
+    const c = (x+y)%2 ? red : bright;
+    setPx(tile,x,y,c[0],c[1],c[2]);
+  }
+  return tile;
+};
+TEXTURES.repeater = () => {
+  const tile = grainy(hex(0x777777), 0.12, 'repeater');
+  const red = hex(0xb92727), dark = hex(0x3e3030);
+  for (let x=2;x<14;x++) for(let y=6;y<10;y++) {
+    const c = (x===3 || x===12) ? red : dark;
+    setPx(tile,x,y,c[0],c[1],c[2]);
+  }
+  for (const x of [4,5,10,11]) for(let y=5;y<11;y++) setPx(tile,x,y,red[0],red[1],red[2]);
+  return tile;
+};
+TEXTURES.light_weighted_pressure_plate = () => pressurePlateTile(hex(0xd8ad35), 'light_weighted_pressure_plate');
+TEXTURES.heavy_weighted_pressure_plate = () => pressurePlateTile(hex(0xb8b8b8), 'heavy_weighted_pressure_plate');
+TEXTURES.redstone_wire = () => {
+  const tile = grainy(hex(0x8f1717), 0.1, 'redstone_wire');
+  const red = hex(0xd52c2c), dark = hex(0x701010);
+  for (let y = 2; y < 14; y++) for (let x = 2; x < 14; x++) {
+    if ((x + y) % 4 === 0 || (x % 5 === 0 && y % 3 === 0)) {
+      const c = (x + y) % 2 ? red : dark;
+      setPx(tile, x, y, c[0], c[1], c[2]);
+    }
+  }
+  return tile;
+};
+TEXTURES.dropper = () => {
+  const tile=grainy(hex(0x777777),0.16,'dropper'), dark=hex(0x252525), rim=hex(0x4a4a4a), iron=hex(0x999999);
+  for(let y=2;y<14;y++) for(let x=2;x<14;x++) {
+    const hole=x>=5&&x<=10&&y>=5&&y<=10;
+    const edge=x===2||x===13||y===2||y===13;
+    const c=hole?dark:edge?rim:iron; setPx(tile,x,y,c[0],c[1],c[2]);
+  }
+  return tile;
+};
+TEXTURES.observer = () => {
+  const tile=grainy(hex(0x777777),0.12,'observer'), stone=hex(0x777777), face=hex(0x454545), eye=hex(0xb32626), pupil=hex(0x241010);
+  for(let y=1;y<15;y++) for(let x=1;x<15;x++) { const c=(x<3||x>12||y<3||y>12)?stone:face; setPx(tile,x,y,c[0],c[1],c[2]); }
+  for(let y=5;y<11;y++) for(let x=5;x<11;x++) setPx(tile,x,y,eye[0],eye[1],eye[2]);
+  for(let y=7;y<9;y++) for(let x=7;x<9;x++) setPx(tile,x,y,pupil[0],pupil[1],pupil[2]);
+  return tile;
+};
+TEXTURES.target = () => {
+  const tile=grainy(hex(0xf0f0f0),0.06,'target');
+  const red=hex(0xc72b2b), white=hex(0xf4f0e8), dark=hex(0x8f1c1c);
+  for(let y=0;y<16;y++) for(let x=0;x<16;x++) {
+    const d=Math.hypot(x-7.5,y-7.5);
+    const c=d<2?dark:d<4?white:d<6?red:d<7?white:red;
+    setPx(tile,x,y,c[0],c[1],c[2]);
+  }
+  return tile;
+};
+TEXTURES.hopper = () => {
+  const tile = grainy(hex(0x777777), 0.16, 'hopper');
+  const dark = hex(0x343434), iron = hex(0xb0b0b0), rim = hex(0x555555);
+  for (let y = 2; y < 14; y++) for (let x = 2; x < 14; x++) {
+    const edge = x < 4 || x > 11 || y < 4 || y > 11;
+    const throat = x >= 6 && x <= 9 && y >= 6 && y <= 10;
+    const c = throat ? dark : edge ? rim : iron;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+TEXTURES.redstone_lamp = () => {
+  const tile = grainy(hex(0x8d7856), 0.1, 'redstone_lamp');
+  const gold = hex(0xe4b94e), pale = hex(0xffe8a0), dark = hex(0x5d4932);
+  for (let y = 2; y < 14; y++) for (let x = 2; x < 14; x++) {
+    const edge = x < 4 || x > 11 || y < 4 || y > 11;
+    const c = edge ? dark : ((x + y) % 3 === 0 ? gold : pale);
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+TEXTURES.glowstone = () => {
+  const tile = grainy(hex(0xb98b45), 0.22, 'glowstone');
+  const bright = hex(0xf6d78b), pale = hex(0xffedb0), dark = hex(0x8c5f2d);
+  for (let y = 1; y < 15; y++) for (let x = 1; x < 15; x++) {
+    const n = (x * 7 + y * 11) % 9;
+    const c = n < 2 ? dark : n < 6 ? bright : pale;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+TEXTURES.comparator = () => {
+  const tile = grainy(hex(0x777777), 0.1, 'comparator');
+  const stone = hex(0x9b9b9b), red = hex(0xb72b2b), dark = hex(0x4b2424), quartz = hex(0xd9c9a8);
+  for (let y = 4; y < 12; y++) for (let x = 2; x < 14; x++) {
+    const c = (x < 5 || x > 10) ? stone : (y >= 7 && y <= 8 ? red : dark);
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  for (let y = 6; y < 10; y++) for (let x = 7; x < 9; x++) setPx(tile, x, y, quartz[0], quartz[1], quartz[2]);
+  return tile;
+};
+TEXTURES.note_block = () => {
+  const tile = planks(hex(0x8b5a32), 'note_block');
+  const dark = hex(0x35251b), top = hex(0xb77a46);
+  for(let y=1;y<15;y++) for(let x=1;x<15;x++) {
+    const edge=x===1||x===14||y===1||y===14;
+    const c=edge?dark:top; setPx(tile,x,y,c[0],c[1],c[2]);
+  }
+  return tile;
+};
+TEXTURES.daylight_detector = () => {
+  const tile = grainy(hex(0x795b3b), 0.08, 'daylight_detector');
+  const quartz = hex(0xd6c6a5), dark = hex(0x4d3827), center = hex(0x9a7952);
+  for(let y=2;y<14;y++) for(let x=2;x<14;x++) {
+    const dx=x-7.5,dy=y-7.5,dist=dx*dx+dy*dy;
+    const c=dist<7?quartz:dist<20?center:dark;
+    setPx(tile,x,y,c[0],c[1],c[2]);
+  }
+  return tile;
+};
+TEXTURES.lever = () => {
+  const tile = grainy(hex(0x777777), 0.12, 'lever');
+  const light = hex(0xb0b0b0), dark = hex(0x454545);
+  for (let y = 3; y < 13; y++) for (let x = 3; x < 13; x++) {
+    const c = (x + y) % 3 === 0 ? dark : light;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+
+// Piston textures are intentionally authored as pixel art fallbacks. A
+// matching Java 1.19 resource-pack tile overrides these at startup.
+function redstoneOreTile(lit = false) {
+  const tile = grainy(hex(0x777777), 0.2, lit ? 'redstone_ore_lit' : 'redstone_ore', { clumps: 8, clumpColor: hex(0x555555) });
+  const rng = new Random(lit ? 'redstone-ore-glow' : 'redstone-ore-dormant');
+  const dark = hex(lit ? 0x8f1515 : 0x651515);
+  const red = hex(lit ? 0xff4545 : 0xb52222);
+  const bright = hex(0xff8b70);
+  for (let i = 0; i < 34; i++) {
+    const x = 1 + rng.nextInt(14), y = 1 + rng.nextInt(14);
+    const c = lit && rng.nextDouble() < 0.22 ? bright : (rng.nextDouble() < 0.55 ? red : dark);
+    setPx(tile, x, y, c[0], c[1], c[2]);
+    if (lit && x < 15 && rng.nextDouble() < 0.25) setPx(tile, x + 1, y, c[0], c[1], c[2]);
+  }
+  return tile;
+}
+TEXTURES.redstone_ore = () => redstoneOreTile(false);
+TEXTURES.redstone_ore_lit = () => redstoneOreTile(true);
+
+TEXTURES.blackstone = () => {
+  const tile = grainy(hex(0x353139), 0.12, 'blackstone');
+  const seam = hex(0x211f25), fleck = hex(0x504a53);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    let c = null;
+    if (y === 0 || y === 8 || x === 0 || x === 8) c = seam;
+    else if ((x * 7 + y * 11) % 19 === 0) c = fleck;
+    if (c) setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+TEXTURES.polished_blackstone = () => {
+  const tile = grainy(hex(0x38333b), 0.06, 'polished_blackstone');
+  const light = hex(0x514b55), dark = hex(0x28252b);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    if ((x + y) % 8 === 0) setPx(tile, x, y, light[0], light[1], light[2]);
+    else if ((x * 3 + y * 5) % 23 === 0) setPx(tile, x, y, dark[0], dark[1], dark[2]);
+  }
+  return tile;
+};
+TEXTURES.polished_blackstone_bricks = () => {
+  const tile = grainy(hex(0x302f35), 0.18, 'polished_blackstone_bricks');
+  const seam = hex(0x211f25);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    if (x === 0 || x === 8 || y === 0 || y === 8) setPx(tile, x, y, seam[0], seam[1], seam[2]);
+  }
+  return tile;
+};
+
+TEXTURES.slime_block = () => {
+  const tile = grainy(hex(0x78a83b), 0.08, 'slime_block');
+  const edge = hex(0x4f7d28), light = hex(0xa5d45b), mid = hex(0x82b943);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    let c = mid;
+    if (x === 0 || x === 15 || y === 0 || y === 15) c = edge;
+    else if ((x + y) % 7 === 0 || (x * 3 + y) % 11 === 0) c = light;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+
+TEXTURES.honey_block = () => {
+  const tile = grainy(hex(0xd99b28), 0.1, 'honey_block');
+  const amber = hex(0xb87518), light = hex(0xf2c45b), pale = hex(0xffdf83);
+  // Uneven amber bands and a few bright honey glints keep the tile readable
+  // without using external copyrighted texture assets.
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    let c = (y < 3 || y > 12) ? amber : (y < 6 || y > 9) ? light : hex(0xe5ad3c);
+    if ((x * 5 + y * 3) % 19 === 0) c = pale;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+
+TEXTURES.honeycomb_block = () => {
+  const tile = grainy(hex(0xd99a27), 0.07, 'honeycomb_block');
+  const outline = hex(0x9a5d18), edge = hex(0xf4c04b), center = hex(0xffdf75);
+  // Repeating offset hex cells, drawn as pixel-art honeycomb.
+  for (let row = -1; row < 4; row++) for (let col = -1; col < 4; col++) {
+    const cx = col * 8 + (row % 2) * 4 + 4;
+    const cy = row * 6 + 3;
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+      const ax = Math.abs(dx), ay = Math.abs(dy);
+      if (ax + ay * 0.58 > 4.2) continue;
+      const x = (cx + dx + 32) % 16, y = (cy + dy + 32) % 16;
+      const c = ax + ay * 0.58 > 3.3 ? outline : ax + ay * 0.58 > 2.4 ? edge : center;
+      setPx(tile, x, y, c[0], c[1], c[2]);
+    }
+  }
+  return tile;
+};
+
+TEXTURES.campfire = () => {
+  const tile = grainy(hex(0x70452b), 0.1, 'campfire');
+  const coal = hex(0x29252a), ember = hex(0xf28a24), hot = hex(0xffd34f);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    let c = y > 10 ? hex(0x9b7042) : ((x + y) % 5 === 0 ? ember : coal);
+    if (x >= 5 && x <= 10 && y >= 4 && y <= 10 && (x + y) % 3 === 0) c = hot;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+TEXTURES.bee_nest = () => {
+  const tile = grainy(hex(0xb98a4e), 0.14, 'bee_nest');
+  const bark = hex(0x75502d), straw = hex(0xd5b06c), dark = hex(0x382a1c);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    let c = y < 4 || y > 11 ? bark : (y % 3 === 0 ? straw : hex(0xb98a4e));
+    if (x >= 5 && x <= 10 && y >= 6 && y <= 10) c = dark;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+TEXTURES.beehive = () => {
+  const tile = grainy(hex(0xd0a45c), 0.08, 'beehive');
+  const bands = hex(0x98652f), pale = hex(0xe5c17a);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const c = y < 3 || y > 12 ? bands : (y % 4 === 0 ? pale : hex(0xd0a45c));
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+
+TEXTURES.piston_side = () => {
+  const tile = grainy(hex(0x777777), 0.12, 'piston_side');
+  const stone = hex(0x777777), wood = hex(0x9b6a3b), dark = hex(0x4b3423), iron = hex(0xb8b8b8);
+  for (let y = 1; y < 15; y++) for (let x = 1; x < 15; x++) {
+    let c = stone;
+    if (x >= 4 && x <= 11 && y >= 4 && y <= 11) c = wood;
+    if ((x === 3 || x === 12 || y === 3 || y === 12)) c = dark;
+    if (x >= 6 && x <= 9 && (y === 2 || y === 13)) c = iron;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+TEXTURES.piston_top = () => {
+  const tile = planks(hex(0xa47743), 'piston_top');
+  const rim = hex(0x5b3d24), center = hex(0x9a6939);
+  for (let i = 0; i < 16; i++) {
+    for (const [x, y] of [[i, 0], [i, 15], [0, i], [15, i]]) setPx(tile, x, y, rim[0], rim[1], rim[2]);
+  }
+  for (let y = 5; y < 11; y++) for (let x = 5; x < 11; x++) setPx(tile, x, y, center[0], center[1], center[2]);
+  return tile;
+};
+TEXTURES.sticky_piston_top = () => {
+  const tile = TEXTURES.piston_top();
+  const green = hex(0x75a83b), dark = hex(0x426b24), light = hex(0x9bc95a);
+  for (let y = 4; y < 12; y++) for (let x = 4; x < 12; x++) {
+    const c = (x === 4 || x === 11 || y === 4 || y === 11) ? dark
+      : ((x + y) % 3 === 0 ? light : green);
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+TEXTURES.piston_bottom = () => grainy(hex(0x777777), 0.12, 'piston_bottom');
 
 /** Visible checkerboard fallback for a missing texture key. */
 function missingTexture() {
@@ -628,7 +1048,10 @@ export function buildBlockTextureTable(blocks, textureIndex) {
     const block = states[i].block;
     const t = block.textures;
     let faces;
-    if (t) {
+    if (block.doorTextures) {
+      const texture = layerFor(block.doorTextures[states[i].values?.half] ?? block.texture);
+      faces = [texture, texture, texture, texture, texture, texture];
+    } else if (t) {
       faces = [
         layerFor(t.bottom ?? t.side ?? t.all),
         layerFor(t.top ?? t.side ?? t.all),
@@ -640,6 +1063,30 @@ export function buildBlockTextureTable(blocks, textureIndex) {
     } else {
       const single = layerFor(block.texture);
       faces = [single, single, single, single, single, single];
+    }
+
+    // Piston faces are oriented by the block's facing property, not by
+    // the world's fixed up/down axes. The contact face shows the piston top;
+    // the other sides use the casing texture. An extended base no longer has
+    // a wooden contact face because its separate head occupies that position.
+    const facingFace = {
+      down: 0, up: 1, north: 2, south: 3, west: 4, east: 5,
+    }[states[i].get('facing')];
+    if (block.id === 'mc:piston' || block.id === 'mc:sticky_piston') {
+      const side = layerFor('piston_side');
+      const front = layerFor(block.id === 'mc:sticky_piston' ? 'sticky_piston_top' : 'piston_top');
+      faces = [layerFor('piston_bottom'), side, side, side, side, side];
+      if (facingFace !== undefined) faces[facingFace] = states[i].get('extended') ? side : front;
+    } else if (block.id === 'mc:piston_head') {
+      const side = layerFor('piston_side');
+      const front = layerFor(states[i].get('sticky') ? 'sticky_piston_top' : 'piston_top');
+      faces = [side, side, side, side, side, side];
+      if (facingFace !== undefined) faces[facingFace] = front;
+    }
+
+    if (block.id === 'mc:redstone_ore' && states[i].get('lit')) {
+      const glow = layerFor('redstone_ore_lit');
+      faces = [glow, glow, glow, glow, glow, glow];
     }
 
     // Logs rotate: an axis=x log shows its rings on the east and

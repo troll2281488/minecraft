@@ -14,4 +14,8 @@ export const USABLE_BLOCKS = {
   'mc:crafting_table': (game) => game._openCraftingTable(),
   'mc:chest': (game) => game._openChest(game.hit.x, game.hit.y, game.hit.z),
   'mc:furnace': (game) => game._openFurnace(game.hit.x, game.hit.y, game.hit.z),
+  'mc:smoker': (game) => game._openSmoker(game.hit.x, game.hit.y, game.hit.z),
+  'mc:blast_furnace': (game) => game._openBlastFurnace(game.hit.x, game.hit.y, game.hit.z),
+  'mc:hopper': (game) => game._openHopper(game.hit.x, game.hit.y, game.hit.z),
+  'mc:dropper': (game) => game._openDropper(game.hit.x, game.hit.y, game.hit.z),
 };

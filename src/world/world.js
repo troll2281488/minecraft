@@ -25,6 +25,7 @@ import { Chunk, GEN_STAGE } from './chunk.js';
 import { computeChunkLight } from './lighting.js';
 import { decodeChunkBinary } from '../save/format.js';
 import { materializeChunk } from '../save/format.js';
+import { refreshWallConnectionsInChunk } from '../game/wall_updates.js';
 
 // Build ceiling comes from constants.js (MAX_Y). It used to be re-derived here,
 // and in five other places, from MIN_Y + SECTION_COUNT * SECTION_HEIGHT.
@@ -95,6 +96,7 @@ export class World {
     const chunk = materializeChunk(msg.cx, msg.cz, decodeChunkBinary(msg.bytes));
     chunk.generatedStage = GEN_STAGE.FULL;
     this.chunks.set(key, chunk);
+    refreshWallConnectionsInChunk(this, chunk);
     this.generatedCount++;
 
     // The new chunk changes what its neighbours' edge faces should show, so
@@ -127,6 +129,7 @@ export class World {
   /** Insert an already-built chunk, e.g. one loaded from a save. */
   adoptChunk(chunk) {
     this.chunks.set(chunkKey(chunk.cx, chunk.cz), chunk);
+    refreshWallConnectionsInChunk(this, chunk);
     this.markDirty(chunk.cx, chunk.cz);
     for (const [dx, dz] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
       this.markDirty(chunk.cx + dx, chunk.cz + dz);

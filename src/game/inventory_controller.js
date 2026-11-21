@@ -22,6 +22,10 @@ export const InventoryControllerMixin = {
   _rebuildInventoryUI() {
     this.ui.buildInventory(this.inventory, this.craftingGrid, {
       onClick: (kind, index, button, shift) => this._onInventoryClick(kind, index, button, shift),
+      onDistribute: (indices) => {
+        if (indices.length < 2) this._onInventoryClick('inventory', indices[0], 0, false);
+        else if (this.inventory.distributeCursor(indices)) this.ui.updateInventory(this.inventory, this.craftingGrid, true);
+      },
       onDropCursor: (button = 0) => {
         const cursor = this.inventory.cursor;
         if (cursor.isEmpty) return;
@@ -126,10 +130,12 @@ export const InventoryControllerMixin = {
     if (kind === 'result') {
       if (!grid.matched || grid.result.isEmpty) return;
       const output = grid.result.clone();
+      const craftedItemId = output.item?.id;
       if (inv.cursor.isEmpty) inv.cursor = output;
       else if (inv.cursor.canStackWith(output)) inv.cursor.mergeFrom(output);
       else return; // hands full with something else
       grid.consume();
+      if (craftedItemId === 'mc:stone_pickaxe') this.player?.recordAdvancementEvent?.('crafted_stone_pickaxe', this.tickCount || 0);
       inv.version++;
     } else if (kind === 'craft') {
       const slot = grid.get(index);

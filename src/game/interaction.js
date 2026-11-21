@@ -17,6 +17,7 @@ import { forwardVector } from '../core/mat4.js';
 import { FACES, AABB, yawToFacing } from '../core/math.js';
 import { AIR } from '../world/block.js';
 import { ITEMS } from '../world/item.js';
+import { enchantmentLevel } from './enchantments.js';
 
 // ---------------------------------------------------------------------------
 // Raycasting
@@ -125,7 +126,8 @@ export function breakTicks(block, heldStack, conditions = {}) {
   // Efficiency, haste, and mining fatigue all fold into the speed term rather
   // than the divisor -- which is why Efficiency V on a diamond pickaxe is such
   // an enormous jump rather than a linear improvement.
-  if (conditions.efficiency > 0) speed += conditions.efficiency ** 2 + 1;
+  const efficiency = Math.max(conditions.efficiency || 0, enchantmentLevel(heldStack, 'efficiency'));
+  if (efficiency > 0) speed += efficiency ** 2 + 1;
   if (conditions.haste > 0) speed *= 1 + MINING.HASTE_PER_LEVEL * conditions.haste;
   if (conditions.miningFatigue > 0) speed *= MINING.MINING_FATIGUE_BASE ** conditions.miningFatigue;
 
@@ -248,6 +250,7 @@ export function wouldTrapPlayer(player, x, y, z) {
 export function orientPlacement(block, player, hit) {
   let state = block.defaultState;
   const isStair = block.renderShape === 'stair';
+  const isMountedDevice = ['button', 'lever'].includes(block.renderShape);
 
   if (block.properties.axis) {
     // Logs align to the face that was clicked: hitting the top of a block places
@@ -256,18 +259,37 @@ export function orientPlacement(block, player, hit) {
     state = state.with('axis', axis);
   }
 
+  if (block.properties.face) {
+    const face = hit.face.dy > 0 ? 'floor' : hit.face.dy < 0 ? 'ceiling' : 'wall';
+    state = state.with('face', face);
+  }
+
   if (block.properties.facing) {
     // Stairs ascend AWAY from the player (the tall step is on the far side), so
     // they face the way the player is looking. Most other directional blocks
     // face TOWARD the player instead.
-    const facing = isStair ? yawToFacing(player.yaw) : yawToFacing(player.yaw + 180);
+    const faceDirection = hit.face.dx > 0 ? 'east' : hit.face.dx < 0 ? 'west'
+      : hit.face.dz > 0 ? 'south' : hit.face.dz < 0 ? 'north' : null;
+    const hopperFacing = hit.face.dy !== 0 ? 'down'
+      : hit.face.dx > 0 ? 'west' : hit.face.dx < 0 ? 'east'
+      : hit.face.dz > 0 ? 'north' : 'south';
+    const sixWayFacing = hit.face.dx > 0 ? 'east' : hit.face.dx < 0 ? 'west'
+      : hit.face.dy > 0 ? 'up' : hit.face.dy < 0 ? 'down'
+      : hit.face.dz > 0 ? 'south' : 'north';
+    const facing = block.id === 'mc:hopper' ? hopperFacing
+      : ['mc:dropper', 'mc:observer', 'mc:piston', 'mc:sticky_piston'].includes(block.id) ? sixWayFacing
+      : isStair || block.renderShape === 'door' || block.renderShape === 'fence_gate'
+        ? yawToFacing(player.yaw)
+        : (isMountedDevice && faceDirection ? faceDirection : yawToFacing(player.yaw + 180));
     if (block.properties.facing.has(facing)) state = state.with('facing', facing);
   }
 
   if (block.properties.half) {
     // Bottom half unless you placed it against the underside of something (or
     // clicked the upper part of a side face -- approximated by the face for now).
-    state = state.with('half', hit.face.dy < 0 ? 'top' : 'bottom');
+    state = block.renderShape === 'door'
+      ? state.with('half', 'lower')
+      : state.with('half', hit.face.dy < 0 ? 'top' : 'bottom');
   }
 
   if (block.properties.type) {
@@ -304,25 +326,68 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
   const rng = positionalRandom(worldSeed, x, y, z, 0x10ad);
   const id = block.id;
 
-  // Blocks that do not drop themselves in vanilla without Silk Touch.
-  // Silk Touch is not implemented yet, so these correctly yield nothing.
+  if (id === 'mc:jukebox') {
+    const record = state.get('record');
+    const drops = [{ id, count: 1 }];
+    if (record && record !== 'none') drops.push({ id: 'mc:music_disc_' + record, count: 1 });
+    return drops;
+  }
+
+  // Silk Touch preserves ordinary block drops, but never makes spawners collectible.
+  const silkTouchBlocks = new Set([
+    'mc:glass', 'mc:ice', 'mc:grass_block', 'mc:stone', 'mc:coal_ore', 'mc:iron_ore',
+    'mc:gold_ore', 'mc:diamond_ore', 'mc:emerald_ore', 'mc:lapis_ore', 'mc:redstone_ore',
+    'mc:glowstone', 'mc:bookshelf', 'mc:clay', 'mc:mycelium', 'mc:podzol',
+    'mc:short_grass', 'mc:fern', 'mc:dead_bush',
+  ]);
+  if (enchantmentLevel(heldStack, 'silk_touch') > 0 && (silkTouchBlocks.has(id) || id.endsWith('_leaves') || id.endsWith('_ore')) && ITEMS.get(id)) {
+    return [{ id, count: 1 }];
+  }
   if (id === 'mc:glass' || id === 'mc:ice') return [];
+  // Monster spawners are never item drops in Java Edition, even with Silk Touch.
+  if (id === 'mc:mob_spawner') return [];
 
   // A shovel breaks a snow block into four snowballs in Java 1.12.2.
   if (id === 'mc:snow_block') return [{ id: 'mc:snowball', count: 4 }];
 
-  if (id === 'mc:wheat') {
+  if (id === 'mc:melon') return [{ id: 'mc:melon_slice', count: 3 + rng.nextInt(5) }];
+  if (id === 'mc:pumpkin_stem' || id === 'mc:melon_stem') {
+    const seedId = id === 'mc:pumpkin_stem' ? 'mc:pumpkin_seeds' : 'mc:melon_seeds';
+    const count = rng.nextInt(2);
+    return count ? [{ id: seedId, count }] : [];
+  }
+
+  if (['mc:wheat', 'mc:carrots', 'mc:potatoes', 'mc:beetroots'].includes(id)) {
     if (state.get('age') < 7) return [];
-    return [
+    if (id === 'mc:wheat') return [
       { id: 'mc:wheat', count: 1 },
       { id: 'mc:wheat_seeds', count: rng.nextInt(4) },
     ];
+    if (id === 'mc:carrots') return [{ id: 'mc:carrot', count: 1 + rng.nextInt(4) }];
+    if (id === 'mc:potatoes') return [{ id: 'mc:potato', count: 1 + rng.nextInt(4) }];
+    return [
+      { id: 'mc:beetroot', count: 1 },
+      { id: 'mc:beetroot_seeds', count: rng.nextInt(4) },
+    ];
   }
 
-  if (id === 'mc:nether_gold_ore') return [{ id: 'mc:gold_nugget', count: 2 + rng.nextInt(4) }];
+  if (id === 'mc:nether_gold_ore') {
+    const base = 2 + rng.nextInt(4);
+    const bonus = enchantmentLevel(heldStack, 'fortune');
+    return [{ id: 'mc:gold_nugget', count: base * (1 + (bonus ? rng.nextInt(bonus + 1) : 0)) }];
+  }
+
+  // Java 1.19 glowstone drops 2–4 dust without Fortune (Silk Touch is not yet implemented).
+  if (id === 'mc:glowstone') {
+    const base = 2 + rng.nextInt(3);
+    const bonus = enchantmentLevel(heldStack, 'fortune');
+    return [{ id: 'mc:glowstone_dust', count: Math.min(4, base + (bonus ? rng.nextInt(bonus + 1) : 0)) }];
+  }
 
   if (id === 'mc:gravel') {
-    return rng.nextDouble() < 0.10
+    const fortune = enchantmentLevel(heldStack, 'fortune');
+    const flintChance = [0.10, 0.14, 0.25, 1][fortune];
+    return rng.nextDouble() < flintChance
       ? [{ id: 'mc:flint', count: 1 }]
       : [{ id: 'mc:gravel', count: 1 }];
   }
@@ -332,6 +397,13 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
     return seeds ? [{ id: 'mc:wheat_seeds', count: seeds }] : [];
   }
   if (id === 'mc:dead_bush') return [];
+
+  // Java cobwebs yield string with a sword, but the block itself with shears.
+  if (id === 'mc:cobweb') {
+    if (heldStack?.item?.tool === 'shears') return [{ id: 'mc:cobweb', count: 1 }];
+    if (heldStack?.item?.tool === 'sword') return [{ id: 'mc:string', count: 1 }];
+    return [];
+  }
 
   if (id.endsWith('_leaves')) {
     if (heldStack?.item?.tool === 'shears') return [{ id, count: 1 }];
@@ -351,6 +423,7 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
     'mc:diamond_ore': 'mc:diamond',
     'mc:emerald_ore': 'mc:emerald',
     'mc:redstone_ore': 'mc:redstone',
+    'mc:redstone_wire': 'mc:redstone',
     'mc:lapis_ore': 'mc:lapis_lazuli',
     'mc:clay': 'mc:clay_ball',
   };
@@ -361,6 +434,10 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
   if (dropId === 'mc:redstone') count = 4 + rng.nextInt(2);
   if (dropId === 'mc:lapis_lazuli') count = 4 + rng.nextInt(5);
   if (dropId === 'mc:clay_ball') count = 4;
+  const fortune = enchantmentLevel(heldStack, 'fortune');
+  if (fortune > 0 && ['mc:coal', 'mc:diamond', 'mc:emerald', 'mc:redstone', 'mc:lapis_lazuli', 'mc:quartz', 'mc:gold_nugget'].includes(dropId)) {
+    count *= 1 + rng.nextInt(fortune + 1);
+  }
 
   return [{ id: dropId, count }];
 }

@@ -10,6 +10,32 @@ import { mineshaftPlan } from '../src/world/gen/structures.js';
 /**
  * Chest and furnace rules from the 1.12.2 reference (docs/TARGET_1_12_2.md, sections 11 and 17).
  */
+
+describe('Online furnace authority', () => {
+  it('only the elected host advances and publishes shared furnace state', () => {
+    const furnace = new Furnace();
+    furnace.input = ItemStack.of('mc:iron_ore', 1);
+    furnace.fuel = ItemStack.of('mc:coal', 1);
+    const key = '4,64,8';
+    const writes = [];
+    const game = {
+      _containers: new Map([[key, { type: 'furnace', data: furnace }]]),
+      multiplayer: { roomId: 'ABCDE', isHost: false, pushContainerState: (...args) => writes.push(args) },
+      tickCount: 20,
+    };
+    ContainerScreensMixin._tickFurnaces.call(game);
+    assertEqual(furnace.burnLeft, 0);
+    assertEqual(writes.length, 0);
+
+    game.multiplayer.isHost = true;
+    ContainerScreensMixin._tickFurnaces.call(game);
+    assertEqual(furnace.burnLeft, furnace.burnTotal);
+    assertEqual(writes.length, 1);
+    assertEqual(writes[0][0], key);
+    assertEqual(writes[0][1], 'furnace');
+  });
+});
+
 describe('Chest', () => {
   it('has 27 slots', () => assertEqual(new Chest().slots.length, CHEST_SLOTS));
   it('fills matching partial stacks before empty slots', () => {
@@ -223,6 +249,50 @@ describe('Generated structure chest loot', () => {
     };
     const chest = ContainerScreensMixin._chestAt.call(context, ...pantry);
     assert(chest.slots.some((stack) => !stack.isEmpty), 'village pantry chest is empty');
+  });
+});
+
+describe('Furnace experience storage', () => {
+  it('banks fractional XP as each supported recipe completes', () => {
+    const f = new Furnace();
+    f.input = ItemStack.of('mc:oak_log', 10);
+    f.fuel = ItemStack.of('mc:coal', 2);
+    for (let i = 0; i < SMELT_TICKS * 10; i++) f.tick();
+    assertEqual(f.output.count, 10);
+    assertEqual(f.xpStored, 1);
+    assertEqual(f.xpOutputCount, 10);
+  });
+
+  it('awards XP only for output actually collected and preserves the remainder', () => {
+    const f = new Furnace();
+    f.xpStored = 3.5;
+    f.xpOutputCount = 10;
+    assertEqual(f.claimExperienceForOutput(4), 1.4);
+    assertEqual(f.xpStored, 2.1);
+    assertEqual(f.xpOutputCount, 6);
+    assertEqual(f.claimExperienceForOutput(99), 2.1);
+    assertEqual(f.xpStored, 0);
+    assertEqual(f.xpOutputCount, 0);
+  });
+
+  it('persists pending XP and resets it when the furnace is drained', () => {
+    const f = new Furnace();
+    f.input = ItemStack.of('mc:iron_ore', 1);
+    f.output = ItemStack.of('mc:iron_ingot', 2);
+    f.xpStored = 1.4;
+    f.xpOutputCount = 2;
+    const loaded = deserializeContainer(serializeContainer('furnace', f)).data;
+    assertEqual(loaded.xpStored, 1.4);
+    assertEqual(loaded.xpOutputCount, 2);
+    drainContainer('furnace', loaded);
+    assertEqual(loaded.xpStored, 0);
+    assertEqual(loaded.xpOutputCount, 0);
+  });
+
+  it('loads old furnace saves without XP fields safely', () => {
+    const loaded = deserializeContainer({ type: 'furnace' }).data;
+    assertEqual(loaded.xpStored, 0);
+    assertEqual(loaded.xpOutputCount, 0);
   });
 });
 

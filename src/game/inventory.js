@@ -20,6 +20,7 @@
 
 import {  } from '../core/constants.js';
 import { ItemStack, ITEMS } from '../world/item.js';
+import { unbreakingDamage } from './enchantments.js';
 
 export const SLOT = {
   HOTBAR_START: 0,
@@ -53,6 +54,19 @@ export class Inventory {
 
   get held() {
     return this.get(this.selectedSlot);
+  }
+
+  /** Swap the selected hotbar stack with the offhand stack (Java key F behavior). */
+  swapHeldWithOffhand() {
+    if (this.slots.length <= SLOT.OFFHAND ||
+        !Number.isInteger(this.selectedSlot) ||
+        this.selectedSlot < SLOT.HOTBAR_START ||
+        this.selectedSlot > SLOT.HOTBAR_END) return false;
+    const held = this.slots[this.selectedSlot];
+    this.slots[this.selectedSlot] = this.slots[SLOT.OFFHAND];
+    this.slots[SLOT.OFFHAND] = held;
+    this.version++;
+    return true;
   }
 
   /**
@@ -136,7 +150,9 @@ export class Inventory {
   damageHeld(amount = 1) {
     const slot = this.slots[this.selectedSlot];
     if (slot.isEmpty || !slot.item.isDamageable) return false;
-    const broke = slot.applyDamage(amount);
+    const effectiveDamage = unbreakingDamage(slot, amount);
+    if (effectiveDamage <= 0) { this.version++; return false; }
+    const broke = slot.applyDamage(effectiveDamage);
     if (broke) this.slots[this.selectedSlot] = ItemStack.EMPTY.clone();
     this.version++;
     return broke;
@@ -149,16 +165,11 @@ export class Inventory {
 
   // -- Click handling -----------------------------------------------------
 
-  /**
-   * Left-click a slot: swap the cursor and slot contents, or merge if they
-   * stack.
-   */
   clickSlot(index) {
     const slot = this.get(index);
     const cursor = this.cursor;
 
     if (cursor.isEmpty) {
-      // Pick up the whole stack.
       this.cursor = slot;
       this.slots[index] = ItemStack.EMPTY.clone();
     } else if (slot.isEmpty) {
@@ -168,24 +179,53 @@ export class Inventory {
       slot.mergeFrom(cursor);
       if (cursor.count <= 0) this.cursor = ItemStack.EMPTY.clone();
     } else {
-      // Different items: swap.
       this.slots[index] = cursor;
       this.cursor = slot;
     }
     this.version++;
   }
 
-  /**
-   * Right-click a slot: take half when the cursor is empty, otherwise place a
-   * single item.
-   */
+  /** Distribute a cursor stack as evenly as possible across dragged player slots. */
+  distributeCursor(indices) {
+    if (this.cursor.isEmpty || !Array.isArray(indices)) return false;
+    const unique = [...new Set(indices)].filter((index) =>
+      Number.isInteger(index) && index >= SLOT.HOTBAR_START &&
+      index <= SLOT.MAIN_END && index < this.slots.length);
+    const eligible = unique.filter((index) => {
+      const slot = this.slots[index];
+      return slot.isEmpty || (slot.canStackWith(this.cursor) && slot.count < slot.maxStackSize);
+    });
+    if (!eligible.length) return false;
+
+    let remaining = this.cursor.count;
+    for (let i = 0; i < eligible.length && remaining > 0; i++) {
+      const index = eligible[i];
+      const slot = this.slots[index];
+      const targetsLeft = eligible.length - i;
+      const fairShare = Math.ceil(remaining / targetsLeft);
+      const room = slot.isEmpty ? this.cursor.maxStackSize : slot.maxStackSize - slot.count;
+      const moved = Math.min(fairShare, room, remaining);
+      if (moved <= 0) continue;
+      if (slot.isEmpty) {
+        this.slots[index] = new ItemStack(this.cursor.item, moved, this.cursor.damage, this.cursor.data);
+      } else {
+        slot.count += moved;
+      }
+      remaining -= moved;
+    }
+
+    this.cursor.count = remaining;
+    if (remaining <= 0) this.cursor = ItemStack.EMPTY.clone();
+    this.version++;
+    return true;
+  }
+
   rightClickSlot(index) {
     const slot = this.get(index);
     const cursor = this.cursor;
 
     if (cursor.isEmpty) {
       if (slot.isEmpty) return;
-      // Ceiling, so right-clicking a stack of 1 takes it rather than nothing.
       const half = Math.ceil(slot.count / 2);
       this.cursor = slot.split(half);
       if (slot.count <= 0) this.slots[index] = ItemStack.EMPTY.clone();
@@ -200,25 +240,18 @@ export class Inventory {
     this.version++;
   }
 
-  /**
-   * Shift-click: move a stack between the hotbar and main storage.
-   *
-   * Vanilla sends hotbar items to main storage and main-storage items to the
-   * hotbar, which is why shift-clicking twice returns an item roughly where it
-   * started rather than moving it in one direction forever.
-   */
   shiftClickSlot(index) {
     const slot = this.get(index);
     if (slot.isEmpty) return;
 
-    // Shift-click equips a matching armour piece into its dedicated slot.
-    // If that slot is occupied, swap the worn piece back into the source slot.
     const armorTargets = { boots: 36, leggings: 37, chestplate: 38, helmet: 39 };
     const armorTarget = armorTargets[slot.item?.armorSlot];
-    if (armorTarget !== undefined && index < SLOT.ARMOR_START) {
-      const worn = this.slots[armorTarget];
+    if (armorTarget !== undefined && index < SLOT.ARMOR_START &&
+        this.slots[armorTarget].isEmpty) {
+      // Vanilla only auto-equips into an empty armor slot. If it is occupied,
+      // continue with the ordinary shift-transfer instead of swapping gear out.
       this.slots[armorTarget] = slot;
-      this.slots[index] = worn.isEmpty ? ItemStack.EMPTY.clone() : worn;
+      this.slots[index] = ItemStack.EMPTY.clone();
       this.version++;
       return;
     }
@@ -227,7 +260,6 @@ export class Inventory {
     const start = toHotbar ? SLOT.HOTBAR_START : SLOT.MAIN_START;
     const end = toHotbar ? SLOT.HOTBAR_END : SLOT.MAIN_END;
 
-    // Merge into partial stacks first, then take an empty slot.
     for (let i = start; i <= end; i++) {
       if (slot.count <= 0) break;
       const target = this.slots[i];
@@ -246,7 +278,6 @@ export class Inventory {
     this.version++;
   }
 
-  /** Drop the cursor stack, e.g. when a container screen closes. */
   takeCursor() {
     const stack = this.cursor;
     this.cursor = ItemStack.EMPTY.clone();
@@ -254,11 +285,7 @@ export class Inventory {
     return stack;
   }
 
-  // -- Persistence --------------------------------------------------------
-
   toJSON() {
-    // Sparse: a mostly-empty inventory is written as a handful of entries
-    // instead of 41 nulls, on every autosave.
     const out = [];
     this.slots.forEach((stack, index) => {
       if (stack.isEmpty) return;
@@ -286,7 +313,7 @@ export class Inventory {
  */
 export class CraftingGrid {
   constructor(size, recipeBook) {
-    this.size = size; // 2 or 3
+    this.size = size;
     this.recipeBook = recipeBook;
     this.slots = Array.from({ length: size * size }, () => ItemStack.EMPTY.clone());
     this.result = ItemStack.EMPTY.clone();
@@ -307,7 +334,6 @@ export class CraftingGrid {
     this.result = this.recipeBook.resultOf(this.matched);
   }
 
-  /** Consume one of each ingredient after a successful craft. */
   consume() {
     for (let i = 0; i < this.slots.length; i++) {
       const slot = this.slots[i];
@@ -318,7 +344,6 @@ export class CraftingGrid {
     this.refresh();
   }
 
-  /** Everything currently in the grid, for returning to the player on close. */
   drain() {
     const stacks = this.slots.filter((s) => !s.isEmpty);
     this.slots = Array.from({ length: this.size * this.size }, () => ItemStack.EMPTY.clone());

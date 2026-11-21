@@ -31,6 +31,15 @@ import {
 import { sectionIndex, yToSectionIndex, yToSectionLocal } from '../core/math.js';
 import { AIR } from './block.js';
 
+/** Dynamic emission for stateful redstone light sources. */
+export function blockEmissionForState(state) {
+  const id = state?.block?.id;
+  if (id === 'mc:redstone_torch') return state.get('lit') === false ? 0 : 7;
+  if (id === 'mc:redstone_lamp') return state.get('lit') ? 15 : 0;
+  if (id === 'mc:redstone_ore') return state.get('lit') ? 9 : 0;
+  return state?.block?.lightEmission || 0;
+}
+
 // Build ceiling comes from constants.js (MAX_Y). It used to be re-derived here,
 // and in five other places, from MIN_Y + SECTION_COUNT * SECTION_HEIGHT.
 
@@ -187,7 +196,8 @@ function computeBlockLight(chunk) {
     for (let y = y0; y < y0 + SECTION_HEIGHT; y++) {
       for (let z = 0; z < CHUNK_SIZE; z++) {
         for (let x = 0; x < CHUNK_SIZE; x++) {
-          const emission = chunk.getBlock(x, y, z).block.lightEmission;
+          const state = chunk.getBlock(x, y, z);
+          const emission = blockEmissionForState(state);
           if (emission > 0) {
             setBlockLight(chunk, x, y, z, emission);
             queue.push(x, y, z, emission);

@@ -21,13 +21,15 @@ const DEFAULTS = Object.freeze({
   inventory: ['KeyE'],
   chat: ['KeyT'],
   drop: ['KeyQ'],
-  fly: ['KeyF'],
+  swapOffhand: ['KeyF'],
+  fly: ['KeyG'],
 });
 
 const LABELS = {
   forward: 'Вперёд', back: 'Назад', left: 'Влево', right: 'Вправо',
   jump: 'Прыжок', sneak: 'Присесть', sprint: 'Бег',
-  inventory: 'Инвентарь', chat: 'Чат', drop: 'Выбросить', fly: 'Полёт (креатив)',
+  inventory: 'Инвентарь', chat: 'Чат', drop: 'Выбросить',
+  swapOffhand: 'Поменять руки', fly: 'Полёт (креатив)',
 };
 
 function clone(obj) {

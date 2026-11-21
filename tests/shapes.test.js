@@ -19,6 +19,7 @@ const AIR = BLOCKS.get('mc:air').defaultState;
 const STONE = BLOCKS.get('mc:stone').defaultState;
 const OAK_SLAB = BLOCKS.get('mc:oak_slab').defaultState; // bottom by default
 const STONE_STAIRS = BLOCKS.get('mc:stone_stairs').defaultState;
+const IRON_BARS = BLOCKS.get('mc:iron_bars').defaultState;
 
 describe('shapes: box geometry', () => {
   it('a full cube is one unit box', () => {
@@ -51,9 +52,106 @@ describe('shapes: box geometry', () => {
     assertDeepEqual(boxes[1], [0.5, 0, 0, 1, 0.5, 1], 'east step below');
   });
 
-  it('isNonCube distinguishes slabs and stairs from cubes', () => {
+  it('iron bars use a thin five-part pane profile', () => {
+    const boxes = shapeBoxes(IRON_BARS);
+    assertEqual(boxes.length, 5);
+    assertDeepEqual(boxes[0], [0.4375, 0, 0.4375, 0.5625, 1, 0.5625]);
+    assert(isNonCube(IRON_BARS));
+    assertDeepEqual(collisionBoxes(IRON_BARS), boxes);
+  });
+
+  it('door panels are thin, rotate when opened, and use both halves consistently', () => {
+    const door = BLOCKS.get('mc:oak_door').defaultState;
+    const closed = shapeBoxes(door);
+    assertEqual(closed.length, 1);
+    assertDeepEqual(closed[0], [0, 0, 0.8125, 1, 1, 1]);
+    const opened = shapeBoxes(door.with('open', true));
+    assertDeepEqual(opened[0], [0, 0, 0, 0.1875, 1, 1]);
+    assertDeepEqual(shapeBoxes(door.with('half', 'upper')), closed);
+    assert(isNonCube(door));
+    assertDeepEqual(collisionBoxes(door), closed);
+  });
+
+  it('trapdoors use a thin horizontal panel when closed and vertical panel when open', () => {
+    const trapdoor = BLOCKS.get('mc:oak_trapdoor').defaultState;
+    assertDeepEqual(shapeBoxes(trapdoor), [[0, 0, 0, 1, 0.1875, 1]]);
+    assertDeepEqual(shapeBoxes(trapdoor.with('half', 'top')), [[0, 0.8125, 0, 1, 1, 1]]);
+    assertDeepEqual(shapeBoxes(trapdoor.with('open', true)), [[0, 0, 0, 1, 1, 0.1875]]);
+    assertDeepEqual(collisionBoxes(trapdoor), shapeBoxes(trapdoor));
+    assert(isNonCube(trapdoor));
+  });
+
+  it('all six wooden trapdoors and iron trapdoor are registered', () => {
+    for (const id of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak', 'iron']) {
+      const block = BLOCKS.get(`mc:${id}_trapdoor`);
+      assert(block, `${id} trapdoor missing`);
+      assertEqual(block.renderShape, 'trapdoor');
+      assertEqual(block.states.length, 4 * 2 * 2 * 2);
+    }
+  });
+
+  it('redstone repeater has a low profile model and no player collision', () => {
+    const repeater = BLOCKS.get('mc:repeater').defaultState;
+    assertEqual(shapeBoxes(repeater).length, 3);
+    assertEqual(collisionBoxes(repeater).length, 0);
+    assertEqual(repeater.get('delay'), 1);
+    assertEqual(repeater.with('delay', 4).get('delay'), 4);
+    assertEqual(repeater.with('facing', 'east').get('facing'), 'east');
+  });
+
+  it('redstone wire is a thin non-colliding surface', () => {
+    const wire = BLOCKS.get('mc:redstone_wire').defaultState;
+    assertDeepEqual(shapeBoxes(wire), [[0, 0, 0, 1, 0.0625, 1]]);
+    assert(isNonCube(wire));
+    assertEqual(collisionBoxes(wire).length, 0);
+  });
+
+  it('buttons, levers and pressure plates have compact render geometry', () => {
+    const button = BLOCKS.get('mc:stone_button').defaultState;
+    assertDeepEqual(shapeBoxes(button), [[0.375, 0.375, 0, 0.625, 0.625, 0.125]]);
+    assertDeepEqual(shapeBoxes(button.with('powered', true)), [[0.375, 0.375, 0, 0.625, 0.625, 0.0625]]);
+    const plate = BLOCKS.get('mc:stone_pressure_plate').defaultState;
+    assertDeepEqual(shapeBoxes(plate), [[0, 0, 0, 1, 0.0625, 1]]);
+    assertDeepEqual(shapeBoxes(plate.with('powered', true)), [[0, 0, 0, 1, 0.03125, 1]]);
+    assertEqual(shapeBoxes(BLOCKS.get('mc:lever').defaultState).length, 2);
+    assert(isNonCube(button));
+    assertEqual(collisionBoxes(button).length, 0, 'buttons are non-solid controls');
+    assertEqual(collisionBoxes(plate).length, 0, 'pressure plates are non-solid controls');
+  });
+
+  it('weighted pressure plates use a thin model and non-colliding geometry', () => {
+    const light = BLOCKS.get('mc:light_weighted_pressure_plate').defaultState;
+    assertDeepEqual(shapeBoxes(light), [[0, 0, 0, 1, 0.0625, 1]]);
+    assertDeepEqual(shapeBoxes(light.with('power', 9)), [[0, 0, 0, 1, 0.03125, 1]]);
+    assertEqual(collisionBoxes(light).length, 0);
+    assertEqual(isNonCube(light), true);
+  });
+
+  it('all Java 1.19 button, lever and pressure plate blocks are registered', () => {
+    for (const id of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) {
+      assert(BLOCKS.get(`mc:${id}_button`), `${id} button missing`);
+      assert(BLOCKS.get(`mc:${id}_pressure_plate`), `${id} pressure plate missing`);
+    }
+    for (const id of ['stone', 'polished_blackstone']) {
+      assert(BLOCKS.get(`mc:${id}_button`), `${id} button missing`);
+      assert(BLOCKS.get(`mc:${id}_pressure_plate`), `${id} pressure plate missing`);
+    }
+    assert(BLOCKS.get('mc:lever'), 'lever missing');
+  });
+
+  it('all six wooden door variants and iron door are registered', () => {
+    for (const id of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak', 'iron']) {
+      const block = BLOCKS.get(`mc:${id}_door`);
+      assert(block, `${id} door missing`);
+      assertEqual(block.renderShape, 'door');
+      assertEqual(block.states.length, 4 * 2 * 2 * 2 * 2);
+    }
+  });
+
+  it('isNonCube distinguishes slabs, stairs and panes from cubes', () => {
     assert(isNonCube(OAK_SLAB));
     assert(isNonCube(STONE_STAIRS));
+    assert(isNonCube(IRON_BARS));
     assert(!isNonCube(STONE));
   });
 });
@@ -173,6 +271,14 @@ describe('shapes: mesher emits box geometry', () => {
     const quads = meshChunk(viewFor(chunk)).opaqueQuads;
     // Base slab (6) + step box (6), minus nothing culled in open air = 12.
     assert(quads >= 10, `a stair should emit ~12 faces, got ${quads}`);
+  });
+
+  it('iron bars emit pane geometry instead of a full cube', () => {
+    const chunk = new Chunk(0, 0);
+    chunk.setBlock(8, 64, 8, IRON_BARS);
+    computeChunkLight(chunk);
+    const quads = meshChunk(viewFor(chunk)).opaqueQuads;
+    assert(quads > 6, `iron bars should emit multiple thin boxes, got ${quads} quads`);
   });
 
   it('a slab under an opaque block culls its top face', () => {

@@ -28,3 +28,16 @@ export function emptyBucket(bucket) {
   if (!fluid) return null;
   return { fluid: fluid[0], bucket: ItemStack.of('mc:bucket', 1) };
 }
+
+/** Describe a right-click bucket action without mutating world or inventory. */
+export function planBucketInteraction(heldItemId, hitBlockId, hitLevel, targetBlock) {
+  if (heldItemId === 'mc:bucket') {
+    const filled = FLUID_BUCKET[hitBlockId];
+    return filled && (hitLevel === 0 || hitLevel === undefined)
+      ? { type: 'scoop', resultItem: filled, removeHit: true }
+      : null;
+  }
+  const fluid = Object.entries(FLUID_BUCKET).find(([, itemId]) => itemId === heldItemId)?.[0];
+  if (!fluid || !targetBlock || (targetBlock.id !== 'mc:air' && !targetBlock.replaceable)) return null;
+  return { type: 'place', fluid, resultItem: 'mc:bucket' };
+}

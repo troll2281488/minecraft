@@ -3,6 +3,7 @@ import '../src/world/blocks/index.js'; // registers the catalog as a side effect
 import { BLOCKS, AIR, Block, parseStateString, PROPS, boolProp, intProp, enumProp } from '../src/world/block.js';
 import { ITEMS, ItemStack } from '../src/world/item.js';
 import { BLOCK_TAGS, TagRegistry } from '../src/world/tags.js';
+import { canHarvest, blockDrops } from '../src/game/interaction.js';
 
 describe('blockstate: canonical string form', () => {
   // This form is what lands in save files, so these tests guard the
@@ -256,5 +257,21 @@ describe('tags', () => {
   it('every seeded block tag references a registered block', () => {
     const problems = BLOCK_TAGS.validate((id) => BLOCKS.get(id) !== undefined);
     assertEqual(problems.length, 0, problems.join('; '));
+  });
+});
+
+
+describe('Java 1.19 monster spawner block', () => {
+  it('requires a pickaxe and never drops itself', () => {
+    const spawner = BLOCKS.get('mc:mob_spawner');
+    assert(spawner, 'mob spawner block is registered');
+    assertEqual(canHarvest(spawner, ItemStack.empty()), false);
+    const pickaxe = ItemStack.of('mc:wooden_pickaxe', 1);
+    assertEqual(canHarvest(spawner, pickaxe), true);
+    assertEqual(blockDrops(spawner.defaultState, pickaxe).length, 0);
+  });
+
+  it('is hidden from the creative inventory', () => {
+    assertEqual(ITEMS.get('mc:mob_spawner').notInCreative, true);
   });
 });

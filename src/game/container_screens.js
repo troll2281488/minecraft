@@ -2,17 +2,20 @@
  * Chest and furnace screens (Java 1.12.2). A prototype mixin, applied to Game in main.js.
  *
  * The screen is built in code as an overlay, so no index.html markup is needed. Logic
- * lives in game/containers.js. Contents are kept in memory per block position and are
- * not yet saved to the .mcw file. Breaking a container does not drop its contents yet.
+ * lives in game/containers.js. Local contents are saved with the player record; online
+ * container snapshots are shared through the room's Firebase state. Breaking a container
+ * drops its contents in survival.
  *
  * Clicks: left click takes, swaps or merges with the cursor; right click takes half or
  * puts down one; shift-click moves a stack between the player's inventory and the container.
  */
-import { Chest, Furnace, SMELTING, SMELT_TICKS, serializeContainer, deserializeContainer } from './containers.js';
+import { Chest, Hopper, Dropper, Furnace, SMELTING, SMELT_TICKS, moveOneItem, serializeContainer, deserializeContainer, isItemInHopperIntake, insertDroppedStack } from './containers.js';
+import { readSignal } from './redstone_devices.js';
+import { compostChance, compostRoll, composterHopperInsert, composterHopperExtract } from './composting.js';
 import { ItemStack } from '../world/item.js';
-import { positionalRandom } from '../core/rng.js';
-import { mineshaftPlan } from '../world/gen/structures.js';
-import { hash01 } from '../world/gen/hash.js';
+import { positionalRandom, normalizeSeed } from '../core/rng.js';
+import { mineshaftPlan, dungeonDims } from '../world/gen/structures.js';
+import { hash01, seedToInt } from '../world/gen/hash.js';
 import { TerrainGenerator, BIOME, dungeonCandidateForCell, villageCandidateForCell, mineshaftCandidateForCell, desertTempleCandidateForCell, jungleTempleCandidateForCell, strongholdCandidateForCell } from '../world/gen/terrain.js';
 
 const OVERLAY_ID = 'container-overlay';
@@ -52,14 +55,22 @@ function label(stack) {
   return `${name}${stack.count > 1 ? ` <span class="n">${stack.count}</span>` : ''}`;
 }
 
-function generatedChestKind(seed, x, y, z) {
+export function generatedChestKind(seed, x, y, z) {
   if (seed === undefined || seed === null) return null;
 
-  // Dungeon chests are at room origin + (1, 1, 1).
+  // Dungeon rooms always have the north-west chest; a second diagonal chest
+  // is added by the same seeded roll used by placeDungeonRoom. Recognize both
+  // exact coordinates so either chest receives its own deterministic loot.
   for (let gx = Math.floor((x - 64) / 80); gx <= Math.floor(x / 80); gx++) {
     for (let gz = Math.floor((z - 64) / 80); gz <= Math.floor(z / 80); gz++) {
       const room = dungeonCandidateForCell(seed, gx, gz);
-      if (room && x === room.x + 1 && y === room.y + 1 && z === room.z + 1) return 'dungeon';
+      if (!room || y !== room.y + 1) continue;
+      const firstChest = x === room.x + 1 && z === room.z + 1;
+      const roomRng = positionalRandom(seed, room.x, 7301, room.z, 7301);
+      const hasSecondChest = roomRng.nextBoolean();
+      const { ix, iz } = dungeonDims(room);
+      const secondChest = hasSecondChest && x === room.x + ix && z === room.z + iz;
+      if (firstChest || secondChest) return 'dungeon';
     }
   }
 
@@ -116,13 +127,220 @@ function generatedChestKind(seed, x, y, z) {
   for (let gx = Math.floor((x - 512) / 512); gx <= Math.floor(x / 512); gx++) {
     for (let gz = Math.floor((z - 512) / 512); gz <= Math.floor(z / 512); gz++) {
       const stronghold = strongholdCandidateForCell(seed, gx, gz);
-      if (stronghold && x === stronghold.x + 2 && y === stronghold.y + 1 && z === stronghold.z + 2) return 'stronghold';
+      if (!stronghold) continue;
+      // The three room types are placed at fixed, world-seed-derived
+      // coordinates by TerrainGenerator.placeStronghold.
+      if (y === stronghold.y + 1 && x === stronghold.x + 2 && z === stronghold.z + 2) return 'stronghold_crossing';
+      if (y === stronghold.y + 1 && x === stronghold.x + 7 && z === stronghold.z - 24) return 'stronghold_crossing';
+      if (y === stronghold.y + 1 && ((x === stronghold.x - 10 && z === stronghold.z + 8) ||
+          (x === stronghold.x - 6 && z === stronghold.z + 8))) return 'stronghold_library';
+      const largeLibrary = hash01(seedToInt(normalizeSeed(seed)), stronghold.x, stronghold.y, stronghold.z, 7419) >= 0.22;
+      const libraryX = stronghold.x - (largeLibrary ? 32 : 28);
+      const libraryZ = stronghold.z - (largeLibrary ? 7 : 5);
+      if (y === stronghold.y + (largeLibrary && x === libraryX + 2 && z === libraryZ + 12 ? 6 : 1) &&
+          x === libraryX + 2 && z === libraryZ + 2) return 'stronghold_library';
+      if (largeLibrary && x === libraryX + 2 && z === libraryZ + 12 && y === stronghold.y + 6) return 'stronghold_library';
+      if (y === stronghold.y + 1 && x === stronghold.x + 20 && z === stronghold.z + 10) return 'stronghold_corridor';
     }
   }
   return null;
 }
 
-function fillGeneratedChest(seed, x, y, z, chest, kind) {
+// Java 1.19 simple_dungeon loot table, represented as three independent pools.
+// The book entry remains a plain book until enchantment data is implemented.
+export const DUNGEON_LOOT_POOLS = Object.freeze([
+  {
+    rolls: [1, 3],
+    entries: [
+      ['mc:saddle', 20, 1, 1],
+      ['mc:golden_apple', 15, 1, 1],
+      ['mc:enchanted_golden_apple', 2, 1, 1],
+      ['mc:music_disc_otherside', 2, 1, 1],
+      ['mc:music_disc_13', 15, 1, 1],
+      ['mc:music_disc_cat', 15, 1, 1],
+      ['mc:name_tag', 20, 1, 1],
+      ['mc:golden_horse_armor', 10, 1, 1],
+      ['mc:iron_horse_armor', 15, 1, 1],
+      ['mc:diamond_horse_armor', 5, 1, 1],
+      ['mc:enchanted_book', 10, 1, 1],
+    ],
+  },
+  {
+    rolls: [1, 4],
+    entries: [
+      ['mc:iron_ingot', 10, 1, 4],
+      ['mc:gold_ingot', 5, 1, 1],
+      ['mc:bread', 20, 1, 1],
+      ['mc:wheat', 20, 1, 4],
+      ['mc:bucket', 10, 1, 1],
+      ['mc:redstone', 15, 1, 4],
+      ['mc:coal', 15, 1, 4],
+      ['mc:melon_seeds', 10, 2, 4],
+      ['mc:pumpkin_seeds', 10, 2, 4],
+      ['mc:beetroot_seeds', 10, 2, 4],
+    ],
+  },
+  {
+    rolls: 3,
+    entries: [
+      ['mc:bone', 10, 1, 8],
+      ['mc:gunpowder', 10, 1, 8],
+      ['mc:rotten_flesh', 10, 1, 8],
+      ['mc:string', 10, 1, 8],
+    ],
+  },
+]);
+
+// Separate Java-style treasure pools for desert and jungle temples.
+// Entries are limited to item IDs currently implemented by this project.
+export const TEMPLE_LOOT_POOLS = Object.freeze({
+  desert_temple: Object.freeze([
+    { rolls: [2, 4], entries: [
+      ['mc:diamond', 5, 1, 1], ['mc:iron_ingot', 15, 1, 5], ['mc:gold_ingot', 15, 2, 7],
+      ['mc:emerald', 15, 1, 3], ['mc:bone', 25, 4, 6], ['mc:string', 25, 1, 8],
+    ] },
+    { rolls: [1, 3], entries: [
+      ['mc:saddle', 20, 1, 1], ['mc:iron_horse_armor', 15, 1, 1], ['mc:golden_horse_armor', 10, 1, 1],
+      ['mc:enchanted_book', 20, 1, 1], ['mc:golden_apple', 20, 1, 1],
+    ] },
+    { rolls: 4, entries: [
+      ['mc:bone', 10, 1, 8], ['mc:string', 10, 1, 8], ['mc:rotten_flesh', 10, 1, 8],
+      ['mc:iron_ingot', 5, 1, 3], ['mc:gold_ingot', 5, 1, 3],
+    ] },
+  ]),
+  jungle_temple: Object.freeze([
+    { rolls: [2, 6], entries: [
+      ['mc:diamond', 3, 1, 1], ['mc:iron_ingot', 10, 1, 5], ['mc:gold_ingot', 15, 2, 7],
+      ['mc:emerald', 2, 1, 3], ['mc:bone', 20, 4, 6], ['mc:string', 20, 1, 8],
+      ['mc:enchanted_book', 10, 1, 1], ['mc:saddle', 3, 1, 1], ['mc:golden_horse_armor', 2, 1, 1],
+      ['mc:iron_horse_armor', 5, 1, 1], ['mc:golden_apple', 2, 1, 1],
+    ] },
+    { rolls: 1, entries: [
+      ['mc:emerald', 10, 1, 1], ['mc:diamond', 5, 1, 1], ['mc:iron_ingot', 10, 1, 3],
+      ['mc:gold_ingot', 10, 1, 3], ['mc:enchanted_book', 5, 1, 1],
+    ] },
+  ]),
+});
+
+// Stronghold room loot follows the separate Java 1.19 chest tables.
+// Map and compass entries are omitted until those item IDs are implemented.
+export const STRONGHOLD_LOOT_POOLS = Object.freeze({
+  // Java 1.19 library: 2–10 rolls from one weighted pool.
+  stronghold_library: Object.freeze([
+    { rolls: [2, 10], entries: [
+      ['mc:book', 20, 1, 3], ['mc:paper', 20, 2, 7],
+      ['mc:enchanted_book', 10, 1, 1], ['mc:compass', 1, 1, 1],
+      ['mc:map', 1, 1, 1],
+    ] },
+  ]),
+  // Java 1.19 storeroom: 1–4 rolls, with the original 62 total weight.
+  stronghold_crossing: Object.freeze([
+    { rolls: [1, 4], entries: [
+      ['mc:apple', 15, 1, 3], ['mc:bread', 15, 1, 3],
+      ['mc:coal', 10, 3, 8], ['mc:iron_ingot', 10, 1, 5],
+      ['mc:redstone', 5, 4, 9], ['mc:gold_ingot', 5, 1, 3],
+      ['mc:enchanted_book', 1, 1, 1], ['mc:iron_pickaxe', 1, 1, 1],
+    ] },
+  ]),
+  // Java 1.19 altar: 2–3 common rolls, then one rare bonus roll.
+  stronghold_corridor: Object.freeze([
+    { rolls: [2, 3], entries: [
+      ['mc:ender_pearl', 10, 1, 1], ['mc:diamond', 3, 1, 3],
+      ['mc:iron_ingot', 10, 1, 5], ['mc:gold_ingot', 5, 1, 3],
+      ['mc:redstone', 5, 4, 9], ['mc:bread', 15, 1, 3],
+      ['mc:apple', 15, 1, 3],
+    ] },
+    { rolls: 1, entries: [
+      ['mc:golden_apple', 1, 1, 1], ['mc:enchanted_book', 1, 1, 1],
+      ['mc:saddle', 1, 1, 1], ['mc:iron_horse_armor', 1, 1, 1],
+      ['mc:golden_horse_armor', 1, 1, 1], ['mc:diamond_horse_armor', 1, 1, 1],
+      ['mc:music_disc_13', 1, 1, 1], ['mc:music_disc_cat', 1, 1, 1],
+      ['mc:music_disc_otherside', 1, 1, 1],
+    ] },
+  ]),
+});
+
+function fillWeightedPools(seed, x, y, z, chest, pools, salt, kind) {
+  const rng = positionalRandom(seed, x, y, z, salt);
+  for (const pool of pools) {
+    const rolls = Array.isArray(pool.rolls)
+      ? pool.rolls[0] + rng.nextInt(pool.rolls[1] - pool.rolls[0] + 1)
+      : pool.rolls;
+    for (let i = 0; i < rolls; i++) {
+      const entry = chooseWeightedLootEntry(pool.entries, rng);
+      if (!entry) continue;
+      const [id, , minCount, maxCount] = entry;
+      chest.insert(ItemStack.of(id, minCount + rng.nextInt(maxCount - minCount + 1)));
+    }
+  }
+  scatterGeneratedChestLoot(seed, x, y, z, chest, kind);
+}
+
+export function chooseWeightedLootEntry(entries, rng) {
+  if (!Array.isArray(entries) || entries.length === 0 || !rng?.nextInt) return null;
+  const totalWeight = entries.reduce((sum, entry) => sum + Math.max(0, entry[1] | 0), 0);
+  if (totalWeight <= 0) return null;
+  let roll = rng.nextInt(totalWeight);
+  for (const entry of entries) {
+    roll -= Math.max(0, entry[1] | 0);
+    if (roll < 0) return entry;
+  }
+  return entries[entries.length - 1];
+}
+
+/** Spread generated loot across chest slots with a coordinate-seeded shuffle. */
+export function scatterGeneratedChestLoot(seed, x, y, z, chest, kind = 'dungeon') {
+  if (!chest || !Array.isArray(chest.slots)) return;
+  const stacks = chest.slots.filter((stack) => stack && !stack.isEmpty);
+  const slotOrder = Array.from({ length: chest.slots.length }, (_, i) => i);
+  const kindSalt = {
+    dungeon: 0, village: 1, stronghold: 2, mineshaft: 3,
+    desert_temple: 4, jungle_temple: 5,
+    stronghold_library: 6, stronghold_crossing: 7, stronghold_corridor: 8,
+  }[kind] ?? 9;
+  const salt = 0x534c4f54 + kindSalt;
+  const rng = positionalRandom(seed, x, y, z, salt);
+  for (let i = slotOrder.length - 1; i > 0; i--) {
+    const j = rng.nextInt(i + 1);
+    [slotOrder[i], slotOrder[j]] = [slotOrder[j], slotOrder[i]];
+  }
+  chest.slots = Array.from({ length: chest.slots.length }, () => ItemStack.EMPTY.clone());
+  stacks.forEach((stack, i) => {
+    if (i < slotOrder.length) chest.slots[slotOrder[i]] = stack;
+  });
+}
+
+function fillDungeonChest(seed, x, y, z, chest) {
+  const rng = positionalRandom(seed, x, y, z, 3301);
+  for (const pool of DUNGEON_LOOT_POOLS) {
+    const rolls = Array.isArray(pool.rolls)
+      ? pool.rolls[0] + rng.nextInt(pool.rolls[1] - pool.rolls[0] + 1)
+      : pool.rolls;
+    for (let i = 0; i < rolls; i++) {
+      const entry = chooseWeightedLootEntry(pool.entries, rng);
+      if (!entry) continue;
+      const [id, , minCount, maxCount] = entry;
+      const count = minCount + rng.nextInt(maxCount - minCount + 1);
+      chest.insert(ItemStack.of(id, count));
+    }
+  }
+}
+
+export function fillGeneratedChest(seed, x, y, z, chest, kind) {
+  if (kind === 'desert_temple' || kind === 'jungle_temple') {
+    fillWeightedPools(seed, x, y, z, chest, TEMPLE_LOOT_POOLS[kind], kind === 'desert_temple' ? 3306 : 3307, kind);
+    return;
+  }
+  if (kind === 'stronghold_library' || kind === 'stronghold_crossing' || kind === 'stronghold_corridor') {
+    const salts = { stronghold_library: 3308, stronghold_crossing: 3309, stronghold_corridor: 3310 };
+    fillWeightedPools(seed, x, y, z, chest, STRONGHOLD_LOOT_POOLS[kind], salts[kind], kind);
+    return;
+  }
+  if (kind === 'dungeon') {
+    fillDungeonChest(seed, x, y, z, chest);
+    scatterGeneratedChestLoot(seed, x, y, z, chest, kind);
+    return;
+  }
   const salt = kind === 'dungeon' ? 3301 : kind === 'village' ? 3302 : kind === 'stronghold' ? 3304 : kind === 'mineshaft' ? 3305 : 3303;
   const rng = positionalRandom(seed, x, y, z, salt);
   const villageLoot = [
@@ -136,12 +354,6 @@ function fillGeneratedChest(seed, x, y, z, chest, kind) {
     ['mc:coal', 2, 7], ['mc:string', 2, 6], ['mc:bone', 1, 5],
     ['mc:diamond', 1, 2], ['mc:emerald', 1, 2], ['mc:apple', 1, 3], ['mc:paper', 1, 4],
     ['mc:iron_pickaxe', 1, 1], ['mc:gold_nugget', 2, 7],
-  ];
-  const templeLoot = [
-    ['mc:bread', 1, 4], ['mc:apple', 1, 3], ['mc:iron_ingot', 1, 4],
-    ['mc:gold_ingot', 1, 4], ['mc:gold_nugget', 3, 9], ['mc:emerald', 1, 3],
-    ['mc:diamond', 1, 2], ['mc:coal', 2, 6], ['mc:bone', 1, 4],
-    ['mc:string', 2, 5], ['mc:wheat_seeds', 2, 6],
   ];
   const strongholdLoot = [
     ['mc:bread', 1, 4], ['mc:apple', 1, 3], ['mc:iron_ingot', 1, 4],
@@ -158,7 +370,7 @@ function fillGeneratedChest(seed, x, y, z, chest, kind) {
   const pool = kind === 'village' ? villageLoot
     : kind === 'dungeon' ? dungeonLoot
     : kind === 'stronghold' ? strongholdLoot
-    : kind === 'mineshaft' ? mineshaftLoot : templeLoot;
+    : mineshaftLoot;
   const rolls = kind === 'village' ? 5 + rng.nextInt(3)
     : kind === 'stronghold' ? 5 + rng.nextInt(3)
     : kind === 'mineshaft' ? 8 + rng.nextInt(5) : 6 + rng.nextInt(4);
@@ -166,6 +378,7 @@ function fillGeneratedChest(seed, x, y, z, chest, kind) {
     const [id, min, max] = pool[rng.nextInt(pool.length)];
     chest.insert(ItemStack.of(id, min + rng.nextInt(max - min + 1)));
   }
+  scatterGeneratedChestLoot(seed, x, y, z, chest, kind);
 }
 
 export const ContainerScreensMixin = {
@@ -213,30 +426,364 @@ export const ContainerScreensMixin = {
     return this._containers.get(key).data;
   },
 
-  _furnaceAt(x, y, z) {
+  _dropperAt(x, y, z) {
     this._containers ??= new Map();
     const key = this._containerKey(x, y, z);
     const entry = this._containers.get(key);
-    if (entry?.type !== 'furnace' || !(entry.data instanceof Furnace)) {
-      this._containers.set(key, { type: 'furnace', data: new Furnace() });
+    if (entry?.type !== 'dropper' || !(entry.data instanceof Dropper) || entry.data.slots.length !== 9) {
+      this._containers.set(key, { type: 'dropper', data: new Dropper() });
+    }
+    return this._containers.get(key).data;
+  },
+
+  _hopperAt(x, y, z) {
+    this._containers ??= new Map();
+    const key = this._containerKey(x, y, z);
+    const entry = this._containers.get(key);
+    if (entry?.type !== 'hopper' || !(entry.data instanceof Hopper) || entry.data.slots.length !== 5) {
+      this._containers.set(key, { type: 'hopper', data: new Hopper() });
+    }
+    return this._containers.get(key).data;
+  },
+
+  _furnaceAt(x, y, z, kind = 'furnace') {
+    this._containers ??= new Map();
+    const key = this._containerKey(x, y, z);
+    const entry = this._containers.get(key);
+    if (entry?.type !== kind || !(entry.data instanceof Furnace) || entry.data.kind !== kind) {
+      this._containers.set(key, { type: kind, data: new Furnace(kind) });
     }
     return this._containers.get(key).data;
   },
 
   _openChest(x, y, z) {
-    this._openContainer({ title: 'Сундук', slots: this._chestAt(x, y, z).slots, kind: 'chest' });
+    const key = this._containerKey(x, y, z);
+    this._openContainer({ title: 'Сундук', slots: this._chestAt(x, y, z).slots, kind: 'chest', key });
   },
 
-  _openFurnace(x, y, z) {
-    const furnace = this._furnaceAt(x, y, z);
-    this._openContainer({ title: 'Печь', furnace, kind: 'furnace' });
+  _openDropper(x, y, z) {
+    const dropper = this._dropperAt(x, y, z);
+    this._openContainer({ title: 'Выбрасыватель', slots: dropper.slots, kind: 'dropper', key: this._containerKey(x, y, z) });
   },
+
+  _openHopper(x, y, z) {
+    const hopper = this._hopperAt(x, y, z);
+    this._openContainer({ title: 'Воронка', slots: hopper.slots, kind: 'hopper', key: this._containerKey(x, y, z) });
+  },
+
+  _openFurnace(x, y, z, kind = 'furnace') {
+    const furnace = this._furnaceAt(x, y, z, kind);
+    const title = kind === 'smoker' ? 'Коптильня' : kind === 'blast_furnace' ? 'Плавильная печь' : 'Печь';
+    this._openContainer({ title, furnace, kind: 'furnace', containerType: kind, key: this._containerKey(x, y, z), x, y, z });
+  },
+
+  _openSmoker(x, y, z) { return this._openFurnace(x, y, z, 'smoker'); },
+  _openBlastFurnace(x, y, z) { return this._openFurnace(x, y, z, 'blast_furnace'); },
 
   /** Advance every furnace that exists in the world. Called from the fixed tick. */
   _tickFurnaces() {
     if (!this._containers) return;
-    for (const { type, data } of this._containers.values()) {
-      if (type === 'furnace') data.tick();
+    // One deterministic room host advances online furnaces; otherwise every
+    // client would simulate and publish competing copies of the same timers.
+    if (this.multiplayer?.roomId && !this.multiplayer.isHost) return;
+    for (const [key, { type, data }] of this._containers) {
+      if (!['furnace', 'smoker', 'blast_furnace'].includes(type)) continue;
+      // If a non-host player owns the advisory edit lease, pause host writes
+      // until that screen closes so the furnace snapshot cannot overwrite it.
+      if (this.multiplayer?.isContainerLockedByOther?.(key)) continue;
+      data.tick();
+      if (this.multiplayer?.roomId && this.tickCount % 20 === 0) {
+        this.multiplayer.pushContainerState(key, type, data);
+      }
+    }
+  },
+
+  /** Transfer one item between a hopper and another supported container. */
+  _hopperTransferOne(sourceEntry, destinationEntry, destinationFace = 'side') {
+    if (!sourceEntry || !destinationEntry) return false;
+    let sourceSlots;
+    if (['furnace', 'smoker', 'blast_furnace'].includes(sourceEntry.type)) {
+      // A hopper below a furnace extracts its finished output. Fuel-container
+      // returns are intentionally not modeled until bucket/container items exist.
+      const source = sourceEntry.data.output;
+      if (!source || source.isEmpty) return false;
+      const destinationSlots = destinationEntry.data?.slots;
+      if (!['furnace', 'smoker', 'blast_furnace'].includes(destinationEntry.type)) {
+        const moved = moveOneItem([source], destinationSlots);
+        if (moved && source.count <= 0) sourceEntry.data.output = ItemStack.EMPTY.clone();
+        return moved;
+      }
+      sourceSlots = [source];
+    } else {
+      sourceSlots = sourceEntry.data?.slots;
+    }
+    if (!Array.isArray(sourceSlots)) return false;
+
+    if (['furnace', 'smoker', 'blast_furnace'].includes(destinationEntry.type)) {
+      // Java hopper faces have distinct furnace roles: top -> input,
+      // horizontal sides -> fuel, bottom -> output extraction only.
+      const key = destinationFace === 'top' ? 'input'
+        : destinationFace === 'side' ? 'fuel' : null;
+      if (!key) return false;
+      const target = destinationEntry.data[key];
+      if (!target) return false;
+      const sourceIndex = sourceSlots.findIndex((stack) => {
+        if (!stack || stack.isEmpty) return false;
+        const item = stack.item;
+        if (key === 'input' ? !destinationEntry.data.acceptsInput(item.id) : item.fuelTicks <= 0) return false;
+        if (target.isEmpty) return true;
+        const one = ItemStack.of(item.id, 1, stack.damage, stack.data);
+        return target.canStackWith(one) && target.count < target.maxStackSize;
+      });
+      if (sourceIndex < 0) return false;
+      const source = sourceSlots[sourceIndex];
+      const one = ItemStack.of(source.item.id, 1, source.damage, source.data);
+      if (target.isEmpty) destinationEntry.data[key] = one;
+      else target.count += 1;
+      source.count -= 1;
+      if (source.count <= 0) sourceSlots[sourceIndex] = ItemStack.EMPTY.clone();
+      return true;
+    }
+    return moveOneItem(sourceSlots, destinationEntry.data?.slots);
+  },
+
+  /** Host-authoritative dropper: one item per rising redstone pulse. */
+  _tickDroppers() {
+    const player = this.player;
+    if (!player || (this.multiplayer?.roomId && !this.multiplayer.isHost)) return;
+    const tick = this.tickCount || 0;
+    this._dropperPending ||= new Map();
+    this._dropperPowered ||= new Map();
+    const world = this.world;
+    const bx = Math.floor(player.x), by = Math.floor(player.y), bz = Math.floor(player.z);
+    const vectors = { down:[0,-1,0], up:[0,1,0], north:[0,0,-1], south:[0,0,1], west:[-1,0,0], east:[1,0,0] };
+    for (let y=by-3;y<=by+4;y++) for(let x=bx-8;x<=bx+8;x++) for(let z=bz-8;z<=bz+8;z++) {
+      const state=world.getBlock(x,y,z);
+      if(state.block.id!=='mc:dropper') continue;
+      const key=this._containerKey(x,y,z);
+      if(this.multiplayer?.isContainerLockedByOther?.(key)) continue;
+      let powered=false;
+      for(const [dx,dy,dz] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]) {
+        if(readSignal(world,x+dx,y+dy,z+dz,x,y,z)>0){powered=true;break;}
+      }
+      const wasPowered=this._dropperPowered.get(key)===true;
+      this._dropperPowered.set(key,powered);
+      if(powered&&!wasPowered&&!this._dropperPending.has(key)) this._dropperPending.set(key,tick+4);
+    }
+    for(const [key,due] of this._dropperPending) {
+      const [x,y,z]=key.split(',').map(Number), state=world.getBlock(x,y,z);
+      if(state.block.id!=='mc:dropper'){this._dropperPending.delete(key);this._dropperPowered.delete(key);continue;}
+      if(tick<due) continue;
+      const dropper=this._dropperAt(x,y,z);
+      const slotIndex=dropper.slots.findIndex((slot)=>slot&&!slot.isEmpty);
+      if(slotIndex<0){this._dropperPending.delete(key);continue;}
+      const [dx,dy,dz]=vectors[state.get('facing')]||vectors.north;
+      const tx=x+dx,ty=y+dy,tz=z+dz, targetId=world.getBlock(tx,ty,tz).block.id;
+      let destination=null;
+      if(targetId==='mc:chest'||targetId==='mc:trapped_chest') destination={type:'chest',data:this._chestAt(tx,ty,tz)};
+      else if(targetId==='mc:hopper') destination={type:'hopper',data:this._hopperAt(tx,ty,tz)};
+      else if(targetId==='mc:dropper') destination={type:'dropper',data:this._dropperAt(tx,ty,tz)};
+      else if(targetId==='mc:furnace') destination={type:'furnace',data:this._furnaceAt(tx,ty,tz)};
+      let moved=false;
+      if(destination&&!this.multiplayer?.isContainerLockedByOther?.(this._containerKey(tx,ty,tz))) {
+        moved=this._hopperTransferOne({type:'dropper',data:dropper},destination,dy<0?'top':'side');
+        if(moved&&this.multiplayer?.roomId){this._hopperDirtyKeys||=new Set();this._hopperDirtyKeys.add(this._containerKey(tx,ty,tz));}
+      }
+      if(!moved) {
+        const source=dropper.slots[slotIndex];
+        const one=ItemStack.of(source.item.id,1,source.damage,source.data);
+        const px=x+0.5+dx*0.72, py=y+0.35+dy*0.72, pz=z+0.5+dz*0.72;
+        this.entities?.spawnItemStackAt(one,px,py,pz,dx*0.12,0.08+dy*0.08,dz*0.12);
+        source.count--;
+        if(source.count<=0) dropper.slots[slotIndex]=ItemStack.EMPTY.clone();
+        moved=true;
+      }
+      if(moved&&this.multiplayer?.roomId){this._hopperDirtyKeys||=new Set();this._hopperDirtyKeys.add(key);}
+      this._dropperPending.delete(key);
+    }
+  },
+
+  /** Host-authoritative hopper transfer, sampled every eight game ticks nearby. */
+  _tickHoppers() {
+    const player = this.player;
+    if (!player || (this.multiplayer?.roomId && !this.multiplayer.isHost)) return;
+    const tick = this.tickCount || 0;
+    // Container contents are batched at 1 Hz in multiplayer; never publish
+    // every eight-tick transfer as a separate database write.
+    if (this.multiplayer?.roomId && this.multiplayer.isHost && tick % 20 === 0 &&
+        this._hopperDirtyKeys?.size) {
+      for (const dirtyKey of this._hopperDirtyKeys) {
+        const entry = this._containers?.get(dirtyKey);
+        if (entry) this.multiplayer.pushContainerState(dirtyKey, entry.type, entry.data);
+      }
+      this._hopperDirtyKeys.clear();
+    }
+    if (tick % 8 !== 0) return;
+    const world = this.world;
+    const baseX = Math.floor(player.x), baseY = Math.floor(player.y), baseZ = Math.floor(player.z);
+    const directions = {
+      down: [0, -1, 0], north: [0, 0, -1], south: [0, 0, 1],
+      west: [-1, 0, 0], east: [1, 0, 0],
+    };
+    for (let y = baseY - 4; y <= baseY + 4; y++) {
+      for (let x = baseX - 6; x <= baseX + 6; x++) for (let z = baseZ - 6; z <= baseZ + 6; z++) {
+        let state = world.getBlock(x, y, z);
+        if (state.block.id !== 'mc:hopper') continue;
+        const key = this._containerKey(x, y, z);
+        if (this.multiplayer?.isContainerLockedByOther?.(key)) continue;
+        let powered = false;
+        for (const [dx, dy, dz] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]]) {
+          if (readSignal(world, x + dx, y + dy, z + dz, x, y, z) > 0) { powered = true; break; }
+        }
+        const enabled = !powered;
+        if (state.get('enabled') !== enabled) {
+          state = state.with('enabled', enabled);
+          world.setBlock(x, y, z, state);
+          this.multiplayer?.pushBlockChange(x, y, z, state);
+        }
+        if (!enabled) continue;
+
+        const hopper = this._hopperAt(x, y, z);
+        const hopperEntry = { type: 'hopper', data: hopper };
+        let collectedDroppedItem = false;
+
+        // Collect item entities from the open top. Only the room host mutates
+        // shared drops; multiplayer claims use the same atomic transaction as
+        // player pickup, so a player and a hopper cannot collect one stack twice.
+        const drops = this.entities?.droppedItems;
+        if (Array.isArray(drops)) {
+          for (let dropIndex = drops.length - 1; dropIndex >= 0; dropIndex--) {
+            const drop = drops[dropIndex];
+            if (drop.hopperClaiming || drop.claiming ||
+                !isItemInHopperIntake(drop, x, y, z)) continue;
+            const previewHopper = new Hopper();
+            previewHopper.slots = hopper.slots.map((slot) => slot.clone());
+            const preview = insertDroppedStack(previewHopper, drop.stack);
+            if (preview.inserted <= 0) continue;
+
+            if (drop.networkKey && this.multiplayer?.roomId) {
+              drop.hopperClaiming = true;
+              Promise.resolve(this.multiplayer.claimDroppedItem(drop)).then((claimed) => {
+                drop.hopperClaiming = false;
+                if (!claimed) return;
+                const currentIndex = this.entities?.droppedItems?.indexOf(drop) ?? -1;
+                if (currentIndex >= 0) this.entities.droppedItems.splice(currentIndex, 1);
+                const currentState = this.world.getBlock(x, y, z);
+                if (currentState.block.id !== 'mc:hopper' || currentState.get('enabled') === false) {
+                  // The item has been claimed, but the hopper was removed or
+                  // disabled during the async transaction: return the full stack.
+                  this.entities?.spawnItemStackAt(drop.stack, drop.x, drop.y, drop.z, 0, 0.04, 0);
+                  return;
+                }
+                const targetHopper = this._hopperAt(x, y, z);
+                const { inserted, remaining } = insertDroppedStack(targetHopper, drop.stack);
+                if (remaining > 0) {
+                  this.entities?.spawnItemStackAt(
+                    ItemStack.of(drop.stack.item.id, remaining, drop.stack.damage, drop.stack.data),
+                    drop.x, drop.y, drop.z, 0, 0.04, 0,
+                  );
+                }
+                if (inserted > 0 && this.multiplayer?.roomId) {
+                  this._hopperDirtyKeys ||= new Set();
+                  this._hopperDirtyKeys.add(key);
+                }
+              }).catch(() => { drop.hopperClaiming = false; });
+              continue;
+            }
+
+            const { inserted, remaining } = insertDroppedStack(hopper, drop.stack);
+            if (inserted > 0) {
+              if (remaining <= 0) drops.splice(dropIndex, 1);
+              else drop.stack.count = remaining;
+              collectedDroppedItem = true;
+              if (this.multiplayer?.roomId) {
+                this._hopperDirtyKeys ||= new Set();
+                this._hopperDirtyKeys.add(key);
+              }
+            }
+          }
+        }
+        const [dx, dy, dz] = directions[state.get('facing')] || directions.down;
+        const tx = x + dx, ty = y + dy, tz = z + dz;
+        const targetBlock = world.getBlock(tx, ty, tz).block.id;
+        let moved = collectedDroppedItem;
+        let destinationEntry = null;
+        if (targetBlock === 'mc:chest' || targetBlock === 'mc:trapped_chest') {
+          destinationEntry = { type: 'chest', data: this._chestAt(tx, ty, tz) };
+        } else if (['mc:furnace', 'mc:smoker', 'mc:blast_furnace'].includes(targetBlock)) {
+          const stationType = targetBlock.slice(3);
+          destinationEntry = { type: stationType, data: this._furnaceAt(tx, ty, tz, stationType) };
+        } else if (targetBlock === 'mc:hopper') {
+          destinationEntry = { type: 'hopper', data: this._hopperAt(tx, ty, tz) };
+        }
+        if (targetBlock === 'mc:composter' && dy < 0) {
+          const composterState = world.getBlock(tx, ty, tz);
+          const level = composterState.get('level');
+          if (level < 8) {
+            const sourceIndex = hopper.slots.findIndex((stack) => stack && !stack.isEmpty && compostChance(stack.item.id) !== null);
+            if (sourceIndex >= 0) {
+              const source = hopper.slots[sourceIndex];
+              const result = composterHopperInsert(level, source.item.id,
+                compostRoll(world.seed, tx, ty, tz, tick, source.item.id));
+              if (result.accepted) {
+                source.count -= 1;
+                if (source.count <= 0) hopper.slots[sourceIndex] = ItemStack.EMPTY.clone();
+                moved = true;
+                if (result.level !== level) {
+                  const next = composterState.with('level', result.level);
+                  world.setBlock(tx, ty, tz, next);
+                  this.multiplayer?.pushBlockChange(tx, ty, tz, next);
+                }
+              }
+            }
+          }
+        } else if (destinationEntry && !moved) {
+          const targetKey = this._containerKey(tx, ty, tz);
+          if (!this.multiplayer?.isContainerLockedByOther?.(targetKey)) {
+            moved = this._hopperTransferOne(hopperEntry, destinationEntry, dy < 0 ? 'top' : 'side');
+            if (moved && this.multiplayer?.roomId) {
+              this._hopperDirtyKeys ||= new Set();
+              this._hopperDirtyKeys.add(targetKey);
+            }
+          }
+        }
+
+        // If the outlet could not accept an item, pull one from the container above.
+        if (!moved) {
+          const sourceId = world.getBlock(x, y + 1, z).block.id;
+          let sourceEntry = null;
+          if (sourceId === 'mc:chest' || sourceId === 'mc:trapped_chest') {
+            sourceEntry = { type: 'chest', data: this._chestAt(x, y + 1, z) };
+          } else if (['mc:furnace', 'mc:smoker', 'mc:blast_furnace'].includes(sourceId)) {
+            const stationType = sourceId.slice(3);
+            sourceEntry = { type: stationType, data: this._furnaceAt(x, y + 1, z, stationType) };
+          } else if (sourceId === 'mc:hopper') {
+            sourceEntry = { type: 'hopper', data: this._hopperAt(x, y + 1, z) };
+          }
+          const sourceKey = this._containerKey(x, y + 1, z);
+          if (sourceId === 'mc:composter') {
+            const composterState = world.getBlock(x, y + 1, z);
+            const extraction = composterHopperExtract(composterState.get('level'));
+            if (extraction.extracted &&
+                moveOneItem([ItemStack.of('mc:bone_meal', 1)], hopper.slots)) {
+              const next = composterState.with('level', extraction.level);
+              world.setBlock(x, y + 1, z, next);
+              this.multiplayer?.pushBlockChange(x, y + 1, z, next);
+              moved = true;
+            }
+          } else if (sourceEntry && !this.multiplayer?.isContainerLockedByOther?.(sourceKey)) {
+            moved = this._hopperTransferOne(sourceEntry, hopperEntry, 'bottom');
+            if (moved && this.multiplayer?.roomId) {
+              this._hopperDirtyKeys ||= new Set();
+              this._hopperDirtyKeys.add(sourceKey);
+            }
+          }
+        }
+        if (moved && this.multiplayer?.roomId) {
+          this._hopperDirtyKeys ||= new Set();
+          this._hopperDirtyKeys.add(key);
+        }
+      }
     }
   },
 
@@ -244,6 +791,7 @@ export const ContainerScreensMixin = {
     ensureStyle();
     this._closeContainer();
     this._activeContainer = spec;
+    spec.lockState = this.multiplayer?.roomId ? 'pending' : 'local';
     this.inventoryOpen = true;
     document.exitPointerLock?.();
     const overlay = document.createElement('div');
@@ -252,6 +800,38 @@ export const ContainerScreensMixin = {
     document.body.appendChild(overlay);
     this._renderContainer();
     this._containerTimer = setInterval(() => this._renderContainer(), 250);
+    if (this.multiplayer?.roomId) {
+      const active = spec;
+      this.multiplayer.acquireContainerLock?.(spec.key).then((result) => {
+        if (this._activeContainer !== active) {
+          if (result?.ok && result.token) void this.multiplayer.releaseContainerLock?.(active.key, result.token);
+          return;
+        }
+        if (result?.ok) {
+          active.lockState = 'owned';
+          active.lockToken = result.token || null;
+          if (result.token) this._containerLockTimer = setInterval(async () => {
+            const renewed = await this.multiplayer.renewContainerLock?.(active.key, active.lockToken);
+            if (!renewed && this._activeContainer === active) {
+              active.lockState = 'lost';
+              clearInterval(this._containerLockTimer);
+              this._renderContainer();
+              this.ui?.toast?.('Блокировка контейнера потеряна. Изменения остановлены.', { error: true });
+            }
+          }, 5000);
+        } else {
+          active.lockState = result?.offline ? 'offline' : 'busy';
+          active.lockOwner = result?.owner || '';
+          this.ui?.toast?.(result?.offline ? 'Нет соединения: подключись, чтобы редактировать общий контейнер.' : 'Контейнер уже редактирует другой игрок.', { error: true });
+        }
+        this._renderContainer();
+      }).catch((error) => {
+        if (this._activeContainer !== active) return;
+        active.lockState = 'offline';
+        this._renderContainer();
+        console.warn('[container] lock acquisition failed:', error);
+      });
+    }
     // Handle both mouse buttons on pointer-down so slot transfers are immediate
     // and do not depend on a synthetic click surviving the UI re-render.
     overlay.onpointerdown = (e) => {
@@ -269,6 +849,11 @@ export const ContainerScreensMixin = {
     const overlay = document.getElementById(OVERLAY_ID);
     if (overlay) overlay.remove();
     clearInterval(this._containerTimer);
+    clearInterval(this._containerLockTimer);
+    const active = this._activeContainer;
+    this._containerReleasePromise = active?.lockToken
+      ? this.multiplayer?.releaseContainerLock?.(active.key, active.lockToken) || Promise.resolve(false)
+      : Promise.resolve(false);
     this._activeContainer = null;
     this.inventoryOpen = false;
     this._requestPointerLock?.();
@@ -290,13 +875,13 @@ export const ContainerScreensMixin = {
     if (!overlay || !spec) return;
     const inv = this.inventory;
     let body = '';
-    if (spec.kind === 'chest') {
+    if (spec.kind === 'chest' || spec.kind === 'hopper' || spec.kind === 'dropper') {
       body += `<h3>${spec.title}</h3><div class="row slots-9">`;
-      for (let i = 0; i < spec.slots.length; i++) body += this._slotHtml('chest', i, spec.slots[i]);
+      for (let i = 0; i < spec.slots.length; i++) body += this._slotHtml(spec.kind, i, spec.slots[i]);
       body += '</div>';
     } else {
       const f = spec.furnace;
-      const pct = f.cookProgress / SMELT_TICKS;
+      const pct = f.cookProgress / f.smeltTicks;
       const burn = f.burnTotal > 0 ? f.burnLeft / f.burnTotal : 0;
       body += `<h3>${spec.title}</h3>`;
       body += `<div class="row furnace-slots"><div class="slot-group"><span>Сырьё</span>${this._slotHtml('furnace-in', 0, f.input)}</div>`;
@@ -312,6 +897,11 @@ export const ContainerScreensMixin = {
     body += '</div><div class="row slots-9">';
     for (let i = 0; i <= 8; i++) body += this._slotHtml('inv', i, inv.slots[i]);
     body += '</div>';
+    if (spec.lockState === 'pending') body += '<div class="hint">Проверка блокировки контейнера…</div>';
+    else if (spec.lockState === 'busy') body += '<div class="hint">Контейнер сейчас редактирует другой игрок.</div>';
+    else if (spec.lockState === 'offline') body += '<div class="hint">Нет соединения — редактирование общего контейнера отключено.</div>';
+    else if (spec.lockState === 'lost') body += '<div class="hint">Блокировка потеряна. Закрой и открой контейнер снова.</div>';
+    else if (spec.lockState === 'owned') body += '<div class="hint">Контейнер закреплён за вами на время редактирования.</div>';
     body += `<div class="hint">В курсоре: ${inv.cursor?.isEmpty ? 'пусто' : label(inv.cursor)}. Shift-клик переносит стак. Esc — закрыть.</div>`;
     body += '<button id="container-close">Закрыть</button>';
     overlay.innerHTML = `<div class="panel">${body}</div>`;
@@ -323,13 +913,15 @@ export const ContainerScreensMixin = {
     const inv = this.inventory;
     const spec = this._activeContainer;
     if (!spec) return;
+    if (['pending', 'busy', 'offline', 'lost'].includes(spec.lockState)) return;
 
     if (kind === 'inv') {
-      if (shift && spec.kind === 'chest') {
+      if (shift && (spec.kind === 'chest' || spec.kind === 'hopper' || spec.kind === 'dropper')) {
         const stack = inv.slots[index];
-        if (!stack.isEmpty && this._moveToChest(spec, stack)) {
-          inv.slots[index] = ItemStack.EMPTY.clone();
-        }
+        const movedAll = !stack.isEmpty && (spec.kind === 'chest'
+          ? this._moveToChest(spec, stack) : spec.kind === 'hopper'
+            ? this._moveToHopper(spec, stack) : this._moveToDropper(spec, stack));
+        if (movedAll) inv.slots[index] = ItemStack.EMPTY.clone();
       } else if (shift && spec.kind === 'furnace') {
         const stack = inv.slots[index];
         if (!stack.isEmpty && this._moveToFurnace(spec, stack) && stack.count <= 0) {
@@ -344,6 +936,7 @@ export const ContainerScreensMixin = {
       }
       inv.version++;
       this._renderContainer();
+      this._syncActiveContainer();
       return;
     }
 
@@ -351,6 +944,16 @@ export const ContainerScreensMixin = {
     const target = this._containerSlot(spec, kind, index);
     if (!target) return;
     const { get, set } = target;
+    if (shift) {
+      const outputBefore = target.outputOnly ? target.get().count : 0;
+      this._moveContainerSlotToInventory(target);
+      if (target.outputOnly) this._claimFurnaceExperience(spec, outputBefore - target.get().count);
+      inv.version++;
+      this._renderContainer();
+      this._syncActiveContainer();
+      return;
+    }
+    const outputBefore = target.outputOnly ? target.get().count : 0;
     const cursor = inv.cursor;
     if (target.outputOnly) {
       const output = get();
@@ -370,18 +973,36 @@ export const ContainerScreensMixin = {
     } else {
       this._swapWithCursor(get(), set, button);
     }
+    if (target.outputOnly) this._claimFurnaceExperience(spec, outputBefore - target.get().count);
     inv.version++;
     this._renderContainer();
+    this._syncActiveContainer();
+  },
+
+  _claimFurnaceExperience(spec, removedCount) {
+    if (removedCount <= 0 || !spec?.furnace) return;
+    const points = spec.furnace.claimExperienceForOutput(removedCount);
+    if (points <= 0) return;
+    const whole = Math.floor(points);
+    const awarded = whole + (Math.random() < points - whole ? 1 : 0);
+    if (awarded > 0) this.entities?.spawnExperienceOrbs(awarded, (spec.x ?? 0) + 0.5, (spec.y ?? 64) + 0.5, (spec.z ?? 0) + 0.5);
+  },
+
+  _syncActiveContainer() {
+    const spec = this._activeContainer;
+    if (!spec?.key || !['local', 'owned'].includes(spec.lockState)) return;
+    const entry = this._containers?.get(spec.key);
+    if (entry) this.multiplayer?.pushContainerState(spec.key, entry.type, entry.data);
   },
 
   _containerSlot(spec, kind, index) {
-    if (kind === 'chest') {
+    if (kind === 'chest' || kind === 'hopper' || kind === 'dropper') {
       return { get: () => spec.slots[index], set: (v) => { spec.slots[index] = v; } };
     }
     const f = spec.furnace;
     if (kind === 'furnace-in') return {
       get: () => f.input, set: (v) => { f.input = v; },
-      accepts: (item) => SMELTING.has(item.id),
+      accepts: (item) => f.acceptsInput(item.id),
     };
     if (kind === 'furnace-fuel') return {
       get: () => f.fuel, set: (v) => { f.fuel = v; },
@@ -396,6 +1017,19 @@ export const ContainerScreensMixin = {
       };
     }
     return null;
+  },
+
+  /** Shift-transfer as much as possible from a container slot into player storage. */
+  _moveContainerSlotToInventory(target) {
+    const stack = target.get();
+    if (stack.isEmpty) return false;
+    const copy = stack.clone();
+    const remainder = this.inventory.add(copy);
+    const moved = stack.count - remainder;
+    if (moved <= 0) return false;
+    stack.count = remainder;
+    target.set(remainder > 0 ? stack : ItemStack.EMPTY.clone());
+    return true;
   },
 
   _swapWithCursor(slotStack, set, button) {
@@ -430,7 +1064,7 @@ export const ContainerScreensMixin = {
   /** Move a stack to the furnace input or fuel slot; preserve any remainder. */
   _moveToFurnace(spec, stack) {
     const furnace = spec.furnace;
-    const key = SMELTING.has(stack.item.id) ? 'input' :
+    const key = furnace.acceptsInput(stack.item.id) ? 'input' :
       stack.item.fuelTicks > 0 ? 'fuel' : null;
     if (!key) return false;
     const current = furnace[key];
@@ -442,6 +1076,24 @@ export const ContainerScreensMixin = {
     else current.count += moved;
     stack.count -= moved;
     return true;
+  },
+
+  /** Move as much of `stack` into the dropper as fits. Returns true if all moved. */
+  _moveToDropper(spec, stack) {
+    const dropper = new Dropper();
+    dropper.slots = spec.slots;
+    const rest = dropper.insert(stack.clone());
+    stack.count = rest;
+    return rest === 0;
+  },
+
+  /** Move as much of `stack` into the hopper as fits. Returns true if all moved. */
+  _moveToHopper(spec, stack) {
+    const hopper = new Hopper();
+    hopper.slots = spec.slots;
+    const rest = hopper.insert(stack.clone());
+    stack.count = rest;
+    return rest === 0;
   },
 
   /** Move as much of `stack` into the chest as fits. Returns true if all of it moved. */

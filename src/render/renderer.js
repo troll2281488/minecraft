@@ -127,7 +127,7 @@ function vanillaLayerParts(model, layerName = 'main') {
 }
 
 const MOB_TEXTURE_FILES = Object.freeze({
-  cow:'cow.png', pig:'pig.png', sheep:'sheep.png', sheep_fur:'sheep_fur.png', chicken:'chicken.png', wolf:'wolf.png', horse:'horse.png', rabbit:'rabbit.png', polar_bear:'polar_bear.png', mooshroom:'mooshroom.png',
+  cow:'cow.png', goat:'cow.png', pig:'pig.png', sheep:'sheep.png', sheep_fur:'sheep_fur.png', chicken:'chicken.png', wolf:'wolf.png', horse:'horse.png', rabbit:'rabbit.png', polar_bear:'polar_bear.png', mooshroom:'mooshroom.png',
   zombie:'zombie.png', skeleton:'skeleton.png', stray:'stray.png',
   bat:'bat.png', blaze:'blaze.png', ghast:'ghast.png', guardian:'guardian.png',
   elder_guardian:'guardian_elder.png', endermite:'endermite.png', magma_cube:'magmacube.png',
@@ -468,6 +468,13 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     document.getElementById('health')?.classList.toggle('hidden', creativeHud);
     document.getElementById('food')?.classList.toggle('hidden', creativeHud);
     document.getElementById('armor')?.classList.toggle('hidden', creativeHud);
+    document.getElementById('xpbar')?.classList.toggle('hidden', creativeHud);
+    document.getElementById('xp-level')?.classList.toggle('hidden', creativeHud);
+    const xpFill = document.getElementById('xpbar-fill');
+    if (xpFill) xpFill.style.width = `${Math.max(0, Math.min(1, this.player.experience?.progress ?? 0)) * 100}%`;
+    const xpLevel = document.getElementById('xp-level');
+    if (xpLevel) xpLevel.textContent = (this.player.experience?.level ?? 0) > 0 ? String(this.player.experience.level) : '';
+
     const health = document.getElementById('health');
     if (health) renderBar(health, this.player.health, 'heart');
     const armor = document.getElementById('armor');
@@ -873,9 +880,31 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         [[0,0,0],size,[1,1,1,1]],
       ], 0, -1, -1, 1, { itemModel: true, itemSprite: true, itemTexture: entry.texture, itemReady: true, itemSwing: 0 });
     }
+    // Minecarts are compact block-built entities; their world state is saved locally.
+    for (const cart of this.minecarts?.carts ?? []) {
+      const wheel = [0.16, 0.16, 0.16];
+      const parts = [
+        [[0,0.30,0],[0.92,0.22,0.92],[0.30,0.31,0.34,1]],
+        [[0,0.48,0],[0.78,0.18,0.78],[0.48,0.50,0.53,1]],
+        [[-0.34,0.13,-0.32],wheel,[0.10,0.10,0.11,1]],
+        [[0.34,0.13,-0.32],wheel,[0.10,0.10,0.11,1]],
+        [[-0.34,0.13,0.32],wheel,[0.10,0.10,0.11,1]],
+        [[0.34,0.13,0.32],wheel,[0.10,0.10,0.11,1]],
+      ];
+      draw(cart.x, cart.y - 0.08, cart.z, cart.yaw || 0, parts, 0, -1, -1, 1, {});
+    }
+    // XP orbs use small bright voxel sprites; larger-value orbs have a warm core.
+    for (const orb of this.entities?.experienceOrbs ?? []) {
+      const phase = (orb.age || 0) * 0.075;
+      const green = 0.58 + (Math.sin(phase) + 1) * 0.10;
+      const body = [[0, 0, 0], [0.16, 0.16, 0.16], [0.30, green, 0.10, 1]];
+      const parts = [body];
+      if (orb.value >= 17) parts.push([[0, 0, 0.075], [0.07, 0.07, 0.035], [0.96, 0.48, 0.10, 1]]);
+      draw(orb.x, orb.y + Math.sin(phase) * 0.035, orb.z, phase, parts, 0, -1, -1, 1, {});
+    }
     if (this.thirdPerson) {
       document.getElementById('held-item-view')?.classList.add('hidden');
-      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.ridingHorse && !this.player.onGround, jumping: !this.player.ridingHorse && !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking || !!this.player.ridingHorse, riding: !!this.player.ridingHorse, walking: !this.player.ridingHorse && this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035, attack: this.player.attackTime > 0, attackTime: this.player.attackTime }, true);
+      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : this.player.ridingMinecart ? 0.42 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround, jumping: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking || !!this.player.ridingHorse || !!this.player.ridingMinecart, riding: !!this.player.ridingHorse || !!this.player.ridingMinecart, walking: !this.player.ridingHorse && !this.player.ridingMinecart && this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035, attack: this.player.attackTime > 0, attackTime: this.player.attackTime }, true);
       draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, outerHuman, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.ridingHorse && !this.player.onGround, sneaking: this.player.sneaking || !!this.player.ridingHorse, riding: !!this.player.ridingHorse, skinLayer: true }, true);
       const armorColors = ['#b8b8b8','#8f8f9b','#b17a45','#6c778a'];
       const armorParts = [];
@@ -907,6 +936,46 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     for (const remote of this.multiplayer?.remotePlayers?.values?.() ?? []) {
       draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, human, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, jumping: !!remote.jumping, sneaking: !!remote.sneaking, walking: !!remote.walking, attack: !!remote.attacking, attackTime: remote.attackTime ?? 0 }, true);
       draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, outerHuman, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, sneaking: !!remote.sneaking, skinLayer: true }, true);
+      const remoteArmorParts = [];
+      for (const id of remote.armor ?? []) {
+        if (!id) continue;
+        const color = id.includes('diamond') ? [0.20,0.82,0.78,1]
+          : id.includes('iron') ? [0.72,0.76,0.80,1]
+          : id.includes('gold') ? [0.95,0.72,0.18,1]
+          : id.includes('leather') ? [0.48,0.28,0.14,1]
+          : id.includes('chainmail') ? [0.52,0.58,0.62,1] : [0.48,0.52,0.58,1];
+        if (id.endsWith('_helmet')) remoteArmorParts.push([[0,1.55,0],[0.55,0.55,0.55],color]);
+        if (id.endsWith('_chestplate')) remoteArmorParts.push(
+          [[0,1.00,0],[0.56,0.78,0.30],color],
+          [[-0.375,1.00,0],[0.29,0.78,0.29],color],
+          [[0.375,1.00,0],[0.29,0.78,0.29],color],
+        );
+        if (id.endsWith('_leggings')) remoteArmorParts.push(
+          [[-0.125,0.39,0],[0.28,0.78,0.28],color],
+          [[0.125,0.39,0],[0.28,0.78,0.28],color],
+        );
+        if (id.endsWith('_boots')) remoteArmorParts.push(
+          [[-0.125,0.08,0.035],[0.27,0.18,0.30],color],
+          [[0.125,0.08,0.035],[0.27,0.18,0.30],color],
+        );
+      }
+      if (remoteArmorParts.length) draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, remoteArmorParts, 0, -1, -1, 1, {});
+      const equipmentPart = (id, side) => {
+        if (!id) return;
+        const color = id.includes('diamond') ? [0.20,0.82,0.78,1]
+          : id.includes('iron') ? [0.72,0.76,0.80,1]
+          : id.includes('gold') ? [0.95,0.72,0.18,1]
+          : id.includes('wooden') ? [0.48,0.30,0.16,1]
+          : id.includes('stone') ? [0.48,0.50,0.52,1]
+          : id.includes('shield') ? [0.42,0.28,0.16,1] : [0.62,0.62,0.62,1];
+        const tool = /sword|pickaxe|axe|shovel|hoe|trident/.test(id);
+        const parts = tool
+          ? [[[side * 0.36,1.02,0.30],[0.10,0.34,0.10],[0.42,0.27,0.14,1]],[[side * 0.36,1.31,0.30],[0.15,0.30,0.055],color]]
+          : [[[side * 0.36,1.12,0.30],[id.includes('shield') ? 0.34 : 0.22,id.includes('shield') ? 0.42 : 0.22,0.10],color]];
+        draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, parts, 0, -1, -1, 1, {});
+      };
+      equipmentPart(remote.heldItem, 1);
+      equipmentPart(remote.offhandItem, -1);
     }
     for (const particle of (this.particlesMode === 'off' ? [] : this.entities?.blockParticles ?? [])) {
       const size = 0.045 + Math.min(1, particle.life / 28) * 0.025;
@@ -925,6 +994,14 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     for (const mob of this.entities?.mobs ?? []) {
       const vanillaModel = this.entityModels?.getModel?.('minecraft:' + mob.type);
       const vanillaParts = vanillaLayerParts(vanillaModel, 'main');
+      const beeFallback = [
+        [[0,1.05,0],[0.48,0.42,0.58],[0.93,0.68,0.12,1]],
+        [[0,1.10,0.29],[0.28,0.28,0.20],[0.18,0.14,0.08,1]],
+        [[-0.23,1.30,0],[0.42,0.035,0.42],[0.86,0.91,0.94,0.72]],
+        [[0.23,1.30,0],[0.42,0.035,0.42],[0.86,0.91,0.94,0.72]],
+        [[-0.18,0.76,0.08],[0.035,0.22,0.035],[0.16,0.12,0.07,1]],
+        [[0.18,0.76,0.08],[0.035,0.22,0.035],[0.16,0.12,0.07,1]],
+      ];
       const villagerFallback = [
         [[0,0.98,0],[0.43,0.72,0.34],[0.48,0.30,0.18,1]],
         [[0,1.62,0],[0.48,0.48,0.42],[0.67,0.50,0.36,1]],
@@ -933,21 +1010,21 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         [[-0.13,0.39,0],[0.20,0.70,0.22],[0.34,0.25,0.18,1]],
         [[0.13,0.39,0],[0.20,0.70,0.22],[0.34,0.25,0.18,1]],
       ];
-      const parts = vanillaParts ?? (mob.type === 'villager' ? villagerFallback
+      const parts = vanillaParts ?? (mob.type === 'bee' ? beeFallback : mob.type === 'villager' ? villagerFallback
         : mob.type === 'zombie' ? zombie
         : mob.type === 'skeleton' || mob.type === 'stray' ? skeleton
         : mob.type === 'creeper' ? creeper
         : mob.type === 'enderman' ? enderman
         : mob.type === 'spider' || mob.type === 'cave_spider' ? spider
-        : mob.type === 'pig' || mob.type === 'rabbit' ? pig : mob.type === 'cow' || mob.type === 'mooshroom' || mob.type === 'polar_bear' ? cow
+        : mob.type === 'pig' || mob.type === 'rabbit' ? pig : mob.type === 'cow' || mob.type === 'goat' || mob.type === 'mooshroom' || mob.type === 'polar_bear' ? cow
         : mob.type === 'chicken' ? chicken : sheep);
       const pulse = mob.type === 'creeper' && mob.anim?.fuse > 0
         ? 1 + Math.sin(mob.anim.fuse * Math.PI * 12) * 0.10 * mob.anim.fuse : 1;
-      const legs = mob.type === 'creeper' ? [2, 5] : mob.type === 'zombie' || mob.type === 'skeleton' || mob.type === 'stray' || mob.type === 'villager' ? [4, 5]
+      const legs = mob.type === 'bee' ? [-1, -1] : mob.type === 'creeper' ? [2, 5] : mob.type === 'zombie' || mob.type === 'skeleton' || mob.type === 'stray' || mob.type === 'villager' ? [4, 5]
         : mob.type === 'pig' ? [3, 6] : mob.type === 'cow' ? [2, 5]
         : mob.type === 'chicken' ? [4, 5] : mob.type === 'enderman' ? [4, 5] : [2, 5];
       const babyScale = mob.ageTicks < 0 ? 0.55 : 1;
-      const animal = ['sheep', 'pig', 'cow', 'chicken', 'mooshroom', 'rabbit', 'wolf', 'polar_bear'].includes(mob.type);
+      const animal = ['sheep', 'pig', 'cow', 'goat', 'chicken', 'mooshroom', 'rabbit', 'wolf', 'polar_bear', 'bee'].includes(mob.type);
       const humanoid = ['zombie', 'skeleton', 'stray', 'villager'].includes(mob.type);
       // Mob movement advances along +sin(yaw), +cos(yaw); render the model on that same forward axis.
       draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
@@ -955,6 +1032,12 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         mobType: mob.type, mobTextureKey: mob.type === 'villager' ? 'villager_' + (mob.villagerCareer === 'archer' ? 'fletcher' : (mob.villagerCareer || 'farmer')) : mob.type,
         idle: mob.anim?.idle ?? 0, walking: !!mob.anim?.walking,
       });
+      if (mob.type === 'goat' && !vanillaParts) {
+        draw(mob.x, mob.y, mob.z, mob.yaw, [
+          [[-0.27,1.30,0.68],[0.075,0.24,0.075],[0.78,0.72,0.58,1]],
+          [[0.27,1.30,0.68],[0.075,0.24,0.075],[0.78,0.72,0.58,1]],
+        ], mob.walkPhase, -1, -1, pulse * babyScale, {});
+      }
       if (mob.type === 'horse' && mob.horseArmor) {
         const armorColor = mob.horseArmor === 'diamond' ? [0.18,0.78,0.78,1]
           : mob.horseArmor === 'golden' ? [0.92,0.70,0.18,1] : [0.68,0.72,0.76,1];

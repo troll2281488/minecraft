@@ -8,21 +8,23 @@ export const SOUND_EVENTS = Object.freeze({
   'block.chest.open':'chestOpen','block.chest.close':'chestClose',
   'block.furnace.start':'furnace','block.note':'note',
   'entity.player.hurt':'hurt','entity.player.levelup':'levelup',
-  'entity.item.pickup':'pickup','entity.item.drop':'drop',
+  'entity.item.pickup':'pickup','entity.item.drop':'drop','entity.experience_orb.pickup':'xp',
   'entity.arrow.shoot':'shoot','entity.arrow.hit':'arrowHit',
   'entity.generic.explode':'explode','entity.mob.ambient':'ambient',
   'entity.mob.hurt':'mobHurt','entity.mob.death':'mobDeath',
   'entity.villager.trade':'trade','item.equip':'equip','item.cast':'cast',
   'item.reel':'reel','item.fishing.bite':'bite','item.fishing.catch':'catch',
+  'item.eat':'eat','item.goat_horn':'goatHorn',
   'weather.rain':'rain','weather.thunder':'thunder',
   'fluid.water':'water','fluid.lava':'lava','ui.click':'click','ui.toast':'toast',
 });
 export const SOUND_PRESETS = Object.freeze({
   break:{f:190,d:.13,type:'square',volume:.075}, place:{f:320,d:.075,type:'triangle',volume:.07},
   hit:{f:105,d:.09,type:'sawtooth',volume:.075}, hurt:{f:78,d:.16,type:'triangle',volume:.085},
-  pickup:{f:620,d:.12,type:'sine',volume:.065}, drop:{f:250,d:.08,type:'triangle',volume:.06},
+  pickup:{f:620,d:.12,type:'sine',volume:.065}, xp:{f:940,d:.10,type:'sine',volume:.045}, drop:{f:250,d:.08,type:'triangle',volume:.06},
   step:{f:120,d:.045,type:'triangle',volume:.035}, equip:{f:440,d:.10,type:'sine',volume:.06},
   cast:{f:520,d:.12,type:'triangle',volume:.065}, reel:{f:360,d:.10,type:'triangle',volume:.06},
+  eat:{f:540,d:.08,type:'triangle',volume:.045}, goatHorn:{f:185,d:.72,type:'sawtooth',volume:.075},
   bite:{f:880,d:.08,type:'sine',volume:.07}, catch:{f:740,d:.16,type:'sine',volume:.07},
   doorOpen:{f:165,d:.22,type:'square',volume:.055}, doorClose:{f:125,d:.19,type:'square',volume:.055},
   chestOpen:{f:235,d:.16,type:'triangle',volume:.055}, chestClose:{f:175,d:.14,type:'triangle',volume:.055},
@@ -36,6 +38,11 @@ export const SOUND_PRESETS = Object.freeze({
   click:{f:520,d:.035,type:'square',volume:.035}, toast:{f:720,d:.10,type:'sine',volume:.045},
 });
 const MATERIAL_PITCH = Object.freeze({wood:.78,grass:1.28,stone:1,sand:.92,metal:1.55,glass:1.8});
+
+export function noteBlockFrequency(note) {
+  const pitch = Math.max(0, Math.min(24, Math.floor(Number(note) || 0)));
+  return 440 * Math.pow(2, (pitch - 12) / 12);
+}
 export class GameSounds {
   constructor(){this.context=null;this.lastStep=0;this.enabled=true;this.masterVolume=1;}
   _ctx(){
@@ -64,6 +71,17 @@ export class GameSounds {
     osc.type=p.type;osc.frequency.setValueAtTime(frequency,now);
     osc.frequency.exponentialRampToValueAtTime(Math.max(30,frequency*.55),now+p.d);
     osc.connect(gain);osc.start(now);osc.stop(now+p.d+.015);
+  }
+  playNote(note, material = 'wood'){
+    const c=this._ctx();if(!c)return false;
+    const now=c.currentTime,gain=c.createGain(),osc=c.createOscillator();
+    const instrument=material==='metal'?'square':material==='stone'||material==='sand'?'triangle':'sine';
+    const frequency=noteBlockFrequency(note);
+    gain.gain.setValueAtTime(.085*this.masterVolume,now);
+    gain.gain.exponentialRampToValueAtTime(.001,now+.32);gain.connect(c.destination);
+    osc.type=instrument;osc.frequency.setValueAtTime(frequency,now);
+    osc.connect(gain);osc.start(now);osc.stop(now+.34);
+    return true;
   }
   step(material){
     const now=globalThis.performance?.now?.()??0;
