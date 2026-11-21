@@ -558,6 +558,8 @@ define('mc:end_portal_frame', {
 define('mc:farmland', {
   hardness: 0.6, resistance: 0.6, tool: 'shovel', soundGroup: 'grass',
   texture: 'farmland',
+  properties: { moisture: PROPS.moisture },
+  defaultValues: { moisture: 0 },
 });
 
 define('mc:wheat', {
