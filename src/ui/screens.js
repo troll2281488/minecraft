@@ -32,6 +32,7 @@ export const ScreensMixin = {
     this._loadSettings();
     this._buildKeybindSettings();
     this._buildSoundPackSettings();
+    this._buildMusicSettings();
     byId('setting-distance').oninput = (e) => {
       this.renderDistance = Number(e.target.value);
       byId('setting-distance-value').textContent = this.renderDistance + ' чанков';
@@ -261,6 +262,37 @@ export const ScreensMixin = {
       const status = section.querySelector('#bedrock-sound-status');
       if (status) status.textContent = 'Звуковой пак отключён.';
       this.ui.toast('Bedrock-звуковой пак отключён');
+    });
+  },
+
+
+  _buildMusicSettings() {
+    const panel = document.querySelector('#settings-screen .panel');
+    if (!panel || document.getElementById('background-music-settings')) return;
+    const section = document.createElement('section');
+    section.id = 'background-music-settings';
+    section.innerHTML = '<h2>Фоновая музыка</h2><p class="sub">Добавь свои аудиофайлы OGG, MP3 или WAV. Они сохранятся в этом браузере и будут случайно чередоваться во время игры.</p><div class="settings-row"><button id="btn-import-background-music" class="secondary" type="button">Добавить музыку</button><button id="btn-clear-background-music" class="secondary" type="button">Очистить плейлист</button></div><div class="settings-row"><label for="background-music-volume">Громкость музыки</label><input id="background-music-volume" type="range" min="0" max="1" step=".01" value=".22"></div><p id="background-music-status" role="status" aria-live="polite">Музыка не добавлена.</p>';
+    panel.insertBefore(section, document.getElementById('btn-settings-back'));
+    const status = section.querySelector('#background-music-status');
+    const player = this.sounds.music;
+    player.restore().then(count => { if (count) status.textContent = 'В плейлисте: ' + count + ' трек(ов). Музыка включится при входе в мир.'; }).catch(error => { status.textContent = 'Не удалось прочитать плейлист: ' + error.message; });
+    section.querySelector('#background-music-volume').addEventListener('input', event => player.setVolume(event.target.value));
+    section.querySelector('#btn-import-background-music').addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.type = 'file'; input.multiple = true; input.accept = '.ogg,.mp3,.wav,.m4a,.aac,.flac,audio/*';
+      input.onchange = async () => {
+        if (!input.files?.length) return;
+        try {
+          const result = await player.importFiles(input.files);
+          status.textContent = 'Добавлено файлов: ' + result.count + '. Всего в плейлисте: ' + result.total + '. Музыка сохранена.';
+          if (this.running) await player.start();
+        } catch (error) { status.textContent = 'Ошибка музыки: ' + error.message; }
+      };
+      input.click();
+    });
+    section.querySelector('#btn-clear-background-music').addEventListener('click', async () => {
+      try { await player.clear(); status.textContent = 'Плейлист очищен.'; }
+      catch (error) { status.textContent = 'Не удалось очистить плейлист: ' + error.message; }
     });
   },
 
