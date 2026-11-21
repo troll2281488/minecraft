@@ -130,10 +130,12 @@ export const InventoryControllerMixin = {
     if (kind === 'result') {
       if (!grid.matched || grid.result.isEmpty) return;
       const output = grid.result.clone();
+      const craftedItemId = output.item?.id;
       if (inv.cursor.isEmpty) inv.cursor = output;
       else if (inv.cursor.canStackWith(output)) inv.cursor.mergeFrom(output);
       else return; // hands full with something else
       grid.consume();
+      if (craftedItemId === 'mc:stone_pickaxe') this.player?.recordAdvancementEvent?.('crafted_stone_pickaxe', this.tickCount || 0);
       inv.version++;
     } else if (kind === 'craft') {
       const slot = grid.get(index);
