@@ -89,6 +89,17 @@ export function detachMobLead(mob, owner = 'player') {
   return true;
 }
 
+export const BREEDING_FOODS = Object.freeze({
+  cow: Object.freeze(['mc:wheat']), sheep: Object.freeze(['mc:wheat']),
+  pig: Object.freeze(['mc:carrot', 'mc:potato']),
+  chicken: Object.freeze(['mc:wheat_seeds', 'mc:pumpkin_seeds', 'mc:melon_seeds']),
+  rabbit: Object.freeze(['mc:carrot', 'mc:golden_carrot', 'mc:dandelion']),
+  horse: Object.freeze(['mc:golden_carrot', 'mc:golden_apple']),
+});
+
+export function canBreedAnimalWith(type, itemId) {
+  return !!BREEDING_FOODS[type]?.includes(itemId);
+}
 export function tickChickenEggLaying(mob, random = Math.random) {
   if (!mob || mob.type !== 'chicken') return false;
   if (!Number.isFinite(mob.eggLayTicks)) mob.eggLayTicks = 6000 + Math.floor(random() * 6001);
@@ -864,13 +875,7 @@ export class MobSystem {
     const player = this.game.player;
     if (!animal || !player || !['survival', 'creative'].includes(player.gamemode)) return false;
     const creative = player.gamemode === 'creative';
-    const foods = {
-      cow: ['mc:wheat'], sheep: ['mc:wheat'],
-      pig: ['mc:carrot', 'mc:potato'],
-      chicken: ['mc:wheat_seeds', 'mc:pumpkin_seeds', 'mc:melon_seeds'],
-    };
-    const accepted = foods[animal.type];
-    if (!accepted || !held?.item || !accepted.includes(held.item.id)) return false;
+    if (!held?.item || !canBreedAnimalWith(animal.type, held.item.id)) return false;
     if (animal.ageTicks >= 0 && (animal.breedCooldown > 0 || animal.loveTicks > 0)) {
       this.game.ui?.toast('This animal is not ready to breed');
       return true;
@@ -920,7 +925,7 @@ export class MobSystem {
       id: this.nextId++, type: first.type, x, y, z,
       yaw: first.yaw, targetYaw: first.yaw, speed: first.speed,
       thinkTicks: 0, attackTicks: 0, walkPhase: 0,
-      health: ({ cow: 10, pig: 10, chicken: 4, sheep: 8 })[first.type] ?? 10,
+      health: ({ cow: 10, pig: 10, chicken: 4, sheep: 8, rabbit: 3, horse: 30 })[first.type] ?? 10,
       sheared: false, hurtTicks: 0, fuseTicks: 0,
       ageTicks: -24000, loveTicks: 0, breedCooldown: 0,
       anim: { walk: 0, idle: 0, attack: 0, hurt: 0, fuse: 0 },
