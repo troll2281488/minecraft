@@ -6,6 +6,7 @@ import { Player } from '../src/entity/player.js';
 import { withEnchantment, canApplyEnchantment, ENCHANTMENTS } from '../src/game/enchantments.js';
 import { Inventory } from '../src/game/inventory.js';
 import { MobSystem } from '../src/entity/mobs.js';
+import { createArrow, stepArrow } from '../src/entity/arrows.js';
 import { beginCrossbowLoad, crossbowLoadProgress, finishCrossbowLoad, crossbowShotPlan, consumeCrossbowCharge, canPierceAdditionalTarget } from '../src/game/crossbow.js';
 import { createTridentProjectile, stepTrident, tridentReturnVelocity, riptideImpulse, impalingBonusDamage, canChannelLightning } from '../src/game/trident.js';
 import { ADVANCEMENTS, createAdvancementState, awardAdvancementCriterion, processAdvancementEvent, serializeAdvancementState } from '../src/game/advancements.js';
@@ -154,5 +155,21 @@ describe('crossbow right-click gameplay integration', () => {
     game.tickCount = 60;
     entities.releaseCrossbowLoad();
     assertEqual(entities.arrows.length, 0);
+  });
+});
+
+
+describe('Piercing arrow collision handling', () => {
+  it('passes through the configured number of distinct mobs without repeat hits', () => {
+    const arrow = createArrow(0, 1, 0, [0, 0, 1], 1);
+    arrow.piercingLevel = 1;
+    const first = { id: 1, x: 0, y: 1, z: 1, health: 20 };
+    const second = { id: 2, x: 0, y: 1, z: 2.5, health: 20 };
+    const hit1 = stepArrow(arrow, () => false, [first, second]);
+    assertEqual(hit1.mob.id, 1);
+    assertEqual(arrow.done, false);
+    const hit2 = stepArrow(arrow, () => false, [first, second]);
+    assertEqual(hit2.mob.id, 2);
+    assertEqual(arrow.done, true);
   });
 });
