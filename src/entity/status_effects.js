@@ -8,9 +8,14 @@ export const POTION_ITEMS = Object.freeze({
   'mc:potion_regeneration': Object.freeze({ effect: 'regeneration', duration: 900, amplifier: 0 }),
   'mc:potion_fire_resistance': Object.freeze({ effect: 'fire_resistance', duration: 3600, amplifier: 0 }),
   'mc:potion_healing': Object.freeze({ effect: 'instant_health', duration: 1, amplifier: 0, instant: 'healing' }),
+  'mc:potion_poison': Object.freeze({ effect: 'poison', duration: 900, amplifier: 0 }),
+  'mc:potion_water_breathing': Object.freeze({ effect: 'water_breathing', duration: 3600, amplifier: 0 }),
+  'mc:potion_slow_falling': Object.freeze({ effect: 'slow_falling', duration: 1800, amplifier: 0 }),
+  'mc:potion_leaping': Object.freeze({ effect: 'jump_boost', duration: 3600, amplifier: 0 }),
+  'mc:potion_weakness': Object.freeze({ effect: 'weakness', duration: 1800, amplifier: 0 }),
 });
 
-const VALID_EFFECTS = new Set(['swiftness', 'strength', 'regeneration', 'fire_resistance']);
+const VALID_EFFECTS = new Set(['swiftness', 'strength', 'regeneration', 'fire_resistance', 'poison', 'water_breathing', 'slow_falling', 'jump_boost', 'weakness']);
 
 export class PlayerStatusEffects {
   constructor() {
@@ -47,6 +52,10 @@ export class PlayerStatusEffects {
     for (const [type, effect] of this.active) {
       effect.duration--;
       effect.ticks++;
+      if (type === 'poison' && effect.ticks % Math.max(1, 25 >> effect.amplifier) === 0 &&
+          player.health > 1) {
+        player.health = Math.max(1, player.health - 1);
+      }
       if (type === 'regeneration' && effect.ticks % Math.max(1, 50 >> effect.amplifier) === 0 &&
           player.health > 0 && player.health < 20) {
         player.health = Math.min(20, player.health + 1);
