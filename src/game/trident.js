@@ -2,7 +2,7 @@
 export const TRIDENT = Object.freeze({ SPEED: 2.5, DAMAGE: 8, GRAVITY: 0.05, DRAG: 0.99, MAX_AGE: 1200 });
 
 export function createTridentProjectile(x, y, z, direction, options = {}) {
-  if (![x, y, z, ...direction].every(Number.isFinite) || direction.length !== 3) return null;
+  if (!Array.isArray(direction) || direction.length !== 3 || ![x, y, z, ...direction].every(Number.isFinite)) return null;
   const length = Math.hypot(...direction) || 1;
   const speed = TRIDENT.SPEED;
   return {
