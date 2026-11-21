@@ -39,6 +39,7 @@ describe('crossbow loading and firing', () => {
     assertEqual(canPierceAdditionalTarget(shot, 4), true);
     assertEqual(canPierceAdditionalTarget(shot, 5), false);
   });
+  });
 });
 
 describe('trident flight and enchantments', () => {
@@ -310,7 +311,8 @@ describe('new ranged weapon advancements', () => {
 });
 
 
-it('detonates a crossbow firework rocket without arrow damage on entity impact', () => {
+describe('crossbow firework rocket impact', () => {
+  it('detonates without arrow damage on entity impact', () => {
   const game = {
     inventory: new Inventory(), player: new Player(0, 64, 0), tickCount: 1,
     world: { seed: 1, time: 0, getHeight: () => -64, getBlock: () => ({ block: { solid: false } }) },
