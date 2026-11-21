@@ -8,7 +8,7 @@ export function beginCrossbowLoad(stack, tick) {
 }
 
 export function crossbowLoadProgress(data, tick) {
-  if (!Number.isInteger(data?.loadingSince) || !Number.isInteger(tick)) return 0;
+  if (!Number.isInteger(data?.loadingSince) || !Number.isFinite(tick)) return 0;
   return Math.max(0, Math.min(1, (tick - data.loadingSince) / CROSSBOW.LOAD_TICKS));
 }
 
