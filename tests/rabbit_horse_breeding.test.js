@@ -1,5 +1,5 @@
 import { describe, it, assertEqual } from './framework.js';
-import { canBreedAnimalWith, BREEDING_FOODS, MobSystem } from '../src/entity/mobs.js';
+import { canBreedAnimalWith, BREEDING_FOODS, horseFoodEffect } from '../src/entity/mobs.js';
 import '../src/world/blocks/index.js';
 
 describe('Java rabbit and horse breeding', () => {
@@ -25,6 +25,16 @@ describe('Java rabbit and horse breeding', () => {
     assertEqual(canBreedAnimalWith('chicken', 'mc:wheat'), false);
   });
 
+  it('applies Java horse healing and foal growth values', () => {
+    assertEqual(horseFoodEffect('mc:sugar').heal, 1);
+    assertEqual(horseFoodEffect('mc:wheat').heal, 2);
+    assertEqual(horseFoodEffect('mc:apple').heal, 3);
+    assertEqual(horseFoodEffect('mc:golden_carrot').heal, 4);
+    assertEqual(horseFoodEffect('mc:golden_apple').heal, 10);
+    assertEqual(horseFoodEffect('mc:hay_block').heal, 20);
+    assertEqual(horseFoodEffect('mc:hay_block').growth, 0.90);
+    assertEqual(horseFoodEffect('mc:carrot'), null);
+  });
   it('does not expose mutable shared breeding food lists', () => {
     assertEqual(Object.isFrozen(BREEDING_FOODS), true);
     assertEqual(Object.isFrozen(BREEDING_FOODS.rabbit), true);
