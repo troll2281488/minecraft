@@ -496,12 +496,12 @@ function wallBlock(name, texture, hardness = 2) {
 for (const [name, texture] of [
   ['cobblestone', 'cobblestone'], ['mossy_cobblestone', 'mossy_cobblestone'],
   ['brick', 'stone_bricks'], ['prismarine', 'stone'],
-  ['red_sandstone', 'red_sandstone'], ['mossy_stone_brick', 'stone_bricks'],
+  ['red_sandstone', 'red_sandstone'], ['mossy_stone_brick', 'mossy_stone_bricks'],
   ['granite', 'granite'], ['stone_brick', 'stone_bricks'],
   ['nether_brick', 'nether_bricks'], ['andesite', 'andesite'],
-  ['red_nether_brick', 'nether_bricks'], ['sandstone', 'sandstone'],
+  ['red_nether_brick', 'red_nether_bricks'], ['sandstone', 'sandstone'],
   ['end_stone_brick', 'end_bricks'], ['diorite', 'diorite'],
-  ['blackstone', 'blackstone'], ['polished_blackstone_brick', 'polished_blackstone'],
+  ['blackstone', 'blackstone'], ['polished_blackstone_brick', 'polished_blackstone_bricks'],
   ['polished_blackstone', 'polished_blackstone'],
 ]) wallBlock(name, texture);
 
