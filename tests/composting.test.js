@@ -3,6 +3,8 @@ import { describe, it, assert, assertEqual } from './framework.js';
 import { BLOCKS } from '../src/world/block.js';
 import { ITEMS } from '../src/world/item.js';
 import { RECIPES } from '../src/game/recipes.js';
+import { ContainerScreensMixin } from '../src/game/container_screens.js';
+import { ItemStack } from '../src/world/item.js';
 import {
   COMPOSTER_MAX_LEVEL, COMPOSTABLE_ITEM_IDS, compostChance, isCompostable,
   nextComposterLevel, compostRoll, boneMealAge,
@@ -10,6 +12,56 @@ import {
 } from '../src/game/composting.js';
 
 describe('composter and bone meal farming', () => {
+  it('moves one compostable item from a hopper into a composter on the eight-tick cadence', () => {
+    const blocks = new Map();
+    const air = BLOCKS.get('mc:air').defaultState;
+    const world = {
+      seed: 9876,
+      getBlock(x, y, z) { return blocks.get(`${x},${y},${z}`) || air; },
+      setBlock(x, y, z, state) { blocks.set(`${x},${y},${z}`, state); },
+    };
+    blocks.set('0,1,0', BLOCKS.get('mc:hopper').defaultState);
+    blocks.set('0,0,0', BLOCKS.get('mc:composter').defaultState);
+    const game = Object.assign({}, ContainerScreensMixin, {
+      world, player: { x: 0.5, y: 0.5, z: 0.5 }, tickCount: 8,
+      multiplayer: null, _containers: new Map(),
+    });
+    const hopper = game._hopperAt(0, 1, 0);
+    hopper.slots[0] = ItemStack.of('mc:bread', 2);
+    game._tickHoppers();
+    assertEqual(hopper.slots[0].count, 1);
+    const level = world.getBlock(0, 0, 0).get('level');
+    assert(level === 0 || level === 1, 'composter level must remain in valid range after one attempt');
+  });
+
+  it('extracts one bone meal from a full composter and preserves it when the hopper is full', () => {
+    const makeGame = (fillHopper) => {
+      const blocks = new Map();
+      const air = BLOCKS.get('mc:air').defaultState;
+      const world = {
+        seed: 123,
+        getBlock(x, y, z) { return blocks.get(`${x},${y},${z}`) || air; },
+        setBlock(x, y, z, state) { blocks.set(`${x},${y},${z}`, state); },
+      };
+      blocks.set('0,0,0', BLOCKS.get('mc:hopper').defaultState);
+      blocks.set('0,1,0', BLOCKS.get('mc:composter').defaultState.with('level', 8));
+      const game = Object.assign({}, ContainerScreensMixin, {
+        world, player: { x: 0.5, y: 0.5, z: 0.5 }, tickCount: 8,
+        multiplayer: null, _containers: new Map(),
+      });
+      const hopper = game._hopperAt(0, 0, 0);
+      if (fillHopper) for (let i = 0; i < hopper.slots.length; i++) hopper.slots[i] = ItemStack.of('mc:bread', 64);
+      return { game, world, hopper };
+    };
+    const ready = makeGame(false);
+    ready.game._tickHoppers();
+    assertEqual(ready.hopper.slots[0].item.id, 'mc:bone_meal');
+    assertEqual(ready.hopper.slots[0].count, 1);
+    assertEqual(ready.world.getBlock(0, 1, 0).get('level'), 0);
+    const blocked = makeGame(true);
+    blocked.game._tickHoppers();
+    assertEqual(blocked.world.getBlock(0, 1, 0).get('level'), 8);
+  });
   it('registers composter with saved fill level from zero to eight', () => {
     const composter = BLOCKS.get('mc:composter');
     assert(composter, 'composter missing');
