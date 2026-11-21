@@ -1070,8 +1070,8 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         : mob.type === 'cow' || mob.type === 'sheep' || mob.type === 'goat' || mob.type === 'mooshroom' || mob.type === 'polar_bear' || mob.type === 'horse' ? [2, 5]
         : mob.type === 'chicken' ? [4, 5] : [2, 5];
       const babyScale = mob.ageTicks < 0 ? 0.55 : 1;
-      const animal = ['sheep', 'pig', 'cow', 'goat', 'chicken', 'mooshroom', 'rabbit', 'wolf', 'polar_bear', 'bee'].includes(mob.type);
-      const humanoid = ['zombie', 'skeleton', 'stray', 'villager'].includes(mob.type);
+      const animal = ['sheep', 'pig', 'cow', 'goat', 'chicken', 'mooshroom', 'rabbit', 'wolf', 'polar_bear', 'bee', 'horse'].includes(mob.type);
+      const humanoid = ['zombie', 'skeleton', 'stray', 'villager', 'enderman'].includes(mob.type);
       // Mob movement advances along +sin(yaw), +cos(yaw); render the model on that same forward axis.
       draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
         hurt: (mob.hurtTicks || 0) > 0, animal, humanoid, vanillaModel: !!vanillaParts,
