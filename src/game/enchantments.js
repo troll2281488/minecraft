@@ -151,6 +151,9 @@ export function combineOnAnvil(left, right) {
 
 /** Weighted list of enchantments eligible for a particular item category. */
 export function eligibleEnchantments(item, { treasure = false } = {}) {
+  if (item?.id === 'mc:enchanted_book') return Object.entries(ENCHANTMENTS)
+    .filter(([, def]) => treasure || !def.treasure)
+    .map(([id, def]) => ({ id, maxLevel: def.max, weight: def.weight }));
   const categories = CATEGORY(item);
   return Object.entries(ENCHANTMENTS)
     .filter(([id, def]) => (treasure || !def.treasure) &&
@@ -222,4 +225,18 @@ export function applyEnchantingOffer(stack, offer, { playerLevel = 0, lapis = 0 
     levelsSpent: offer.levelCost,
     lapisSpent: offer.lapisCost,
   };
+}
+
+
+/** Mending repairs two durability points per XP point; return unused XP. */
+export function repairWithMending(stack, xpPoints) {
+  const xp = Math.max(0, Math.floor(Number(xpPoints) || 0));
+  if (!stack || stack.isEmpty || !stack.item?.isDamageable ||
+      enchantmentLevel(stack, 'mending') < 1 || stack.damage <= 0) {
+    return { repaired: 0, xpUsed: 0, xpRemaining: xp };
+  }
+  const repaired = Math.min(stack.damage, Math.floor(xp / 2));
+  if (repaired <= 0) return { repaired: 0, xpUsed: 0, xpRemaining: xp };
+  stack.damage = Math.max(0, stack.damage - repaired);
+  return { repaired, xpUsed: repaired * 2, xpRemaining: xp - repaired * 2 };
 }
