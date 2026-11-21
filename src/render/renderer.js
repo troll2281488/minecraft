@@ -20,6 +20,7 @@ import {
 import { ChunkRenderer } from './chunk_renderer.js';
 import { raycast } from '../game/interaction.js';
 import { renderBar } from '../ui/hud_bars.js';
+import { bedrockItemPose, bedrockChargeProgress } from './bedrock_animation_curves.js';
 
 /**
  * A unit cube as 36 vertices of (x, y, z, u, v), two triangles per face.
@@ -758,8 +759,11 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
             // and its 8-tick countdown is normalised to the pack's 0..1 timer.
             const attackPhase = Math.pow(attackProgress, 0.45) * Math.PI;
             const attackSwing = Math.sin(attackPhase) * (-56 * Math.PI / 180);
-            swing = pose.attack ? attackSwing : pose.swimming
-              ? Math.sin(walkPhase * 1.7) * 0.68
+            swing = pose.attack ? attackSwing
+              : pose.bowDraw ? -1.18
+              : pose.crossbowLoad ? -0.82
+              : pose.tridentCharge ? -1.42
+              : pose.swimming ? Math.sin(walkPhase * 1.7) * 0.68
               : pose.airborne ? (pose.jumping ? -0.42 : -0.10)
               : pose.sneaking ? -0.30
               : -0.42;
@@ -1089,8 +1093,16 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         [[0, 0, 0], [0.001, 0.001, 0.001], [0, 0, 0, 0]],
         [[0.015, -0.10 - handBob, 0.015], [0.20, 0.54, 0.20], [0.12, 0.48, 0.72, 1]],
       ];
-      draw(handX, handY, handZ, yaw, armParts, this.player.walkPhase, -1, -1, 1,
-        { firstPerson: true, attack: this.player.attackTime > 0, attackTime: this.player.attackTime, sneaking: this.player.sneaking, swimming: this.player.inWater, airborne: !this.player.onGround, walking: this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035 }, true);
+      const bowDrawing = this.entities?.bowDrawStart != null;
+      const crossbowLoading = this.entities?.crossbowLoadStart != null;
+      const tridentCharging = this.entities?.tridentThrowStart != null;
+      const firstPersonArmPose = {
+        firstPerson: true, attack: this.player.attackTime > 0, attackTime: this.player.attackTime,
+        bowDraw: bowDrawing, crossbowLoad: crossbowLoading, tridentCharge: tridentCharging,
+        sneaking: this.player.sneaking, swimming: this.player.inWater, airborne: !this.player.onGround,
+        walking: this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035,
+      };
+      draw(handX, handY, handZ, yaw, armParts, this.player.walkPhase, -1, -1, 1, firstPersonArmPose, true);
       // Draw the matching transparent sleeve over the first-person arm too.
       const outerArmParts = armParts.map(([offset, size, color]) => [offset, size.map((value) => value * 1.045), color]);
       draw(handX, handY, handZ, yaw, outerArmParts, this.player.walkPhase, -1, -1, 1,
@@ -1123,20 +1135,34 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         if (this.heldItemTextureReady) {
           const isBlock = !!held.item.block;
           const isFishingRod = id.includes('fishing_rod');
-          const isBow = id.includes('bow');
+          const itemKind = id.includes('crossbow') ? 'crossbow'
+            : id.includes('bow') ? 'bow'
+            : id.includes('shield') ? 'shield'
+            : id.includes('trident') ? 'trident' : 'item';
           const isTool = /sword|pickaxe|axe|shovel|hoe/.test(id);
           const size = isBlock ? [0.19, 0.19, 0.19]
             : isFishingRod ? [0.16, 0.58, 0.035]
-            : isBow ? [0.34, 0.56, 0.035]
+            : itemKind === 'bow' ? [0.34, 0.56, 0.035]
+            : itemKind === 'crossbow' ? [0.38, 0.48, 0.045]
+            : itemKind === 'shield' ? [0.48, 0.58, 0.045]
+            : itemKind === 'trident' ? [0.18, 0.62, 0.035]
             : isTool ? [0.27, 0.56, 0.035] : [0.24, 0.38, 0.035];
-          const itemParts = [[[0, 0, 0], size, [1, 1, 1, 1], null, null, [0.12, 0, -0.18]]];
-          // The bottom of the arm is the wrist: anchor the held sprite there,
-          // rather than in the middle of the forearm.
-          const itemX = handX + rightX * 0.018;
-          const itemY = handY - 0.24;
-          const itemZ = handZ + forwardZ * 0.025 + rightZ * 0.018;
-          const itemSwing = this.player.attackTime > 0
-            ? -0.55 * Math.sin((8 - this.player.attackTime) / 8 * Math.PI) : -0.12;
+          const nowTick = this.tickCount || 0;
+          const chargeStart = itemKind === 'bow' ? this.entities?.bowDrawStart
+            : itemKind === 'crossbow' ? this.entities?.crossbowLoadStart
+            : itemKind === 'trident' ? this.entities?.tridentThrowStart : null;
+          const chargeDuration = itemKind === 'trident' ? 10 : itemKind === 'crossbow' ? 25 : 20;
+          const charge = bedrockChargeProgress(chargeStart, nowTick, chargeDuration);
+          const attackProgress = Math.max(0, Math.min(1, (8 - (this.player.attackTime ?? 0)) / 8));
+          const itemPose = bedrockItemPose(this.player.attackTime > 0 ? attackProgress : 0, itemKind, charge);
+          const itemSize = [size[0], size[1] * itemPose.scaleY, size[2]];
+          const itemParts = [[[0, 0, 0], itemSize, [1, 1, 1, 1], null, null, itemPose.rotation]];
+          // Translate the Bedrock pack's 1/16-block keyframe offsets into the
+          // camera-relative item anchor used by this renderer.
+          const itemX = handX + rightX * (0.018 + itemPose.offset[0]) + forwardX * itemPose.offset[2];
+          const itemY = handY - 0.24 + itemPose.offset[1];
+          const itemZ = handZ + forwardZ * (0.025 + itemPose.offset[2]) + rightZ * 0.018;
+          const itemSwing = this.player.attackTime > 0 ? 0 : -0.12;
           draw(itemX, itemY, itemZ, yaw, itemParts, 0, -1, -1, 1,
             { itemModel: true, itemSprite: true, itemSwing });
         }
