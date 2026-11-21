@@ -33,6 +33,12 @@ export function precipitationRoll(seed, x, y, z, time, salt = 'rain') {
   return hash32(key) / 0x100000000;
 }
 
+/** Stable per-position thunder roll; callers evaluate only nearby loaded blocks. */
+export function shouldLightningRodStrike(seed, x, y, z, time, weather) {
+  return weather === 'thunder' &&
+    precipitationRoll(seed, x, y, z, time, 'lightning-rod') < 0.0004;
+}
+
 export function nextRainCauldronLevel(level, weather, roll) {
   const current = Number.isInteger(level) ? Math.max(0, Math.min(3, level)) : 0;
   if (!['rain', 'thunder'].includes(weather) || current >= 3 ||
@@ -63,7 +69,7 @@ export function tickWeatherBlocks(world, player, weather, time) {
       for (let y = Math.max(-64, surfaceY - 3); y <= surfaceY + 1; y++) {
         const state = world.getBlock(x, y, z);
         const id = state?.block?.id;
-        if (id !== 'mc:campfire' && id !== 'mc:cauldron') continue;
+        if (id !== 'mc:campfire' && id !== 'mc:cauldron' && id !== 'mc:lightning_rod') continue;
 
         let exposed = true;
         for (let aboveY = y + 1; aboveY <= surfaceY + 1; aboveY++) {
