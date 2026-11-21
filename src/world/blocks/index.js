@@ -782,7 +782,7 @@ ITEMS.define('mc:diamond_horse_armor', { stackSize: 1, horseArmor: 'diamond' });
 for (const mobType of [
   'cow','pig','sheep','chicken','zombie','husk','zombie_villager','skeleton','stray','wither_skeleton',
   'creeper','enderman','spider','cave_spider','silverfish','endermite','slime','magma_cube','vex','vindicator','evoker','witch','blaze','ghast','guardian','elder_guardian','wither',
-  'mooshroom','rabbit','wolf','horse','polar_bear','villager',
+  'mooshroom','rabbit','wolf','horse','polar_bear','villager','bee',
 ]) {
   ITEMS.define(`mc:${mobType}_spawn_egg`, {
     stackSize: 64, spawnEggMob: mobType,
