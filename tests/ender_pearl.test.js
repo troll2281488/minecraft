@@ -22,10 +22,8 @@ describe('Java ender pearl landing', () => {
   });
 
   it('rejects blocked headroom, missing floor and unloaded destination chunks', () => {
-    const blocked = new Map([
-      ['3,63,4', { id: 'mc:stone', solid: true }],
-      ['3,65,4', { id: 'mc:stone', solid: true }],
-    ]);
+    const blocked = new Map();
+    for (let y = 63; y <= 68; y++) blocked.set(`3,${y},4`, { id: 'mc:stone', solid: true });
     assertEqual(findEnderPearlLanding(testWorld(blocked), {
       x: 3, y: 63, z: 4, face: { dx: 0, dy: 1, dz: 0 },
     }), null);
