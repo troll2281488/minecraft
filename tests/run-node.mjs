@@ -8,6 +8,8 @@ import './bee_hives.test.js';
 import './weather.test.js';
 import './status_effects.test.js';
 import './sleep.test.js';
+import './sponge.test.js';
+import './jukebox.test.js';
 import './farming.test.js';
 import './composting.test.js';
 import './hopper.test.js';
