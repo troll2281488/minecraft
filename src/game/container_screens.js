@@ -9,7 +9,7 @@
  * Clicks: left click takes, swaps or merges with the cursor; right click takes half or
  * puts down one; shift-click moves a stack between the player's inventory and the container.
  */
-import { Chest, Hopper, Dropper, Furnace, SMELTING, SMELT_TICKS, moveOneItem, serializeContainer, deserializeContainer } from './containers.js';
+import { Chest, Hopper, Dropper, Furnace, SMELTING, SMELT_TICKS, moveOneItem, serializeContainer, deserializeContainer, isItemInHopperIntake, insertDroppedStack } from './containers.js';
 import { readSignal } from './redstone_devices.js';
 import { compostChance, compostRoll, composterHopperInsert, composterHopperExtract } from './composting.js';
 import { ItemStack } from '../world/item.js';
@@ -636,10 +636,68 @@ export const ContainerScreensMixin = {
 
         const hopper = this._hopperAt(x, y, z);
         const hopperEntry = { type: 'hopper', data: hopper };
+        let collectedDroppedItem = false;
+
+        // Collect item entities from the open top. Only the room host mutates
+        // shared drops; multiplayer claims use the same atomic transaction as
+        // player pickup, so a player and a hopper cannot collect one stack twice.
+        const drops = this.entities?.droppedItems;
+        if (Array.isArray(drops)) {
+          for (let dropIndex = drops.length - 1; dropIndex >= 0; dropIndex--) {
+            const drop = drops[dropIndex];
+            if (drop.hopperClaiming || drop.claiming ||
+                !isItemInHopperIntake(drop, x, y, z)) continue;
+            const previewHopper = new Hopper();
+            previewHopper.slots = hopper.slots.map((slot) => slot.clone());
+            const preview = insertDroppedStack(previewHopper, drop.stack);
+            if (preview.inserted <= 0) continue;
+
+            if (drop.networkKey && this.multiplayer?.roomId) {
+              drop.hopperClaiming = true;
+              Promise.resolve(this.multiplayer.claimDroppedItem(drop)).then((claimed) => {
+                drop.hopperClaiming = false;
+                if (!claimed) return;
+                const currentIndex = this.entities?.droppedItems?.indexOf(drop) ?? -1;
+                if (currentIndex >= 0) this.entities.droppedItems.splice(currentIndex, 1);
+                const currentState = this.world.getBlock(x, y, z);
+                if (currentState.block.id !== 'mc:hopper' || currentState.get('enabled') === false) {
+                  // The item has been claimed, but the hopper was removed or
+                  // disabled during the async transaction: return the full stack.
+                  this.entities?.spawnItemStackAt(drop.stack, drop.x, drop.y, drop.z, 0, 0.04, 0);
+                  return;
+                }
+                const targetHopper = this._hopperAt(x, y, z);
+                const { inserted, remaining } = insertDroppedStack(targetHopper, drop.stack);
+                if (remaining > 0) {
+                  this.entities?.spawnItemStackAt(
+                    ItemStack.of(drop.stack.item.id, remaining, drop.stack.damage, drop.stack.data),
+                    drop.x, drop.y, drop.z, 0, 0.04, 0,
+                  );
+                }
+                if (inserted > 0 && this.multiplayer?.roomId) {
+                  this._hopperDirtyKeys ||= new Set();
+                  this._hopperDirtyKeys.add(key);
+                }
+              }).catch(() => { drop.hopperClaiming = false; });
+              continue;
+            }
+
+            const { inserted, remaining } = insertDroppedStack(hopper, drop.stack);
+            if (inserted > 0) {
+              if (remaining <= 0) drops.splice(dropIndex, 1);
+              else drop.stack.count = remaining;
+              collectedDroppedItem = true;
+              if (this.multiplayer?.roomId) {
+                this._hopperDirtyKeys ||= new Set();
+                this._hopperDirtyKeys.add(key);
+              }
+            }
+          }
+        }
         const [dx, dy, dz] = directions[state.get('facing')] || directions.down;
         const tx = x + dx, ty = y + dy, tz = z + dz;
         const targetBlock = world.getBlock(tx, ty, tz).block.id;
-        let moved = false;
+        let moved = collectedDroppedItem;
         let destinationEntry = null;
         if (targetBlock === 'mc:chest' || targetBlock === 'mc:trapped_chest') {
           destinationEntry = { type: 'chest', data: this._chestAt(tx, ty, tz) };
@@ -669,7 +727,7 @@ export const ContainerScreensMixin = {
               }
             }
           }
-        } else if (destinationEntry) {
+        } else if (destinationEntry && !moved) {
           const targetKey = this._containerKey(tx, ty, tz);
           if (!this.multiplayer?.isContainerLockedByOther?.(targetKey)) {
             moved = this._hopperTransferOne(hopperEntry, destinationEntry, dy < 0 ? 'top' : 'side');
