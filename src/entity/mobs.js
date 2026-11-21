@@ -7,6 +7,7 @@ import { createVillagerProfile } from './villager_trades.js';
 import { drawPower, canFire } from '../game/bow.js';
 import { aimVector, createArrow, stepArrow } from './arrows.js';
 import { tickBeeForaging } from '../game/bee_hives.js';
+import { enchantmentDamageBonus } from '../game/enchantments.js';
 
 /**
  * Lightweight voxel creature simulation. Mobs use deterministic game ticks,
@@ -1151,7 +1152,8 @@ export class MobSystem {
     const player = this.game.player;
     const held = this.game.inventory?.held;
     const baseDamage = Math.max(1, held?.item?.attackDamage || 1);
-    const damage = baseDamage + (player.effects?.has('strength') ? 3 * (player.effects.amplifier('strength') + 1) : 0);
+    const damage = baseDamage + enchantmentDamageBonus(held, mob.type) +
+      (player.effects?.has('strength') ? 3 * (player.effects.amplifier('strength') + 1) : 0);
     const finalDamage = mob.type === 'horse' ? calculateHorseArmorDamage(damage, mob.horseArmor) : damage;
     mob.health = Math.max(0, mob.health - finalDamage);
     this.game.sounds?.play('hit');
