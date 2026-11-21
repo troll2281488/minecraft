@@ -419,6 +419,7 @@ export const BlockActionsMixin = {
     if (!player || player.gamemode !== GAMEMODE.SURVIVAL || stack.isEmpty || !food) return false;
     if (!player.vitals.eat(food)) return false;
     this.inventory.consumeHeld(1);
+    if (stack.item.id === 'mc:honey_bottle') this.inventory.addItem('mc:glass_bottle', 1);
     this.ui.toast('Eating');
     return true;
   },
