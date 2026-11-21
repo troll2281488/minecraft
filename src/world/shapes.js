@@ -36,41 +36,80 @@ function slabBoxes(state) {
 }
 
 // ---------------------------------------------------------------------------
-// Stairs (straight)
+// Stairs (straight and neighbour-shaped corners)
 // ---------------------------------------------------------------------------
 
-// The tall part sits on the `facing` side; placement points that away from the
-// player, so you step up in the direction you are looking. Corner auto-shaping
-// (inner/outer, from neighbouring stairs) is a later refinement -- until then
-// every stair renders and collides as a straight one, which is a valid stair,
-// just non-connecting at corners.
-const STAIR_STEP_BOTTOM = {
-  north: [0, 0.5, 0, 1, 1, 0.5],
-  south: [0, 0.5, 0.5, 1, 1, 1],
-  east: [0.5, 0.5, 0, 1, 1, 1],
-  west: [0, 0.5, 0, 0.5, 1, 1],
-};
-const STAIR_STEP_TOP = {
-  north: [0, 0, 0, 1, 0.5, 0.5],
-  south: [0, 0, 0.5, 1, 0.5, 1],
-  east: [0.5, 0, 0, 1, 0.5, 1],
-  west: [0, 0, 0, 0.5, 0.5, 1],
-};
-
+// The raised half occupies the half-block in front of the stair's facing.
+// Corner shapes are split into quarter-block boxes so the renderer and player
+// collision share precisely the same inner/outer profile.
+const STAIR_VECTORS = Object.freeze({
+  north: [0, -1], south: [0, 1], west: [-1, 0], east: [1, 0],
+});
+const STAIR_LEFT = Object.freeze({ north: 'west', south: 'east', west: 'south', east: 'north' });
+const STAIR_RIGHT = Object.freeze({ north: 'east', south: 'west', west: 'north', east: 'south' });
 const STAIR_CACHE = new Map();
 
-function stairBoxes(state) {
-  const facing = state.get('facing');
-  const half = state.get('half');
-  const key = `${facing}:${half}`;
-  let boxes = STAIR_CACHE.get(key);
-  if (!boxes) {
-    const base = half === 'top' ? SLAB_TOP[0] : SLAB_BOTTOM[0];
-    const step = half === 'top' ? STAIR_STEP_TOP[facing] : STAIR_STEP_BOTTOM[facing];
-    boxes = Object.freeze([base, Object.freeze([...step])]);
-    STAIR_CACHE.set(key, boxes);
+function stairShapeFromNeighbors(state, getNeighbor) {
+  const facing = state.get('facing') || 'north';
+  const half = state.get('half') || 'bottom';
+  if (!getNeighbor) return state.get('shape') || 'straight';
+  const [dx, dz] = STAIR_VECTORS[facing];
+  const front = getNeighbor(dx, 0, dz);
+  const back = getNeighbor(-dx, 0, -dz);
+  const isCompatible = (neighbor) => neighbor?.block?.renderShape === 'stair' &&
+    neighbor.get('half') === half &&
+    neighbor.get('facing') !== facing &&
+    STAIR_VECTORS[neighbor.get('facing')][0] * dx +
+      STAIR_VECTORS[neighbor.get('facing')][1] * dz === 0;
+  if (isCompatible(front)) {
+    return front.get('facing') === STAIR_LEFT[facing] ? 'outer_left' : 'outer_right';
   }
-  return boxes;
+  if (isCompatible(back)) {
+    return back.get('facing') === STAIR_LEFT[facing] ? 'inner_left' : 'inner_right';
+  }
+  return 'straight';
+}
+
+function stairQuadrant(facing, side) {
+  const front = STAIR_VECTORS[facing];
+  const lateral = STAIR_VECTORS[side];
+  const x0 = front[0] < 0 || lateral[0] < 0 ? 0 : 0.5;
+  const x1 = x0 + 0.5;
+  const z0 = front[1] < 0 || lateral[1] < 0 ? 0 : 0.5;
+  const z1 = z0 + 0.5;
+  return [x0, z0, x1, z1];
+}
+
+function stairBoxes(state, getNeighbor) {
+  const facing = state.get('facing') || 'north';
+  const half = state.get('half') || 'bottom';
+  const shape = stairShapeFromNeighbors(state, getNeighbor);
+  const key = `${facing}:${half}:${shape}`;
+  if (STAIR_CACHE.has(key)) return STAIR_CACHE.get(key);
+  const y0 = half === 'top' ? 0 : 0.5;
+  const y1 = half === 'top' ? 0.5 : 1;
+  const base = half === 'top' ? SLAB_TOP[0] : SLAB_BOTTOM[0];
+  const boxes = [base];
+  const left = stairQuadrant(facing, STAIR_LEFT[facing]);
+  const right = stairQuadrant(facing, STAIR_RIGHT[facing]);
+  const rearLeft = stairQuadrant(STAIR_VECTORS[facing][0] === 0
+    ? (facing === 'north' ? 'south' : 'north')
+    : (facing === 'west' ? 'east' : 'west'), STAIR_LEFT[facing]);
+  const rearRight = stairQuadrant(STAIR_VECTORS[facing][0] === 0
+    ? (facing === 'north' ? 'south' : 'north')
+    : (facing === 'west' ? 'east' : 'west'), STAIR_RIGHT[facing]);
+  let quadrants;
+  if (shape === 'outer_left') quadrants = [left];
+  else if (shape === 'outer_right') quadrants = [right];
+  else if (shape === 'inner_left') quadrants = [left, right, rearLeft];
+  else if (shape === 'inner_right') quadrants = [left, right, rearRight];
+  else quadrants = [left, right];
+  for (const [x0, z0, x1, z1] of quadrants) {
+    boxes.push([x0, y0, z0, x1, y1, z1]);
+  }
+  const frozen = Object.freeze(boxes.map((box) => Object.freeze(box)));
+  STAIR_CACHE.set(key, frozen);
+  return frozen;
 }
 
 // ---------------------------------------------------------------------------
@@ -367,7 +406,7 @@ export function shapeBoxes(state, getNeighbor = null) {
     case 'wall': return wallBoxes(state, getNeighbor);
     case 'fence_gate': return fenceGateBoxes(state);
     case 'slab': return slabBoxes(state);
-    case 'stair': return stairBoxes(state);
+    case 'stair': return stairBoxes(state, getNeighbor);
     case 'pane': return PANE_BOXES;
     case 'ladder': return ladderBoxes(state);
     case 'door': return doorBoxes(state);
