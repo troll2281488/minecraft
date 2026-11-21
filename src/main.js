@@ -374,7 +374,7 @@ class Game {
     player.tick(world);
     const lavaAtFeet = world.getBlock(Math.floor(player.x), Math.floor(player.y + 0.05), Math.floor(player.z)).block.id === 'mc:lava';
     const lavaAtHead = world.getBlock(Math.floor(player.x), Math.floor(player.y + 1.2), Math.floor(player.z)).block.id === 'mc:lava';
-    if (!player.flying && (lavaAtFeet || lavaAtHead)) {
+    if (!player.flying && (lavaAtFeet || lavaAtHead) && !player.effects?.has('fire_resistance')) {
       this._lavaDamageTicks = (this._lavaDamageTicks || 0) + 1;
       if (this._lavaDamageTicks % 20 === 1) player.health = Math.max(0, player.health - 2);
     } else this._lavaDamageTicks = 0;
