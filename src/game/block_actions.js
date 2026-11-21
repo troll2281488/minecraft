@@ -32,6 +32,7 @@ import { weatherAt } from './weather.js';
 import { absorbWaterAround } from './sponge.js';
 import { POTION_ITEMS } from '../entity/status_effects.js';
 import { planCampfireFoodInteraction } from './campfire_cooking.js';
+import { findEnderPearlLanding } from './ender_pearl.js';
 
 export const BlockActionsMixin = {
   _refreshWallConnections(...positions) {
@@ -133,6 +134,28 @@ export const BlockActionsMixin = {
   },
 
   _useOrPlace() {
+    if (this.inventory?.held?.item?.id === 'mc:ender_pearl') {
+      const last = this.player.lastEnderPearlUse ?? -1000;
+      if (this.tickCount - last < 20) {
+        this.ui.toast('Эндер-жемчуг ещё перезаряжается');
+        return;
+      }
+      const landing = findEnderPearlLanding(this.world, this.hit);
+      if (!landing) {
+        this.ui.toast('Здесь нельзя безопасно телепортироваться', { error: true });
+        return;
+      }
+      this.player.lastEnderPearlUse = this.tickCount;
+      this.player.x = landing.x; this.player.y = landing.y; this.player.z = landing.z;
+      this.player.vx = 0; this.player.vy = 0; this.player.vz = 0;
+      if (this.player.gamemode === GAMEMODE.SURVIVAL) {
+        this.inventory.consumeHeld(1);
+        this.player.health = Math.max(0, this.player.health - 5);
+      }
+      this.sounds?.play('cast');
+      this.ui.toast('Телепортация эндер-жемчугом');
+      return;
+    }
     if (this.inventory?.held?.item?.id === 'mc:goat_horn') {
       const last = this.player.lastGoatHornUse ?? -1000;
       if (this.tickCount - last < 140) {
