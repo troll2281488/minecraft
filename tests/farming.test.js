@@ -34,6 +34,11 @@ describe('wheat farming and farmland hydration', () => {
     assertEqual(hasNearbyWaterSource(world, 0, 64, 0), true);
   });
 
+  it('uses the full square horizontal water range, including diagonal corners', () => {
+    const source = BLOCKS.get('mc:water').defaultState;
+    assertEqual(hasNearbyWaterSource(makeWorld([['4,65,4', source]]), 0, 64, 0), true);
+  });
+
   it('does not hydrate from flowing water or water beyond the four-block range', () => {
     const flowing = BLOCKS.get('mc:water').defaultState.with('level', 4);
     assertEqual(hasNearbyWaterSource(makeWorld([['2,64,0', flowing]]), 0, 64, 0), false);
