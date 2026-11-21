@@ -796,6 +796,33 @@ export class Multiplayer {
     }
   }
 
+  pushBlockChanges(changes) {
+    if (!this.roomId || this.applyingRemoteBlock || !Array.isArray(changes) || !changes.length) return;
+    const updates = {};
+    const queued = [];
+    for (const change of changes) {
+      const { x, y, z, state } = change || {};
+      const stateString = state?.toString?.();
+      if (![x, y, z].every(Number.isInteger) || !stateString) continue;
+      const key = `overworld_${x}_${y}_${z}`;
+      const payload = { x, y, z, state: stateString, ts: Date.now() };
+      updates[key] = payload;
+      const queueKey = `${this.roomId}:${key}`;
+      const entry = { roomId: this.roomId, key, payload };
+      this.pendingBlockWrites.set(queueKey, entry);
+      queued.push([queueKey, entry]);
+    }
+    if (!queued.length) return;
+    while (this.pendingBlockWrites.size > 4096) this.pendingBlockWrites.delete(this.pendingBlockWrites.keys().next().value);
+    if (!this.db || !this.firebaseConnected) return;
+    const roomId = this.roomId;
+    update(ref(this.db, `minecraft_game/rooms/${roomId}/blocks`), updates)
+      .then(() => {
+        for (const [key, entry] of queued) if (this.pendingBlockWrites.get(key) === entry) this.pendingBlockWrites.delete(key);
+      })
+      .catch((error) => console.warn('[multiplayer] batched block update:', error));
+  },
+
   pushBlockChange(x, y, z, state) {
     if (!this.roomId || this.applyingRemoteBlock) return;
     const stateString = state?.toString?.();
