@@ -995,6 +995,7 @@ ITEMS.define('mc:bow', { stackSize: 1, maxDamage: 384, weapon: 'bow' });
 ITEMS.define('mc:crossbow', { stackSize: 1, maxDamage: 465, weapon: 'crossbow' });
 ITEMS.define('mc:trident', { stackSize: 1, maxDamage: 250, weapon: 'trident', attackDamage: 9 });
 ITEMS.define('mc:arrow', { stackSize: 64 });
+ITEMS.define('mc:firework_rocket', { stackSize: 64, rarity: 'common' });
 ITEMS.define('mc:saddle', { stackSize: 1 });
 ITEMS.define('mc:carrot_on_a_stick', { stackSize: 1, maxDamage: 25, tool: 'carrot_on_a_stick' });
 ITEMS.define('mc:lead', { stackSize: 64 });
