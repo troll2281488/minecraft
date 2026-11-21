@@ -824,6 +824,19 @@ TEXTURES.slime_block = () => {
   return tile;
 };
 
+TEXTURES.honey_block = () => {
+  const tile = grainy(hex(0xd99b28), 0.1, 'honey_block');
+  const amber = hex(0xb87518), light = hex(0xf2c45b), pale = hex(0xffdf83);
+  // Uneven amber bands and a few bright honey glints keep the tile readable
+  // without using external copyrighted texture assets.
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    let c = (y < 3 || y > 12) ? amber : (y < 6 || y > 9) ? light : hex(0xe5ad3c);
+    if ((x * 5 + y * 3) % 19 === 0) c = pale;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+
 TEXTURES.piston_side = () => {
   const tile = grainy(hex(0x777777), 0.12, 'piston_side');
   const stone = hex(0x777777), wood = hex(0x9b6a3b), dark = hex(0x4b3423), iron = hex(0xb8b8b8);
