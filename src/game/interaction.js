@@ -334,7 +334,13 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
   }
 
   // Silk Touch preserves ordinary block drops, but never makes spawners collectible.
-  if (enchantmentLevel(heldStack, 'silk_touch') > 0 && id !== 'mc:mob_spawner' && ITEMS.get(id)) {
+  const silkTouchBlocks = new Set([
+    'mc:glass', 'mc:ice', 'mc:grass_block', 'mc:stone', 'mc:coal_ore', 'mc:iron_ore',
+    'mc:gold_ore', 'mc:diamond_ore', 'mc:emerald_ore', 'mc:lapis_ore', 'mc:redstone_ore',
+    'mc:glowstone', 'mc:bookshelf', 'mc:clay', 'mc:mycelium', 'mc:podzol',
+    'mc:short_grass', 'mc:fern', 'mc:dead_bush',
+  ]);
+  if (enchantmentLevel(heldStack, 'silk_touch') > 0 && silkTouchBlocks.has(id) && ITEMS.get(id)) {
     return [{ id, count: 1 }];
   }
   if (id === 'mc:glass' || id === 'mc:ice') return [];
