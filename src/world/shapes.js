@@ -380,8 +380,6 @@ export function wallStateFromNeighbors(state, getNeighbor) {
     .with('west', west).with('east', east).with('up', up);
 }
 
-const WALL_CACHE = new Map();
-
 function wallBoxes(state) {
   const connections = {
     north: state.get('north') || 'none',
