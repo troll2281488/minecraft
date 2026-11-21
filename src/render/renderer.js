@@ -789,7 +789,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           // First-person attack swing is already applied above; do not add a second rotation.
         } else if (!skin && pose.vanillaModel && /head/i.test(partName ?? '')) {
           swing = Math.sin(pose.idle ?? 0) * 0.045 + (pose.walking ? Math.sin(walkPhase * 0.5) * 0.025 : 0);
-        } else if (!skin && pose.humanoid && (pose.vanillaModel ? /arm/i.test(partName ?? '') : (partIndex === 2 || partIndex === 3))) {
+        } else if (!skin && pose.humanoid && (pose.vanillaModel ? /arm/i.test(partName ?? '') : (pose.mobType === 'villager' ? partIndex === 3 : (partIndex === 2 || partIndex === 3)))) {
           // Fallback humanoid arrays follow head/body/left-arm/right-arm/legs.
           // The old 3/4 test animated the right arm and left leg as if both were arms.
           const left = /left/i.test(partName ?? '') || (!/right/i.test(partName ?? '') && partIndex === 2);
@@ -1065,7 +1065,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         : mob.type === 'spider' || mob.type === 'cave_spider' ? [4, 11]
         : mob.type === 'creeper' ? [2, 5]
         : ['zombie','skeleton','stray','villager','enderman'].includes(mob.type) ? [4, 5]
-        : mob.type === 'pig' || mob.type === 'rabbit' ? [2, 5]
+        : mob.type === 'pig' || mob.type === 'rabbit' ? [3, 6]
         : mob.type === 'cow' || mob.type === 'sheep' || mob.type === 'goat' || mob.type === 'mooshroom' || mob.type === 'polar_bear' || mob.type === 'horse' ? [2, 5]
         : mob.type === 'chicken' ? [4, 5] : [2, 5];
       const babyScale = mob.ageTicks < 0 ? 0.55 : 1;
