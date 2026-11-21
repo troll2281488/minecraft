@@ -80,6 +80,7 @@ describe('composter and bone meal farming', () => {
     assertEqual(compostChance('mc:carrot'), 0.65);
     assertEqual(compostChance('mc:pumpkin'), 0.65);
     assertEqual(compostChance('mc:melon_slice'), 0.50);
+    assertEqual(compostChance('mc:sugar_cane'), 0.50);
     assertEqual(compostChance('mc:bread'), 0.85);
     assertEqual(isCompostable('mc:diamond'), false);
     assertEqual(compostChance('mc:missing_item'), null);
