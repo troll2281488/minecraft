@@ -20,7 +20,16 @@ describe('Seeded Overworld weather', () => {
     assertEqual(nextRainCauldronLevel(1, 'rain', 0.5), 1);
   });
 
-  it('limits lightning rod strikes to deterministic thunder rolls', () => {\n    assertEqual(shouldLightningRodStrike('seed', 0, 64, 0, 20, 'rain'), false);\n    assertEqual(shouldLightningRodStrike('seed', 0, 64, 0, 20, 'clear'), false);\n    let seed = 'rod';\n    while (!shouldLightningRodStrike(seed, 0, 64, 0, 20, 'thunder')) seed += 'x';\n    assertEqual(shouldLightningRodStrike(seed, 0, 64, 0, 20, 'thunder'), true);\n    assertEqual(shouldLightningRodStrike(seed, 0, 64, 0, 20, 'rain'), false);\n  });\n\n  it('lets rain extinguish only lit campfires', () => {
+  it('limits lightning rod strikes to deterministic thunder rolls', () => {
+    assertEqual(shouldLightningRodStrike('seed', 0, 64, 0, 20, 'rain'), false);
+    assertEqual(shouldLightningRodStrike('seed', 0, 64, 0, 20, 'clear'), false);
+    let seed = 'rod';
+    while (!shouldLightningRodStrike(seed, 0, 64, 0, 20, 'thunder')) seed += 'x';
+    assertEqual(shouldLightningRodStrike(seed, 0, 64, 0, 20, 'thunder'), true);
+    assertEqual(shouldLightningRodStrike(seed, 0, 64, 0, 20, 'rain'), false);
+  });
+
+  it('lets rain extinguish only lit campfires', () => {
     assertEqual(shouldRainExtinguishCampfire('rain', true, 0), true);
     assertEqual(shouldRainExtinguishCampfire('thunder', true, 0.049), true);
     assertEqual(shouldRainExtinguishCampfire('clear', true, 0), false);
@@ -68,7 +77,19 @@ describe('Weather block integration', () => {
     assertEqual(cauldronWorld.getBlock(0, 64, 0).get('level'), 2);
   });
 
-  it('charges exposed lightning rods during thunder and resets their redstone pulse', () => {\n    let seed = 'weather-lightning-rod';\n    while (!shouldLightningRodStrike(seed, 0, 64, 0, 20, 'thunder')) seed += 'x';\n    const world = mockWorld(seed, { '0,64,0': state('mc:lightning_rod', { powered: false }) });\n    const changes = tickWeatherBlocks(world, { x: 0, z: 0 }, 'thunder', 20);\n    assertEqual(changes.length, 1);\n    assertEqual(world.getBlock(0, 64, 0).get('powered'), true);\n    const reset = tickWeatherBlocks(world, { x: 0, z: 0 }, 'thunder', 40);\n    assertEqual(reset.length, 1);\n    assertEqual(world.getBlock(0, 64, 0).get('powered'), false);\n  });\n\n  it('does not apply rain effects beneath a solid roof or during clear weather', () => {
+  it('charges exposed lightning rods during thunder and resets their redstone pulse', () => {
+    let seed = 'weather-lightning-rod';
+    while (!shouldLightningRodStrike(seed, 0, 64, 0, 20, 'thunder')) seed += 'x';
+    const world = mockWorld(seed, { '0,64,0': state('mc:lightning_rod', { powered: false }) });
+    const changes = tickWeatherBlocks(world, { x: 0, z: 0 }, 'thunder', 20);
+    assertEqual(changes.length, 1);
+    assertEqual(world.getBlock(0, 64, 0).get('powered'), true);
+    const reset = tickWeatherBlocks(world, { x: 0, z: 0 }, 'thunder', 40);
+    assertEqual(reset.length, 1);
+    assertEqual(world.getBlock(0, 64, 0).get('powered'), false);
+  });
+
+  it('does not apply rain effects beneath a solid roof or during clear weather', () => {
     let seed = 'covered-weather';
     while (precipitationRoll(seed, 0, 64, 0, 20, 'campfire') >= 0.05) seed += 'x';
     const covered = mockWorld(seed, {
