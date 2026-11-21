@@ -437,7 +437,8 @@ class Game {
 
     if (this.mouseButtons.has(0) && !this.inventoryOpen && !this.tradeOpen) {
       // Entity hits take priority over mining blocks behind the creature.
-      const hitMob = this.entities?.attackFromPlayer();
+      const hitCart = this.minecarts?.attackFromPlayer();
+      const hitMob = hitCart || this.entities?.attackFromPlayer();
       if (!hitMob && this.hit) {
         const conditions = {
           underwater: player.inWater,
