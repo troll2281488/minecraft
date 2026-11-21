@@ -73,7 +73,10 @@ export const BlockActionsMixin = {
       // The upper door half is dependent on the lower half and never drops an item.
       const drops = isDoor && doorHalf === 'upper'
         ? [] : blockDrops(state, this.inventory.held, this.world.seed, x, y, z);
-      for (const drop of drops) this.inventory.addItem(drop.id, drop.count);
+      for (const drop of drops) {
+        this.inventory.addItem(drop.id, drop.count);
+        if (drop.id === 'mc:diamond' && this.player?.gamemode === GAMEMODE.SURVIVAL) this.player.recordAdvancementEvent?.('acquired_diamond', this.tickCount || 0);
+      }
       // Ore XP is awarded only for a valid survival harvest, never for creative breaking.
       if (canHarvest(state.block, this.inventory.held)) {
         if (state.block.id === 'mc:stone' && this.player?.gamemode === GAMEMODE.SURVIVAL) this.player.recordAdvancementEvent?.('mined_stone', this.tickCount || 0);
