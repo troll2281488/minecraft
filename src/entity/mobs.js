@@ -16,6 +16,12 @@ import { tickBeeForaging } from '../game/bee_hives.js';
  * each hostile has a readable counterplay window instead of sharing one generic AI.
  */
 /** Pick a walkable local detour that still trends toward the target. */
+/** Java sunlight ignition: zombies (including zombie villagers), skeletons and strays; husks and wither skeletons are immune. */
+export function shouldBurnInSunlight(type, daylight, skyExposed) {
+  return daylight > 0.82 && skyExposed &&
+    ['zombie', 'zombie_villager', 'skeleton', 'stray'].includes(type);
+}
+
 export function chooseMobDetourYaw(currentYaw, desiredYaw, options) {
   let bestYaw = null;
   let bestScore = Infinity;
@@ -1252,17 +1258,15 @@ export class MobSystem {
       if (mob.hurtTicks > 0) mob.hurtTicks--;
       mob.anim.hurt = mob.hurtTicks > 0 ? mob.hurtTicks / 8 : 0;
 
-      if (this.game.daylight > 0.82 && ['zombie', 'skeleton', 'stray'].includes(mob.type)) {
-        const above = world.getBlock(Math.floor(mob.x), Math.floor(mob.y + 2), Math.floor(mob.z)).block;
-        if (!above.solid && !above.liquid) {
-          mob.sunBurnTicks = (mob.sunBurnTicks || 0) + 1;
-          if (mob.sunBurnTicks >= 20) {
-            mob.sunBurnTicks = 0;
-            mob.health -= 2;
-            mob.hurtTicks = 5;
-          }
-        } else mob.sunBurnTicks = 0;
-      }
+      const above = world.getBlock(Math.floor(mob.x), Math.floor(mob.y + 2), Math.floor(mob.z)).block;
+      if (shouldBurnInSunlight(mob.type, this.game.daylight, !above.solid && !above.liquid)) {
+        mob.sunBurnTicks = (mob.sunBurnTicks || 0) + 1;
+        if (mob.sunBurnTicks >= 20) {
+          mob.sunBurnTicks = 0;
+          mob.health -= 2;
+          mob.hurtTicks = 5;
+        }
+      } else mob.sunBurnTicks = 0;
 
       if (player.ridingHorse === mob) {
         mob.x = player.x; mob.y = player.y - 0.15; mob.z = player.z;
