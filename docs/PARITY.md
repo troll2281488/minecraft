@@ -210,6 +210,10 @@ Player movement now detects ladder contact: forward or jump input climbs at a ca
 
 Redstone ore has a saved lit state. Right-clicking it or stepping on it activates a 30-tick glow; the lit state emits block light level 9 and uses a brighter procedural texture. Repeated contact refreshes the timer. This is a local player-contact approximation; projectile activation, exact vanilla mining-start hooks and mob contact are not included.
 
+### Slime blocks and piston adhesion
+
+Slime blocks can be crafted from nine slime balls. A piston pushing a slime block now plans the connected attached-block group before changing the world; attached ordinary blocks move with it, and the complete group is rejected if any member is immovable, outside build height, in an unloaded chunk, or would exceed the 12-block push cap. Slime/honey cross-adhesion is not implemented because honey blocks and honey acquisition are not yet part of this build.
+
 ### Pistons
 
 Normal and sticky pistons now react to adjacent local redstone signals. Extension validates the complete push line before mutating anything, moves up to 12 movable blocks from farthest to nearest, creates an oriented internal piston head, and records the extended blockstate. Retraction removes the head; sticky pistons pull one movable block from two blocks ahead when the front cell is clear. Bedrock, obsidian, portal blocks, piston parts, containers, spawners and other registered immovable IDs block movement. The piston head has a shared render/collision box model. This remains a deliberately bounded first implementation: no slime/honey adhesion, moving-block entity interpolation, quasi-connectivity, block-entity movement, or complete Java neighbor-update scheduler.
