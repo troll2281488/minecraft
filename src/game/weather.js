@@ -41,7 +41,7 @@ export function shouldLightningRodStrike(seed, x, y, z, time, weather) {
 
 export function nextRainCauldronLevel(level, weather, roll) {
   const current = Number.isInteger(level) ? Math.max(0, Math.min(3, level)) : 0;
-  if (!['rain', 'thunder'].includes(weather) || current >= 3 ||
+  if (!['clear', 'rain', 'thunder'].includes(weather) || current >= 3 ||
       !Number.isFinite(roll) || roll >= 0.001) return current;
   return current + 1;
 }
@@ -79,7 +79,10 @@ export function tickWeatherBlocks(world, player, weather, time) {
         if (!exposed) continue;
 
         let next = state;
-        if (id === 'mc:campfire' && shouldRainExtinguishCampfire(
+        if (id === 'mc:lightning_rod') {
+          const struck = shouldLightningRodStrike(seed, x, y, z, time, weather);
+          if (state.get?.('powered') !== struck) next = state.with('powered', struck);
+        } else if (id === 'mc:campfire' && shouldRainExtinguishCampfire(
           weather, state.get?.('lit') !== false,
           precipitationRoll(seed, x, y, z, time, 'campfire'),
         )) {
