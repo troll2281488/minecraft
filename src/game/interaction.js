@@ -324,6 +324,13 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
   const rng = positionalRandom(worldSeed, x, y, z, 0x10ad);
   const id = block.id;
 
+  if (id === 'mc:jukebox') {
+    const record = state.get('record');
+    const drops = [{ id, count: 1 }];
+    if (record && record !== 'none') drops.push({ id: 'mc:music_disc_' + record, count: 1 });
+    return drops;
+  }
+
   // Blocks that do not drop themselves in vanilla without Silk Touch.
   // Silk Touch is not implemented yet, so these correctly yield nothing.
   if (id === 'mc:glass' || id === 'mc:ice') return [];

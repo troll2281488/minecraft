@@ -527,6 +527,12 @@ for (const [name, texture] of [
 ]) wallBlock(name, texture);
 
 
+// Jukebox: stores the inserted Java music disc in block state so it survives saves and sync.
+define('mc:jukebox', {
+  hardness: 2, resistance: 2, tool: 'axe', soundGroup: 'wood', texture: 'jukebox',
+  properties: { record: PROPS.record }, defaultValues: { record: 'none' },
+});
+
 // Note block: 25 semitone pitches, tuned by right-click and triggered by redstone.
 define('mc:note_block', {
   hardness: 0.8, resistance: 0.8, tool: 'axe', soundGroup: 'wood', texture: 'note_block',

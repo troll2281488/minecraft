@@ -29,6 +29,7 @@ import { planBucketInteraction } from './bucket.js';
 import { planCauldronInteraction } from './cauldron.js';
 import { canSleepAt, hasNearbySleepHostile } from './sleep.js';
 import { weatherAt } from './weather.js';
+import { absorbWaterAround } from './sponge.js';
 import { POTION_ITEMS } from '../entity/status_effects.js';
 
 export const BlockActionsMixin = {
@@ -137,6 +138,35 @@ export const BlockActionsMixin = {
       return;
     }
     const heldItem = this.inventory?.held?.item;
+    const heldStack = this.inventory?.held;
+    if (this.hit?.state?.block?.id === 'mc:jukebox') {
+      const { x, y, z, state } = this.hit;
+      const record = state.get('record') || 'none';
+      const discIds = { 'mc:music_disc_13': '13', 'mc:music_disc_cat': 'cat', 'mc:music_disc_otherside': 'otherside' };
+      const discId = heldStack?.item?.id;
+      if (record !== 'none' && (!heldStack || heldStack.isEmpty)) {
+        const next = state.with('record', 'none');
+        if (this.world.setBlock(x, y, z, next)) {
+          this.multiplayer?.pushBlockChange(x, y, z, next);
+          const itemId = 'mc:music_disc_' + record;
+          const leftover = this.inventory.addItem(itemId, 1);
+          if (leftover > 0) this.entities?.spawnItemStackAt(new ItemStack(ITEMS.get(itemId), 1), this.player.x, this.player.y + 0.5, this.player.z);
+          this.sounds?.play('chestClose');
+          this.ui.toast('Пластинка извлечена');
+        }
+        return;
+      }
+      if (record === 'none' && discIds[discId]) {
+        const next = state.with('record', discIds[discId]);
+        if (this.world.setBlock(x, y, z, next)) {
+          this.multiplayer?.pushBlockChange(x, y, z, next);
+          if (this.player.gamemode === GAMEMODE.SURVIVAL) this.inventory.consumeHeld(1);
+          this.sounds?.play('chestOpen');
+          this.ui.toast('Пластинка помещена в проигрыватель');
+        }
+        return;
+      }
+    }
     if (this.hit?.state?.block?.id === 'mc:cauldron' && heldItem) {
       const { x, y, z, state } = this.hit;
       const plan = planCauldronInteraction(heldItem.id, state.get('level'));
@@ -698,7 +728,23 @@ export const BlockActionsMixin = {
       this.multiplayer?.pushBlockChange(target.x, target.y + 1, target.z, upper);
     } else {
       if (!this.world.setBlock(target.x, target.y, target.z, state)) return;
-      this.multiplayer?.pushBlockChange(target.x, target.y, target.z, state);
+      if (block.id !== 'mc:sponge') this.multiplayer?.pushBlockChange(target.x, target.y, target.z, state);
+    }
+    if (block.id === 'mc:sponge') {
+      const absorbed = absorbWaterAround(this.world, target.x, target.y, target.z);
+      if (absorbed.length > 0) {
+        const wet = this.world.dimension === 'nether'
+          ? BLOCKS.get('mc:sponge')?.defaultState
+          : BLOCKS.get('mc:wet_sponge')?.defaultState;
+        if (wet && this.world.setBlock(target.x, target.y, target.z, wet)) {
+          this.multiplayer?.pushBlockChanges?.([
+            ...absorbed,
+            { x: target.x, y: target.y, z: target.z, state: wet },
+          ]);
+        }
+      } else {
+        this.multiplayer?.pushBlockChange(target.x, target.y, target.z, state);
+      }
     }
     this._refreshWallConnections({ x: target.x, y: target.y, z: target.z },
       ...(block.renderShape === 'door' ? [{ x: target.x, y: target.y + 1, z: target.z }] : []));
