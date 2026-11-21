@@ -184,6 +184,13 @@ describe('Java wall family geometry and crafting', () => {
     }
   });
 
+  it('provides the vanilla brick block used by the brick-wall recipe', () => {
+    assert(BLOCKS.get('mc:bricks'));
+    const recipe = RECIPES.recipes.find((entry) => entry.result === 'mc:brick_wall');
+    assert(recipe);
+    assertEqual(recipe.key.B, 'mc:bricks');
+  });
+
   it('registers six-wall recipes for every material variant', () => {
     for (const material of materials) {
       const recipe = RECIPES.recipes.find((entry) => entry.result === `mc:${material}_wall`);
