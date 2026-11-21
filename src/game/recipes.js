@@ -57,6 +57,25 @@ recipes.push({
   result: 'mc:nether_brick_fence', count: 6,
   pattern: ['NNN', 'NNN'], key: { N: 'mc:nether_bricks' },
 });
+
+// Six matching stone blocks craft six walls, as in Java Edition.
+const WALL_MATERIALS = [
+  ['cobblestone', 'cobblestone'], ['mossy_cobblestone', 'mossy_cobblestone'],
+  ['brick', 'stone_bricks'], ['prismarine', 'prismarine'],
+  ['red_sandstone', 'red_sandstone'], ['mossy_stone_brick', 'stone_bricks'],
+  ['granite', 'granite'], ['stone_brick', 'stone_bricks'],
+  ['nether_brick', 'nether_bricks'], ['andesite', 'andesite'],
+  ['red_nether_brick', 'nether_bricks'], ['sandstone', 'sandstone'],
+  ['end_stone_brick', 'end_bricks'], ['diorite', 'diorite'],
+  ['blackstone', 'blackstone'], ['polished_blackstone_brick', 'polished_blackstone'],
+  ['polished_blackstone', 'polished_blackstone'],
+];
+for (const [material, ingredient] of WALL_MATERIALS) {
+  recipes.push({
+    result: `mc:${material}_wall`, count: 6,
+    pattern: ['BBB', 'BBB'], key: { B: `mc:${ingredient}` },
+  });
+}
 recipes.push({
   result: 'mc:iron_door', count: 3,
   pattern: ['II', 'II', 'II'],
