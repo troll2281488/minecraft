@@ -191,6 +191,10 @@ define('mc:glass', {
   opaqueCube: false, opacity: 0, renderShape: 'cutout', texture: 'glass',
 });
 
+define('mc:terracotta', {
+  hardness: 1.25, resistance: 4.2, tool: 'pickaxe', soundGroup: 'stone', texture: 'terracotta',
+});
+
 define('mc:white_wool', {
   hardness: 0.8, resistance: 0.8, soundGroup: 'cloth', texture: 'white_wool',
 });
