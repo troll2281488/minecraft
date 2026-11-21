@@ -107,6 +107,19 @@ export function calculateArmorDamage(damage, armorPoints = 0, toughness = 0) {
   return damage * (1 - effectiveArmor / 25);
 }
 
+export function shieldBlocksAttack(player, sourceX, sourceZ, active = true) {
+  if (!active || !player || !Number.isFinite(sourceX) || !Number.isFinite(sourceZ)) return false;
+  const dx = sourceX - player.x;
+  const dz = sourceZ - player.z;
+  const distance = Math.hypot(dx, dz);
+  if (distance < 1e-6) return false;
+  const yaw = (player.yaw || 0) * Math.PI / 180;
+  const facingX = -Math.sin(yaw);
+  const facingZ = Math.cos(yaw);
+  // Shields cover a 120-degree frontal arc; attacks from behind still connect.
+  return (dx * facingX + dz * facingZ) / distance >= 0.5;
+}
+
 export function calculateHorseArmorDamage(damage, material = null) {
   const points = ({ leather: 3, iron: 5, golden: 7, diamond: 11 })[material] || 0;
   return calculateArmorDamage(damage, points, 0);
@@ -859,13 +872,27 @@ export class MobSystem {
     return true;
   }
 
-  _damagePlayer(amount) {
+  _damagePlayer(amount, sourceX = null, sourceZ = null) {
     const player = this.game.player;
     if (!player || player.gamemode !== 'survival' || amount <= 0) return 0;
     const difficulty = this.game.worldMeta?.difficulty || 'normal';
     if (difficulty === 'peaceful') return 0;
     amount *= difficulty === 'easy' ? 0.5 : difficulty === 'hard' ? 1.5 : 1;
     const inventory = this.game.inventory;
+    const held = inventory?.held;
+    const offhand = inventory?.get(40);
+    const shieldSlot = held?.item?.id === 'mc:shield' ? inventory.selectedSlot
+      : offhand?.item?.id === 'mc:shield' ? 40 : -1;
+    if (shieldSlot >= 0 && this.game.mouseButtons?.has(2) &&
+        shieldBlocksAttack(player, sourceX, sourceZ, true)) {
+      const shield = inventory.get(shieldSlot);
+      const broke = shield.applyDamage(1);
+      if (broke) inventory.set(shieldSlot, ItemStack.EMPTY.clone());
+      else inventory.version++;
+      this.game.ui?.updateHotbar(inventory);
+      this.game.sounds?.play('cast');
+      return 0;
+    }
     let armorPoints = 0;
     let toughness = 0;
     let worn = false;
@@ -1283,7 +1310,7 @@ export class MobSystem {
         if (mob.fuseTicks >= profile.fuseTicks) {
           if (distance < profile.blastRange) {
             const damage = Math.max(0, Math.ceil((profile.blastRange - distance) * 3));
-            this._damagePlayer(damage);
+            this._damagePlayer(damage, mob.x, mob.z);
             const knock = 0.11 / Math.max(distance, 0.2);
             player.vx += dx * knock; player.vz += dz * knock;
           }
@@ -1396,7 +1423,7 @@ export class MobSystem {
         mob.anim.attack = Math.min(1, mob.attackTicks / 18);
         if (mob.attackTicks >= profile.attackCooldown) {
           mob.attackTicks = 0; mob.anim.attack = 0;
-          this._damagePlayer(mob.type === 'blaze' ? 6 : profile.damage);
+          this._damagePlayer(mob.type === 'blaze' ? 6 : profile.damage, mob.x, mob.z);
           if (mob.type === 'stray') { player.vx *= 0.72; player.vz *= 0.72; }
           const hitMessage = mob.type === 'blaze' ? 'Блейз попал огненным зарядом!' : mob.type === 'stray' ? 'Странник попал в тебя!' : 'Скелет попал в тебя!';
           this.game.ui?.toast(hitMessage, { error: true, duration: 1000 });
@@ -1407,7 +1434,7 @@ export class MobSystem {
         mob.anim.attack = Math.min(1, mob.attackTicks / 10);
         if (mob.attackTicks >= (profile?.attackCooldown ?? 40)) {
           mob.attackTicks = 0; mob.anim.attack = 0;
-          this._damagePlayer(profile?.damage ?? 1);
+          this._damagePlayer(profile?.damage ?? 1, mob.x, mob.z);
           player.vx += (dx / Math.max(distance, 0.01)) * 0.12;
           player.vz += (dz / Math.max(distance, 0.01)) * 0.12;
           this.game.ui?.toast(mob.type + ' атаковал тебя!', { error: true, duration: 1100 });
