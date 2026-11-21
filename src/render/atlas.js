@@ -518,6 +518,7 @@ const TEXTURES = {
   granite:            () => grainy(hex(0x9a6a5a), 0.24, 'granite', { clumps: 7 }),
   polished_granite:   () => grainy(hex(0xa2705f), 0.1, 'polished_granite'),
   stone_bricks:       () => grainy(hex(0x777777), 0.20, 'stone_bricks', { clumps: 5 }),
+  bricks:             () => grainy(hex(0x985044), 0.18, 'bricks', { clumps: 5, clumpColor: hex(0xb36a58) }),
   diorite:            () => grainy(hex(0xcfcfcf), 0.26, 'diorite', { clumps: 7, clumpColor: hex(0x9d9d9d) }),
   polished_diorite:   () => grainy(hex(0xd6d6d6), 0.1, 'polished_diorite'),
   andesite:           () => grainy(hex(0x8a8a8a), 0.22, 'andesite', { clumps: 6 }),
