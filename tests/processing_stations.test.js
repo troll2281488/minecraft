@@ -8,8 +8,8 @@ import { Furnace, SMELTING, SMOKING, BLASTING, serializeContainer, deserializeCo
 describe('Java processing stations', () => {
   it('registers smooth stone, smoker and blast furnace as obtainable blocks', () => {
     for (const id of ['mc:smooth_stone', 'mc:smoker', 'mc:blast_furnace']) {
-      assertEqual(BLOCKS.has(id), true);
-      assertEqual(ITEMS.has(id), true);
+      assertEqual(!!BLOCKS.get(id), true);
+      assertEqual(!!ITEMS.get(id), true);
     }
     assertEqual(RECIPES.producing('mc:smoker').length, 1);
     assertEqual(RECIPES.producing('mc:blast_furnace').length, 1);
