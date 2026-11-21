@@ -190,6 +190,29 @@ describe('wheat farming and farmland hydration', () => {
     assert(changed.some((change) => change.x === expected.x && change.z === expected.z), 'fruit change was not returned for replication');
   });
 
+  it('grows both pumpkin and melon fruit from the matching mature stem', () => {
+    for (const [stemId, fruitId] of [['mc:pumpkin_stem', 'mc:pumpkin'], ['mc:melon_stem', 'mc:melon']]) {
+      const entries = [
+        ['0,64,0', BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)],
+        ['0,65,0', BLOCKS.get(stemId).defaultState.with('age', 7)],
+        ['1,64,0', BLOCKS.get('mc:dirt').defaultState],
+        ['-1,64,0', BLOCKS.get('mc:dirt').defaultState],
+        ['0,64,1', BLOCKS.get('mc:dirt').defaultState],
+        ['0,64,-1', BLOCKS.get('mc:dirt').defaultState],
+      ];
+      let seed = 0, target = null;
+      for (; seed < 100; seed++) {
+        target = chooseStemFruitTarget(makeWorld(entries), 0, 65, 0, seed, 600, stemId);
+        if (target) break;
+      }
+      assert(target, 'no valid fruit target for ' + stemId);
+      const world = makeWorld(entries);
+      world.seed = seed;
+      tickFarming(world, { x: 0, y: 65, z: 0 }, 600);
+      assertEqual(world.getBlock(target.x, target.y, target.z).block.id, fruitId);
+    }
+  });
+
   it('does not spawn fruit when all adjacent soil is unsuitable or spaces are blocked', () => {
     const entries = [
       ['0,64,0', BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)],
@@ -211,6 +234,9 @@ describe('wheat farming and farmland hydration', () => {
     const melon = blockDrops(BLOCKS.get('mc:melon').defaultState, null, 4, 0, 64, 0);
     assertEqual(melon[0].id, 'mc:melon_slice');
     assert(melon[0].count >= 3 && melon[0].count <= 7);
+    const pumpkin = blockDrops(BLOCKS.get('mc:pumpkin').defaultState, null, 4, 0, 64, 0);
+    assertEqual(pumpkin[0].id, 'mc:pumpkin');
+    assertEqual(pumpkin[0].count, 1);
     const pumpkinStem = blockDrops(BLOCKS.get('mc:pumpkin_stem').defaultState, null, 5, 0, 64, 0);
     assert(pumpkinStem.length <= 1);
     if (pumpkinStem.length) assertEqual(pumpkinStem[0].id, 'mc:pumpkin_seeds');
