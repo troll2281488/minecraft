@@ -122,7 +122,7 @@ export function combineOnAnvil(left, right, { materialRepair = false } = {}) {
   if (left.item.id !== right.item.id && right.item.id !== 'mc:enchanted_book' && !materialRepair) {
     return { ok: false, reason: 'incompatible_items' };
   }
-  if (left.item.id === right.item.id && !left.item.isDamageable) return { ok: false, reason: 'not_repairable' };
+  if (left.item.id === right.item.id && !left.item.isDamageable && left.item.id !== 'mc:enchanted_book') return { ok: false, reason: 'not_repairable' };
 
   const output = left.clone();
   let cost = 0;
