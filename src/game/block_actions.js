@@ -132,6 +132,7 @@ export const BlockActionsMixin = {
   },
 
   _useOrPlace() {
+    if (this.entities?.boostPigFromPlayer()) return;
     const villager = this.entities?.targetedMob();
     if (villager?.type === 'villager') {
       this._openVillagerTrade(villager);
