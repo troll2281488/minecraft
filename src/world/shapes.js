@@ -61,11 +61,26 @@ function stairShapeFromNeighbors(state, getNeighbor) {
     neighbor.get('facing') !== facing &&
     STAIR_VECTORS[neighbor.get('facing')][0] * dx +
       STAIR_VECTORS[neighbor.get('facing')][1] * dz === 0;
+  // Java stairs do not form a corner when another stair continues the same
+  // run around the side. This avoids a false corner in three-stair junctions.
+  const hasSameRunAt = (sideFacing) => {
+    const [sx, sz] = STAIR_VECTORS[sideFacing];
+    const side = getNeighbor(sx, 0, sz);
+    return side?.block?.renderShape === 'stair' &&
+      side.get('half') === half && side.get('facing') === facing;
+  };
   if (isCompatible(front)) {
-    return front.get('facing') === STAIR_LEFT[facing] ? 'outer_left' : 'outer_right';
+    const candidateFacing = front.get('facing');
+    const opposite = { north: 'south', south: 'north', west: 'east', east: 'west' };
+    if (!hasSameRunAt(opposite[candidateFacing])) {
+      return candidateFacing === STAIR_LEFT[facing] ? 'outer_left' : 'outer_right';
+    }
   }
   if (isCompatible(back)) {
-    return back.get('facing') === STAIR_LEFT[facing] ? 'inner_left' : 'inner_right';
+    const candidateFacing = back.get('facing');
+    if (!hasSameRunAt(candidateFacing)) {
+      return candidateFacing === STAIR_LEFT[facing] ? 'inner_left' : 'inner_right';
+    }
   }
   return 'straight';
 }
