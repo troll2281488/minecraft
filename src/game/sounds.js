@@ -44,22 +44,76 @@ export function noteBlockFrequency(note) {
   const pitch = Math.max(0, Math.min(24, Math.floor(Number(note) || 0)));
   return 440 * Math.pow(2, (pitch - 12) / 12);
 }
+
+// The imported archive is stored in IndexedDB, not localStorage: a full OGG pack
+// can exceed the browser's localStorage quota by several megabytes.
+const BEDROCK_PACK_DB='donorcraft-resource-packs';
+const BEDROCK_PACK_STORE='archives';
+function openBedrockPackDb(){
+  return new Promise((resolve,reject)=>{
+    if(!globalThis.indexedDB){reject(new Error('IndexedDB недоступен'));return;}
+    const request=indexedDB.open(BEDROCK_PACK_DB,1);
+    request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains(BEDROCK_PACK_STORE))request.result.createObjectStore(BEDROCK_PACK_STORE);};
+    request.onsuccess=()=>resolve(request.result);
+    request.onerror=()=>reject(request.error||new Error('Не удалось открыть IndexedDB'));
+  });
+}
+async function saveBedrockArchive(file){
+  const db=await openBedrockPackDb();
+  try{await new Promise((resolve,reject)=>{const tx=db.transaction(BEDROCK_PACK_STORE,'readwrite');tx.objectStore(BEDROCK_PACK_STORE).put(awaitFileBuffer(file),'bedrock-sounds');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});}
+  finally{db.close();}
+}
+async function awaitFileBuffer(file){return file.arrayBuffer();}
+async function loadBedrockArchive(){
+  const db=await openBedrockPackDb();
+  try{return await new Promise((resolve,reject)=>{const request=db.transaction(BEDROCK_PACK_STORE,'readonly').objectStore(BEDROCK_PACK_STORE).get('bedrock-sounds');request.onsuccess=()=>resolve(request.result||null);request.onerror=()=>reject(request.error);});}
+  finally{db.close();}
+}
+async function deleteBedrockArchive(){
+  const db=await openBedrockPackDb();
+  try{await new Promise((resolve,reject)=>{const tx=db.transaction(BEDROCK_PACK_STORE,'readwrite');tx.objectStore(BEDROCK_PACK_STORE).delete('bedrock-sounds');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});}
+  finally{db.close();}
+}
+
 export class GameSounds {
-  constructor(){this.context=null;this.lastStep=0;this.enabled=true;this.masterVolume=1;this.bedrockPack=null;}
+  constructor(){this.context=null;this.lastStep=0;this.enabled=true;this.masterVolume=1;this.bedrockPack=null;this._restorePromise=null;this._restoreScheduled=false;}
   async importBedrockPack(file){
     const context=this._ctx();
     if(!context)throw new Error('Web Audio недоступен в этом браузере');
     const pack=new BedrockSoundPack(context);
     const result=await pack.import(file);
     this.bedrockPack=pack;
+    // Keep the imported archive locally so the player does not have to import it
+    // again after a reload. IndexedDB is used because the pack is larger than
+    // localStorage's practical quota.
+    try { await saveBedrockArchive(file); }
+    catch (error) { console.warn('Не удалось сохранить звуковой пак локально:', error); }
     return result;
   }
-  clearBedrockPack(){this.bedrockPack=null;}
+  async restoreSavedPack(){
+    if(this.bedrockPack)return true;
+    if(this._restorePromise)return this._restorePromise;
+    this._restorePromise=(async()=>{
+      const archive=await loadBedrockArchive();
+      if(!archive)return false;
+      const pack=new BedrockSoundPack(this._ctx());
+      await pack.import(new File([archive],'Donorcraft-Bedrock-Sounds.mcpack',{type:'application/zip'}));
+      this.bedrockPack=pack;
+      return true;
+    })();
+    try{return await this._restorePromise;}
+    finally{this._restorePromise=null;}
+  }
+  async clearBedrockPack(){this.bedrockPack=null;try{await deleteBedrockArchive();}catch(error){console.warn('Не удалось удалить сохранённый пак:',error);}}
   _ctx(){
     if(!this.enabled)return null;
     const Audio=globalThis.AudioContext||globalThis.webkitAudioContext;
     if(!Audio)return null;
     if(!this.context)this.context=new Audio();
+    if(!this._restoreScheduled){
+      this._restoreScheduled=true;
+      Promise.resolve().then(()=>this.restoreSavedPack().catch(error=>console.warn('Не удалось восстановить звуковой пак:',error)));
+    }
     if(this.context.state==='suspended')this.context.resume().catch(()=>{});
     return this.context;
   }
