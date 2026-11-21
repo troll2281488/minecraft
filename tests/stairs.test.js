@@ -48,4 +48,52 @@ describe('Java stair corner geometry', () => {
     const lookup = neighborAt(new Map([['0,0,-1', neighbor]]));
     assertDeepEqual(collisionBoxes(OAK, lookup), shapeBoxes(OAK, lookup));
   });
+
+  it('handles outer and inner corners in all four horizontal directions', () => {
+    const vectors = {
+      north: [0, -1], south: [0, 1], west: [-1, 0], east: [1, 0],
+    };
+    const leftOf = { north: 'west', south: 'east', west: 'south', east: 'north' };
+    for (const facing of Object.keys(vectors)) {
+      const [dx, dz] = vectors[facing];
+      const leftFacing = leftOf[facing];
+      const leftVector = vectors[leftFacing];
+      const stair = OAK.with('facing', facing);
+      const leftNeighbor = OAK.with('facing', leftFacing);
+      const outerLookup = neighborAt(new Map([[ `${dx},0,${dz}`, leftNeighbor ]]));
+      const outer = shapeBoxes(stair, outerLookup);
+      assertEqual(outer.length, 2, `outer corner facing ${facing}`);
+      const inner = shapeBoxes(stair, neighborAt(new Map([
+        [`${-dx},0,${-dz}`, leftNeighbor],
+      ])));
+      assertEqual(inner.length, 4, `inner corner facing ${facing}`);
+      assertDeepEqual(collisionBoxes(stair, outerLookup), outer);
+      const parallel = OAK.with('facing', facing);
+      const straight = shapeBoxes(stair, neighborAt(new Map([
+        [`${dx},0,${dz}`, parallel],
+      ])));
+      assertEqual(straight.length, 3, `parallel neighbor facing ${facing}`);
+      const diagonal = shapeBoxes(stair, neighborAt(new Map([
+        [`${dx + leftVector[0]},0,${dz + leftVector[1]}`, leftNeighbor],
+      ])));
+      assertEqual(diagonal.length, 3, `diagonal neighbor facing ${facing}`);
+    }
+  });
+
+  it('keeps top-half corner collision and rendering aligned', () => {
+    const top = OAK.with('half', 'top');
+    const neighbor = OAK.with('half', 'top').with('facing', 'west');
+    const lookup = neighborAt(new Map([['0,0,-1', neighbor]]));
+    const rendered = shapeBoxes(top, lookup);
+    assertDeepEqual(collisionBoxes(top, lookup), rendered);
+    assertEqual(rendered[0][1], 0.5);
+    assertEqual(rendered[0][4], 1);
+  });
+
+  it('does not connect to a non-stair neighbor', () => {
+    const other = { block: { renderShape: 'cube' }, get: () => 'west' };
+    const boxes = shapeBoxes(OAK, neighborAt(new Map([['0,0,-1', other]])));
+    assertEqual(boxes.length, 3);
+  });
+
 });
