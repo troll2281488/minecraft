@@ -5,6 +5,7 @@ import './redstone_devices.test.js';
 import './pistons.test.js';
 import './piston_textures.test.js';
 import './bee_hives.test.js';
+import './weather.test.js';
 import './farming.test.js';
 import './composting.test.js';
 import './hopper.test.js';
