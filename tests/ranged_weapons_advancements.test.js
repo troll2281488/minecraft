@@ -9,6 +9,7 @@ import { MobSystem } from '../src/entity/mobs.js';
 import { createArrow, stepArrow } from '../src/entity/arrows.js';
 import { beginCrossbowLoad, crossbowLoadProgress, finishCrossbowLoad, crossbowShotPlan, consumeCrossbowCharge, canPierceAdditionalTarget } from '../src/game/crossbow.js';
 import { createTridentProjectile, stepTrident, tridentReturnVelocity, riptideImpulse, impalingBonusDamage, canChannelLightning, channelingLightningEffect } from '../src/game/trident.js';
+import { weatherAt } from '../src/game/weather.js';
 import { ADVANCEMENTS, createAdvancementState, awardAdvancementCriterion, processAdvancementEvent, serializeAdvancementState } from '../src/game/advancements.js';
 
 describe('crossbow loading and firing', () => {
@@ -269,5 +270,41 @@ describe('crossbow firework rocket ammunition', () => {
     assertEqual(entities.arrows[0].isFireworkRocket, false);
     assertEqual(inventory.countOf('mc:arrow'), 0);
     assertEqual(inventory.countOf('mc:firework_rocket'), 1);
+  });
+});
+
+
+describe('Channeling mob integration', () => {
+  it('damages and charges an exposed creeper only during a thunderstorm', () => {
+    let seed = 0;
+    while (weatherAt(seed, 0) !== 'thunder') seed++;
+    const player = new Player(0, 64, 0);
+    const game = {
+      inventory: new Inventory(), player, tickCount: 1,
+      world: { seed, time: 0, getHeight: () => -64, getBlock: () => ({ block: { solid: false } }) },
+      ui: { toast() {} }, sounds: { play() {} },
+    };
+    const entities = new MobSystem(game);
+    const creeper = { id: 7, type: 'creeper', x: 0, y: player.eyeY - 0.5, z: 2.5, health: 20, anim: {} };
+    entities.mobs.push(creeper);
+    const trident = createArrow(0, player.eyeY, 0.55, [0, 0, 1], 0.9);
+    Object.assign(trident, { isTrident: true, channeling: true, damage: 8, vx: 0, vy: 0, vz: 2.5 });
+    entities.arrows.push(trident);
+    entities._tickArrows();
+    assertEqual(creeper.health, 7);
+    assertEqual(creeper.charged, true);
+    assertEqual(creeper.fireTicks, 160);
+    assertEqual(player.advancements.adventure_channeling.done, true);
+  });
+});
+
+describe('new ranged weapon advancements', () => {
+  it('awards throw-trident and crossbow achievements once', () => {
+    const player = new Player();
+    assertEqual(player.recordAdvancementEvent('threw_trident', 10).completed, true);
+    assertEqual(player.recordAdvancementEvent('shot_crossbow', 20).completed, true);
+    assertEqual(player.advancements.adventure_throw_trident.done, true);
+    assertEqual(player.advancements.adventure_shoot_crossbow.done, true);
+    assertEqual(player.recordAdvancementEvent('shot_crossbow', 30).awarded, false);
   });
 });
