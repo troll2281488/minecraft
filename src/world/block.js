@@ -102,6 +102,7 @@ export const PROPS = {
   layers: intProp('layers', 1, 8),
   honeyLevel: intProp('honey_level', 0, 5),
   moisture: intProp('moisture', 0, 7),
+  composterLevel: intProp('level', 0, 8),
   north: boolProp('north'),
   south: boolProp('south'),
   east: boolProp('east'),
