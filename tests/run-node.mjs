@@ -15,6 +15,7 @@ import './livestock_interactions.test.js';
 import './shield_food.test.js';
 import './fluid_buckets.test.js';
 import './processing_stations.test.js';
+import './cauldron.test.js';
 import { applyRemotePlayerState, remoteEquipmentSnapshot, queueChatMessage, canAcquireContainerLease, electRoomHost, isContainerLeaseHeldByOther, isValidContainerKey, listJoinableRooms, ownsContainerLease, queueContainerWrite } from '../src/game/multiplayer.js';
 
 describe('multiplayer container key validation', () => {
