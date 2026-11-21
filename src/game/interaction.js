@@ -340,7 +340,7 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
     'mc:glowstone', 'mc:bookshelf', 'mc:clay', 'mc:mycelium', 'mc:podzol',
     'mc:short_grass', 'mc:fern', 'mc:dead_bush',
   ]);
-  if (enchantmentLevel(heldStack, 'silk_touch') > 0 && silkTouchBlocks.has(id) && ITEMS.get(id)) {
+  if (enchantmentLevel(heldStack, 'silk_touch') > 0 && (silkTouchBlocks.has(id) || id.endsWith('_leaves') || id.endsWith('_ore')) && ITEMS.get(id)) {
     return [{ id, count: 1 }];
   }
   if (id === 'mc:glass' || id === 'mc:ice') return [];
