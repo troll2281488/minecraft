@@ -831,6 +831,8 @@ const MATERIALS = [
   ['mc:lapis_lazuli', {}],
   ['mc:redstone', { block: 'mc:redstone_wire' }],
   ['mc:flint', {}],
+  ['mc:blaze_powder', {}],
+  ['mc:egg', { stackSize: 16 }],
   ['mc:blaze_rod', {}],
   ['mc:snowball', {}],
   ['mc:clay_ball', {}],
@@ -943,6 +945,7 @@ ITEMS.define('mc:potion_healing', { stackSize: 1, rarity: 'uncommon' });
 ITEMS.define('mc:shield', { stackSize: 1, maxDamage: 336, weapon: 'shield' });
 ITEMS.define('mc:shears', { stackSize: 1, maxDamage: 238, tool: 'shears', attackDamage: 1 });
 ITEMS.define('mc:flint_and_steel', { stackSize: 1, maxDamage: 64, tool: 'flint_and_steel' });
+ITEMS.define('mc:fire_charge', { stackSize: 64 });
 ITEMS.define('mc:fishing_rod', { stackSize: 1, maxDamage: 64, tool: 'fishing_rod' });
 ITEMS.define('mc:bow', { stackSize: 1, maxDamage: 384, weapon: 'bow' });
 ITEMS.define('mc:arrow', { stackSize: 64 });

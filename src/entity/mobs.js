@@ -1,4 +1,5 @@
 import { ITEMS, ItemStack } from '../world/item.js';
+import { BLOCKS } from '../world/block.js';
 import { SPAWNER_MOB_TYPES, spawnerMobType, spawnerPlayerInRange, countSpawnerMobs, nextSpawnerDelay, spawnerSpawnPosition } from './spawners.js';
 import { experienceForMob, experienceForFishing, experienceForBreeding, splitExperienceIntoOrbs, mergeExperienceOrbState, isExperienceOrbHazard } from './experience.js';
 import { TerrainGenerator, villageCandidateForCell } from '../world/gen/terrain.js';
@@ -88,6 +89,57 @@ export function detachMobLead(mob, owner = 'player') {
   return true;
 }
 
+export const HORSE_FOOD_EFFECTS = Object.freeze({
+  'mc:sugar': Object.freeze({ heal: 1, growth: 0.10 }),
+  'mc:wheat': Object.freeze({ heal: 2, growth: 0.20 }),
+  'mc:apple': Object.freeze({ heal: 3, growth: 0.30 }),
+  'mc:golden_carrot': Object.freeze({ heal: 4, growth: 0.50, breeding: true }),
+  'mc:golden_apple': Object.freeze({ heal: 10, growth: 0.50, breeding: true }),
+  'mc:enchanted_golden_apple': Object.freeze({ heal: 10, growth: 0.50, breeding: true }),
+  'mc:hay_block': Object.freeze({ heal: 20, growth: 0.90 }),
+});
+
+export function horseFoodEffect(itemId) {
+  return HORSE_FOOD_EFFECTS[itemId] || null;
+}
+export const BREEDING_FOODS = Object.freeze({
+  cow: Object.freeze(['mc:wheat']), sheep: Object.freeze(['mc:wheat']),
+  pig: Object.freeze(['mc:carrot', 'mc:potato']),
+  chicken: Object.freeze(['mc:wheat_seeds', 'mc:pumpkin_seeds', 'mc:melon_seeds']),
+  rabbit: Object.freeze(['mc:carrot', 'mc:golden_carrot', 'mc:dandelion']),
+  horse: Object.freeze(['mc:golden_carrot', 'mc:golden_apple']),
+});
+
+export function canBreedAnimalWith(type, itemId) {
+  return !!BREEDING_FOODS[type]?.includes(itemId);
+}
+export function tickChickenEggLaying(mob, random = Math.random) {
+  if (!mob || mob.type !== 'chicken') return false;
+  if (!Number.isFinite(mob.eggLayTicks)) mob.eggLayTicks = 6000 + Math.floor(random() * 6001);
+  mob.eggLayTicks = Math.max(0, mob.eggLayTicks - 1);
+  if (mob.eggLayTicks > 0) return false;
+  mob.eggLayTicks = 6000 + Math.floor(random() * 6001);
+  return true;
+}
+
+export function tickSheepGrassRegrowth(mob, world, random = Math.random) {
+  if (!mob || mob.type !== 'sheep' || !mob.sheared || !world) return null;
+  if (!Number.isFinite(mob.grazeTicks)) mob.grazeTicks = 600 + Math.floor(random() * 601);
+  mob.grazeTicks = Math.max(0, mob.grazeTicks - 1);
+  if (mob.grazeTicks > 0) return null;
+  const x = Math.floor(mob.x), y = Math.floor(mob.y - 1), z = Math.floor(mob.z);
+  const below = world.getBlock(x, y, z);
+  if (below?.block?.id === 'mc:grass_block') {
+    const dirt = BLOCKS.get('mc:dirt')?.defaultState;
+    if (dirt && world.setBlock(x, y, z, dirt)) {
+      mob.sheared = false;
+      mob.grazeTicks = 600 + Math.floor(random() * 601);
+      return { x, y, z, state: dirt };
+    }
+  }
+  mob.grazeTicks = 120;
+  return null;
+}
 export const MOB_TYPES_112 = Object.freeze([
   'bat','bee','blaze','cave_spider','chicken','cow','creeper','donkey','elder_guardian',
   'ender_dragon','enderman','endermite','evoker','ghast','guardian','horse','husk','illusioner',
@@ -423,7 +475,7 @@ export class MobSystem {
       beePollenTicks: Number.isFinite(mob.beePollenTicks) ? mob.beePollenTicks : 0,
       beeHiveWorkTicks: Number.isFinite(mob.beeHiveWorkTicks) ? mob.beeHiveWorkTicks : 0,
       beeSearchTicks: Number.isFinite(mob.beeSearchTicks) ? mob.beeSearchTicks : 0,
-      sheared: !!mob.sheared,
+      sheared: !!mob.sheared, eggLayTicks: Number.isFinite(mob.eggLayTicks) ? mob.eggLayTicks : 0, grazeTicks: Number.isFinite(mob.grazeTicks) ? mob.grazeTicks : 0,
       fuseTicks: mob.fuseTicks || 0,
       walkPhase: mob.walkPhase || 0,
       ageTicks: Number.isFinite(mob.ageTicks) ? mob.ageTicks : 0,
@@ -533,7 +585,7 @@ export class MobSystem {
         beeHiveWorkTicks: Number.isFinite(mob.beeHiveWorkTicks) ? Math.max(0, Math.min(200, mob.beeHiveWorkTicks)) : 0,
         beeSearchTicks: Number.isFinite(mob.beeSearchTicks) ? Math.max(0, Math.min(20, mob.beeSearchTicks)) : 0,
         beeTarget: null,
-        sheared: !!mob.sheared,
+        sheared: !!mob.sheared, eggLayTicks: Number.isFinite(mob.eggLayTicks) ? Math.max(0, Math.min(12000, mob.eggLayTicks)) : 0, grazeTicks: Number.isFinite(mob.grazeTicks) ? Math.max(0, Math.min(1200, mob.grazeTicks)) : 0,
         hurtTicks: 0,
         knockbackX: 0, knockbackZ: 0,
         fuseTicks: Number.isFinite(mob.fuseTicks) ? Math.max(0, Math.min(30, mob.fuseTicks)) : 0,
@@ -558,7 +610,7 @@ export class MobSystem {
       thinkTicks: 0, attackTicks: 0, walkPhase: Math.random() * 6,
       moveTicks: 0, pauseTicks: 45 + Math.floor(Math.random() * 100),
       health: ({ bee:10, zombie:20, husk:20, zombie_villager:20, skeleton:20, stray:20, wither_skeleton:20, creeper:20, enderman:40, spider:16, cave_spider:12, silverfish:8, endermite:8, slime:16, magma_cube:16, vex:14, vindicator:24, evoker:24, witch:26, blaze:20, ghast:10, guardian:30, elder_guardian:80, wither:300, cow:10, pig:10, chicken:4, sheep:8, mooshroom:10, rabbit:3, wolf:8, horse:30, polar_bear:30, villager:20 })[type] ?? 10,
-      sheared: false, hurtTicks: 0, fuseTicks: 0,
+      sheared: false, eggLayTicks: type === 'chicken' ? 6000 + Math.floor(Math.random() * 6001) : 0, grazeTicks: 600 + Math.floor(Math.random() * 601), hurtTicks: 0, fuseTicks: 0,
       ageTicks: 0, loveTicks: 0, breedCooldown: 0,
       anim: { walk: 0, idle: Math.random() * Math.PI * 2, attack: 0, hurt: 0, fuse: 0 },
       ...extra,
@@ -836,13 +888,22 @@ export class MobSystem {
     const player = this.game.player;
     if (!animal || !player || !['survival', 'creative'].includes(player.gamemode)) return false;
     const creative = player.gamemode === 'creative';
-    const foods = {
-      cow: ['mc:wheat'], sheep: ['mc:wheat'],
-      pig: ['mc:carrot', 'mc:potato'],
-      chicken: ['mc:wheat_seeds', 'mc:pumpkin_seeds', 'mc:melon_seeds'],
-    };
-    const accepted = foods[animal.type];
-    if (!accepted || !held?.item || !accepted.includes(held.item.id)) return false;
+    if (animal.type === 'horse' && held?.item) {
+      const effect = horseFoodEffect(held.item.id);
+      if (effect && animal.health < 30) {
+        if (!creative) this.game.inventory.remove(held.item.id, 1);
+        animal.health = Math.min(30, animal.health + effect.heal);
+        this.game.ui?.toast('Лошадь восстановила здоровье');
+        return true;
+      }
+      if (effect && animal.ageTicks < 0) {
+        if (!creative) this.game.inventory.remove(held.item.id, 1);
+        animal.ageTicks = Math.min(0, Math.ceil(animal.ageTicks * (1 - effect.growth)));
+        this.game.ui?.toast('Жеребёнок быстрее взрослеет');
+        return true;
+      }
+      if (!effect?.breeding) return false;
+    }    if (!held?.item || !canBreedAnimalWith(animal.type, held.item.id)) return false;
     if (animal.ageTicks >= 0 && (animal.breedCooldown > 0 || animal.loveTicks > 0)) {
       this.game.ui?.toast('This animal is not ready to breed');
       return true;
@@ -892,7 +953,7 @@ export class MobSystem {
       id: this.nextId++, type: first.type, x, y, z,
       yaw: first.yaw, targetYaw: first.yaw, speed: first.speed,
       thinkTicks: 0, attackTicks: 0, walkPhase: 0,
-      health: ({ cow: 10, pig: 10, chicken: 4, sheep: 8 })[first.type] ?? 10,
+      health: ({ cow: 10, pig: 10, chicken: 4, sheep: 8, rabbit: 3, horse: 30 })[first.type] ?? 10,
       sheared: false, hurtTicks: 0, fuseTicks: 0,
       ageTicks: -24000, loveTicks: 0, breedCooldown: 0,
       anim: { walk: 0, idle: 0, attack: 0, hurt: 0, fuse: 0 },
@@ -1309,6 +1370,13 @@ export class MobSystem {
       const dz = player.z - mob.z;
       const distance = Math.hypot(dx, dz);
       if (distance > (this.game.simulationDistance || 6) * 16) continue;
+      if (mob.type === 'chicken' && tickChickenEggLaying(mob)) {
+        this.spawnItemStackAt(new ItemStack(ITEMS.get('mc:egg'), 1), mob.x, mob.y + 0.35, mob.z);
+      }
+      if (mob.type === 'sheep') {
+        const grazed = tickSheepGrassRegrowth(mob, world);
+        if (grazed) this.game.multiplayer?.pushBlockChange(grazed.x, grazed.y, grazed.z, grazed.state);
+      }
       mob.anim.idle += 0.045;
       mob.anim.walk = mob.walkPhase;
       if (mob.hurtTicks > 0) mob.hurtTicks--;
