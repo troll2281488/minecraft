@@ -1,7 +1,7 @@
 import '../src/world/blocks/index.js';
 import { describe, it, assertEqual } from './framework.js';
 import { BLOCKS } from '../src/world/block.js';
-import { RedstoneDevicesMixin } from '../src/game/redstone_devices.js';
+import { RedstoneDevicesMixin, comparatorContainerOutput, comparatorOutput } from '../src/game/redstone_devices.js';
 
 function makeGame(blockId, entities = {}, withPlayer = false) {
   const blocks = new Map([['0,0,0', BLOCKS.get(blockId).defaultState]]);
@@ -81,6 +81,63 @@ describe('weighted pressure plate signal', () => {
     const drops = [{ x: 0.5, y: 0.08, z: 0.5 }, { x: 0.5, y: 0.08, z: 0.5 }];
     const { game, blocks } = makeGame('mc:light_weighted_pressure_plate', { droppedItems: drops }, false);
     game._tickWeightedPressurePlates(0, 0, 0, true);
+    assertEqual(blocks.get('0,0,0').get('power'), 2);
+  });
+});
+
+function makeComparatorGame(rearBlock, inventory) {
+  const blocks = new Map();
+  const key = (x, y, z) => `${x},${y},${z}`;
+  const comparator = BLOCKS.get('mc:comparator').defaultState.with('facing', 'east');
+  blocks.set(key(0, 0, 0), comparator);
+  blocks.set(key(-1, 0, 0), rearBlock);
+  const game = {
+    world: {
+      getBlock(x, y, z) { return blocks.get(key(x, y, z)) || BLOCKS.get('mc:air').defaultState; },
+      setBlock(x, y, z, state) { blocks.set(key(x, y, z), state); return true; },
+    },
+    tickCount: 0,
+    _hopperAt: () => inventory,
+    _dropperAt: () => inventory,
+    ...RedstoneDevicesMixin,
+  };
+  return { game, blocks };
+}
+
+describe('comparator inventory signals', () => {
+  it('calculates inventory fullness with a minimum signal of one', () => {
+    assertEqual(comparatorContainerOutput([], 5), 0);
+    assertEqual(comparatorContainerOutput([{ count: 1, maxStackSize: 64 }], 1), 1);
+    assertEqual(comparatorContainerOutput([{ count: 64, maxStackSize: 64 }, null, null, null, null], 5), 3);
+    assertEqual(comparatorContainerOutput(Array.from({ length: 5 }, () => ({ count: 64, maxStackSize: 64 })), 5), 15);
+  });
+
+  it('supports compare and subtract modes with clamped signal levels', () => {
+    assertEqual(comparatorOutput(12, 4, 7, false), 12);
+    assertEqual(comparatorOutput(6, 4, 7, false), 0);
+    assertEqual(comparatorOutput(12, 4, 7, true), 5);
+    assertEqual(comparatorOutput(-10, 40, 2, true), 0);
+  });
+
+  it('reads five-slot hopper fullness and applies the two-tick comparator delay', () => {
+    const { game, blocks } = makeComparatorGame(BLOCKS.get('mc:hopper').defaultState, {
+      slots: [{ count: 64, maxStackSize: 64 }, null, null, null, null],
+    });
+    game._tickComparators(0, 0, 0, true);
+    assertEqual(blocks.get('0,0,0').get('power'), 0);
+    game.tickCount = 2;
+    game._tickComparators(0, 0, 0, true);
+    assertEqual(blocks.get('0,0,0').get('power'), 3);
+    assertEqual(blocks.get('0,0,0').get('powered'), true);
+  });
+
+  it('reads nine-slot dropper fullness', () => {
+    const { game, blocks } = makeComparatorGame(BLOCKS.get('mc:dropper').defaultState, {
+      slots: [{ count: 64, maxStackSize: 64 }, ...Array(8).fill(null)],
+    });
+    game._tickComparators(0, 0, 0, true);
+    game.tickCount = 2;
+    game._tickComparators(0, 0, 0, true);
     assertEqual(blocks.get('0,0,0').get('power'), 2);
   });
 });
