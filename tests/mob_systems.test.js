@@ -1,8 +1,23 @@
 import { describe, it, assert, assertEqual } from './framework.js';
 import {
-  MOB_TYPES_112, MOB_AI_PROFILES, chooseMobDetourYaw, shearSheep, rollFishingCatch, calculateArmorDamage, rollMobDrops,
+  MOB_TYPES_112, MOB_AI_PROFILES, chooseMobDetourYaw, shearSheep, rollFishingCatch, calculateArmorDamage, rollMobDrops, shouldBurnInSunlight,
 } from '../src/entity/mobs.js';
 import { createArrow, stepArrow } from '../src/entity/arrows.js';
+
+describe('Java undead sunlight rules', () => {
+  it('burns zombies, zombie villagers, skeletons and strays in exposed daylight', () => {
+    for (const type of ['zombie', 'zombie_villager', 'skeleton', 'stray']) {
+      assertEqual(shouldBurnInSunlight(type, 1, true), true);
+    }
+  });
+  it('does not burn husks, wither skeletons, night mobs or mobs under cover', () => {
+    for (const type of ['husk', 'wither_skeleton', 'creeper', 'spider']) {
+      assertEqual(shouldBurnInSunlight(type, 1, true), false);
+    }
+    assertEqual(shouldBurnInSunlight('zombie', 0.5, true), false);
+    assertEqual(shouldBurnInSunlight('skeleton', 1, false), false);
+  });
+});
 
 describe('Arrow flight and hit detection', () => {
   it('detects a mob hit instead of letting the arrow pass through', () => {
