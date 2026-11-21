@@ -139,6 +139,10 @@ export const BlockActionsMixin = {
     }
     const heldItem = this.inventory?.held?.item;
     const heldStack = this.inventory?.held;
+    if (['mc:egg', 'mc:snowball'].includes(heldItem?.id)) {
+      if (this.entities?.throwItemProjectile(heldItem.id)) this.ui.updateHotbar(this.inventory);
+      return;
+    }
     if (this.hit?.state?.block?.id === 'mc:jukebox') {
       const { x, y, z, state } = this.hit;
       const record = state.get('record') || 'none';
