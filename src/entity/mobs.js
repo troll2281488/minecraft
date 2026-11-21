@@ -1392,8 +1392,9 @@ export class MobSystem {
     const player = this.game.player;
     const held = this.game.inventory?.held;
     const baseDamage = Math.max(1, held?.item?.attackDamage || 1);
-    const damage = baseDamage + enchantmentDamageBonus(held, mob.type) +
-      (player.effects?.has('strength') ? 3 * (player.effects.amplifier('strength') + 1) : 0);
+    const weaknessPenalty = player.effects?.has('weakness') ? 4 * (player.effects.amplifier('weakness') + 1) : 0;
+    const damage = Math.max(0, baseDamage + enchantmentDamageBonus(held, mob.type) +
+      (player.effects?.has('strength') ? 3 * (player.effects.amplifier('strength') + 1) : 0) - weaknessPenalty);
     const finalDamage = mob.type === 'horse' ? calculateHorseArmorDamage(damage, mob.horseArmor) : damage;
     const previousHealth = mob.health;
     mob.health = Math.max(0, mob.health - finalDamage);
