@@ -126,7 +126,8 @@ recipes.push({ result: 'mc:piston', count: 1, pattern: ['PPP', 'CIC', 'CRC'], ke
 recipes.push({ result: 'mc:sticky_piston', count: 1, ingredients: ['mc:piston', 'mc:slime_ball'] });
 recipes.push({ result: 'mc:dropper', count: 1, pattern: ['CCC', 'C C', 'CRC'], key: { C: 'mc:cobblestone', R: 'mc:redstone' } });
 recipes.push({ result: 'mc:observer', count: 1, pattern: ['CCC', 'RQR', 'CCC'], key: { C: 'mc:cobblestone', R: 'mc:redstone', Q: 'mc:quartz' } });
-recipes.push({ result: 'mc:target', count: 1, pattern: ['R R', ' H ', 'R R'], key: { R: 'mc:redstone', H: 'mc:hay_block' } });\nrecipes.push({ result: 'mc:lightning_rod', count: 1, pattern: ['C', 'C', 'C'], key: { C: 'mc:copper_ingot' } });
+recipes.push({ result: 'mc:target', count: 1, pattern: ['R R', ' H ', 'R R'], key: { R: 'mc:redstone', H: 'mc:hay_block' } });
+recipes.push({ result: 'mc:lightning_rod', count: 1, pattern: ['C', 'C', 'C'], key: { C: 'mc:copper_ingot' } });
 recipes.push({ result: 'mc:repeater', count: 1, pattern: ['T T', ' R ', 'SSS'], key: { T: 'mc:redstone_torch', R: 'mc:redstone', S: 'mc:stone' } });
 recipes.push({ result: 'mc:light_weighted_pressure_plate', count: 1, pattern: ['GG'], key: { G: 'mc:gold_ingot' } });
 recipes.push({ result: 'mc:heavy_weighted_pressure_plate', count: 1, pattern: ['II'], key: { I: 'mc:iron_ingot' } });
@@ -457,7 +458,9 @@ export const RECIPES = new RecipeBook().addAll(recipes);
 
 const problems = RECIPES.validate();
 if (problems.length > 0) {
-  throw new Error('Recipe validation failed:\n  - ' + problems.join('\n  - '));
+  throw new Error('Recipe validation failed:
+  - ' + problems.join('
+  - '));
 }
 
 export const RECIPE_COUNT = RECIPES.size;
