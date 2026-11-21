@@ -1,3 +1,4 @@
+import { BedrockSoundPack } from '../audio/bedrock_sound_pack.js';
 /**
  * Original procedural sound events. AudioContext is created lazily after a user
  * gesture; these synthesized cues are not recordings from Minecraft.
@@ -44,7 +45,16 @@ export function noteBlockFrequency(note) {
   return 440 * Math.pow(2, (pitch - 12) / 12);
 }
 export class GameSounds {
-  constructor(){this.context=null;this.lastStep=0;this.enabled=true;this.masterVolume=1;}
+  constructor(){this.context=null;this.lastStep=0;this.enabled=true;this.masterVolume=1;this.bedrockPack=null;}
+  async importBedrockPack(file){
+    const context=this._ctx();
+    if(!context)throw new Error('Web Audio недоступен в этом браузере');
+    const pack=new BedrockSoundPack(context);
+    const result=await pack.import(file);
+    this.bedrockPack=pack;
+    return result;
+  }
+  clearBedrockPack(){this.bedrockPack=null;}
   _ctx(){
     if(!this.enabled)return null;
     const Audio=globalThis.AudioContext||globalThis.webkitAudioContext;
@@ -56,6 +66,7 @@ export class GameSounds {
   setEnabled(enabled){this.enabled=!!enabled;}
   setVolume(volume){this.masterVolume=Math.max(0,Math.min(1,Number(volume)||0));}
   playEvent(eventId,material='stone'){
+    if(this.enabled&&this.bedrockPack?.play(eventId,this.masterVolume))return true;
     const kind=SOUND_EVENTS[eventId];
     if(!kind)return false;
     this.play(kind,material);
