@@ -585,6 +585,26 @@ for (const [id, texture] of [
   properties: { age: PROPS.age7 }, defaultValues: { age: 0 }, texture,
 });
 
+// Pumpkin and melon stems are age-tracked crops; their fruit grows in an adjacent
+// open block above suitable soil rather than replacing the stem.
+for (const [id, texture] of [
+  ['mc:pumpkin_stem', 'pumpkin_stem'],
+  ['mc:melon_stem', 'melon_stem'],
+]) define(id, {
+  hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
+  replaceable: true, renderShape: 'cross', soundGroup: 'grass',
+  properties: { age: PROPS.age7 }, defaultValues: { age: 0 }, texture,
+});
+
+define('mc:pumpkin', {
+  hardness: 1, resistance: 1, tool: 'axe', soundGroup: 'wood',
+  texture: 'pumpkin',
+});
+define('mc:melon', {
+  hardness: 1, resistance: 1, tool: 'axe', soundGroup: 'wood',
+  texture: 'melon',
+});
+
 define('mc:torch', {
   hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
   lightEmission: 14, renderShape: 'torch', soundGroup: 'wood', texture: 'torch',
@@ -695,7 +715,7 @@ ITEM_TAGS.define('#mc:coals', ['mc:coal', 'mc:charcoal']);
 // ---------------------------------------------------------------------------
 
 /** Every block gets an item form unless it is unobtainable. */
-const NO_ITEM = new Set(['mc:air', 'mc:water', 'mc:lava', 'mc:portal', 'mc:wheat', 'mc:carrots', 'mc:potatoes', 'mc:beetroots', 'mc:redstone_wire', 'mc:piston_head']);
+const NO_ITEM = new Set(['mc:air', 'mc:water', 'mc:lava', 'mc:portal', 'mc:wheat', 'mc:carrots', 'mc:potatoes', 'mc:beetroots', 'mc:pumpkin_stem', 'mc:melon_stem', 'mc:redstone_wire', 'mc:piston_head']);
 for (const block of BLOCKS.blocks.values()) {
   if (NO_ITEM.has(block.id)) continue;
   ITEMS.defineBlockItem(block.id, {
@@ -751,6 +771,7 @@ const MATERIALS = [
   ['mc:bucket', { stackSize: 16 }],
   ['mc:melon_seeds', {}],
   ['mc:pumpkin_seeds', {}],
+  ['mc:melon_slice', { food: { nutrition: 2, saturation: 1.2 } }],
   ['mc:beetroot_seeds', {}],
   ['mc:beetroot', { food: { nutrition: 1, saturation: 0.6 } }],
 ];

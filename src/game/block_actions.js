@@ -22,7 +22,7 @@ import { drainContainer } from './containers.js';
 import { getVillagerOffers, executeVillagerTrade } from '../entity/villager_trades.js';
 import { pistonVector } from './pistons.js';
 import { hiveHarvestResult, hasCampfireSmoke } from './bee_hives.js';
-import { compostChance, nextComposterLevel, boneMealAge, compostRoll } from './composting.js';
+import { compostChance, nextComposterLevel, boneMealAge, compostRoll, canApplyBoneMeal } from './composting.js';
 
 export const BlockActionsMixin = {
   _breakBlock() {
@@ -162,7 +162,7 @@ export const BlockActionsMixin = {
       return;
     }
     if (heldItem?.id === 'mc:bone_meal' && this.hit &&
-        ['mc:wheat', 'mc:carrots', 'mc:potatoes', 'mc:beetroots'].includes(this.hit.state.block.id)) {
+        canApplyBoneMeal(this.hit.state.block.id, this.hit.state.get('age'))) {
       const { x, y, z, state } = this.hit;
       const nextAge = boneMealAge(state.get('age'), this.world.seed, x, y, z, this.tickCount);
       if (nextAge === null) {
@@ -423,6 +423,8 @@ export const BlockActionsMixin = {
       'mc:carrot': 'mc:carrots',
       'mc:potato': 'mc:potatoes',
       'mc:beetroot_seeds': 'mc:beetroots',
+      'mc:pumpkin_seeds': 'mc:pumpkin_stem',
+      'mc:melon_seeds': 'mc:melon_stem',
     };
     const plantedCrop = cropForSeed[held.item?.id];
     if (plantedCrop && id === 'mc:farmland') {
@@ -433,7 +435,7 @@ export const BlockActionsMixin = {
         if (crop && this.world.setBlock(cropPos.x, cropPos.y, cropPos.z, crop)) {
           this.multiplayer?.pushBlockChange(cropPos.x, cropPos.y, cropPos.z, crop);
           if (survival) this.inventory.consumeHeld(1);
-          const labels = { 'mc:wheat': 'Wheat', 'mc:carrots': 'Carrots', 'mc:potatoes': 'Potatoes', 'mc:beetroots': 'Beetroot' };
+          const labels = { 'mc:wheat': 'Wheat', 'mc:carrots': 'Carrots', 'mc:potatoes': 'Potatoes', 'mc:beetroots': 'Beetroot', 'mc:pumpkin_stem': 'Pumpkin', 'mc:melon_stem': 'Melon' };
           this.ui.toast(labels[plantedCrop] + ' planted');
         }
       }

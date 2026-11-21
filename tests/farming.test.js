@@ -4,10 +4,12 @@ import { BLOCKS } from '../src/world/block.js';
 import { ITEMS } from '../src/world/item.js';
 import {
   tickFarming, nextWheatAge, nextCropAge, hasNearbyWaterSource,
+  chooseStemFruitTarget, STEM_IDS,
   FARMLAND_MAX_MOISTURE, DRY_WHEAT_GROWTH_INTERVAL,
 } from '../src/game/farming.js';
 import { RECIPES } from '../src/game/recipes.js';
 import { blockDrops } from '../src/game/interaction.js';
+import { boneMealAge, canApplyBoneMeal } from '../src/game/composting.js';
 
 function makeWorld(entries = []) {
   const blocks = new Map(entries);
@@ -136,7 +138,201 @@ describe('wheat farming and farmland hydration', () => {
     assertEqual(drops[1].id, 'mc:wheat_seeds');
   });
 
+  it('registers pumpkin and melon stems as seven-stage crops and fruit as harvestable blocks', () => {
+    for (const id of STEM_IDS) {
+      const stem = BLOCKS.get(id);
+      assert(stem, id + ' missing');
+      assertEqual(nextCropAge(stem.defaultState), 1);
+      assertEqual(nextCropAge(stem.defaultState.with('age', 7)), null);
+    }
+    assert(BLOCKS.get('mc:pumpkin'), 'pumpkin block missing');
+    assert(BLOCKS.get('mc:melon'), 'melon block missing');
+    for (const id of ['mc:pumpkin', 'mc:melon', 'mc:pumpkin_seeds', 'mc:melon_seeds']) {
+      assert(ITEMS.get(id), id + ' item missing');
+    }
+    assertEqual(ITEMS.get('mc:melon_slice').food.nutrition, 2);
+  });
+
+  it('grows pumpkin and melon stems on hydrated farmland and slows dry stems', () => {
+    for (const id of STEM_IDS) {
+      const hydrated = makeWorld([
+        ['0,64,0', BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)],
+        ['0,65,0', BLOCKS.get(id).defaultState],
+      ]);
+      tickFarming(hydrated, { x: 0, y: 65, z: 0 }, 600);
+      assertEqual(hydrated.getBlock(0, 65, 0).get('age'), 1, id + ' did not grow');
+      const dry = makeWorld([
+        ['0,64,0', BLOCKS.get('mc:farmland').defaultState],
+        ['0,65,0', BLOCKS.get(id).defaultState],
+      ]);
+      tickFarming(dry, { x: 0, y: 65, z: 0 }, 600);
+      assertEqual(dry.getBlock(0, 65, 0).get('age'), 0, id + ' grew too quickly on dry soil');
+      tickFarming(dry, { x: 0, y: 65, z: 0 }, DRY_WHEAT_GROWTH_INTERVAL);
+      assertEqual(dry.getBlock(0, 65, 0).get('age'), 1, id + ' did not grow on dry interval');
+    }
+  });
+
+  it('places mature stem fruit only in adjacent air above suitable soil, deterministically', () => {
+    const entries = [
+      ['0,64,0', BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)],
+      ['0,65,0', BLOCKS.get('mc:pumpkin_stem').defaultState.with('age', 7)],
+      ['1,64,0', BLOCKS.get('mc:dirt').defaultState],
+      ['-1,64,0', BLOCKS.get('mc:dirt').defaultState],
+      ['0,64,1', BLOCKS.get('mc:dirt').defaultState],
+      ['0,64,-1', BLOCKS.get('mc:dirt').defaultState],
+    ];
+    let seed = 0, expected = null;
+    for (; seed < 100; seed++) {
+      expected = chooseStemFruitTarget(makeWorld(entries), 0, 65, 0, seed, 600, 'mc:pumpkin_stem');
+      if (expected) break;
+    }
+    assert(expected, 'could not find deterministic valid fruit roll');
+    const world = makeWorld(entries);
+    world.seed = seed;
+    const changed = tickFarming(world, { x: 0, y: 65, z: 0 }, 600);
+    assertEqual(world.getBlock(expected.x, expected.y, expected.z).block.id, 'mc:pumpkin');
+    assert(changed.some((change) => change.x === expected.x && change.z === expected.z), 'fruit change was not returned for replication');
+  });
+
+  it('grows both pumpkin and melon fruit from the matching mature stem', () => {
+    for (const [stemId, fruitId] of [['mc:pumpkin_stem', 'mc:pumpkin'], ['mc:melon_stem', 'mc:melon']]) {
+      const entries = [
+        ['0,64,0', BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)],
+        ['0,65,0', BLOCKS.get(stemId).defaultState.with('age', 7)],
+        ['1,64,0', BLOCKS.get('mc:dirt').defaultState],
+        ['-1,64,0', BLOCKS.get('mc:dirt').defaultState],
+        ['0,64,1', BLOCKS.get('mc:dirt').defaultState],
+        ['0,64,-1', BLOCKS.get('mc:dirt').defaultState],
+      ];
+      let seed = 0, target = null;
+      for (; seed < 100; seed++) {
+        target = chooseStemFruitTarget(makeWorld(entries), 0, 65, 0, seed, 600, stemId);
+        if (target) break;
+      }
+      assert(target, 'no valid fruit target for ' + stemId);
+      const world = makeWorld(entries);
+      world.seed = seed;
+      tickFarming(world, { x: 0, y: 65, z: 0 }, 600);
+      assertEqual(world.getBlock(target.x, target.y, target.z).block.id, fruitId);
+    }
+  });
+
+  it('does not spawn fruit on the same tick a stem reaches maturity', () => {
+    const entries = [
+      ['0,64,0', BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)],
+      ['0,65,0', BLOCKS.get('mc:pumpkin_stem').defaultState.with('age', 6)],
+      ['1,64,0', BLOCKS.get('mc:dirt').defaultState],
+      ['-1,64,0', BLOCKS.get('mc:dirt').defaultState],
+      ['0,64,1', BLOCKS.get('mc:dirt').defaultState],
+      ['0,64,-1', BLOCKS.get('mc:dirt').defaultState],
+    ];
+    const world = makeWorld(entries);
+    world.seed = 3;
+    tickFarming(world, { x: 0, y: 65, z: 0 }, 600);
+    assertEqual(world.getBlock(0, 65, 0).get('age'), 7);
+    for (const [x, z] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+      assertEqual(world.getBlock(x, 65, z).block.id, 'mc:air');
+    }
+  });
+
+  it('requires farmland under the mature stem even when neighboring soil is valid', () => {
+    const entries = [
+      ['0,64,0', BLOCKS.get('mc:dirt').defaultState],
+      ['0,65,0', BLOCKS.get('mc:melon_stem').defaultState.with('age', 7)],
+      ['1,64,0', BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)],
+      ['-1,64,0', BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)],
+      ['0,64,1', BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)],
+      ['0,64,-1', BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)],
+    ];
+    const world = makeWorld(entries);
+    world.seed = 12;
+    tickFarming(world, { x: 0, y: 65, z: 0 }, 600);
+    for (const [x, z] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+      assertEqual(world.getBlock(x, 65, z).block.id, 'mc:air');
+    }
+  });
+
+  it('skips occupied fruit positions instead of replacing existing blocks', () => {
+    const entries = [
+      ['0,64,0', BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)],
+      ['0,65,0', BLOCKS.get('mc:pumpkin_stem').defaultState.with('age', 7)],
+      ['1,64,0', BLOCKS.get('mc:dirt').defaultState],
+      ['-1,64,0', BLOCKS.get('mc:dirt').defaultState],
+      ['0,64,1', BLOCKS.get('mc:dirt').defaultState],
+      ['0,64,-1', BLOCKS.get('mc:dirt').defaultState],
+      ['1,65,0', BLOCKS.get('mc:stone').defaultState],
+    ];
+    let seed = 0, target = null;
+    for (; seed < 100; seed++) {
+      target = chooseStemFruitTarget(makeWorld(entries), 0, 65, 0, seed, 600, 'mc:pumpkin_stem');
+      if (target && target.x !== 1) break;
+    }
+    assert(target, 'no unoccupied fruit position found');
+    const world = makeWorld(entries);
+    world.seed = seed;
+    tickFarming(world, { x: 0, y: 65, z: 0 }, 600);
+    assertEqual(world.getBlock(1, 65, 0).block.id, 'mc:stone');
+    assertEqual(world.getBlock(target.x, target.y, target.z).block.id, 'mc:pumpkin');
+  });
+
+  it('does not spawn fruit when all adjacent soil is unsuitable or spaces are blocked', () => {
+    const entries = [
+      ['0,64,0', BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)],
+      ['0,65,0', BLOCKS.get('mc:melon_stem').defaultState.with('age', 7)],
+      ['1,64,0', BLOCKS.get('mc:stone').defaultState],
+      ['-1,64,0', BLOCKS.get('mc:stone').defaultState],
+      ['0,64,1', BLOCKS.get('mc:stone').defaultState],
+      ['0,64,-1', BLOCKS.get('mc:stone').defaultState],
+    ];
+    const world = makeWorld(entries);
+    world.seed = 0;
+    tickFarming(world, { x: 0, y: 65, z: 0 }, 600);
+    for (const [x, z] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+      assertEqual(world.getBlock(x, 65, z).block.id, 'mc:air');
+    }
+  });
+
+  it('drops melon slices and matching seeds from stems', () => {
+    const melon = blockDrops(BLOCKS.get('mc:melon').defaultState, null, 4, 0, 64, 0);
+    assertEqual(melon[0].id, 'mc:melon_slice');
+    assert(melon[0].count >= 3 && melon[0].count <= 7);
+    const pumpkin = blockDrops(BLOCKS.get('mc:pumpkin').defaultState, null, 4, 0, 64, 0);
+    assertEqual(pumpkin[0].id, 'mc:pumpkin');
+    assertEqual(pumpkin[0].count, 1);
+    const pumpkinStem = blockDrops(BLOCKS.get('mc:pumpkin_stem').defaultState, null, 5, 0, 64, 0);
+    assert(pumpkinStem.length <= 1);
+    if (pumpkinStem.length) assertEqual(pumpkinStem[0].id, 'mc:pumpkin_seeds');
+    const melonStem = blockDrops(BLOCKS.get('mc:melon_stem').defaultState, null, 6, 0, 64, 0);
+    assert(melonStem.length <= 1);
+    if (melonStem.length) assertEqual(melonStem[0].id, 'mc:melon_seeds');
+  });
+
+  it('adds pumpkin seed, melon seed and melon block recipes', () => {
+    assertEqual(RECIPES.producing('mc:pumpkin_seeds').length, 1);
+    assertEqual(RECIPES.producing('mc:melon_seeds').length, 1);
+    assertEqual(RECIPES.producing('mc:melon').length, 1);
+    assertEqual(RECIPES.producing('mc:melon')[0].pattern.join('/'), 'MMM/MMM/MMM');
+  });
+
+  it('allows bone meal on all six ageable crop families, including both stems', () => {
+    for (const id of ['mc:wheat', 'mc:carrots', 'mc:potatoes', 'mc:beetroots', ...STEM_IDS]) {
+      assertEqual(canApplyBoneMeal(id, 0), true, id + ' should accept bone meal');
+      assertEqual(canApplyBoneMeal(id, 6), true, id + ' should accept bone meal before maturity');
+      assertEqual(canApplyBoneMeal(id, 7), false, id + ' should reject bone meal when mature');
+      const age = boneMealAge(2, 123, 4, 65, 8, 600);
+      assert(age >= 4 && age <= 7, 'bone meal must advance by 2–5 stages');
+      assertEqual(boneMealAge(2, 123, 4, 65, 8, 600), age, 'bone meal result must be deterministic');
+      assertEqual(boneMealAge(7, 123, 4, 65, 8, 600), null, 'mature crop must not grow further');
+    }
+    assertEqual(canApplyBoneMeal('mc:pumpkin', 0), false);
+    assertEqual(canApplyBoneMeal('mc:stone', 0), false);
+    assertEqual(canApplyBoneMeal('mc:wheat', 7), false);
+  });
+
   it('retains bread and wooden hoe crafting recipes', () => {
+    assertEqual(RECIPES.producing('mc:bread').length, 1);
+    assertEqual(RECIPES.producing('mc:wooden_hoe').length, 1);
+  });  it('retains bread and wooden hoe crafting recipes', () => {
     assertEqual(RECIPES.producing('mc:bread').length, 1);
     assertEqual(RECIPES.producing('mc:wooden_hoe').length, 1);
   });

@@ -552,6 +552,24 @@ const TEXTURES = {
       setPx(t, x + 1, y - 1, 225, 203, 97);
     }
   }),
+  pumpkin_stem:       () => crossPlant('pumpkin_stem', (t) => {
+    for (let y = 4; y < 15; y++) {
+      setPx(t, 7, y, 73, 133, 48);
+      setPx(t, 8, y, 104, 160, 59);
+    }
+    for (let x = 5; x < 11; x++) setPx(t, x, 4, 94, 151, 52);
+    setPx(t, 6, 3, 227, 179, 56); setPx(t, 9, 3, 227, 179, 56);
+  }),
+  melon_stem:         () => crossPlant('melon_stem', (t) => {
+    for (let y = 4; y < 15; y++) {
+      setPx(t, 7, y, 66, 128, 49);
+      setPx(t, 8, y, 92, 153, 59);
+    }
+    for (let x = 5; x < 11; x++) setPx(t, x, 4, 83, 144, 54);
+    setPx(t, 6, 3, 196, 174, 68); setPx(t, 9, 3, 196, 174, 68);
+  }),
+  pumpkin:            () => grainy(hex(0xe58a22), 0.13, 'pumpkin', { clumps: 7, clumpColor: hex(0xc66a18) }),
+  melon:              () => grainy(hex(0x4d8b3c), 0.18, 'melon', { clumps: 9, clumpColor: hex(0x2f672e) }),
 
   coal_ore:           () => oreTile(STONE_GREY, hex(0x1b1b1b), 'coal_ore', 6),
   iron_ore:           () => oreTile(STONE_GREY, hex(0xd8a582), 'iron_ore', 5),
