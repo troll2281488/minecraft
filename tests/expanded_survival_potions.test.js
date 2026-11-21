@@ -39,6 +39,25 @@ describe('expanded survival potion effects', () => {
     assertEqual(player.air, 300);
   });
 
+  it('Weakness reduces player melee damage while Strength remains independently applied', async () => {
+    const { Inventory } = await import('../src/game/inventory.js');
+    const { MobSystem } = await import('../src/entity/mobs.js');
+    const player = new Player();
+    const inventory = new Inventory();
+    const game = { player, inventory, ui: { toast() {} }, sounds: { play() {} } };
+    const mobs = new MobSystem(game);
+    const target = { id: 42, type: 'zombie', x: 1, y: 64, z: 0, health: 20, anim: {} };
+    mobs.targetedMob = () => target;
+    player.effects.apply('weakness', 100);
+    mobs.attackFromPlayer();
+    assertEqual(target.health, 20);
+    player.effects.clear();
+    player.effects.apply('strength', 100);
+    mobs.attackCooldown = 0;
+    mobs.attackFromPlayer();
+    assertEqual(target.health < 20, true);
+  });
+
   it('slow falling reduces downward gravity and jump boost increases jump impulse', () => {
     const normal = new Player();
     const slow = new Player();
