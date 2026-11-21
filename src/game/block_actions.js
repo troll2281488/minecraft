@@ -333,12 +333,12 @@ export const BlockActionsMixin = {
       }
       return;
     }
-    if (heldItem?.id === 'mc:flint_and_steel' && this.hit) {
+    if (['mc:flint_and_steel', 'mc:fire_charge'].includes(heldItem?.id) && this.hit) {
       if (this.hit.state.block.id === 'mc:campfire') {
         const lit = this.hit.state.with('lit', true);
         if (this.world.setBlock(this.hit.x, this.hit.y, this.hit.z, lit)) {
           this.multiplayer?.pushBlockChange(this.hit.x, this.hit.y, this.hit.z, lit);
-          this.inventory.damageHeld(1);
+          if (heldItem.id === 'mc:fire_charge') this.inventory.consumeHeld(1); else this.inventory.damageHeld(1);
           this.sounds?.play('furnace');
           this.ui.toast('Костёр разожжён');
         }
@@ -366,7 +366,7 @@ export const BlockActionsMixin = {
           }
           activated=true;
         }
-        if(activated){this.inventory.damageHeld(1);this.ui.toast('Портал активирован! Нажми ПКМ по порталу, чтобы войти.');}
+        if(activated){if (heldItem.id === 'mc:fire_charge') this.inventory.consumeHeld(1); else this.inventory.damageHeld(1);this.ui.toast('Портал активирован! Нажми ПКМ по порталу, чтобы войти.');}
         else this.ui.toast('Сначала восстанови рамку портала обсидианом.');
         return;
       }
