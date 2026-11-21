@@ -246,3 +246,15 @@ export function fishingWaitTicks(baseTicks, rodStack) {
   const base = Math.max(20, Math.floor(Number(baseTicks) || 20));
   return Math.max(20, base - enchantmentLevel(rodStack, 'lure') * 100);
 }
+
+
+/** Java Protection enchantments contribute one EPF point per level, capped at 20. */
+export function protectionEnchantmentPoints(armorStacks) {
+  const total = (Array.isArray(armorStacks) ? armorStacks : [])
+    .reduce((sum, stack) => sum + enchantmentLevel(stack, 'protection'), 0);
+  return Math.min(20, total);
+}
+
+export function protectionDamageMultiplier(armorStacks) {
+  return 1 - protectionEnchantmentPoints(armorStacks) * 0.04;
+}
