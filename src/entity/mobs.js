@@ -70,6 +70,24 @@ export const MOB_AI_PROFILES = Object.freeze({
   wither: Object.freeze({ detectionRange: 24, speedMultiplier: 0.85, rangedRange: 18, preferredRange: 10, attackCooldown: 45, damage: 4, role: 'boss' }),
 });
 
+const LEASHABLE_MOB_TYPES = new Set(['cow', 'pig', 'sheep', 'chicken', 'mooshroom', 'rabbit', 'wolf', 'horse', 'bee']);
+
+export function canLeadMob(mob) {
+  return !!mob && LEASHABLE_MOB_TYPES.has(mob.type) && !mob.leashHolder;
+}
+
+export function attachMobLead(mob, owner = 'player') {
+  if (!canLeadMob(mob) || typeof owner !== 'string' || !owner || owner.length > 32) return false;
+  mob.leashHolder = owner;
+  return true;
+}
+
+export function detachMobLead(mob, owner = 'player') {
+  if (!mob || mob.leashHolder !== owner) return false;
+  delete mob.leashHolder;
+  return true;
+}
+
 export const MOB_TYPES_112 = Object.freeze([
   'bat','bee','blaze','cave_spider','chicken','cow','creeper','donkey','elder_guardian',
   'ender_dragon','enderman','endermite','evoker','ghast','guardian','horse','husk','illusioner',
@@ -724,7 +742,7 @@ export class MobSystem {
     const player = this.game.player;
     if (!mob || !player || !['survival', 'creative'].includes(player.gamemode)) return false;
 
-    if (mob.type === 'wolf' && !mob.tamed && held?.item?.id === 'mc:bone') {
+    if (mob.type === 'wolf' && mob.tamed && (!held || held.isEmpty)) {\n      mob.sitting = !mob.sitting;\n      this.game.ui?.toast(mob.sitting ? 'Волк сидит' : 'Волк следует за тобой');\n      return true;\n    }\n\n    if (mob.type === 'wolf' && !mob.tamed && held?.item?.id === 'mc:bone') {
       if (player.gamemode !== 'creative') this.game.inventory.consumeHeld(1);
       mob.tameProgress = (mob.tameProgress || 0) + 1;
       if (mob.tameProgress >= 2) {
@@ -1338,13 +1356,13 @@ export class MobSystem {
       const tamedWolf = mob.type === 'wolf' && mob.tamed;
       const fleeing = mob.type !== 'villager' && mob.type !== 'horse' && !tamedWolf &&
         !hostileType && mob.fleeTicks > 0;
-      const followingOwner = tamedWolf && distance > 2.5;
+      const followingOwner = ((tamedWolf && !sittingWolf) || followingLeash) && distance > 2.5;
       if (fleeing) mob.targetYaw = Math.atan2(mob.x - player.x, mob.z - player.z);
       else if (followingOwner) mob.targetYaw = Math.atan2(player.x - mob.x, player.z - mob.z);
 
       // Passive mobs now pause between short wandering bursts instead of
       // sliding and cycling their legs continuously while apparently idle.
-      if (hostile || fleeing || followingOwner) {
+      if (sittingWolf) {\n        mob.moveTicks = 0;\n        mob.pauseTicks = 120;\n      } else if (hostile || fleeing || followingOwner) {
         mob.moveTicks = 2;
         mob.pauseTicks = 0;
       } else {
