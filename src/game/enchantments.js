@@ -91,7 +91,7 @@ export function withEnchantment(stack, id, level) {
   return next;
 }
 
-export function enchantmentDamageMultiplier(stack, targetType = '') {
+export function enchantmentDamageBonus(stack, targetType = '') {
   const sharpness = enchantmentLevel(stack, 'sharpness');
   const smite = enchantmentLevel(stack, 'smite');
   const bane = enchantmentLevel(stack, 'bane_of_arthropods');
