@@ -947,6 +947,11 @@ ITEMS.define('mc:shears', { stackSize: 1, maxDamage: 238, tool: 'shears', attack
 ITEMS.define('mc:flint_and_steel', { stackSize: 1, maxDamage: 64, tool: 'flint_and_steel' });
 ITEMS.define('mc:fire_charge', { stackSize: 64 });
 ITEMS.define('mc:fishing_rod', { stackSize: 1, maxDamage: 64, tool: 'fishing_rod' });
+ITEMS.define('mc:leather_boots', { stackSize: 1, armor: { slot: 'feet', points: 1 } });
+ITEMS.define('mc:ink_sac', {});
+ITEMS.define('mc:tripwire_hook', {});
+ITEMS.define('mc:nautilus_shell', { stackSize: 16 });
+ITEMS.define('mc:lily_pad', { stackSize: 64 });
 ITEMS.define('mc:bow', { stackSize: 1, maxDamage: 384, weapon: 'bow' });
 ITEMS.define('mc:arrow', { stackSize: 64 });
 ITEMS.define('mc:saddle', { stackSize: 1 });
