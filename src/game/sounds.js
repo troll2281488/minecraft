@@ -31,7 +31,7 @@ export const SOUND_PRESETS = Object.freeze({
   doorOpen:{f:165,d:.22,type:'square',volume:.055}, doorClose:{f:125,d:.19,type:'square',volume:.055},
   chestOpen:{f:235,d:.16,type:'triangle',volume:.055}, chestClose:{f:175,d:.14,type:'triangle',volume:.055},
   furnace:{f:95,d:.28,type:'sawtooth',volume:.035}, note:{f:660,d:.24,type:'sine',volume:.065},
-  levelup:{f:880,d:.34,type:'sine',volume:.075}, shoot:{f:420,d:.075,type:'sawtooth',volume:.055},
+  levelup:{f:880,d:.34,type:'sine',volume:.075}, shoot:{f:420,d:.075,type:'sawtooth',volume:.055}, bow:{f:420,d:.11,type:'sawtooth',volume:.065},
   arrowHit:{f:145,d:.065,type:'triangle',volume:.06}, explode:{f:52,d:.42,type:'sawtooth',volume:.12},
   ambient:{f:185,d:.32,type:'sine',volume:.025}, mobHurt:{f:115,d:.19,type:'triangle',volume:.065},
   mobDeath:{f:82,d:.28,type:'sawtooth',volume:.07}, trade:{f:590,d:.11,type:'sine',volume:.06},
@@ -136,7 +136,13 @@ export class GameSounds {
       doorOpen:'block.door.open', doorClose:'block.door.close',
       chestOpen:'block.chest.open', chestClose:'block.chest.close',
       hurt:'entity.player.hurt', mobHurt:'entity.mob.hurt', mobDeath:'entity.mob.death',
-      pickup:'entity.item.pickup', eat:'item.eat', shoot:'entity.arrow.shoot',
+      pickup:'entity.item.pickup', drop:'entity.item.drop', xp:'entity.experience_orb.pickup',
+      levelup:'entity.player.levelup', eat:'item.eat', shoot:'entity.arrow.shoot', bow:'entity.arrow.shoot',
+      arrowHit:'entity.arrow.hit', cast:'item.cast', reel:'item.reel', bite:'item.fishing.bite',
+      catch:'item.fishing.catch', equip:'item.equip', furnace:'block.furnace.start',
+      note:'block.note', trade:'entity.villager.trade', goatHorn:'item.goat_horn',
+      rain:'weather.rain', thunder:'weather.thunder', water:'fluid.water', lava:'fluid.lava',
+      click:'ui.click', toast:'ui.toast',
       explode:'entity.generic.explode', ambient:'entity.mob.ambient',
     })[kind];
     if(packEvent && this.bedrockPack?.play(packEvent,this.masterVolume))return true;
