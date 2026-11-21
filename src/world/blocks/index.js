@@ -226,7 +226,7 @@ for (const [id, hardness, resistance, tool, texture, soundGroup] of [
   ['mc:end_bricks', 3, 9, 'pickaxe', 'sandstone', 'stone'],
   ['mc:purpur_block', 1.5, 6, 'pickaxe', 'stone', 'stone'],
   ['mc:purpur_pillar', 1.5, 6, 'pickaxe', 'stone', 'stone'],
-  ['mc:slime_block', 0, 0, null, 'white_wool', 'slime'],
+  ['mc:slime_block', 0, 0, null, 'slime_block', 'slime'],
   ['mc:magma_block', 0.5, 0.5, 'pickaxe', 'stone', 'stone'],
   ['mc:bone_block', 2, 2, 'pickaxe', 'white_wool', 'stone'],
   ['mc:packed_ice', 0.5, 0.5, 'pickaxe', 'ice', 'glass'],
@@ -328,11 +328,6 @@ define('mc:dropper', {
   hardness: 3.5, resistance: 3.5, tool: 'pickaxe', harvestLevel: 0,
   requiresTool: true, soundGroup: 'stone', texture: 'dropper',
   properties: { facing: PROPS.facingAll }, defaultValues: { facing: 'north' },
-});
-
-define('mc:slime_block', {
-  hardness: 0, resistance: 0, soundGroup: 'slime',
-  texture: 'slime_block', solid: true, opaqueCube: true, opacity: 15,
 });
 
 define('mc:piston', {
