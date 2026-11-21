@@ -5,6 +5,7 @@ import { ITEMS } from '../src/world/item.js';
 import { RECIPES } from '../src/game/recipes.js';
 import { hiveHarvestResult, hasCampfireSmoke, findBeeTarget, tickBeeForaging, HIVE_MAX_HONEY } from '../src/game/bee_hives.js';
 import { MOB_TYPES_112 } from '../src/entity/mobs.js';
+import { shouldGenerateBeeNest, beeNestFacing } from '../src/world/gen/bee_nests.js';
 
 describe('bee nest and beehive harvesting', () => {
   it('registers both hive blocks with persisted 0..5 honey levels', () => {
@@ -88,6 +89,23 @@ describe('bee nest and beehive harvesting', () => {
   it('does not harvest with unrelated items', () => {
     const hive = BLOCKS.get('mc:beehive').defaultState.with('honey_level', 5);
     assertEqual(hiveHarvestResult(hive, 'mc:stick', true).reason, 'wrong_tool');
+  });
+
+  it('generates bee nests deterministically only on eligible oak/birch forest trees', () => {
+    let eligible = 0;
+    for (let x = 0; x < 200; x++) {
+      if (shouldGenerateBeeNest(12345, x, 7, 'mc:flower_forest', 'oak')) eligible++;
+      assertEqual(shouldGenerateBeeNest(12345, x, 7, 'mc:desert', 'oak'), false);
+      assertEqual(shouldGenerateBeeNest(12345, x, 7, 'mc:flower_forest', 'jungle'), false);
+    }
+    assert(eligible > 0 && eligible < 40, 'nest frequency is not within the expected sparse range');
+    assertEqual(shouldGenerateBeeNest(12345, 4, 7, 'mc:flower_forest', 'oak'),
+      shouldGenerateBeeNest(12345, 4, 7, 'mc:flower_forest', 'oak'));
+  });
+
+  it('chooses a stable valid horizontal nest facing', () => {
+    assert(['north', 'south', 'west', 'east'].includes(beeNestFacing(12, 4, 8)));
+    assertEqual(beeNestFacing(12, 4, 8), beeNestFacing(12, 4, 8));
   });
 
   it('registers bees and a creative bee spawn egg', () => {
