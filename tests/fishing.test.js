@@ -1,7 +1,8 @@
 import { describe, it, assertEqual } from './framework.js';
 import { rollFishingCatch } from '../src/entity/mobs.js';
 import '../src/world/blocks/index.js';
-import { ITEMS } from '../src/world/item.js';
+import { ITEMS, ItemStack } from '../src/world/item.js';
+import { withEnchantment } from '../src/game/enchantments.js';
 
 function sequence(values) {
   let index = 0;
@@ -20,6 +21,12 @@ describe('Java 1.19 fishing loot', () => {
     assertEqual(rollFishingCatch(sequence([0.949, 0.999])).id, 'mc:tripwire_hook');
     assertEqual(rollFishingCatch(sequence([0.95, 0])).id, 'mc:bow');
     assertEqual(rollFishingCatch(sequence([0.999, 0.999])).id, 'mc:saddle');
+  });
+  it('moves category weights toward treasure with Luck of the Sea', () => {
+    const rod = ItemStack.of('mc:fishing_rod');
+    const luckyRod = withEnchantment(rod, 'luck_of_the_sea', 3);
+    assertEqual(rollFishingCatch(sequence([0.90, 0]), rod).id, 'mc:lily_pad');
+    assertEqual(rollFishingCatch(sequence([0.90, 0]), luckyRod).id, 'mc:bow');
   });
   it('registers every item returned by the expanded loot table', () => {
     const catches = [
