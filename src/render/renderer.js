@@ -781,16 +781,31 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           // First-person attack swing is already applied above; do not add a second rotation.
         } else if (!skin && pose.vanillaModel && /head/i.test(partName ?? '')) {
           swing = Math.sin(pose.idle ?? 0) * 0.045 + (pose.walking ? Math.sin(walkPhase * 0.5) * 0.025 : 0);
-        } else if (!skin && pose.vanillaModel && /arm/i.test(partName ?? '') && pose.humanoid) {
-          const side = /left/i.test(partName ?? '') ? 1 : /right/i.test(partName ?? '') ? -1 : (partIndex % 2 ? -1 : 1);
-          swing = pose.walking ? Math.sin(walkPhase) * 0.34 * side : 0;
-          if (pose.attack && side < 0) swing -= 0.9;
+        } else if (!skin && pose.humanoid && (pose.vanillaModel ? /arm/i.test(partName ?? '') : (partIndex === 3 || partIndex === 4))) {
+          const left = /left/i.test(partName ?? '') || (!/right/i.test(partName ?? '') && partIndex === 3);
+          const gait = Math.sin(walkPhase) * (pose.sprinting ? 0.92 : 0.58);
+          swing = pose.walking ? gait * (left ? 1 : -1) : 0;
+          if (pose.attack && !left) swing -= 0.9;
+          if (pose.riding) swing = -0.35;
         } else if (!skin && pose.vanillaModel && /leg|foot/i.test(partName ?? '')) {
-          const side = /left/i.test(partName ?? '') ? 0 : /right/i.test(partName ?? '') ? Math.PI : phase;
-          swing = pose.walking ? Math.sin(walkPhase + side) * (pose.sprinting ? 0.52 : 0.38) : 0;
+          const left = /left/i.test(partName ?? '') || (!/right/i.test(partName ?? '') && partIndex % 2 === 0);
+          const gait = Math.sin(walkPhase) * (pose.sprinting ? 0.72 : 0.48);
+          swing = pose.walking ? gait * (left ? 1 : -1) : 0;
+          if (pose.riding) swing = -0.82;
+          if (pose.swimming) swing = Math.sin(walkPhase * 1.7 + (left ? Math.PI : 0)) * 0.42;
         } else if (!skin && pose.vanillaModel && /wing/i.test(partName ?? '')) {
           const flying = ['bee','bat','parrot','chicken','phantom','ender_dragon'].includes(pose.mobType);
           swing = flying ? Math.sin((pose.idle ?? 0) * (pose.mobType === 'bee' ? 3.2 : 2.4)) * (pose.mobType === 'bee' ? 0.48 : 0.34) : 0;
+        } else if (!skin && pose.mobType === 'spider' || (!skin && pose.mobType === 'cave_spider')) {
+          if (partIndex >= 4) {
+            const leg = partIndex - 4;
+            const side = leg % 2 === 0 ? 1 : -1;
+            const pair = Math.floor(leg / 2);
+            swing = pose.walking ? Math.sin(walkPhase + (pair % 2 ? Math.PI : 0)) * 0.34 * side : Math.sin((pose.idle ?? 0) * 0.8 + pair) * 0.025;
+          }
+        } else if (!skin && pose.mobType === 'bee' && !pose.vanillaModel && (partIndex === 2 || partIndex === 3)) {
+          swing = Math.sin((pose.idle ?? 0) * 3.2 + (partIndex === 2 ? 0 : Math.PI)) * 0.48;
+          partOffset[1] += Math.sin((pose.idle ?? 0) * 3.2) * 0.025;
         } else if (!skin && pose.animal && partIndex === 0) {
           // Body bob only follows actual movement; breathing remains subtle at rest.
           const stride = pose.walking ? Math.abs(Math.sin(walkPhase * 2)) : 0;
@@ -1036,9 +1051,13 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         : mob.type === 'chicken' ? chicken : sheep);
       const pulse = mob.type === 'creeper' && mob.anim?.fuse > 0
         ? 1 + Math.sin(mob.anim.fuse * Math.PI * 12) * 0.10 * mob.anim.fuse : 1;
-      const legs = mob.type === 'bee' ? [-1, -1] : mob.type === 'creeper' ? [2, 5] : mob.type === 'zombie' || mob.type === 'skeleton' || mob.type === 'stray' || mob.type === 'villager' ? [4, 5]
-        : mob.type === 'pig' ? [3, 6] : mob.type === 'cow' ? [2, 5]
-        : mob.type === 'chicken' ? [4, 5] : mob.type === 'enderman' ? [4, 5] : [2, 5];
+      const legs = mob.type === 'bee' ? [-1, -1]
+        : mob.type === 'spider' || mob.type === 'cave_spider' ? [4, 11]
+        : mob.type === 'creeper' ? [2, 5]
+        : ['zombie','skeleton','stray','villager','enderman'].includes(mob.type) ? [4, 5]
+        : mob.type === 'pig' || mob.type === 'rabbit' ? [2, 5]
+        : mob.type === 'cow' || mob.type === 'sheep' || mob.type === 'goat' || mob.type === 'mooshroom' || mob.type === 'polar_bear' || mob.type === 'horse' ? [2, 5]
+        : mob.type === 'chicken' ? [4, 5] : [2, 5];
       const babyScale = mob.ageTicks < 0 ? 0.55 : 1;
       const animal = ['sheep', 'pig', 'cow', 'goat', 'chicken', 'mooshroom', 'rabbit', 'wolf', 'polar_bear', 'bee'].includes(mob.type);
       const humanoid = ['zombie', 'skeleton', 'stray', 'villager'].includes(mob.type);
@@ -1046,7 +1065,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
         hurt: (mob.hurtTicks || 0) > 0, animal, humanoid, vanillaModel: !!vanillaParts,
         mobType: mob.type, mobTextureKey: mob.type === 'villager' ? 'villager_' + (mob.villagerCareer === 'archer' ? 'fletcher' : (mob.villagerCareer || 'farmer')) : mob.type,
-        idle: mob.anim?.idle ?? 0, walking: !!mob.anim?.walking, sprinting: !!mob.sprinting, humanoid,
+        idle: mob.anim?.idle ?? 0, walking: !!mob.anim?.walking, sprinting: !!mob.sprinting, attack: (mob.anim?.attack ?? 0) > 0, attackTime: mob.anim?.attack ?? 0, airborne: !!mob.airborne, jumping: !!mob.jumping, swimming: !!mob.inWater, riding: !!mob.riding, humanoid,
       });
       if (mob.type === 'goat' && !vanillaParts) {
         draw(mob.x, mob.y, mob.z, mob.yaw, [
