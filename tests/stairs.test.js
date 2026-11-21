@@ -96,4 +96,22 @@ describe('Java stair corner geometry', () => {
     assertEqual(boxes.length, 3);
   });
 
+
+  it('suppresses a corner when a same-facing stair continues the run at the side', () => {
+    const frontCorner = OAK.with('facing', 'west');
+    const sideRun = OAK.with('facing', 'north');
+    const outer = shapeBoxes(OAK, neighborAt(new Map([
+      ['0,0,-1', frontCorner],
+      ['1,0,0', sideRun],
+    ])));
+    assertEqual(outer.length, 3, 'outer corner blocked by side continuation');
+
+    const backCorner = OAK.with('facing', 'west');
+    const inner = shapeBoxes(OAK, neighborAt(new Map([
+      ['0,0,1', backCorner],
+      ['-1,0,0', sideRun],
+    ])));
+    assertEqual(inner.length, 3, 'inner corner blocked by side continuation');
+  });
+
 });
