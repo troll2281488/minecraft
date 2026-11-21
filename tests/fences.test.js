@@ -105,6 +105,7 @@ describe('Java fence and fence-gate registration and geometry', () => {
       },
       keys: { has: () => false },
       _farmInteraction: () => false,
+      _placeBlock: () => {},
       ...BlockActionsMixin,
     };
     game._useOrPlace();
