@@ -17,6 +17,7 @@ import './rabbit_horse_breeding.test.js';
 import './fire_charge.test.js';
 import './fishing.test.js';
 import './farming.test.js';
+import './sweet_berry_bush.test.js';
 import './composting.test.js';
 import './hopper.test.js';
 import './fences.test.js';

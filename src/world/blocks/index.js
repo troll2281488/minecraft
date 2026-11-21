@@ -690,6 +690,12 @@ for (const [id, texture] of [
   properties: { age: PROPS.age7 }, defaultValues: { age: 0 }, texture,
 });
 
+define('mc:sweet_berry_bush', {
+  hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
+  replaceable: true, renderShape: 'cross', soundGroup: 'grass', texture: 'sweet_berry_bush',
+  properties: { age: PROPS.age7 }, defaultValues: { age: 0 },
+});
+
 define('mc:sugar_cane', {
   hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
   replaceable: true, renderShape: 'cross', soundGroup: 'grass', texture: 'sugar_cane',
@@ -814,7 +820,7 @@ ITEM_TAGS.define('#mc:coals', ['mc:coal', 'mc:charcoal']);
 // ---------------------------------------------------------------------------
 
 /** Every block gets an item form unless it is unobtainable. */
-const NO_ITEM = new Set(['mc:air', 'mc:water', 'mc:lava', 'mc:portal', 'mc:wheat', 'mc:carrots', 'mc:potatoes', 'mc:beetroots', 'mc:pumpkin_stem', 'mc:melon_stem', 'mc:redstone_wire', 'mc:piston_head']);
+const NO_ITEM = new Set(['mc:air', 'mc:water', 'mc:lava', 'mc:portal', 'mc:wheat', 'mc:carrots', 'mc:potatoes', 'mc:beetroots', 'mc:sweet_berry_bush', 'mc:pumpkin_stem', 'mc:melon_stem', 'mc:redstone_wire', 'mc:piston_head']);
 for (const block of BLOCKS.blocks.values()) {
   if (NO_ITEM.has(block.id)) continue;
   ITEMS.defineBlockItem(block.id, {
@@ -930,6 +936,7 @@ for (const [id, nutrition, saturation] of FOODS) {
 }
 
 // Java survival foods added with their vanilla nutrition and container returns.
+ITEMS.define('mc:sweet_berries', { food: { nutrition: 2, saturation: 0.1 } });
 ITEMS.define('mc:golden_carrot', { food: { nutrition: 6, saturation: 1.2 } });
 ITEMS.define('mc:mushroom_stew', { stackSize: 1, food: { nutrition: 6, saturation: 0.6 }, containerItem: 'mc:bowl' });
 ITEMS.define('mc:beetroot_soup', { stackSize: 1, food: { nutrition: 6, saturation: 0.6 }, containerItem: 'mc:bowl' });

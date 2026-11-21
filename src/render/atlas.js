@@ -642,6 +642,7 @@ const TEXTURES = {
 
   short_grass:        () => crossPlant('short_grass', (t, r) => grassBlades(t, r, GRASS_GREEN)),
   fern:               () => crossPlant('fern', (t, r) => grassBlades(t, r, hex(0x5f9440))),
+  sweet_berry_bush:   () => crossPlant('sweet_berry_bush', (t, r) => { grassBlades(t, r, hex(0x477b35)); for (const [x, y] of [[5, 6], [10, 8], [7, 11], [11, 12]]) { setPx(t, x, y, 180, 35, 45); setPx(t, x + 1, y, 215, 55, 61); } }),
   dead_bush:          () => crossPlant('dead_bush', (t, r) => grassBlades(t, r, hex(0x8a6a35))),
   red_mushroom:       () => crossPlant('red_mushroom', (t) => { for (let y=3;y<13;y++) for (let x=4;x<12;x++) if ((x-8)**2+(y-7)**2<19) setPx(t,x,y,190,48,42); setPx(t,8,12,224,210,184); }),
   brown_mushroom:     () => crossPlant('brown_mushroom', (t) => { for (let y=4;y<12;y++) for (let x=4;x<12;x++) if ((x-8)**2+(y-7)**2<20) setPx(t,x,y,126,83,54); setPx(t,8,12,224,210,184); }),

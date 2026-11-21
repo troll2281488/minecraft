@@ -37,6 +37,7 @@ const CHANCES = {
   'mc:beetroot': 0.65,
   'mc:pumpkin': 0.65,
   'mc:melon_slice': 0.50,
+  'mc:sweet_berries': 0.30,
   'mc:sugar_cane': 0.50,
   'mc:apple': 0.65,
   'mc:bread': 0.85,

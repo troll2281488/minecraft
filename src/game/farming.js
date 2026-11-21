@@ -16,6 +16,8 @@ export const FARMLAND_TICK_INTERVAL = 20;
 export const WHEAT_GROWTH_INTERVAL = 600;
 export const DRY_WHEAT_GROWTH_INTERVAL = 1800;
 export const SUGAR_CANE_GROWTH_INTERVAL = 600;
+export const SWEET_BERRY_GROWTH_INTERVAL = 600;
+export const SWEET_BERRY_BUSH_ID = 'mc:sweet_berry_bush';
 export const SUGAR_CANE_MAX_HEIGHT = 3;
 const SUGAR_CANE_SOILS = new Set(['mc:sand', 'mc:dirt', 'mc:grass_block']);
 
@@ -33,6 +35,20 @@ export function canPlantSugarCane(world, x, y, z) {
     if (water?.block?.id === 'mc:water' && (water.get?.('level') ?? 0) === 0) return true;
   }
   return false;
+}
+
+export function nextSweetBerryBushAge(state) {
+  if (state?.block?.id !== SWEET_BERRY_BUSH_ID) return null;
+  const age = state.get('age');
+  return age >= 3 ? null : age + 1;
+}
+
+export function sweetBerryHarvest(state, random = Math.random) {
+  if (state?.block?.id !== SWEET_BERRY_BUSH_ID) return null;
+  const age = state.get('age');
+  if (age < 2) return null;
+  const count = age === 3 ? 2 + Math.floor(random() * 2) : 1 + Math.floor(random() * 2);
+  return { count, state: state.with('age', 1) };
 }
 
 export function nextWheatAge(state) {
@@ -164,6 +180,20 @@ export function tickFarming(world, player, tickCount) {
           if (tickCount % interval !== 0) continue;
           const target = chooseStemFruitTarget(world, x, y, z, world.seed, tickCount, stem.block.id);
           if (target) write(target.x, target.y, target.z, target.state);
+        }
+      }
+    }
+  }
+
+  if (tickCount % SWEET_BERRY_GROWTH_INTERVAL === 0) {
+    const soils = new Set(['mc:grass_block', 'mc:dirt', 'mc:coarse_dirt', 'mc:podzol']);
+    for (let x = px - 8; x <= px + 8; x++) {
+      for (let z = pz - 8; z <= pz + 8; z++) {
+        for (let y = py - 3; y <= py + 4; y++) {
+          const bush = world.getBlock(x, y, z);
+          const nextAge = nextSweetBerryBushAge(bush);
+          if (nextAge === null || !soils.has(world.getBlock(x, y - 1, z)?.block?.id)) continue;
+          write(x, y, z, bush.with('age', nextAge));
         }
       }
     }
