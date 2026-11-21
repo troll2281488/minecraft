@@ -107,7 +107,6 @@ stoneLike('mc:netherrack', 'netherrack', 0.4, 2);
 stoneLike('mc:blackstone', 'blackstone', 1.5, 6);
 stoneLike('mc:polished_blackstone', 'polished_blackstone', 1.5, 6);
 stoneLike('mc:nether_bricks', 'nether_bricks', 2, 6);
-stoneLike('mc:nether_brick_fence', 'nether_bricks', 2, 6);
 stoneLike('mc:nether_gold_ore', 'nether_gold_ore', 3, 3);
 define('mc:glowstone', {
   hardness: 0.3, resistance: 0.3, tool: 'pickaxe', soundGroup: 'glass',
@@ -451,6 +450,40 @@ for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) {
   trapdoor(wood, `${wood}_trapdoor`);
 }
 trapdoor('iron', 'iron_trapdoor', true);
+
+
+// Wood fences and gates use shared box geometry; connections are resolved from
+// neighbouring blocks at render/collision time, so remote edits and old saves
+// do not need a neighbour-state migration.
+const FENCE_PROPERTIES = {
+  north: PROPS.north, south: PROPS.south, west: PROPS.west, east: PROPS.east,
+};
+function fenceBlock(id, texture, material = 'wood') {
+  const wood = material === 'wood';
+  define(`mc:${id}`, {
+    hardness: wood ? 2 : 2, resistance: wood ? 3 : 6,
+    tool: wood ? 'axe' : 'pickaxe', harvestLevel: wood ? -1 : 0,
+    requiresTool: !wood, soundGroup: wood ? 'wood' : 'stone',
+    flammability: wood ? 5 : 0, texture,
+    solid: true, opaqueCube: false, opacity: 0, renderShape: 'fence',
+    properties: FENCE_PROPERTIES,
+    defaultValues: { north: false, south: false, west: false, east: false },
+  });
+}
+function fenceGateBlock(wood) {
+  define(`mc:${wood}_fence_gate`, {
+    hardness: 2, resistance: 3, tool: 'axe', soundGroup: 'wood',
+    flammability: 5, texture: `${wood}_fence_gate`,
+    solid: true, opaqueCube: false, opacity: 0, renderShape: 'fence_gate',
+    properties: { facing: PROPS.facing, open: PROPS.open, powered: PROPS.powered },
+    defaultValues: { facing: 'north', open: false, powered: false },
+  });
+}
+for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) {
+  fenceBlock(`${wood}_fence`, `${wood}_fence`);
+  fenceGateBlock(wood);
+}
+fenceBlock('nether_brick_fence', 'nether_bricks', 'stone');
 
 // Note block: 25 semitone pitches, tuned by right-click and triggered by redstone.
 define('mc:note_block', {
