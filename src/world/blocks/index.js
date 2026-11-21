@@ -860,8 +860,6 @@ const MATERIALS = [
   ['mc:beetroot_seeds', {}],
   ['mc:beetroot', { food: { nutrition: 1, saturation: 0.6 } }],
   ['mc:bowl', { stackSize: 64 }],
-  ['mc:cocoa_beans', {}],
-  ['mc:egg', {}],
 ];
 for (const [id, opts] of MATERIALS) ITEMS.define(id, opts);
 
