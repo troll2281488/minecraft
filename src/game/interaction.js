@@ -378,6 +378,13 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
   }
   if (id === 'mc:dead_bush') return [];
 
+  // Java cobwebs yield string with a sword, but the block itself with shears.
+  if (id === 'mc:cobweb') {
+    if (heldStack?.item?.tool === 'shears') return [{ id: 'mc:cobweb', count: 1 }];
+    if (heldStack?.item?.tool === 'sword') return [{ id: 'mc:string', count: 1 }];
+    return [];
+  }
+
   if (id.endsWith('_leaves')) {
     if (heldStack?.item?.tool === 'shears') return [{ id, count: 1 }];
     const sapling = id.replace('_leaves', '_sapling');
