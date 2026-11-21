@@ -133,6 +133,17 @@ export const BlockActionsMixin = {
   },
 
   _useOrPlace() {
+    if (this.inventory?.held?.item?.id === 'mc:goat_horn') {
+      const last = this.player.lastGoatHornUse ?? -1000;
+      if (this.tickCount - last < 140) {
+        this.ui.toast('Рог ещё перезаряжается');
+        return;
+      }
+      this.player.lastGoatHornUse = this.tickCount;
+      this.sounds?.play('goatHorn');
+      this.ui.toast('Ты протрубил в козий рог');
+      return;
+    }
     if (this.entities?.boostPigFromPlayer()) return;
     const villager = this.entities?.targetedMob();
     if (villager?.type === 'villager') {
