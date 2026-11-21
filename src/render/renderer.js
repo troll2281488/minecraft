@@ -945,8 +945,8 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     }
     if (this.thirdPerson) {
       document.getElementById('held-item-view')?.classList.add('hidden');
-      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : this.player.ridingMinecart ? 0.42 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround, sprinting: !!this.player.sprinting, jumping: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking || !!this.player.ridingHorse || !!this.player.ridingMinecart, riding: !!this.player.ridingHorse || !!this.player.ridingMinecart, walking: !this.player.ridingHorse && !this.player.ridingMinecart && this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035, attack: this.player.attackTime > 0, attackTime: this.player.attackTime }, true);
-      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, outerHuman, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.ridingHorse && !this.player.onGround, sneaking: this.player.sneaking || !!this.player.ridingHorse, riding: !!this.player.ridingHorse, skinLayer: true }, true);
+      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : this.player.ridingMinecart ? 0.42 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater && Math.hypot(this.player.vx ?? 0, this.player.vy ?? 0, this.player.vz ?? 0) > 0.025, airborne: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround, sprinting: !!this.player.sprinting, jumping: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking || !!this.player.ridingHorse || !!this.player.ridingMinecart, riding: !!this.player.ridingHorse || !!this.player.ridingMinecart, walking: !this.player.ridingHorse && !this.player.ridingMinecart && this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035, attack: this.player.attackTime > 0, attackTime: this.player.attackTime }, true);
+      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, outerHuman, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater && Math.hypot(this.player.vx ?? 0, this.player.vy ?? 0, this.player.vz ?? 0) > 0.025, airborne: !this.player.ridingHorse && !this.player.onGround, sneaking: this.player.sneaking || !!this.player.ridingHorse, riding: !!this.player.ridingHorse, skinLayer: true }, true);
       const armorColors = ['#b8b8b8','#8f8f9b','#b17a45','#6c778a'];
       const armorParts = [];
       for (let slot = 36; slot <= 39; slot++) {
@@ -1134,14 +1134,14 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       const firstPersonArmPose = {
         firstPerson: true, attack: this.player.attackTime > 0, attackTime: this.player.attackTime,
         bowDraw: bowDrawing, crossbowLoad: crossbowLoading, tridentCharge: tridentCharging,
-        sneaking: this.player.sneaking, swimming: this.player.inWater, airborne: !this.player.onGround,
+        sneaking: this.player.sneaking, swimming: this.player.inWater && Math.hypot(this.player.vx ?? 0, this.player.vy ?? 0, this.player.vz ?? 0) > 0.025, airborne: !this.player.onGround,
         walking: this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035,
       };
       draw(handX, handY, handZ, yaw, armParts, this.player.walkPhase, -1, -1, 1, firstPersonArmPose, true);
       // Draw the matching transparent sleeve over the first-person arm too.
       const outerArmParts = armParts.map(([offset, size, color]) => [offset, size.map((value) => value * 1.045), color]);
       draw(handX, handY, handZ, yaw, outerArmParts, this.player.walkPhase, -1, -1, 1,
-        { firstPerson: true, skinLayer: true, attack: this.player.attackTime > 0, attackTime: this.player.attackTime, sneaking: this.player.sneaking, swimming: this.player.inWater, airborne: !this.player.onGround, walking: this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035 }, true);
+        { firstPerson: true, skinLayer: true, attack: this.player.attackTime > 0, attackTime: this.player.attackTime, sneaking: this.player.sneaking, swimming: this.player.inWater && Math.hypot(this.player.vx ?? 0, this.player.vy ?? 0, this.player.vz ?? 0) > 0.025, airborne: !this.player.onGround, walking: this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035 }, true);
 
       // Actual vanilla item PNGs are displayed on a thin 3D-oriented sprite;
       // block items are rendered as volumetric cubes using that same source art.
