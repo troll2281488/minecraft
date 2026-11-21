@@ -30,7 +30,7 @@ export function nextWheatAge(state) {
 
 
 
-const CANE_SOILS = new Set(['mc:dirt', 'mc:grass_block', 'mc:podzol', 'mc:coarse_dirt', 'mc:sand']);
+const CANE_SOILS = new Set(['mc:dirt', 'mc:grass_block', 'mc:podzol', 'mc:coarse_dirt', 'mc:sand', 'mc:red_sand']);
 const CACTUS_SOILS = new Set(['mc:sand', 'mc:red_sand']);
 
 function isSourceWater(state) {
@@ -204,7 +204,7 @@ export function tickFarming(world, player, tickCount) {
         for (let y = py - 3; y <= py + 4; y++) {
           const plant = world.getBlock(x, y, z);
           const id = plant?.block?.id;
-          if (!BLOCK_PLANT_IDS.includes(id)) continue;
+          if (!BLOCK_PLANT_IDS.includes(id) || changedKeys.has(`${x},${y},${z}`)) continue;
           if (world.getBlock(x, y + 1, z)?.block?.id !== 'mc:air') continue;
           const baseY = plantColumnBase(world, x, y, z, id);
           const height = y - baseY + 1;
