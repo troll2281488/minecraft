@@ -174,6 +174,29 @@ describe('Java wall family geometry and crafting', () => {
     assertDeepEqual(toStone[1], [0.75, 0.25, 0.25, 1, 0.8125, 0.75]);
   });
 
+  it('uses tall side arms when joining another wall, but low arms for opaque cubes', () => {
+    const wall = BLOCKS.get('mc:cobblestone_wall').defaultState;
+    const tall = shapeBoxes(wall, (dx, dy, dz) =>
+      dx === 0 && dy === 0 && dz === -1 ? wall : null);
+    assertDeepEqual(tall[1], [0.25, 0.25, 0, 0.75, 0.875, 0.25]);
+    const low = shapeBoxes(wall, (dx, dy, dz) =>
+      dx === 0 && dy === 0 && dz === -1 ? STONE : null);
+    assertDeepEqual(low[1], [0.25, 0.25, 0, 0.75, 0.8125, 0.25]);
+  });
+
+  it('hides the central post in an uncapped straight wall run', () => {
+    const wall = BLOCKS.get('mc:cobblestone_wall').defaultState;
+    const straight = shapeBoxes(wall, (dx, dy, dz) =>
+      dy === 0 && dx === 0 && Math.abs(dz) === 1 ? wall : null);
+    assertEqual(straight.length, 2);
+    assertDeepEqual(straight[0], [0.25, 0.25, 0, 0.75, 0.8125, 0.25]);
+    const capped = shapeBoxes(wall, (dx, dy, dz) =>
+      dy === 1 && dx === 0 && dz === 0 ? STONE
+        : dy === 0 && dx === 0 && Math.abs(dz) === 1 ? wall : null);
+    assertEqual(capped.length, 3);
+    assertDeepEqual(capped[0], [0.25, 0, 0.25, 0.75, 1.5, 0.75]);
+  });
+
   it('does not connect to glass, fences, or fence gates', () => {
     const wall = BLOCKS.get('mc:cobblestone_wall').defaultState;
     const glass = BLOCKS.get('mc:glass').defaultState;
