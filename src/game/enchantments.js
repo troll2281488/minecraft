@@ -115,15 +115,16 @@ export function unbreakingDamage(stack, requested = 1, random = Math.random) {
 }
 
 /** Apply Java's anvil enchantment merge and repair rules to two compatible stacks. */
-export function combineOnAnvil(left, right, { materialRepair = false } = {}) {
+export function combineOnAnvil(left, right) {
   if (!left || left.isEmpty || !right || right.isEmpty) return { ok: false, reason: 'missing_input' };
-  if (left.item.id !== right.item.id && right.item.id !== 'mc:enchanted_book' && !materialRepair) {
+  if (left.item.id !== right.item.id && right.item.id !== 'mc:enchanted_book') {
     return { ok: false, reason: 'incompatible_items' };
   }
   if (left.item.id === right.item.id && !left.item.isDamageable && left.item.id !== 'mc:enchanted_book') return { ok: false, reason: 'not_repairable' };
 
   const output = left.clone();
   let cost = 0;
+  let changed = false;
   if (right.item.id === 'mc:enchanted_book' || right.item.id === left.item.id) {
     for (const [id, incoming] of Object.entries(getEnchantments(right))) {
       if (!canApplyEnchantment(left.item, id) && left.item.id !== 'mc:enchanted_book') continue;
@@ -134,6 +135,7 @@ export function combineOnAnvil(left, right, { materialRepair = false } = {}) {
       enchantmentData[id] = nextLevel;
       output.data = { ...(output.data || {}), enchantments: enchantmentData };
       cost += ENCHANTMENTS[id].weight * nextLevel;
+      changed = true;
     }
   }
   if (left.item.id === right.item.id && left.item.isDamageable) {
@@ -141,7 +143,9 @@ export function combineOnAnvil(left, right, { materialRepair = false } = {}) {
     const repaired = Math.min(max, Math.floor(max * 0.12) + (max - left.damage) + (max - right.damage));
     output.damage = Math.max(0, max - repaired);
     cost += 2;
+    changed = changed || output.damage !== left.damage;
   }
+  if (!changed) return { ok: false, reason: 'no_valid_operation' };
   return { ok: true, output, cost: Math.max(1, cost), consumesRight: true };
 }
 
