@@ -92,6 +92,7 @@ function plant(id, texture, tint = null) {
 // ---------------------------------------------------------------------------
 
 stoneLike('mc:stone', 'stone', 1.5, 6);
+stoneLike('mc:smooth_stone', 'smooth_stone', 2, 6);
 stoneLike('mc:cobblestone', 'cobblestone', 2, 6);
 stoneLike('mc:mossy_cobblestone', 'mossy_cobblestone', 2, 6);
 stoneLike('mc:granite', 'granite', 1.5, 6);
@@ -338,6 +339,16 @@ define('mc:chest', {
   textures: { top: 'chest_top', bottom: 'chest_side', side: 'chest_side' },
 });
 define('mc:furnace', {
+  hardness: 3.5, resistance: 3.5, tool: 'pickaxe', harvestLevel: 0,
+  requiresTool: true, soundGroup: 'stone',
+  textures: { top: 'furnace_top', bottom: 'furnace_side', side: 'furnace_front' },
+});
+define('mc:smoker', {
+  hardness: 3.5, resistance: 3.5, tool: 'pickaxe', harvestLevel: 0,
+  requiresTool: true, soundGroup: 'stone',
+  textures: { top: 'furnace_top', bottom: 'furnace_side', side: 'furnace_front' },
+});
+define('mc:blast_furnace', {
   hardness: 3.5, resistance: 3.5, tool: 'pickaxe', harvestLevel: 0,
   requiresTool: true, soundGroup: 'stone',
   textures: { top: 'furnace_top', bottom: 'furnace_side', side: 'furnace_front' },
