@@ -825,7 +825,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           // Gentle head look while idle; slight counter-motion while walking.
           swing = Math.sin(pose.idle ?? 0) * 0.075 + (pose.walking ? Math.sin(walkPhase * 0.5) * 0.035 : 0);
           partOffset[2] += Math.sin((pose.idle ?? 0) * 0.7) * 0.012;
-        } else if (!skin && pose.humanoid && (partIndex === 2 || partIndex === 3)) {
+        } else if (!skin && pose.humanoid && (pose.mobType === 'villager' ? partIndex === 3 : (partIndex === 2 || partIndex === 3))) {
           swing = Math.sin(walkPhase + phase) * 0.34;
         } else if (!skin && partIndex >= legStart && partIndex <= legEnd) {
           swing = pose.walking ? Math.sin(walkPhase + phase) * (pose.animal ? 0.34 : 0.24) : 0;
