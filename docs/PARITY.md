@@ -168,7 +168,7 @@ Observer detects a change in the adjacent block on its facing side and emits a t
 
 ### Hopper automation
 
-Hoppers now have a five-slot saved inventory, a vanilla-shaped recipe, a container UI, one-item transfers on an eight-tick cadence between nearby hoppers/chests/furnaces, and redstone locking. The simulation is host-authoritative in multiplayer and only scans a small area around the active player to limit work and network traffic. Dropped-item pickup, minecart containers, exact sided furnace slot rules, and full unloaded-chunk scheduling remain incomplete.
+Hoppers now have a five-slot saved inventory, a vanilla-shaped recipe, a container UI, one-item transfers on an eight-tick cadence between nearby hoppers/chests/furnaces, and redstone locking. The simulation is host-authoritative in multiplayer and only scans a small area around the active player to limit work and network traffic. Dropped-item pickup, minecart containers, exact sided furnace slot rules, and full unloaded-chunk scheduling remain incomplete. Hoppers also feed compostable items into a composter directly below (one item per transfer attempt; failed compost rolls still consume the item), and a hopper below extracts one bone meal only when the composter reaches level 8 and has room. Composter blockstate changes use the normal block replication path; hopper inventory snapshots remain batched. Comparators read composter levels with Java signal strengths 0, 1, 3, 5, 7, 9, 11, 13, and 15. These are active-area simulations; unloaded automation is not ticked.
 
 ## Not yet started
 
