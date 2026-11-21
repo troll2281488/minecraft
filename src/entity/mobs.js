@@ -1881,3 +1881,5 @@ export class MobSystem {
     }
   }
 }
+
+// Channeling and crossbow projectile integrations are validated in ranged_weapons_advancements.test.js.
