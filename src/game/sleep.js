@@ -16,10 +16,10 @@ export function hasNearbySleepHostile(mobs, x, y, z) {
   });
 }
 
-export function canSleepAt(dimension, worldTime, hostileNearby = false) {
+export function canSleepAt(dimension, worldTime, hostileNearby = false, weather = 'clear') {
   if (dimension !== 'overworld') return { ok: false, reason: 'В этом измерении нельзя спать.' };
   const time = ((Math.floor(worldTime || 0) % 24000) + 24000) % 24000;
-  if (time < 12542 || time > 23460) return { ok: false, reason: 'Спать можно только ночью или во время грозы.' };
+  if (weather !== 'thunder' && (time < 12542 || time > 23460)) return { ok: false, reason: 'Спать можно только ночью или во время грозы.' };
   if (hostileNearby) return { ok: false, reason: 'Поблизости монстры — сейчас нельзя спать.' };
   return { ok: true, reason: '' };
 }
