@@ -263,7 +263,7 @@ recipes.push({
 });
 
 recipes.push({ result: 'mc:flint_and_steel', count: 1, pattern: ['F ', ' I'], key: { F: 'mc:flint', I: 'mc:iron_ingot' } });
-recipes.push({ result: 'mc:shield', count: 1, pattern: ['PPP', 'PIP', ' P '], key: { P: '#mc:planks', I: 'mc:iron_ingot' } });
+recipes.push({ result: 'mc:shield', count: 1, pattern: ['PPP', 'PIP', ' P '], key: { P: '#mc:planks', I: 'mc:iron_ingot' } });\nrecipes.push({ result: 'mc:lead', count: 2, pattern: ['SS ', 'SL ', '  S'], key: { S: 'mc:string', L: 'mc:slime_ball' } });
 
 recipes.push({
   result: 'mc:bread', count: 1,
