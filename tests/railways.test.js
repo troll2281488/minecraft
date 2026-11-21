@@ -30,10 +30,11 @@ describe('Java rail topology', () => {
     assertEqual(isRailBlock(state('mc:activator_rail')), true);
     const blocks = new Map([
       ['0,64,-1', state('mc:rail')],
-      ['0,64,0', state('mc:rail')],
-      ['0,64,1', state('mc:rail')],
+      ['0,64,0', state('mc:rail', { shape: 'east_west' })],
+      ['0,64,1', state('mc:rail', { shape: 'east_west' })],
     ]);
     assertEqual(deriveRailShape(worldWith(blocks), 0, 64, 0), 'north_south');
+    blocks.delete('0,64,-1');
     blocks.set('1,64,0', state('mc:rail'));
     assertEqual(deriveRailShape(worldWith(blocks), 0, 64, 0), 'south_east');
   });
