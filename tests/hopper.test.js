@@ -240,8 +240,9 @@ describe('Java hopper inventory and automation primitives', () => {
       getBlock(x,y,z) { return blocks.get(`${x},${y},${z}`) || BLOCKS.get('mc:air').defaultState; },
       setBlock(x,y,z,state) { blocks.set(`${x},${y},${z}`,state); return true; },
     };
+    const drop = { stack: ItemStack.of('mc:coal', 2), x:0.5, y:1.08, z:0.5 };
     const game = {
-      world, player:{x:0.5,y:0,z:0.5}, tickCount:8, _containers:new Map(),
+      world, entities:{ droppedItems:[drop] }, player:{x:0.5,y:0,z:0.5}, tickCount:8, _containers:new Map(),
       ...ContainerScreensMixin,
     };
     game._hopperAt = () => { throw new Error('powered hopper must not transfer'); };
