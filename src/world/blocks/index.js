@@ -749,7 +749,6 @@ const FOODS = [
   ['mc:raw_cod', 2, 0.2],
   ['mc:raw_salmon', 2, 0.2],
   ['mc:pufferfish', 1, 0.1],
-  ['mc:honey_bottle', 6, 0.1],
   ['mc:tropical_fish', 1, 0.1],
 ];
 for (const [id, nutrition, saturation] of FOODS) {
