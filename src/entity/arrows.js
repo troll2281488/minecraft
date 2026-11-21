@@ -64,13 +64,17 @@ export function stepArrow(arrow, isSolid, mobs = []) {
     arrow.z += arrow.vz / steps;
 
     for (const mob of mobs) {
-      if (mob.health <= 0) continue;
+      if (mob.health <= 0 || (arrow.hitMobIds || []).includes(mob.id)) continue;
       const dx = mob.x - arrow.x;
       const dy = (mob.y + 0.5) - arrow.y;
       const dz = mob.z - arrow.z;
       if (dx * dx + dy * dy + dz * dz <= ARROW.MOB_RADIUS * ARROW.MOB_RADIUS) {
-        arrow.done = true;
-        return { hit: 'mob', mob };
+        const piercingLevel = Math.max(0, Math.min(4, Math.floor(arrow.piercingLevel || 0)));
+        arrow.hitMobIds ||= [];
+        arrow.hitMobIds.push(mob.id);
+        arrow.piercedCount = (arrow.piercedCount || 0) + 1;
+        arrow.done = arrow.piercedCount > piercingLevel;
+        return { hit: 'mob', mob, piercing: piercingLevel > 0 };
       }
     }
 
