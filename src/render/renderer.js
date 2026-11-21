@@ -752,10 +752,13 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
             // counts down from 8 ticks; the previous fixed -2.5 rad pose flipped
             // the arm past 180 degrees, exposing its back face to the camera.
             const attackProgress = Math.max(0, Math.min(1, (8 - (pose.attackTime ?? 0)) / 8));
-            const attackSwing = Math.sin(attackProgress * Math.PI);
-            // The attack lift is applied to handY above. Keep arm rotation
-            // modest so the fist rises vertically instead of lunging forward.
-            swing = pose.attack ? -0.72 * attackSwing : pose.swimming
+            // Port of ambient's Java 1.7 first-person attack curve:
+            // sin(pow(attack_time, 0.45) * 180 degrees) * -56 degrees.
+            // The Bedrock expression is translated to this renderer's radians
+            // and its 8-tick countdown is normalised to the pack's 0..1 timer.
+            const attackPhase = Math.pow(attackProgress, 0.45) * Math.PI;
+            const attackSwing = Math.sin(attackPhase) * (-56 * Math.PI / 180);
+            swing = pose.attack ? attackSwing : pose.swimming
               ? Math.sin(walkPhase * 1.7) * 0.68
               : pose.airborne ? (pose.jumping ? -0.42 : -0.10)
               : pose.sneaking ? -0.30
