@@ -23,7 +23,7 @@ import { getVillagerOffers, executeVillagerTrade } from '../entity/villager_trad
 import { pistonVector } from './pistons.js';
 import { hiveHarvestResult, hasCampfireSmoke } from './bee_hives.js';
 import { compostChance, nextComposterLevel, boneMealAge, compostRoll, canApplyBoneMeal } from './composting.js';
-import { canPlantSugarCane } from './farming.js';
+import { canPlantSugarCane, sweetBerryHarvest } from './farming.js';
 import { refreshWallConnections } from './wall_updates.js';
 import { planBucketInteraction } from './bucket.js';
 import { planCauldronInteraction } from './cauldron.js';
@@ -541,6 +541,34 @@ export const BlockActionsMixin = {
     const held = this.inventory.held;
     const id = state.block.id;
     const survival = this.player.gamemode === GAMEMODE.SURVIVAL;
+
+    if (id === 'mc:sweet_berry_bush') {
+      const harvest = sweetBerryHarvest(state);
+      if (!harvest) {
+        this.ui.toast('The berry bush is not ripe');
+        return true;
+      }
+      const leftover = this.inventory.addItem('mc:sweet_berries', harvest.count);
+      if (leftover > 0) this.entities?.spawnItemStackAt(new ItemStack(ITEMS.get('mc:sweet_berries'), leftover), x, y + 0.5, z);
+      this.world.setBlock(x, y, z, harvest.state);
+      this.multiplayer?.pushBlockChange(x, y, z, harvest.state);
+      this.ui.toast(`Collected ${harvest.count} sweet berries`);
+      return true;
+    }
+
+    if (held.item?.id === 'mc:sweet_berries' && ['mc:grass_block', 'mc:dirt', 'mc:coarse_dirt', 'mc:podzol'].includes(id)) {
+      const targetY = y + 1;
+      const above = this.world.getBlock(x, targetY, z);
+      if (above.block.id === 'mc:air' || above.block.replaceable) {
+        const bush = BLOCKS.get('mc:sweet_berry_bush')?.defaultState;
+        if (bush && this.world.setBlock(x, targetY, z, bush)) {
+          this.multiplayer?.pushBlockChange(x, targetY, z, bush);
+          if (survival) this.inventory.consumeHeld(1);
+          this.ui.toast('Sweet berry bush planted');
+        }
+      }
+      return true;
+    }
 
     // Hoe grass/dirt from the top face to prepare a planting bed.
     if (held.item?.tool === 'hoe' && this.hit.face?.dy === 1 &&
