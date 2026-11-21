@@ -727,7 +727,7 @@ export const ContainerScreensMixin = {
               }
             }
           }
-        } else if (destinationEntry) {
+        } else if (destinationEntry && !moved) {
           const targetKey = this._containerKey(tx, ty, tz);
           if (!this.multiplayer?.isContainerLockedByOther?.(targetKey)) {
             moved = this._hopperTransferOne(hopperEntry, destinationEntry, dy < 0 ? 'top' : 'side');
