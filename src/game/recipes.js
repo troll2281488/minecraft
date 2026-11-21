@@ -60,6 +60,7 @@ for (const wood of WOODS) {
   recipes.push({ result: `mc:${wood}_pressure_plate`, count: 1, pattern: ['PP'], key: { P: `mc:${wood}_planks` } });
 }
 recipes.push({ result: 'mc:stone_button', count: 1, ingredients: ['mc:stone'] });
+recipes.push({ result: 'mc:polished_blackstone', count: 4, pattern: ['BB', 'BB'], key: { B: 'mc:blackstone' } });
 recipes.push({ result: 'mc:polished_blackstone_button', count: 1, ingredients: ['mc:polished_blackstone'] });
 recipes.push({ result: 'mc:stone_pressure_plate', count: 1, pattern: ['SS'], key: { S: 'mc:stone' } });
 recipes.push({ result: 'mc:polished_blackstone_pressure_plate', count: 1, pattern: ['SS'], key: { S: 'mc:polished_blackstone' } });
