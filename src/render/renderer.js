@@ -978,6 +978,12 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         [[0,0.025,-0.24],[0.16,0.012,0.16],[0.82,0.82,0.82,1]],
       ], pitch, -1, -1, 1, {});
     }
+    for (const projectile of this.entities?.projectiles ?? []) {
+      const color = projectile.type === 'egg' ? [0.91, 0.89, 0.78, 1] : [0.86, 0.94, 1, 1];
+      draw(projectile.x, projectile.y, projectile.z, 0, [
+        [[0, 0, 0], [0.14, 0.14, 0.14], color],
+      ], 0, -1, -1, 1, {});
+    }
     for (const mob of this.entities?.mobs ?? []) {
       const vanillaModel = this.entityModels?.getModel?.('minecraft:' + mob.type);
       const vanillaParts = vanillaLayerParts(vanillaModel, 'main');
