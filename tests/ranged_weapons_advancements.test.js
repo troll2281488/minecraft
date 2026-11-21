@@ -281,7 +281,7 @@ describe('Channeling mob integration', () => {
     const player = new Player(0, 64, 0);
     const game = {
       inventory: new Inventory(), player, tickCount: 1,
-      world: { seed, time: 0, getHeight: () => -64, getBlock: () => ({ block: { solid: false } }) },
+      world: { dimension: 'overworld', seed, time: 0, getHeight: () => -64, getBlock: () => ({ block: { solid: false } }) },
       ui: { toast() {} }, sounds: { play() {} },
     };
     const entities = new MobSystem(game);
