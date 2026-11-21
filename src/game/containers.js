@@ -22,7 +22,7 @@ export const SMELTING_XP = new Map([
   ['mc:raw_beef', 0.35], ['mc:raw_porkchop', 0.35],
   ['mc:raw_chicken', 0.35], ['mc:raw_mutton', 0.35],
   ['mc:potato', 0.35], ['mc:raw_cod', 0.35],
-  ['mc:raw_salmon', 0.35], ['mc:raw_rabbit', 0.35],
+  ['mc:raw_salmon', 0.35], ['mc:raw_rabbit', 0.35], ['mc:wet_sponge', 0.15],
 ]);
 /** Progress lost per tick while the furnace is not smelting (vanilla behaviour). */
 const COOL_PER_TICK = 2;
@@ -40,6 +40,7 @@ export const SMELTING = new Map([
   ['mc:sand',         { result: 'mc:glass', count: 1 }],
   ['mc:cobblestone',  { result: 'mc:stone', count: 1 }],
   ['mc:stone',        { result: 'mc:smooth_stone', count: 1 }],
+  ['mc:wet_sponge',   { result: 'mc:sponge', count: 1 }],
   ['mc:raw_beef',     { result: 'mc:cooked_beef', count: 1 }],
   ['mc:raw_porkchop', { result: 'mc:cooked_porkchop', count: 1 }],
   ['mc:raw_chicken',  { result: 'mc:cooked_chicken', count: 1 }],
