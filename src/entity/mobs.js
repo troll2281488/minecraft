@@ -164,10 +164,13 @@ export function shearMooshroom(mob) {
 }
 
 const FISHING_LOOT = Object.freeze({
+  // Java junk weights; the duplicate boots entry represents the damaged
+  // and undamaged leather-boots outcomes (durability metadata is not modelled).
   junk: Object.freeze([
-    'mc:lily_pad', 'mc:leather_boots', 'mc:rotten_flesh', 'mc:stick',
-    'mc:string', 'mc:water_bottle', 'mc:bone', 'mc:ink_sac',
-    'mc:tripwire_hook',
+    ['mc:lily_pad', 17], ['mc:leather_boots', 10], ['mc:leather_boots', 10],
+    ['mc:rotten_flesh', 10], ['mc:stick', 5], ['mc:string', 5],
+    ['mc:water_bottle', 10], ['mc:bone', 10], ['mc:ink_sac', 10],
+    ['mc:tripwire_hook', 10],
   ]),
   treasure: Object.freeze([
     'mc:bow', 'mc:enchanted_book', 'mc:fishing_rod',
@@ -190,9 +193,17 @@ export function rollFishingCatch(random = Math.random) {
     if (fishRoll < 0.98) return { id: 'mc:pufferfish', count: 1 };
     return { id: 'mc:tropical_fish', count: 1 };
   }
-  const loot = categoryRoll < 0.95 ? FISHING_LOOT.junk : FISHING_LOOT.treasure;
-  const index = Math.min(loot.length - 1, Math.floor(random() * loot.length));
-  return { id: loot[index], count: 1 };
+  if (categoryRoll < 0.95) {
+    const totalWeight = FISHING_LOOT.junk.reduce((sum, entry) => sum + entry[1], 0);
+    let ticket = random() * totalWeight;
+    for (const [id, weight] of FISHING_LOOT.junk) {
+      ticket -= weight;
+      if (ticket < 0) return { id, count: 1 };
+    }
+    return { id: FISHING_LOOT.junk[FISHING_LOOT.junk.length - 1][0], count: 1 };
+  }
+  const index = Math.min(FISHING_LOOT.treasure.length - 1, Math.floor(random() * FISHING_LOOT.treasure.length));
+  return { id: FISHING_LOOT.treasure[index], count: 1 };
 }
 
 /** Apply the Java 1.12 armour formula and return health damage after reduction. */
