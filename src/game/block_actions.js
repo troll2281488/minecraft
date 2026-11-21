@@ -76,6 +76,7 @@ export const BlockActionsMixin = {
       for (const drop of drops) this.inventory.addItem(drop.id, drop.count);
       // Ore XP is awarded only for a valid survival harvest, never for creative breaking.
       if (canHarvest(state.block, this.inventory.held)) {
+        if (state.block.id === 'mc:stone' && this.player?.gamemode === GAMEMODE.SURVIVAL) this.player.recordAdvancementEvent?.('mined_stone', this.tickCount || 0);
         // Java 1.19 spawners never drop as items; a pickaxe releases 15–43 XP.
         const experience = state.block.id === 'mc:mob_spawner'
           ? experienceForSpawner()
@@ -598,6 +599,7 @@ export const BlockActionsMixin = {
           if (!result.ok) {
             this.ui.toast(result.reason, { error: true });
           } else {
+            this.player?.recordAdvancementEvent?.('traded_with_villager', this.tickCount || 0);
             this.ui.updateHotbar(this.inventory);
             if (this.player?.gamemode === GAMEMODE.SURVIVAL) {
               this.entities?.spawnExperienceOrbs(
