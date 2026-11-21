@@ -1,6 +1,6 @@
 import { describe, it, assertEqual } from './framework.js';
 import '../src/world/blocks/index.js';
-import { ITEMS, ItemStack } from '../src/world/item.js';
+import { ITEMS } from '../src/world/item.js';
 import { RECIPES } from '../src/game/recipes.js';
 import { shieldBlocksAttack } from '../src/entity/mobs.js';
 
