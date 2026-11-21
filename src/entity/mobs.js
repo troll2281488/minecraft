@@ -485,6 +485,12 @@ export class MobSystem {
         mob.hurtTicks = 10;
         mob.anim.hurt = 1;
         mob.playerDamageTicks = 100;
+        if (arrow.piercingLevel > 0) {
+          // Piercing arrows keep travelling and remember every hit entity so
+          // they cannot repeatedly damage the same mob on later ticks.
+          if (arrow.done) this.arrows.splice(i, 1);
+          continue;
+        }
         arrow.stuckMobId = mob.id;
         arrow.offsetX = arrow.x - mob.x; arrow.offsetY = arrow.y - mob.y; arrow.offsetZ = arrow.z - mob.z;
         arrow.done = false;
