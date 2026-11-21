@@ -39,6 +39,7 @@ export const SessionMixin = {
       this.ui.toast('Нижний мир обновлён: старая генерация Незера заменена новой.', { duration: 6000 });
     }
     this.entities?.reset();
+    this.minecarts?.reset();
     this.world.time = meta.time ?? 0;
 
     // Load any chunks already saved for this world before generating new ones,
@@ -70,6 +71,7 @@ export const SessionMixin = {
     await this._waitForSpawnChunks(isNew);
     // Mobs are world state, not player state; restore them only for local worlds.
     this.entities?.loadFrom?.(this.multiplayer?.roomId ? [] : playerJson?.mobs);
+    this.minecarts?.loadFrom?.(this.multiplayer?.roomId ? [] : playerJson?.minecarts);
 
     if (isNew) {
       const spawn = await this._findSafeSpawn();
@@ -334,6 +336,7 @@ export const SessionMixin = {
       containers: this.multiplayer?.roomId ? [] : this._serializeContainers?.() ?? [],
       // Preserve nearby creatures, including health and sheep shearing, in local saves.
       mobs: this.multiplayer?.roomId ? [] : this.entities?.toJSON?.() ?? [],
+      minecarts: this.multiplayer?.roomId ? [] : this.minecarts?.toJSON?.() ?? [],
     });
     await storage.putWorld({ ...this.worldMeta, time: this.world.time, dimension: this.world.dimension });
 
