@@ -10,17 +10,17 @@ export const HIVE_MAX_HONEY = 5;
  */
 export function hasCampfireSmoke(world, x, y, z) {
   if (!world?.getBlock) return false;
-  for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
-    for (let depth = 2; depth <= 5; depth++) {
-      const cx = x + dx, cz = z + dz, campY = y - depth;
-      if (world.getBlock(cx, campY, cz)?.block?.id !== 'mc:campfire') continue;
-      let clear = true;
-      for (let sy = campY + 1; sy < y; sy++) {
-        const id = world.getBlock(cx, sy, cz)?.block?.id;
-        if (id !== 'mc:air' && id !== 'mc:short_grass') { clear = false; break; }
-      }
-      if (clear) return true;
+  // The smoke source must be in the same column; a one-block air gap is
+  // required so smoke can reach the underside of the hive.
+  for (let depth = 2; depth <= 5; depth++) {
+    const campY = y - depth;
+    if (world.getBlock(x, campY, z)?.block?.id !== 'mc:campfire') continue;
+    let clear = true;
+    for (let sy = campY + 1; sy < y; sy++) {
+      const id = world.getBlock(x, sy, z)?.block?.id;
+      if (id !== 'mc:air' && id !== 'mc:short_grass') { clear = false; break; }
     }
+    if (clear) return true;
   }
   return false;
 }
