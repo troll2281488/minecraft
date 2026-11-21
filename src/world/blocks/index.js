@@ -327,6 +327,11 @@ define('mc:dropper', {
   properties: { facing: PROPS.facingAll }, defaultValues: { facing: 'north' },
 });
 
+define('mc:slime_block', {
+  hardness: 0, resistance: 0, soundGroup: 'slime',
+  texture: 'slime_block', solid: true, opaqueCube: true, opacity: 15,
+});
+
 define('mc:piston', {
   hardness: 1.5, resistance: 1.5, tool: 'pickaxe', soundGroup: 'wood',
   textures: { top: 'piston_top', bottom: 'piston_bottom', side: 'piston_side' },
