@@ -9,6 +9,7 @@ import { ITEMS } from '../src/world/item.js';
 import { rollMobDrops } from '../src/entity/mobs.js';
 import { blockEmissionForState } from '../src/world/lighting.js';
 import { MAX_Y } from '../src/core/constants.js';
+import { Player } from '../src/entity/player.js';
 
 const AIR = BLOCKS.get('mc:air').defaultState;
 const STONE = BLOCKS.get('mc:stone').defaultState;
@@ -72,6 +73,46 @@ describe('piston and sticky piston', () => {
     assertEqual(pistonBlocksStick(slime, STONE), true);
     assertEqual(pistonBlocksStick(STONE, slime), true);
     assertEqual(pistonBlocksStick(STONE, STONE), false);
+  });
+
+  it('registers honey block with vanilla slipperiness and an inventory item', () => {
+    const honey = BLOCKS.get('mc:honey_block');
+    assert(honey, 'honey block missing');
+    assert(ITEMS.get('mc:honey_block'), 'honey block item missing');
+    assertEqual(honey.slipperiness, 0.4);
+  });
+
+  it('honey adheres to ordinary blocks but not slime blocks', () => {
+    const honey = BLOCKS.get('mc:honey_block').defaultState;
+    const slime = BLOCKS.get('mc:slime_block').defaultState;
+    assertEqual(pistonBlocksStick(honey, STONE), true);
+    assertEqual(pistonBlocksStick(STONE, honey), true);
+    assertEqual(pistonBlocksStick(honey, honey), true);
+    assertEqual(pistonBlocksStick(honey, slime), false);
+    assertEqual(pistonBlocksStick(slime, honey), false);
+  });
+
+  it('slides a falling player slowly down a honey wall and clears fall distance', () => {
+    const player = new Player(0.7, 1, 0.5);
+    player.vy = -0.42;
+    player.fallDistance = 8;
+    const world = {
+      getBlock(x, y, z) {
+        return x === 1 && y === 1 && z === 0
+          ? BLOCKS.get('mc:honey_block').defaultState : AIR;
+      },
+    };
+    assertEqual(player._applyHoneyBlockSlide(world), true);
+    assertEqual(player.vy, -0.05);
+    assertEqual(player.fallDistance, 0);
+  });
+
+  it('does not apply honey wall sliding when airborne without wall contact', () => {
+    const player = new Player(0.5, 1, 0.5);
+    player.vy = -0.4;
+    const world = { getBlock() { return BLOCKS.get('mc:honey_block').defaultState; } };
+    assertEqual(player._applyHoneyBlockSlide(world), false);
+    assertEqual(player.vy, -0.4);
   });
 
   it('slime blocks pull adjacent ordinary blocks as one push group', () => {
