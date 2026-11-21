@@ -7,8 +7,9 @@ describe('Java bed sleep rules', () => {
     assertEqual(canSleepAt('overworld', 23000).ok, true);
   });
 
-  it('rejects daytime and non-Overworld sleeping', () => {
+  it('rejects daytime except during thunderstorms and rejects other dimensions', () => {
     assertEqual(canSleepAt('overworld', 6000).ok, false);
+    assertEqual(canSleepAt('overworld', 6000, false, 'thunder').ok, true);
     assertEqual(canSleepAt('nether', 18000).ok, false);
   });
 
