@@ -75,6 +75,7 @@ recipes.push({ result: 'mc:honeycomb', count: 4, ingredients: ['mc:honeycomb_blo
 recipes.push({ result: 'mc:beehive', count: 1, pattern: ['PPP', 'HHH', 'PPP'], key: { P: '#mc:planks', H: 'mc:honeycomb' } });
 recipes.push({ result: 'mc:campfire', count: 1, pattern: [' S ', 'SCS', 'LLL'], key: { S: 'mc:stick', C: 'mc:coal', L: '#mc:logs' } });
 recipes.push({ result: 'mc:composter', count: 1, pattern: ['S S', 'S S', 'SSS'], key: { S: '#mc:wooden_slabs' } });
+recipes.push({ result: 'mc:bone_meal', count: 3, ingredients: ['mc:bone'] });
 recipes.push({ result: 'mc:piston', count: 1, pattern: ['PPP', 'CIC', 'CRC'], key: { P: '#mc:planks', C: 'mc:cobblestone', I: 'mc:iron_ingot', R: 'mc:redstone' } });
 recipes.push({ result: 'mc:sticky_piston', count: 1, ingredients: ['mc:piston', 'mc:slime_ball'] });
 recipes.push({ result: 'mc:dropper', count: 1, pattern: ['CCC', 'C C', 'CRC'], key: { C: 'mc:cobblestone', R: 'mc:redstone' } });
@@ -236,6 +237,7 @@ recipes.push({
  * compacting ore a trap.
  */
 const PACKABLE = [
+  ['mc:bone_meal', 'mc:bone_block'],
   ['mc:coal', 'mc:coal_block'],
   ['mc:iron_ingot', 'mc:iron_block'],
   ['mc:gold_ingot', 'mc:gold_block'],
