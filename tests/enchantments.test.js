@@ -62,6 +62,14 @@ describe('Java 1.19 enchantment data and anvil core', () => {
     assertEqual(applied.ok, true);
     assertEqual(enchantmentLevel(applied.output, 'sharpness'), 2);
   });
+  it('repairs matching damaged tools with an anvil bonus', () => {
+    const wornA = new ItemStack(pickaxe.item, 1, 80);
+    const wornB = new ItemStack(pickaxe.item, 1, 90);
+    const repaired = combineOnAnvil(wornA, wornB);
+    assertEqual(repaired.ok, true);
+    assertEqual(repaired.output.damage < wornA.damage, true);
+    assertEqual(wornA.damage, 80);
+  });
   it('applies Efficiency to real block-breaking time', () => {
     const stone = BLOCKS.get('mc:stone');
     const plainTicks = breakTicks(stone, pickaxe);
