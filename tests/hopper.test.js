@@ -146,6 +146,30 @@ describe('Java hopper inventory and automation primitives', () => {
     assertEqual(game.entities.droppedItems.length, 1);
     assertEqual(drop.stack.count, 2);
   });
+  it('uses one transfer action per scan instead of collecting and outputting immediately', () => {
+    const blocks = new Map([
+      ['0,0,0', BLOCKS.get('mc:hopper').defaultState],
+      ['0,-1,0', BLOCKS.get('mc:chest').defaultState],
+    ]);
+    const world = {
+      getBlock(x,y,z) { return blocks.get(`${x},${y},${z}`) || BLOCKS.get('mc:air').defaultState; },
+      setBlock(x,y,z,state) { blocks.set(`${x},${y},${z}`,state); return true; },
+    };
+    const hopper = new Hopper();
+    const chest = new Chest();
+    const entities = { droppedItems:[{
+      stack:ItemStack.of('mc:paper', 7), x:0.5, y:1.08, z:0.5,
+    }] };
+    const game = {
+      world, entities, player:{x:0.5,y:0,z:0.5}, tickCount:8, _containers:new Map(),
+      ...ContainerScreensMixin,
+    };
+    game._hopperAt = () => hopper;
+    game._chestAt = () => chest;
+    game._tickHoppers();
+    assertEqual(hopper.slots[0].count, 7);
+    assertEqual(chest.slots.filter((slot) => !slot.isEmpty).length, 0);
+  });
   it('keeps the uncollected remainder in the world when the hopper is almost full', () => {
     const blocks = new Map([['0,0,0', BLOCKS.get('mc:hopper').defaultState]]);
     const world = {
