@@ -49,6 +49,7 @@ export function daylightDetectorPower(time, inverted = false) {
 export function readSignal(world, x, y, z, targetX, targetY, targetZ) {
   const state = world.getBlock(x,y,z);
   if (state.block.id === 'mc:redstone_block') return 15;
+  if (state.block.id === 'mc:lightning_rod' && state.get('powered')) return 15;
   if (state.block.renderShape === 'redstone_wire') return state.get('power') || 0;
   if (state.block.id === 'mc:daylight_detector' || state.block.id === 'mc:target') return state.get('power') || 0;
   if (state.block.id === 'mc:observer' && state.get('powered')) {

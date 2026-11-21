@@ -1,5 +1,5 @@
 import { describe, it, assertEqual } from './framework.js';
-import { weatherAt, precipitationRoll, nextRainCauldronLevel, shouldRainExtinguishCampfire, tickWeatherBlocks } from '../src/game/weather.js';
+import { weatherAt, precipitationRoll, nextRainCauldronLevel, shouldRainExtinguishCampfire, shouldLightningRodStrike, tickWeatherBlocks } from '../src/game/weather.js';
 
 describe('Seeded Overworld weather', () => {
   it('is deterministic within a weather period', () => {
@@ -18,6 +18,15 @@ describe('Seeded Overworld weather', () => {
     assertEqual(nextRainCauldronLevel(3, 'rain', 0), 3);
     assertEqual(nextRainCauldronLevel(1, 'clear', 0), 1);
     assertEqual(nextRainCauldronLevel(1, 'rain', 0.5), 1);
+  });
+
+  it('limits lightning rod strikes to deterministic thunder rolls', () => {
+    assertEqual(shouldLightningRodStrike('seed', 0, 64, 0, 20, 'rain'), false);
+    assertEqual(shouldLightningRodStrike('seed', 0, 64, 0, 20, 'clear'), false);
+    let seed = 'rod';
+    while (!shouldLightningRodStrike(seed, 0, 64, 0, 20, 'thunder')) seed += 'x';
+    assertEqual(shouldLightningRodStrike(seed, 0, 64, 0, 20, 'thunder'), true);
+    assertEqual(shouldLightningRodStrike(seed, 0, 64, 0, 20, 'rain'), false);
   });
 
   it('lets rain extinguish only lit campfires', () => {
@@ -66,6 +75,18 @@ describe('Weather block integration', () => {
     const cauldronChanges = tickWeatherBlocks(cauldronWorld, { x: 0, z: 0 }, 'thunder', 20);
     assertEqual(cauldronChanges.length, 1);
     assertEqual(cauldronWorld.getBlock(0, 64, 0).get('level'), 2);
+  });
+
+  it('charges exposed lightning rods during thunder and resets their redstone pulse', () => {
+    let seed = 'weather-lightning-rod';
+    while (!shouldLightningRodStrike(seed, 0, 64, 0, 20, 'thunder') || shouldLightningRodStrike(seed, 0, 64, 0, 40, 'thunder')) seed += 'x';
+    const world = mockWorld(seed, { '0,64,0': state('mc:lightning_rod', { powered: false }) });
+    const changes = tickWeatherBlocks(world, { x: 0, z: 0 }, 'thunder', 20);
+    assertEqual(changes.length, 1);
+    assertEqual(world.getBlock(0, 64, 0).get('powered'), true);
+    const reset = tickWeatherBlocks(world, { x: 0, z: 0 }, 'thunder', 40);
+    assertEqual(reset.length, 1);
+    assertEqual(world.getBlock(0, 64, 0).get('powered'), false);
   });
 
   it('does not apply rain effects beneath a solid roof or during clear weather', () => {
