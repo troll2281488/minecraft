@@ -109,7 +109,7 @@ export class Player {
     this.underwater = this._isHeadUnderwater(world);
     this._tickAir();
 
-    const oldX = this.x, oldZ = this.z;
+    const oldX = this.x, oldY = this.y, oldZ = this.z;
     const jumped = this.input.jump && this.onGround;
 
     if (this.flying) {
@@ -133,8 +133,13 @@ export class Player {
     this._applyHoneyBlockSlide(world);
     this._move(world);
     const moved = Math.hypot(this.x - oldX, this.z - oldZ);
-    if (this.inWater) this.walkPhase += 0.12;
-    else if (moved > 0.001) this.walkPhase += Math.min(0.9, moved * 9);
+    const moved3D = Math.hypot(this.x - oldX, this.y - oldY, this.z - oldZ);
+    // Advance the gait from real displacement in every medium. The old fixed
+    // water increment made the arms swim even while the player was motionless.
+    if (moved3D > 0.001) {
+      const phaseStep = moved3D * (this.inWater ? 5.5 : 9);
+      this.walkPhase += Math.min(this.inWater ? 0.52 : 0.9, phaseStep);
+    }
     if (this.attackTime > 0) this.attackTime--;
     this._applyGravityAndFriction(slipperiness);
     this.vitals.tick(this, Math.hypot(this.x - oldX, this.z - oldZ), this.sprinting, jumped);
