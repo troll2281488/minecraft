@@ -781,8 +781,16 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           // First-person attack swing is already applied above; do not add a second rotation.
         } else if (!skin && pose.vanillaModel && /head/i.test(partName ?? '')) {
           swing = Math.sin(pose.idle ?? 0) * 0.045 + (pose.walking ? Math.sin(walkPhase * 0.5) * 0.025 : 0);
-        } else if (!skin && pose.vanillaModel && /leg|wing/i.test(partName ?? '')) {
-          swing = /wing/i.test(partName ?? '') ? Math.sin(pose.idle ?? 0) * 0.10 : pose.walking ? Math.sin(walkPhase + phase) * 0.38 : 0;
+        } else if (!skin && pose.vanillaModel && /arm/i.test(partName ?? '') && pose.humanoid) {
+          const side = /left/i.test(partName ?? '') ? 1 : /right/i.test(partName ?? '') ? -1 : (partIndex % 2 ? -1 : 1);
+          swing = pose.walking ? Math.sin(walkPhase) * 0.34 * side : 0;
+          if (pose.attack && side < 0) swing -= 0.9;
+        } else if (!skin && pose.vanillaModel && /leg|foot/i.test(partName ?? '')) {
+          const side = /left/i.test(partName ?? '') ? 0 : /right/i.test(partName ?? '') ? Math.PI : phase;
+          swing = pose.walking ? Math.sin(walkPhase + side) * (pose.sprinting ? 0.52 : 0.38) : 0;
+        } else if (!skin && pose.vanillaModel && /wing/i.test(partName ?? '')) {
+          const flying = ['bee','bat','parrot','chicken','phantom','ender_dragon'].includes(pose.mobType);
+          swing = flying ? Math.sin((pose.idle ?? 0) * (pose.mobType === 'bee' ? 3.2 : 2.4)) * (pose.mobType === 'bee' ? 0.48 : 0.34) : 0;
         } else if (!skin && pose.animal && partIndex === 0) {
           // Body bob only follows actual movement; breathing remains subtle at rest.
           const stride = pose.walking ? Math.abs(Math.sin(walkPhase * 2)) : 0;
@@ -912,7 +920,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     }
     if (this.thirdPerson) {
       document.getElementById('held-item-view')?.classList.add('hidden');
-      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : this.player.ridingMinecart ? 0.42 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround, jumping: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking || !!this.player.ridingHorse || !!this.player.ridingMinecart, riding: !!this.player.ridingHorse || !!this.player.ridingMinecart, walking: !this.player.ridingHorse && !this.player.ridingMinecart && this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035, attack: this.player.attackTime > 0, attackTime: this.player.attackTime }, true);
+      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : this.player.ridingMinecart ? 0.42 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround, sprinting: !!this.player.sprinting, jumping: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking || !!this.player.ridingHorse || !!this.player.ridingMinecart, riding: !!this.player.ridingHorse || !!this.player.ridingMinecart, walking: !this.player.ridingHorse && !this.player.ridingMinecart && this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035, attack: this.player.attackTime > 0, attackTime: this.player.attackTime }, true);
       draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, outerHuman, this.player.walkPhase, 4, 5, 1, { swimming: this.player.inWater, airborne: !this.player.ridingHorse && !this.player.onGround, sneaking: this.player.sneaking || !!this.player.ridingHorse, riding: !!this.player.ridingHorse, skinLayer: true }, true);
       const armorColors = ['#b8b8b8','#8f8f9b','#b17a45','#6c778a'];
       const armorParts = [];
@@ -1038,7 +1046,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
         hurt: (mob.hurtTicks || 0) > 0, animal, humanoid, vanillaModel: !!vanillaParts,
         mobType: mob.type, mobTextureKey: mob.type === 'villager' ? 'villager_' + (mob.villagerCareer === 'archer' ? 'fletcher' : (mob.villagerCareer || 'farmer')) : mob.type,
-        idle: mob.anim?.idle ?? 0, walking: !!mob.anim?.walking,
+        idle: mob.anim?.idle ?? 0, walking: !!mob.anim?.walking, sprinting: !!mob.sprinting, humanoid,
       });
       if (mob.type === 'goat' && !vanillaParts) {
         draw(mob.x, mob.y, mob.z, mob.yaw, [
