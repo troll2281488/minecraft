@@ -2,7 +2,7 @@ import '../src/world/blocks/index.js';
 import { describe, it, assert, assertEqual } from './framework.js';
 import { BLOCKS } from '../src/world/block.js';
 import { shapeBoxes, collisionBoxes } from '../src/world/shapes.js';
-import { planPistonMove, PISTON_MAX_PUSH } from '../src/game/pistons.js';
+import { planPistonMove, PISTON_MAX_PUSH, pistonBlocksStick } from '../src/game/pistons.js';
 import { RedstoneDevicesMixin } from '../src/game/redstone_devices.js';
 import { RECIPES } from '../src/game/recipes.js';
 import { ITEMS } from '../src/world/item.js';
@@ -26,15 +26,16 @@ function makeWorld(entries = []) {
 
 describe('piston and sticky piston', () => {
   it('registers both piston types, internal head, items and recipes', () => {
-    for (const id of ['mc:piston', 'mc:sticky_piston', 'mc:piston_head']) {
+    for (const id of ['mc:piston', 'mc:sticky_piston', 'mc:piston_head', 'mc:slime_block']) {
       assert(BLOCKS.get(id), `${id} block missing`);
     }
-    for (const id of ['mc:piston', 'mc:sticky_piston']) {
+    for (const id of ['mc:piston', 'mc:sticky_piston', 'mc:slime_block']) {
       assert(RECIPES.recipes.some((recipe) => recipe.result === id), `${id} recipe missing`);
     }
     assertEqual(BLOCKS.get('mc:piston').defaultState.get('extended'), false);
     assertEqual(BLOCKS.get('mc:piston_head').defaultState.get('sticky'), false);
     assert(ITEMS.get('mc:slime_ball'), 'slime ball item missing');
+    assert(ITEMS.get('mc:slime_block'), 'slime block item missing');
   });
 
   it('renders the oriented head as two physical boxes', () => {
@@ -64,6 +65,63 @@ describe('piston and sticky piston', () => {
     ({ world, blocks } = makeWorld([['1,0,0', BLOCKS.get('mc:obsidian').defaultState]]));
     assertEqual(planPistonMove(world, 0, 0, 0, 'east'), null);
     assertEqual(blocks.get('1,0,0').block.id, 'mc:obsidian');
+  });
+
+  it('sticks slime blocks to ordinary blocks but not to unrelated ordinary blocks', () => {
+    const slime = BLOCKS.get('mc:slime_block').defaultState;
+    assertEqual(pistonBlocksStick(slime, STONE), true);
+    assertEqual(pistonBlocksStick(STONE, slime), true);
+    assertEqual(pistonBlocksStick(STONE, STONE), false);
+  });
+
+  it('slime blocks pull adjacent ordinary blocks as one push group', () => {
+    const piston = BLOCKS.get('mc:piston').defaultState.with('facing', 'east');
+    const slime = BLOCKS.get('mc:slime_block').defaultState;
+    const { world } = makeWorld([
+      ['0,0,0', piston], ['1,0,0', slime], ['1,1,0', STONE],
+    ]);
+    const plan = planPistonMove(world, 0, 0, 0, 'east');
+    assertEqual(plan.length, 2);
+    assertEqual(plan.some((move) => move.from.x === 1 && move.from.y === 0), true);
+    assertEqual(plan.some((move) => move.from.x === 1 && move.from.y === 1), true);
+  });
+
+  it('counts side-attached blocks toward the twelve-block push cap', () => {
+    const entries = [['1,0,0', BLOCKS.get('mc:slime_block').defaultState], ['1,1,0', STONE]];
+    for (let x = 2; x <= 12; x++) entries.push([`${x},0,0`, STONE]);
+    const { world, blocks } = makeWorld(entries);
+    assertEqual(planPistonMove(world, 0, 0, 0, 'east'), null);
+    assertEqual(blocks.get('1,0,0').block.id, 'mc:slime_block');
+    assertEqual(blocks.get('1,1,0'), STONE);
+  });
+
+  it('commits a slime push with attached blocks without losing either block', () => {
+    const piston = BLOCKS.get('mc:piston').defaultState.with('facing', 'east');
+    const source = BLOCKS.get('mc:redstone_block').defaultState;
+    const slime = BLOCKS.get('mc:slime_block').defaultState;
+    const { world, blocks } = makeWorld([
+      ['0,0,0', piston], ['0,0,-1', source],
+      ['1,0,0', slime], ['1,1,0', STONE],
+    ]);
+    const game = { world, player: { x: 0, y: 0, z: 0 }, ...RedstoneDevicesMixin };
+    game._tickPistons(0, 0, 0, true);
+    assertEqual(blocks.get('0,0,0').get('extended'), true);
+    assertEqual(blocks.get('1,0,0').block.id, 'mc:piston_head');
+    assertEqual(blocks.get('2,0,0'), slime);
+    assertEqual(blocks.get('2,1,0'), STONE);
+    assertEqual(blocks.get('1,1,0'), AIR);
+  });
+
+  it('rejects an entire slime push if any attached block is immovable', () => {
+    const piston = BLOCKS.get('mc:piston').defaultState.with('facing', 'east');
+    const slime = BLOCKS.get('mc:slime_block').defaultState;
+    const obsidian = BLOCKS.get('mc:obsidian').defaultState;
+    const { world, blocks } = makeWorld([
+      ['0,0,0', piston], ['1,0,0', slime], ['1,1,0', obsidian],
+    ]);
+    assertEqual(planPistonMove(world, 0, 0, 0, 'east'), null);
+    assertEqual(blocks.get('1,0,0'), slime);
+    assertEqual(blocks.get('1,1,0'), obsidian);
   });
 
   it('refuses to push beyond build height or into an unloaded chunk', () => {
@@ -126,6 +184,22 @@ describe('piston and sticky piston', () => {
     game._tickRedstoneOre(0, 0, 0, false);
     assertEqual(blocks.get('0,0,0').get('lit'), false);
     assertEqual(blockEmissionForState(blocks.get('0,0,0')), 0);
+  });
+
+  it('restores a finite expiry for saved glowing ore after load', () => {
+    const litOre = BLOCKS.get('mc:redstone_ore').defaultState.with('lit', true);
+    const { world, blocks } = makeWorld([['1,0,1', litOre]]);
+    const game = {
+      world, tickCount: 5,
+      player: { x: 0, y: 0, z: 0, flying: true },
+      ...RedstoneDevicesMixin,
+    };
+    game._tickRedstoneOre(0, 0, 0, true);
+    assertEqual(game._redstoneOreTimers.get('1,0,1'), 35);
+    game.tickCount = 35;
+    game._tickRedstoneOre(0, 0, 0, true);
+    assertEqual(blocks.get('1,0,1').get('lit'), false);
+    assertEqual(game._redstoneOreTimers.has('1,0,1'), false);
   });
 
   it('slimes provide slime balls needed for sticky piston crafting', () => {

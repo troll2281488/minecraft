@@ -1,7 +1,9 @@
 import { describe, it, assertEqual } from './framework.js';
 import './stronghold_library.test.js';
 import './redstone_wire.test.js';
+import './redstone_devices.test.js';
 import './pistons.test.js';
+import './piston_textures.test.js';
 import { applyRemotePlayerState, remoteEquipmentSnapshot, queueChatMessage, canAcquireContainerLease, electRoomHost, isContainerLeaseHeldByOther, isValidContainerKey, listJoinableRooms, ownsContainerLease, queueContainerWrite } from '../src/game/multiplayer.js';
 
 describe('multiplayer container key validation', () => {

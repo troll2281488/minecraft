@@ -791,6 +791,39 @@ function redstoneOreTile(lit = false) {
 TEXTURES.redstone_ore = () => redstoneOreTile(false);
 TEXTURES.redstone_ore_lit = () => redstoneOreTile(true);
 
+TEXTURES.blackstone = () => {
+  const tile = grainy(hex(0x353139), 0.12, 'blackstone');
+  const seam = hex(0x211f25), fleck = hex(0x504a53);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    let c = null;
+    if (y === 0 || y === 8 || x === 0 || x === 8) c = seam;
+    else if ((x * 7 + y * 11) % 19 === 0) c = fleck;
+    if (c) setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+TEXTURES.polished_blackstone = () => {
+  const tile = grainy(hex(0x38333b), 0.06, 'polished_blackstone');
+  const light = hex(0x514b55), dark = hex(0x28252b);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    if ((x + y) % 8 === 0) setPx(tile, x, y, light[0], light[1], light[2]);
+    else if ((x * 3 + y * 5) % 23 === 0) setPx(tile, x, y, dark[0], dark[1], dark[2]);
+  }
+  return tile;
+};
+
+TEXTURES.slime_block = () => {
+  const tile = grainy(hex(0x78a83b), 0.08, 'slime_block');
+  const edge = hex(0x4f7d28), light = hex(0xa5d45b), mid = hex(0x82b943);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    let c = mid;
+    if (x === 0 || x === 15 || y === 0 || y === 15) c = edge;
+    else if ((x + y) % 7 === 0 || (x * 3 + y) % 11 === 0) c = light;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+
 TEXTURES.piston_side = () => {
   const tile = grainy(hex(0x777777), 0.12, 'piston_side');
   const stone = hex(0x777777), wood = hex(0x9b6a3b), dark = hex(0x4b3423), iron = hex(0xb8b8b8);
@@ -909,6 +942,25 @@ export function buildBlockTextureTable(blocks, textureIndex) {
     } else {
       const single = layerFor(block.texture);
       faces = [single, single, single, single, single, single];
+    }
+
+    // Piston faces are oriented by the block's facing property, not by
+    // the world's fixed up/down axes. The contact face shows the piston top;
+    // the other sides use the casing texture. An extended base no longer has
+    // a wooden contact face because its separate head occupies that position.
+    const facingFace = {
+      down: 0, up: 1, north: 2, south: 3, west: 4, east: 5,
+    }[states[i].get('facing')];
+    if (block.id === 'mc:piston' || block.id === 'mc:sticky_piston') {
+      const side = layerFor('piston_side');
+      const front = layerFor(block.id === 'mc:sticky_piston' ? 'sticky_piston_top' : 'piston_top');
+      faces = [layerFor('piston_bottom'), side, side, side, side, side];
+      if (facingFace !== undefined) faces[facingFace] = states[i].get('extended') ? side : front;
+    } else if (block.id === 'mc:piston_head') {
+      const side = layerFor('piston_side');
+      const front = layerFor(states[i].get('sticky') ? 'sticky_piston_top' : 'piston_top');
+      faces = [side, side, side, side, side, side];
+      if (facingFace !== undefined) faces[facingFace] = front;
     }
 
     if (block.id === 'mc:redstone_ore' && states[i].get('lit')) {

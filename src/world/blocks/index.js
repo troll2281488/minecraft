@@ -104,10 +104,15 @@ stoneLike('mc:polished_andesite', 'polished_andesite', 1.5, 6);
 stoneLike('mc:sandstone', 'sandstone', 0.8, 0.8);
 stoneLike('mc:obsidian', 'obsidian', 50, 1200, 3);
 stoneLike('mc:netherrack', 'netherrack', 0.4, 2);
+stoneLike('mc:blackstone', 'blackstone', 1.5, 6);
+stoneLike('mc:polished_blackstone', 'polished_blackstone', 1.5, 6);
 stoneLike('mc:nether_bricks', 'nether_bricks', 2, 6);
 stoneLike('mc:nether_brick_fence', 'nether_bricks', 2, 6);
 stoneLike('mc:nether_gold_ore', 'nether_gold_ore', 3, 3);
-stoneLike('mc:glowstone', 'sea_lantern', 0.3, 0.3);
+define('mc:glowstone', {
+  hardness: 0.3, resistance: 0.3, tool: 'pickaxe', soundGroup: 'glass',
+  lightEmission: 15, texture: 'glowstone',
+});
 define('mc:soul_sand', { hardness: 0.5, resistance: 0.5, tool: 'shovel', soundGroup: 'sand', texture: 'soul_sand' });
 define('mc:bed', { hardness: 0.2, resistance: 0.2, tool: 'axe', soundGroup: 'wood', texture: 'bed', renderShape: 'slab', opaqueCube: false, properties: { type: PROPS.slabType }, defaultValues: { type: 'bottom' } });
 
@@ -223,7 +228,7 @@ for (const [id, hardness, resistance, tool, texture, soundGroup] of [
   ['mc:end_bricks', 3, 9, 'pickaxe', 'sandstone', 'stone'],
   ['mc:purpur_block', 1.5, 6, 'pickaxe', 'stone', 'stone'],
   ['mc:purpur_pillar', 1.5, 6, 'pickaxe', 'stone', 'stone'],
-  ['mc:slime_block', 0, 0, null, 'white_wool', 'slime'],
+  ['mc:slime_block', 0, 0, null, 'slime_block', 'slime'],
   ['mc:magma_block', 0.5, 0.5, 'pickaxe', 'stone', 'stone'],
   ['mc:bone_block', 2, 2, 'pickaxe', 'white_wool', 'stone'],
   ['mc:packed_ice', 0.5, 0.5, 'pickaxe', 'ice', 'glass'],
@@ -506,11 +511,6 @@ define('mc:redstone_torch', {
   hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
   lightEmission: 7, renderShape: 'torch', soundGroup: 'wood', texture: 'redstone_torch',
   properties: { lit: PROPS.lit }, defaultValues: { lit: true },
-});
-
-define('mc:glowstone', {
-  hardness: 0.3, resistance: 0.3, tool: 'pickaxe', soundGroup: 'glass',
-  lightEmission: 15, texture: 'glowstone',
 });
 
 define('mc:repeater', {

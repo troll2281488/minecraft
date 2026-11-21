@@ -272,7 +272,10 @@ export const RedstoneDevicesMixin = {
     const world = this.world, tick = this.tickCount || 0;
     this._redstoneOreTimers ||= new Map();
     const box = this.player?.boundingBox?.();
-    if (hasPlayer && box && !this.player.flying) {
+    if (hasPlayer) {
+      // Reconstruct expiry for persisted lit states even if the player
+      // controller has not produced a bounding box yet after loading a save.
+      // This prevents saved ore from remaining permanently illuminated.
       for (let y = baseY - 2; y <= baseY + 1; y++) {
         for (let x = baseX - 2; x <= baseX + 2; x++) {
           for (let z = baseZ - 2; z <= baseZ + 2; z++) {
@@ -282,6 +285,7 @@ export const RedstoneDevicesMixin = {
             if (state.get('lit') && !this._redstoneOreTimers.has(key)) {
               this._redstoneOreTimers.set(key, tick + 30);
             }
+            if (!box || this.player.flying) continue;
             const overlaps = box.minX < x + 1 && box.maxX > x
               && box.minZ < z + 1 && box.maxZ > z
               && box.minY <= y + 1.05 && box.maxY > y + 0.5;
@@ -622,6 +626,12 @@ export const RedstoneDevicesMixin = {
         if (rearBlock.block.id === 'mc:chest' || rearBlock.block.id === 'mc:trapped_chest') {
           const chest = this._chestAt?.(rearX, rearY, rearZ);
           if (chest?.slots) containerPower = comparatorContainerOutput(chest.slots, chest.slots.length);
+        } else if (rearBlock.block.id === 'mc:hopper') {
+          const hopper = this._hopperAt?.(rearX, rearY, rearZ);
+          if (hopper?.slots) containerPower = comparatorContainerOutput(hopper.slots, hopper.slots.length);
+        } else if (rearBlock.block.id === 'mc:dropper' || rearBlock.block.id === 'mc:dispenser') {
+          const dropper = this._dropperAt?.(rearX, rearY, rearZ);
+          if (dropper?.slots) containerPower = comparatorContainerOutput(dropper.slots, dropper.slots.length);
         } else if (rearBlock.block.id === 'mc:furnace') {
           const furnace = this._furnaceAt?.(rearX, rearY, rearZ);
           if (furnace) containerPower = comparatorContainerOutput([furnace.input, furnace.fuel, furnace.output], 3);
