@@ -334,6 +334,8 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
   if (id === 'mc:snow_block') return [{ id: 'mc:snowball', count: 4 }];
 
   if (id === 'mc:melon') return [{ id: 'mc:melon_slice', count: 3 + rng.nextInt(5) }];
+  if (id === 'mc:sugar_cane') return [{ id: 'mc:sugar_cane', count: 1 }];
+  if (id === 'mc:cactus') return [{ id: 'mc:cactus', count: 1 }];
   if (id === 'mc:pumpkin_stem' || id === 'mc:melon_stem') {
     const seedId = id === 'mc:pumpkin_stem' ? 'mc:pumpkin_seeds' : 'mc:melon_seeds';
     const count = rng.nextInt(2);
