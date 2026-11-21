@@ -6,6 +6,8 @@ import './pistons.test.js';
 import './piston_textures.test.js';
 import './bee_hives.test.js';
 import './weather.test.js';
+import './status_effects.test.js';
+import './sleep.test.js';
 import './farming.test.js';
 import './composting.test.js';
 import './hopper.test.js';
