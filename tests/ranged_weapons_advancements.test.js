@@ -8,7 +8,7 @@ import { Inventory } from '../src/game/inventory.js';
 import { MobSystem } from '../src/entity/mobs.js';
 import { createArrow, stepArrow } from '../src/entity/arrows.js';
 import { beginCrossbowLoad, crossbowLoadProgress, finishCrossbowLoad, crossbowShotPlan, consumeCrossbowCharge, canPierceAdditionalTarget } from '../src/game/crossbow.js';
-import { createTridentProjectile, stepTrident, tridentReturnVelocity, riptideImpulse, impalingBonusDamage, canChannelLightning } from '../src/game/trident.js';
+import { createTridentProjectile, stepTrident, tridentReturnVelocity, riptideImpulse, impalingBonusDamage, canChannelLightning, channelingLightningEffect } from '../src/game/trident.js';
 import { ADVANCEMENTS, createAdvancementState, awardAdvancementCriterion, processAdvancementEvent, serializeAdvancementState } from '../src/game/advancements.js';
 
 describe('crossbow loading and firing', () => {
@@ -220,5 +220,54 @@ describe('bow enchantment gameplay integration', () => {
     game.tickCount = 30;
     entities.releaseBow();
     assertEqual(entities.arrows.length, 0);
+  });
+});
+
+
+describe('Channeling lightning gameplay effects', () => {
+  it('strikes only during exposed thunderstorms and carries vanilla target effects', () => {
+    assertEqual(channelingLightningEffect({ channeling: true, thunder: false, skyVisible: true, targetExposed: true, targetType: 'creeper' }), null);
+    assertEqual(channelingLightningEffect({ channeling: true, thunder: true, skyVisible: false, targetExposed: false, targetType: 'creeper' }), null);
+    const creeper = channelingLightningEffect({ channeling: true, thunder: true, skyVisible: true, targetExposed: true, targetType: 'creeper' });
+    assertEqual(creeper.damage, 5);
+    assertEqual(creeper.fireTicks, 160);
+    assertEqual(creeper.chargedCreeper, true);
+    const villager = channelingLightningEffect({ channeling: true, thunder: true, skyVisible: true, targetExposed: true, targetType: 'villager' });
+    assertEqual(villager.transformTo, 'witch');
+  });
+});
+
+describe('crossbow firework rocket ammunition', () => {
+  it('registers craftable rockets and chooses them when no arrows are available', () => {
+    assertEqual(ITEMS.get('mc:firework_rocket').stackSize, 64);
+    assertEqual(RECIPES.producing('mc:firework_rocket').length, 1);
+    const inventory = new Inventory();
+    inventory.addItem('mc:crossbow', 1);
+    inventory.addItem('mc:firework_rocket', 1);
+    const player = new Player(0, 64, 0);
+    const game = { inventory, player, tickCount: 0, ui: { toast() {} }, sounds: { play() {} } };
+    const entities = new MobSystem(game);
+    assertEqual(entities.beginCrossbowLoad(), true);
+    game.tickCount = 25;
+    assertEqual(entities.releaseCrossbowLoad(), true);
+    assertEqual(entities.arrows.length, 1);
+    assertEqual(entities.arrows[0].isFireworkRocket, true);
+    assertEqual(inventory.countOf('mc:firework_rocket'), 0);
+    assertEqual(inventory.held.data.charged, false);
+  });
+  it('prefers regular arrows when both ammunition types are available', () => {
+    const inventory = new Inventory();
+    inventory.addItem('mc:crossbow', 1);
+    inventory.addItem('mc:firework_rocket', 1);
+    inventory.addItem('mc:arrow', 1);
+    const player = new Player(0, 64, 0);
+    const game = { inventory, player, tickCount: 0, ui: { toast() {} }, sounds: { play() {} } };
+    const entities = new MobSystem(game);
+    entities.beginCrossbowLoad();
+    game.tickCount = 25;
+    entities.releaseCrossbowLoad();
+    assertEqual(entities.arrows[0].isFireworkRocket, false);
+    assertEqual(inventory.countOf('mc:arrow'), 0);
+    assertEqual(inventory.countOf('mc:firework_rocket'), 1);
   });
 });
