@@ -71,7 +71,21 @@ export const MOB_AI_PROFILES = Object.freeze({
   wither: Object.freeze({ detectionRange: 24, speedMultiplier: 0.85, rangedRange: 18, preferredRange: 10, attackCooldown: 45, damage: 4, role: 'boss' }),
 });
 
-const LEASHABLE_MOB_TYPES = new Set(['cow', 'pig', 'sheep', 'chicken', 'mooshroom', 'rabbit', 'wolf', 'horse', 'bee']);
+const LEASHABLE_MOB_TYPES = new Set(['cow', 'pig', 'sheep', 'chicken', 'mooshroom', 'rabbit', 'wolf', 'horse', 'bee', 'goat']);
+
+export function nextGoatRamState(mob, distance) {
+  const cooldown = Math.max(0, (mob?.ramCooldown || 0) - 1);
+  const previousWindup = Math.max(0, mob?.ramWindup || 0);
+  let windup = Math.max(0, previousWindup - 1);
+  const previousActive = Math.max(0, mob?.ramTicks || 0);
+  let active = Math.max(0, previousActive - 1);
+  if (!mob || mob.type !== 'goat') return { cooldown, windup, active, start: false };
+  if (previousWindup > 0 && windup === 0) active = 12;
+  if (previousActive > 0 && active === 0) cooldown = Math.max(cooldown, 600);
+  const start = previousWindup === 0 && active === 0 && cooldown === 0 && distance >= 4 && distance <= 8;
+  if (start) windup = 30;
+  return { cooldown, windup, active, start };
+}
 
 export function canSaddlePig(mob) {
   return mob?.type === 'pig' && mob.saddled !== true;
@@ -117,6 +131,7 @@ export const BREEDING_FOODS = Object.freeze({
   chicken: Object.freeze(['mc:wheat_seeds', 'mc:pumpkin_seeds', 'mc:melon_seeds']),
   rabbit: Object.freeze(['mc:carrot', 'mc:golden_carrot', 'mc:dandelion']),
   horse: Object.freeze(['mc:golden_carrot', 'mc:golden_apple']),
+  goat: Object.freeze(['mc:wheat']),
 });
 
 export function canBreedAnimalWith(type, itemId) {
@@ -155,7 +170,7 @@ export const MOB_TYPES_112 = Object.freeze([
   'llama','magma_cube','mooshroom','mule','ocelot','parrot','pig','polar_bear',
   'rabbit','sheep','shulker','silverfish','skeleton','skeleton_horse','slime',
   'snow_golem','spider','squid','stray','vex','villager','vindicator','witch',
-  'wither','wither_skeleton','wolf','zombie','zombie_horse','zombie_villager',
+  'wither','wither_skeleton','wolf','zombie','zombie_horse','zombie_villager','goat',
 ]);
 
 export function shearSheep(mob, random = Math.random) {
@@ -513,6 +528,10 @@ export class MobSystem {
       tameProgress: Number.isFinite(mob.tameProgress) ? Math.max(0, Math.min(3, mob.tameProgress)) : 0,
       saddled: ['horse', 'pig'].includes(mob.type) && !!mob.saddled,
       horseArmor: ['iron', 'golden', 'diamond'].includes(mob.horseArmor) ? mob.horseArmor : null,
+      ramCooldown: mob.type === 'goat' ? Math.max(0, Math.min(600, mob.ramCooldown || 0)) : 0,
+      ramWindup: mob.type === 'goat' ? Math.max(0, Math.min(30, mob.ramWindup || 0)) : 0,
+      ramTicks: mob.type === 'goat' ? Math.max(0, Math.min(12, mob.ramTicks || 0)) : 0,
+      hornsDropped: mob.type === 'goat' ? Math.max(0, Math.min(2, mob.hornsDropped || 0)) : 0,
       leashHolder: typeof mob.leashHolder === 'string' && mob.leashHolder.length <= 32 ? mob.leashHolder : null,
       beePollenTicks: Number.isFinite(mob.beePollenTicks) ? mob.beePollenTicks : 0,
       beeHiveWorkTicks: Number.isFinite(mob.beeHiveWorkTicks) ? mob.beeHiveWorkTicks : 0,
@@ -622,6 +641,10 @@ export class MobSystem {
         tameProgress: Number.isFinite(mob.tameProgress) ? Math.max(0, Math.min(3, mob.tameProgress)) : 0,
         saddled: ['horse', 'pig'].includes(mob.type) && !!mob.saddled,
         horseArmor: ['iron', 'golden', 'diamond'].includes(mob.horseArmor) ? mob.horseArmor : null,
+        ramCooldown: mob.type === 'goat' && Number.isFinite(mob.ramCooldown) ? Math.max(0, Math.min(600, mob.ramCooldown)) : 0,
+        ramWindup: mob.type === 'goat' && Number.isFinite(mob.ramWindup) ? Math.max(0, Math.min(30, mob.ramWindup)) : 0,
+        ramTicks: mob.type === 'goat' && Number.isFinite(mob.ramTicks) ? Math.max(0, Math.min(12, mob.ramTicks)) : 0,
+        hornsDropped: mob.type === 'goat' && Number.isFinite(mob.hornsDropped) ? Math.max(0, Math.min(2, mob.hornsDropped)) : 0,
         leashHolder: typeof mob.leashHolder === 'string' && mob.leashHolder.length <= 32 && LEASHABLE_MOB_TYPES.has(mob.type) ? mob.leashHolder : null,
         beePollenTicks: Number.isFinite(mob.beePollenTicks) ? Math.max(0, Math.min(600, mob.beePollenTicks)) : 0,
         beeHiveWorkTicks: Number.isFinite(mob.beeHiveWorkTicks) ? Math.max(0, Math.min(200, mob.beeHiveWorkTicks)) : 0,
@@ -651,7 +674,7 @@ export class MobSystem {
       speed: MOB_AI_PROFILES[type] ? 0.035 : 0.018,
       thinkTicks: 0, attackTicks: 0, walkPhase: Math.random() * 6,
       moveTicks: 0, pauseTicks: 45 + Math.floor(Math.random() * 100),
-      health: ({ bee:10, zombie:20, husk:20, zombie_villager:20, skeleton:20, stray:20, wither_skeleton:20, creeper:20, enderman:40, spider:16, cave_spider:12, silverfish:8, endermite:8, slime:16, magma_cube:16, vex:14, vindicator:24, evoker:24, witch:26, blaze:20, ghast:10, guardian:30, elder_guardian:80, wither:300, cow:10, pig:10, chicken:4, sheep:8, mooshroom:10, rabbit:3, wolf:8, horse:30, polar_bear:30, villager:20 })[type] ?? 10,
+      health: ({ goat:10, bee:10, zombie:20, husk:20, zombie_villager:20, skeleton:20, stray:20, wither_skeleton:20, creeper:20, enderman:40, spider:16, cave_spider:12, silverfish:8, endermite:8, slime:16, magma_cube:16, vex:14, vindicator:24, evoker:24, witch:26, blaze:20, ghast:10, guardian:30, elder_guardian:80, wither:300, cow:10, pig:10, chicken:4, sheep:8, mooshroom:10, rabbit:3, wolf:8, horse:30, polar_bear:30, villager:20 })[type] ?? 10,
       sheared: false, eggLayTicks: type === 'chicken' ? 6000 + Math.floor(Math.random() * 6001) : 0, grazeTicks: 600 + Math.floor(Math.random() * 601), hurtTicks: 0, fuseTicks: 0,
       ageTicks: 0, loveTicks: 0, breedCooldown: 0,
       anim: { walk: 0, idle: Math.random() * Math.PI * 2, attack: 0, hurt: 0, fuse: 0 },
@@ -704,7 +727,7 @@ export class MobSystem {
 
   /** Spawn a supported creature from a creative egg on the clicked block. */
   spawnFromEgg(type, x, z) {
-    if (!['cow','pig','sheep','chicken','mooshroom','rabbit','wolf','horse','polar_bear','zombie','husk','zombie_villager','skeleton','stray','wither_skeleton','creeper','enderman','spider','cave_spider','silverfish','endermite','slime','magma_cube','vex','vindicator','evoker','witch','blaze','ghast','guardian','elder_guardian','wither','villager','bee'].includes(type)) return false;
+    if (!['cow','pig','sheep','chicken','mooshroom','rabbit','wolf','horse','polar_bear','zombie','husk','zombie_villager','skeleton','stray','wither_skeleton','creeper','enderman','spider','cave_spider','silverfish','endermite','slime','magma_cube','vex','vindicator','evoker','witch','blaze','ghast','guardian','elder_guardian','wither','villager','bee','goat'].includes(type)) return false;
     if (type === 'villager') {
       const world = this.game.world;
       const y = world.getHeight(x, z);
@@ -1419,6 +1442,8 @@ export class MobSystem {
             type = roll < 0.78 ? 'mooshroom' : roll < 0.9 ? 'cow' : 'sheep';
           } else if (jungle && roll < 0.22) {
             type = 'rabbit';
+          } else if (['mc:mountains','mc:windswept_hills','mc:extreme_hills_edge','mc:extreme_hills_plus'].includes(biome) && roll < 0.34) {
+            type = 'goat';
           } else if (cold && roll < 0.18) {
             type = 'polar_bear';
           } else if (dry) {
@@ -1531,6 +1556,17 @@ export class MobSystem {
       }
 
       const endermanAngry = mob.type === 'enderman' && targeted && distance < 16;
+      if (mob.type === 'goat' && player.gamemode === 'survival') {
+        const ram = nextGoatRamState(mob, distance);
+        mob.ramCooldown = ram.cooldown;
+        mob.ramWindup = ram.windup;
+        mob.ramTicks = ram.active;
+        if (ram.start || ram.windup > 0 || ram.active > 0) {
+          mob.targetYaw = Math.atan2(dx, dz);
+          mob.moveTicks = 2;
+          mob.pauseTicks = 0;
+        }
+      }
       const hostile = hostileType && player.gamemode === 'survival' &&
         distance < profile.detectionRange &&
         (mob.type !== 'enderman' || endermanAngry || distance < 2.5);
@@ -1568,8 +1604,8 @@ export class MobSystem {
           }
         }
       }
-      const moving = hostile || fleeing || followingOwner || mob.moveTicks > 0;
-      const speed = moving ? (hostile ? mob.speed * profile.speedMultiplier : fleeing ? 0.105 : followingOwner ? 0.045 : mob.speed) : 0;
+      const moving = hostile || fleeing || followingOwner || mob.moveTicks > 0 || (mob.type === 'goat' && mob.ramWindup > 0);
+      const speed = moving ? (mob.type === 'goat' && mob.ramTicks > 0 ? 0.20 : hostile ? mob.speed * profile.speedMultiplier : fleeing ? 0.105 : followingOwner ? 0.045 : mob.speed) : 0;
       if (moving || Math.abs(mob.knockbackX || 0) + Math.abs(mob.knockbackZ || 0) > 0.005) {
         mob.yaw += Math.atan2(Math.sin(mob.targetYaw - mob.yaw), Math.cos(mob.targetYaw - mob.yaw)) * (fleeing ? 0.38 : 0.12);
       }
@@ -1598,6 +1634,14 @@ export class MobSystem {
           // If both axes are blocked, look for a nearby safe step around the
           // obstacle. This prevents hostile mobs from endlessly pushing into
           // the same wall while pursuing the player.
+          if ((!xFree || !zFree) && mob.type === 'goat' && mob.ramTicks > 0 && (mob.hornsDropped || 0) < 2) {
+            mob.hornsDropped = (mob.hornsDropped || 0) + 1;
+            mob.ramTicks = 0;
+            mob.ramCooldown = 600;
+            const horn = ITEMS.get('mc:goat_horn');
+            if (horn) this.spawnItemStackAt(new ItemStack(horn, 1), mob.x, mob.y + 0.8, mob.z);
+            this.game.sounds?.play('hit', 'stone');
+          }
           if (!xFree && !zFree && hostile) {
             mob.blockedTicks = (mob.blockedTicks || 0) + 1;
             if (mob.blockedTicks >= 3) {
@@ -1630,6 +1674,14 @@ export class MobSystem {
       if (moving) mob.walkPhase += speed * (hostile ? 12 : 8);
       mob.anim.walk = mob.walkPhase;
       mob.anim.walking = moving;
+
+      if (mob.type === 'goat' && mob.ramTicks > 0 && distance < 1.45) {
+        this._damagePlayer(4, mob.x, mob.z);
+        const force = 0.22 / Math.max(distance, 0.25);
+        player.vx += dx * force; player.vz += dz * force;
+        mob.ramTicks = 0;
+        mob.ramCooldown = 600;
+      }
 
       // Skeletons and strays keep their distance and fire ranged attacks.
       if (profile?.rangedRange && hostile && distance < profile.rangedRange && distance > 3) {

@@ -843,6 +843,7 @@ const MATERIALS = [
   ['mc:diamond', {}],
   ['mc:emerald', {}],
   ['mc:lapis_lazuli', {}],
+  ['mc:goat_horn', { stackSize: 1, rarity: 'uncommon' }],
   ['mc:redstone', { block: 'mc:redstone_wire' }],
   ['mc:flint', {}],
   ['mc:blaze_powder', {}],
