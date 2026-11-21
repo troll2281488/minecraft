@@ -11,6 +11,7 @@
  */
 import { Chest, Hopper, Dropper, Furnace, SMELTING, SMELT_TICKS, moveOneItem, serializeContainer, deserializeContainer } from './containers.js';
 import { readSignal } from './redstone_devices.js';
+import { compostChance, compostRoll, composterHopperInsert, composterHopperExtract } from './composting.js';
 import { ItemStack } from '../world/item.js';
 import { positionalRandom, normalizeSeed } from '../core/rng.js';
 import { mineshaftPlan, dungeonDims } from '../world/gen/structures.js';
@@ -647,7 +648,28 @@ export const ContainerScreensMixin = {
         } else if (targetBlock === 'mc:hopper') {
           destinationEntry = { type: 'hopper', data: this._hopperAt(tx, ty, tz) };
         }
-        if (destinationEntry) {
+        if (targetBlock === 'mc:composter' && dy < 0) {
+          const composterState = world.getBlock(tx, ty, tz);
+          const level = composterState.get('level');
+          if (level < 8) {
+            const sourceIndex = hopper.slots.findIndex((stack) => stack && !stack.isEmpty && compostChance(stack.item.id) !== null);
+            if (sourceIndex >= 0) {
+              const source = hopper.slots[sourceIndex];
+              const result = composterHopperInsert(level, source.item.id,
+                compostRoll(world.seed, tx, ty, tz, tick, source.item.id));
+              if (result.accepted) {
+                source.count -= 1;
+                if (source.count <= 0) hopper.slots[sourceIndex] = ItemStack.EMPTY.clone();
+                moved = true;
+                if (result.level !== level) {
+                  const next = composterState.with('level', result.level);
+                  world.setBlock(tx, ty, tz, next);
+                  this.multiplayer?.pushBlockChange(tx, ty, tz, next);
+                }
+              }
+            }
+          }
+        } else if (destinationEntry) {
           const targetKey = this._containerKey(tx, ty, tz);
           if (!this.multiplayer?.isContainerLockedByOther?.(targetKey)) {
             moved = this._hopperTransferOne(hopperEntry, destinationEntry, dy < 0 ? 'top' : 'side');
@@ -670,7 +692,17 @@ export const ContainerScreensMixin = {
             sourceEntry = { type: 'hopper', data: this._hopperAt(x, y + 1, z) };
           }
           const sourceKey = this._containerKey(x, y + 1, z);
-          if (sourceEntry && !this.multiplayer?.isContainerLockedByOther?.(sourceKey)) {
+          if (sourceId === 'mc:composter') {
+            const composterState = world.getBlock(x, y + 1, z);
+            const extraction = composterHopperExtract(composterState.get('level'));
+            if (extraction.extracted &&
+                moveOneItem([ItemStack.of('mc:bone_meal', 1)], hopper.slots)) {
+              const next = composterState.with('level', extraction.level);
+              world.setBlock(x, y + 1, z, next);
+              this.multiplayer?.pushBlockChange(x, y + 1, z, next);
+              moved = true;
+            }
+          } else if (sourceEntry && !this.multiplayer?.isContainerLockedByOther?.(sourceKey)) {
             moved = this._hopperTransferOne(sourceEntry, hopperEntry, 'bottom');
             if (moved && this.multiplayer?.roomId) {
               this._hopperDirtyKeys ||= new Set();

@@ -84,3 +84,26 @@ export function boneMealAge(age, seed, x, y, z, tick) {
   const roll = compostRoll(seed, x, y, z, tick, 'bone_meal');
   return Math.min(7, age + 2 + Math.floor(roll * 4));
 }
+
+
+/** Hopper input consumes one compostable item; a failed roll still consumes it. */
+export function composterHopperInsert(level, itemId, roll) {
+  const chance = compostChance(itemId);
+  if (!Number.isInteger(level) || level < 0 || level >= COMPOSTER_MAX_LEVEL ||
+      chance === null || !Number.isFinite(roll) || roll < 0 || roll >= 1) {
+    return { accepted: false, level };
+  }
+  return { accepted: true, level: nextComposterLevel(level, chance, roll) };
+}
+
+/** A bottom hopper can extract exactly one bone meal only from a ready composter. */
+export function composterHopperExtract(level) {
+  return { extracted: level === COMPOSTER_MAX_LEVEL, level: level === COMPOSTER_MAX_LEVEL ? 0 : level };
+}
+
+/** Java comparator output for composter fill levels: 0, 1, 3, ... 13, 15. */
+export function composterComparatorOutput(level) {
+  if (!Number.isInteger(level) || level < 0 || level > COMPOSTER_MAX_LEVEL) return 0;
+  if (level === 0) return 0;
+  return level === COMPOSTER_MAX_LEVEL ? 15 : level * 2 - 1;
+}

@@ -147,4 +147,16 @@ describe('comparator inventory signals', () => {
     game._tickComparators(0, 0, 0, true);
     assertEqual(blocks.get('0,0,0').get('power'), 2);
   });
+
+  it('reads all nine composter fill levels after the comparator update delay', () => {
+    const expected = [0, 1, 3, 5, 7, 9, 11, 13, 15];
+    for (let level = 0; level <= 8; level++) {
+      const composter = BLOCKS.get('mc:composter').defaultState.with('level', level);
+      const { game, blocks } = makeComparatorGame(composter, null);
+      game._tickComparators(0, 0, 0, true);
+      game.tickCount = 2;
+      game._tickComparators(0, 0, 0, true);
+      assertEqual(blocks.get('0,0,0').get('power'), expected[level]);
+    }
+  });
 });
