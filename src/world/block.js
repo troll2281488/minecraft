@@ -94,6 +94,7 @@ export const PROPS = {
   age7: intProp('age', 0, 7),
   age15: intProp('age', 0, 15),
   note: intProp('note', 0, 24),
+  record: enumProp('record', ['none', '13', 'cat', 'otherside']),
   comparatorMode: enumProp('mode', ['compare', 'subtract']),
   level: intProp('level', 0, 15),
   power: intProp('power', 0, 15),
