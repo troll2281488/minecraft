@@ -3,6 +3,9 @@ import { describe, it, assertEqual } from './framework.js';
 import { ITEMS } from '../src/world/item.js';
 import { RECIPES } from '../src/game/recipes.js';
 import { Player } from '../src/entity/player.js';
+import { withEnchantment, canApplyEnchantment, ENCHANTMENTS } from '../src/game/enchantments.js';
+import { Inventory } from '../src/game/inventory.js';
+import { MobSystem } from '../src/entity/mobs.js';
 import { beginCrossbowLoad, crossbowLoadProgress, finishCrossbowLoad, crossbowShotPlan, consumeCrossbowCharge, canPierceAdditionalTarget } from '../src/game/crossbow.js';
 import { createTridentProjectile, stepTrident, tridentReturnVelocity, riptideImpulse, impalingBonusDamage, canChannelLightning } from '../src/game/trident.js';
 import { ADVANCEMENTS, createAdvancementState, awardAdvancementCriterion, processAdvancementEvent, serializeAdvancementState } from '../src/game/advancements.js';
@@ -94,6 +97,10 @@ describe('playable crossbow item and saved advancement progress', () => {
     assertEqual(RECIPES.producing('mc:crossbow').length, 1);
     assertEqual(RECIPES.producing('mc:trident').length, 0);
     assertEqual(ITEMS.get('mc:trident').maxDamage, 250);
+    assertEqual(canApplyEnchantment(ITEMS.get('mc:crossbow'), 'quick_charge'), true);
+    assertEqual(canApplyEnchantment(ITEMS.get('mc:crossbow'), 'multishot'), true);
+    assertEqual(canApplyEnchantment(ITEMS.get('mc:trident'), 'loyalty'), true);
+    assertEqual(ENCHANTMENTS.piercing.max, 4);
   });
   it('persists earned advancement criteria with player state', () => {
     const player = new Player(3, 70, -4);
@@ -111,5 +118,41 @@ describe('playable crossbow item and saved advancement progress', () => {
     player.loadFrom({ advancements: { injected: { criteria: ['fake'] }, story_obtain_diamond: { criteria: ['fake'] } } });
     assertEqual(player.advancements.injected, undefined);
     assertEqual(player.advancements.story_obtain_diamond.done, false);
+  });
+});
+
+
+describe('crossbow right-click gameplay integration', () => {
+  it('charges, consumes one arrow and fires three projectiles with Multishot', () => {
+    const inventory = new Inventory();
+    inventory.addItem('mc:crossbow', 1);
+    inventory.addItem('mc:arrow', 8);
+    inventory.held.data = { enchantments: { multishot: 1, quick_charge: 1 } };
+    const player = new Player(0, 64, 0);
+    const game = { inventory, player, tickCount: 0, ui: { toast() {} }, sounds: { play() {} } };
+    const entities = new MobSystem(game);
+    assertEqual(entities.beginCrossbowLoad(), true);
+    game.tickCount = 20;
+    assertEqual(entities.releaseCrossbowLoad(), true);
+    assertEqual(entities.arrows.length, 3);
+    assertEqual(inventory.countOf('mc:arrow'), 7);
+    assertEqual(inventory.held.damage, 1);
+    assertEqual(inventory.held.data.charged, false);
+  });
+  it('does not fire before the charge duration or without ammunition', () => {
+    const inventory = new Inventory();
+    inventory.addItem('mc:crossbow', 1);
+    const player = new Player(0, 64, 0);
+    const game = { inventory, player, tickCount: 0, ui: { toast() {} }, sounds: { play() {} } };
+    const entities = new MobSystem(game);
+    entities.beginCrossbowLoad();
+    game.tickCount = 24;
+    entities.releaseCrossbowLoad();
+    assertEqual(entities.arrows.length, 0);
+    game.tickCount = 30;
+    entities.beginCrossbowLoad();
+    game.tickCount = 60;
+    entities.releaseCrossbowLoad();
+    assertEqual(entities.arrows.length, 0);
   });
 });
