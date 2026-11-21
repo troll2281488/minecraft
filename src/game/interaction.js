@@ -17,6 +17,7 @@ import { forwardVector } from '../core/mat4.js';
 import { FACES, AABB, yawToFacing } from '../core/math.js';
 import { AIR } from '../world/block.js';
 import { ITEMS } from '../world/item.js';
+import { enchantmentLevel } from './enchantments.js';
 
 // ---------------------------------------------------------------------------
 // Raycasting
@@ -125,7 +126,8 @@ export function breakTicks(block, heldStack, conditions = {}) {
   // Efficiency, haste, and mining fatigue all fold into the speed term rather
   // than the divisor -- which is why Efficiency V on a diamond pickaxe is such
   // an enormous jump rather than a linear improvement.
-  if (conditions.efficiency > 0) speed += conditions.efficiency ** 2 + 1;
+  const efficiency = Math.max(conditions.efficiency || 0, enchantmentLevel(heldStack, 'efficiency'));
+  if (efficiency > 0) speed += efficiency ** 2 + 1;
   if (conditions.haste > 0) speed *= 1 + MINING.HASTE_PER_LEVEL * conditions.haste;
   if (conditions.miningFatigue > 0) speed *= MINING.MINING_FATIGUE_BASE ** conditions.miningFatigue;
 
@@ -331,8 +333,10 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
     return drops;
   }
 
-  // Blocks that do not drop themselves in vanilla without Silk Touch.
-  // Silk Touch is not implemented yet, so these correctly yield nothing.
+  // Silk Touch preserves ordinary block drops, but never makes spawners collectible.
+  if (enchantmentLevel(heldStack, 'silk_touch') > 0 && id !== 'mc:mob_spawner' && ITEMS.get(id)) {
+    return [{ id, count: 1 }];
+  }
   if (id === 'mc:glass' || id === 'mc:ice') return [];
   // Monster spawners are never item drops in Java Edition, even with Silk Touch.
   if (id === 'mc:mob_spawner') return [];
@@ -361,13 +365,22 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
     ];
   }
 
-  if (id === 'mc:nether_gold_ore') return [{ id: 'mc:gold_nugget', count: 2 + rng.nextInt(4) }];
+  if (id === 'mc:nether_gold_ore') {
+    const base = 2 + rng.nextInt(4);
+    const bonus = enchantmentLevel(heldStack, 'fortune');
+    return [{ id: 'mc:gold_nugget', count: base * (1 + (bonus ? rng.nextInt(bonus + 1) : 0)) }];
+  }
 
   // Java 1.19 glowstone drops 2–4 dust without Fortune (Silk Touch is not yet implemented).
-  if (id === 'mc:glowstone') return [{ id: 'mc:glowstone_dust', count: 2 + rng.nextInt(3) }];
+  if (id === 'mc:glowstone') {
+    const base = 2 + rng.nextInt(3);
+    const bonus = enchantmentLevel(heldStack, 'fortune');
+    return [{ id: 'mc:glowstone_dust', count: Math.min(4, base + (bonus ? rng.nextInt(bonus + 1) : 0)) }];
+  }
 
   if (id === 'mc:gravel') {
-    return rng.nextDouble() < 0.10
+    const fortune = enchantmentLevel(heldStack, 'fortune');
+    return rng.nextDouble() < Math.min(1, 0.10 + fortune * 0.10)
       ? [{ id: 'mc:flint', count: 1 }]
       : [{ id: 'mc:gravel', count: 1 }];
   }
@@ -414,6 +427,10 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
   if (dropId === 'mc:redstone') count = 4 + rng.nextInt(2);
   if (dropId === 'mc:lapis_lazuli') count = 4 + rng.nextInt(5);
   if (dropId === 'mc:clay_ball') count = 4;
+  const fortune = enchantmentLevel(heldStack, 'fortune');
+  if (fortune > 0 && ['mc:coal', 'mc:diamond', 'mc:emerald', 'mc:redstone', 'mc:lapis_lazuli', 'mc:quartz', 'mc:gold_nugget'].includes(dropId)) {
+    count *= 1 + rng.nextInt(fortune + 1);
+  }
 
   return [{ id: dropId, count }];
 }
