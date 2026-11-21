@@ -29,7 +29,7 @@ export const ENCHANTMENTS = Object.freeze({
   infinity: { max: 1, weight: 1, applies: ['bow'], group: 'arrow_supply' },
   luck_of_the_sea: { max: 3, weight: 2, applies: ['fishing_rod'] },
   lure: { max: 3, weight: 2, applies: ['fishing_rod'] },
-  mending: { max: 1, weight: 2, applies: ['durable'], treasure: true },
+  mending: { max: 1, weight: 2, applies: ['durable'], group: 'arrow_supply', treasure: true },
   curse_of_binding: { max: 1, weight: 1, applies: ['armor'], treasure: true },
   curse_of_vanishing: { max: 1, weight: 1, applies: ['all'], treasure: true },
 });
@@ -137,7 +137,8 @@ export function combineOnAnvil(left, right, { materialRepair = false } = {}) {
       output.data = { ...(output.data || {}), enchantments: enchantmentData };
       cost += ENCHANTMENTS[id].weight * nextLevel;
     }
-  } else if (left.item.id === right.item.id && left.item.isDamageable) {
+  }
+  if (left.item.id === right.item.id && left.item.isDamageable) {
     const max = left.item.maxDamage;
     const repaired = Math.min(max, Math.floor(max * 0.12) + (max - left.damage) + (max - right.damage));
     output.damage = Math.max(0, max - repaired);
