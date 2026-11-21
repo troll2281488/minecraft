@@ -548,6 +548,7 @@ export class MobSystem {
         mob.anim.hurt = 1;
         mob.playerDamageTicks = 100;
         if (arrow.isTrident && arrow.loyaltyLevel > 0) { arrow.returning = true; continue; }
+        if (arrow.isTrident) { this.arrows.splice(i, 1); continue; }
         if (arrow.piercingLevel > 0) {
           // Piercing arrows keep travelling and remember every hit entity so
           // they cannot repeatedly damage the same mob on later ticks.
@@ -559,6 +560,7 @@ export class MobSystem {
         arrow.done = false;
       } else if (result.hit === 'block') {
         if (arrow.isTrident && arrow.loyaltyLevel > 0) { arrow.returning = true; continue; }
+        if (arrow.isTrident) { this.arrows.splice(i, 1); continue; }
         arrow.stuck = true;
         arrow.stuckYaw = Math.atan2(-arrow.vx, arrow.vz);
         arrow.stuckPitch = Math.atan2(-arrow.vy, Math.hypot(arrow.vx, arrow.vz));
