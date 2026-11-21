@@ -78,6 +78,8 @@ recipes.push({ result: 'mc:composter', count: 1, pattern: ['S S', 'S S', 'SSS'],
 recipes.push({ result: 'mc:pumpkin_seeds', count: 4, ingredients: ['mc:pumpkin'] });
 recipes.push({ result: 'mc:melon_seeds', count: 1, ingredients: ['mc:melon_slice'] });
 recipes.push({ result: 'mc:melon', count: 1, pattern: ['MMM', 'MMM', 'MMM'], key: { M: 'mc:melon_slice' } });
+recipes.push({ result: 'mc:sugar', count: 1, ingredients: ['mc:sugar_cane'] });
+recipes.push({ result: 'mc:paper', count: 3, pattern: ['CCC'], key: { C: 'mc:sugar_cane' } });
 recipes.push({ result: 'mc:bone_meal', count: 3, ingredients: ['mc:bone'] });
 recipes.push({ result: 'mc:piston', count: 1, pattern: ['PPP', 'CIC', 'CRC'], key: { P: '#mc:planks', C: 'mc:cobblestone', I: 'mc:iron_ingot', R: 'mc:redstone' } });
 recipes.push({ result: 'mc:sticky_piston', count: 1, ingredients: ['mc:piston', 'mc:slime_ball'] });

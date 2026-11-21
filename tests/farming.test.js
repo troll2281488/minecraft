@@ -4,7 +4,7 @@ import { BLOCKS } from '../src/world/block.js';
 import { ITEMS } from '../src/world/item.js';
 import {
   tickFarming, nextWheatAge, nextCropAge, hasNearbyWaterSource,
-  chooseStemFruitTarget, STEM_IDS,
+  chooseStemFruitTarget, STEM_IDS, canPlantSugarCane, SUGAR_CANE_MAX_HEIGHT,
   FARMLAND_MAX_MOISTURE, DRY_WHEAT_GROWTH_INTERVAL,
 } from '../src/game/farming.js';
 import { RECIPES } from '../src/game/recipes.js';
@@ -22,7 +22,65 @@ function makeWorld(entries = []) {
   };
 }
 
+describe('sugar cane farming', () => {
+  it('requires sand, dirt or grass and adjacent source water', () => {
+    const sand = BLOCKS.get('mc:sand').defaultState;
+    const dirt = BLOCKS.get('mc:dirt').defaultState;
+    const water = BLOCKS.get('mc:water').defaultState;
+    assertEqual(canPlantSugarCane(makeWorld([['0,64,0', sand], ['1,65,0', water]]), 0, 64, 0), true);
+    assertEqual(canPlantSugarCane(makeWorld([['0,64,0', dirt], ['0,65,1', water]]), 0, 64, 0), true);
+    assertEqual(canPlantSugarCane(makeWorld([['0,64,0', sand]]), 0, 64, 0), false);
+    assertEqual(canPlantSugarCane(makeWorld([['0,64,0', BLOCKS.get('mc:stone').defaultState], ['1,65,0', water]]), 0, 64, 0), false);
+    assertEqual(canPlantSugarCane(makeWorld([['0,64,0', sand], ['1,65,0', water.with('level', 2)]]), 0, 64, 0), false);
+  });
+
+  it('grows one top segment at a time and never exceeds three blocks', () => {
+    const cane = BLOCKS.get('mc:sugar_cane').defaultState;
+    const sand = BLOCKS.get('mc:sand').defaultState;
+    const water = BLOCKS.get('mc:water').defaultState;
+    const world = makeWorld([
+      ['0,64,0', sand], ['1,65,0', water],
+      ['0,65,0', cane],
+    ]);
+    tickFarming(world, { x: 0, y: 65, z: 0 }, 599);
+    assertEqual(world.getBlock(0, 66, 0).block.id, 'mc:air');
+    const first = tickFarming(world, { x: 0, y: 65, z: 0 }, 600);
+    assertEqual(world.getBlock(0, 66, 0).block.id, 'mc:sugar_cane');
+    assertEqual(first.filter(c => c.state.block.id === 'mc:sugar_cane').length, 1);
+    tickFarming(world, { x: 0, y: 66, z: 0 }, 1200);
+    assertEqual(world.getBlock(0, 67, 0).block.id, 'mc:sugar_cane');
+    tickFarming(world, { x: 0, y: 67, z: 0 }, 1800);
+    assertEqual(world.getBlock(0, 68, 0).block.id, 'mc:air');
+    assertEqual(SUGAR_CANE_MAX_HEIGHT, 3);
+  });
+
+  it('drops one sugar cane item when harvested', () => {
+    const drops = blockDrops(BLOCKS.get('mc:sugar_cane').defaultState, null, 9, 0, 65, 0);
+    assertEqual(drops.length, 1);
+    assertEqual(drops[0].id, 'mc:sugar_cane');
+    assertEqual(drops[0].count, 1);
+  });
+
+  it('does not grow through a blocked top or without valid water', () => {
+    const cane = BLOCKS.get('mc:sugar_cane').defaultState;
+    const sand = BLOCKS.get('mc:sand').defaultState;
+    const stone = BLOCKS.get('mc:stone').defaultState;
+    const world = makeWorld([['0,64,0', sand], ['0,65,0', cane], ['0,66,0', stone]]);
+    tickFarming(world, { x: 0, y: 65, z: 0 }, 600);
+    assertEqual(world.getBlock(0, 66, 0).block.id, 'mc:stone');
+    assertEqual(world.getBlock(0, 67, 0).block.id, 'mc:air');
+  });
+});
+
 describe('wheat farming and farmland hydration', () => {
+  it('registers sugar cane as a placeable item block', () => {
+    assert(BLOCKS.get('mc:sugar_cane'), 'sugar cane block missing');
+    assert(ITEMS.get('mc:sugar_cane'), 'sugar cane item missing');
+    assert(ITEMS.get('mc:sugar'), 'sugar item missing');
+    assertEqual(RECIPES.producing('mc:sugar').length, 1);
+    assertEqual(RECIPES.producing('mc:paper').some(recipe => recipe.pattern?.join('/') === 'CCC'), true);
+  });
+
   it('registers persisted farmland moisture from zero through seven', () => {
     const farmland = BLOCKS.get('mc:farmland');
     assert(farmland, 'farmland missing');
