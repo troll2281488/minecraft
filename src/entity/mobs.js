@@ -10,7 +10,7 @@ import { beginCrossbowLoad as beginCrossbowLoadData, finishCrossbowLoad, crossbo
 import { tickBeeForaging } from '../game/bee_hives.js';
 import { weatherAt } from '../game/weather.js';
 import { channelingLightningEffect } from '../game/trident.js';
-import { fireworkBlastImpacts, FIREWORK_BLAST } from '../game/firework_explosion.js';
+import { fireworkBlastImpacts, creeperBlastImpacts, FIREWORK_BLAST } from '../game/firework_explosion.js';
 import { enchantmentDamageBonus, enchantmentLevel, repairWithMending, fishingWaitTicks, protectionDamageMultiplier, unbreakingDamage } from '../game/enchantments.js';
 
 /**
@@ -1802,6 +1802,21 @@ export class MobSystem {
             this._damagePlayer(damage, mob.x, mob.z);
             const knock = (mob.charged ? 0.22 : 0.11) / Math.max(distance, 0.2);
             player.vx += dx * knock; player.vz += dz * knock;
+          }
+          const mobImpacts = creeperBlastImpacts(this.mobs, mob, !!mob.charged);
+          for (const impact of mobImpacts) {
+            const target = impact.mob;
+            target.health = Math.max(0, target.health - impact.damage);
+            const blastScale = mob.charged ? 2 : 1;
+            target.knockbackX = (target.knockbackX || 0) + impact.knockbackX * blastScale;
+            target.knockbackZ = (target.knockbackZ || 0) + impact.knockbackZ * blastScale;
+            target.vy = (target.vy || 0) + impact.knockbackY * blastScale;
+            target.hurtTicks = 10;
+            target.anim ||= {};
+            target.anim.hurt = 1;
+            if (target.health <= 0 && ['zombie','skeleton','stray','creeper','spider','enderman','witch','slime','magma_cube','ghast','blaze','wither_skeleton','drowned','phantom','guardian','elder_guardian','silverfish','cave_spider'].includes(target.type)) {
+              this.game.player?.recordAdvancementEvent?.('killed_hostile', this.game.tickCount || 0);
+            }
           }
           mob.health = 0;
         }
