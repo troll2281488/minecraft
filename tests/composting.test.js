@@ -34,6 +34,30 @@ describe('composter and bone meal farming', () => {
     assert(level === 0 || level === 1, 'composter level must remain in valid range after one attempt');
   });
 
+  it('accepts sugar cane and cactus from a hopper and consumes one item per attempt', () => {
+    for (const itemId of ['mc:sugar_cane', 'mc:cactus']) {
+      const blocks = new Map();
+      const air = BLOCKS.get('mc:air').defaultState;
+      const world = {
+        seed: 321,
+        getBlock(x, y, z) { return blocks.get(`${x},${y},${z}`) || air; },
+        setBlock(x, y, z, state) { blocks.set(`${x},${y},${z}`, state); return true; },
+      };
+      blocks.set('0,1,0', BLOCKS.get('mc:hopper').defaultState);
+      blocks.set('0,0,0', BLOCKS.get('mc:composter').defaultState);
+      const game = Object.assign({}, ContainerScreensMixin, {
+        world, player: { x: 0.5, y: 0.5, z: 0.5 }, tickCount: 8,
+        multiplayer: null, _containers: new Map(),
+      });
+      const hopper = game._hopperAt(0, 1, 0);
+      hopper.slots[0] = ItemStack.of(itemId, 2);
+      game._tickHoppers();
+      assertEqual(hopper.slots[0].count, 1, itemId + ' was not consumed by the composter');
+      const level = world.getBlock(0, 0, 0).get('level');
+      assert(level === 0 || level === 1, itemId + ' produced an invalid composter level');
+    }
+  });
+
   it('extracts one bone meal from a full composter and preserves it when the hopper is full', () => {
     const makeGame = (fillHopper) => {
       const blocks = new Map();
@@ -80,6 +104,8 @@ describe('composter and bone meal farming', () => {
     assertEqual(compostChance('mc:carrot'), 0.65);
     assertEqual(compostChance('mc:pumpkin'), 0.65);
     assertEqual(compostChance('mc:melon_slice'), 0.50);
+    assertEqual(compostChance('mc:sugar_cane'), 0.50);
+    assertEqual(compostChance('mc:cactus'), 0.50);
     assertEqual(compostChance('mc:bread'), 0.85);
     assertEqual(isCompostable('mc:diamond'), false);
     assertEqual(compostChance('mc:missing_item'), null);

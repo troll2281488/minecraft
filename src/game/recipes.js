@@ -184,6 +184,9 @@ recipes.push({
 
 recipes.push({ result: 'mc:flint_and_steel', count: 1, pattern: ['F ', ' I'], key: { F: 'mc:flint', I: 'mc:iron_ingot' } });
 
+recipes.push({ result: 'mc:sugar', count: 1, ingredients: ['mc:sugar_cane'] });
+recipes.push({ result: 'mc:paper', count: 3, pattern: ['CCC'], key: { C: 'mc:sugar_cane' } });
+
 recipes.push({
   result: 'mc:bread', count: 1,
   pattern: ['WWW'],

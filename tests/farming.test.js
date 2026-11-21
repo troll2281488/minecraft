@@ -4,7 +4,8 @@ import { BLOCKS } from '../src/world/block.js';
 import { ITEMS } from '../src/world/item.js';
 import {
   tickFarming, nextWheatAge, nextCropAge, hasNearbyWaterSource,
-  chooseStemFruitTarget, STEM_IDS,
+  chooseStemFruitTarget, STEM_IDS, canPlaceSugarCane, canPlaceCactus,
+  BLOCK_PLANT_GROWTH_INTERVAL,
   FARMLAND_MAX_MOISTURE, DRY_WHEAT_GROWTH_INTERVAL,
 } from '../src/game/farming.js';
 import { RECIPES } from '../src/game/recipes.js';
@@ -332,8 +333,105 @@ describe('wheat farming and farmland hydration', () => {
   it('retains bread and wooden hoe crafting recipes', () => {
     assertEqual(RECIPES.producing('mc:bread').length, 1);
     assertEqual(RECIPES.producing('mc:wooden_hoe').length, 1);
-  });  it('retains bread and wooden hoe crafting recipes', () => {
+  });
+
+  it('retains bread and wooden hoe crafting recipes', () => {
     assertEqual(RECIPES.producing('mc:bread').length, 1);
     assertEqual(RECIPES.producing('mc:wooden_hoe').length, 1);
+  });
+});
+
+describe('sugar cane and cactus farming', () => {
+  it('registers ageable sugar cane and cactus with placeable item forms', () => {
+    for (const id of ['mc:sugar_cane', 'mc:cactus']) {
+      const block = BLOCKS.get(id);
+      assert(block, id + ' block missing');
+      assertEqual(block.defaultState.get('age'), 0);
+      assertEqual(block.defaultState.with('age', 15).get('age'), 15);
+      assert(ITEMS.get(id), id + ' item form missing');
+    }
+    assertEqual(BLOCK_PLANT_GROWTH_INTERVAL, 600);
+  });
+
+  it('requires adjacent source water for the base sugar cane block', () => {
+    const sand = BLOCKS.get('mc:sand').defaultState;
+    const water = BLOCKS.get('mc:water').defaultState;
+    const flowing = water.with('level', 1);
+    const dry = makeWorld([['0,64,0', sand]]);
+    assertEqual(canPlaceSugarCane(dry, 0, 65, 0), false);
+    const wet = makeWorld([['0,64,0', sand], ['1,64,0', water]]);
+    assertEqual(canPlaceSugarCane(wet, 0, 65, 0), true);
+    const notSource = makeWorld([['0,64,0', sand], ['1,64,0', flowing]]);
+    assertEqual(canPlaceSugarCane(notSource, 0, 65, 0), false);
+  });
+
+  it('allows sugar cane to stack on cane above a valid watered base', () => {
+    const sand = BLOCKS.get('mc:sand').defaultState;
+    const cane = BLOCKS.get('mc:sugar_cane').defaultState;
+    const water = BLOCKS.get('mc:water').defaultState;
+    const world = makeWorld([
+      ['0,64,0', sand], ['1,64,0', water],
+      ['0,65,0', cane],
+    ]);
+    assertEqual(canPlaceSugarCane(world, 0, 66, 0), true);
+  });
+
+  it('requires cactus sand support and four clear horizontal neighbors', () => {
+    const sand = BLOCKS.get('mc:sand').defaultState;
+    const cactus = BLOCKS.get('mc:cactus').defaultState;
+    const stone = BLOCKS.get('mc:stone').defaultState;
+    const valid = makeWorld([['0,64,0', sand]]);
+    assertEqual(canPlaceCactus(valid, 0, 65, 0), true);
+    const blocked = makeWorld([['0,64,0', sand], ['1,65,0', stone]]);
+    assertEqual(canPlaceCactus(blocked, 0, 65, 0), false);
+    const stacked = makeWorld([['0,64,0', sand], ['0,65,0', cactus]]);
+    assertEqual(canPlaceCactus(stacked, 0, 66, 0), true);
+  });
+
+  it('grows both plants one block when their age counter reaches the growth threshold', () => {
+    for (const id of ['mc:sugar_cane', 'mc:cactus']) {
+      const base = id === 'mc:sugar_cane'
+        ? [['0,64,0', BLOCKS.get('mc:sand').defaultState], ['1,64,0', BLOCKS.get('mc:water').defaultState]]
+        : [['0,64,0', BLOCKS.get('mc:sand').defaultState]];
+      const plant = BLOCKS.get(id).defaultState.with('age', 15);
+      let seed = 0, grown = false;
+      for (; seed < 100; seed++) {
+        const world = makeWorld([...base, ['0,65,0', plant]]);
+        world.seed = seed;
+        const changes = tickFarming(world, { x: 0, y: 65, z: 0 }, BLOCK_PLANT_GROWTH_INTERVAL);
+        if (world.getBlock(0, 66, 0).block.id === id) {
+          assert(changes.some((change) => change.x === 0 && change.y === 66), id + ' growth not returned for replication');
+          assertEqual(world.getBlock(0, 65, 0).get('age'), 0);
+          grown = true;
+          break;
+        }
+      }
+      assert(grown, id + ' did not grow for any deterministic test seed');
+    }
+  });
+
+  it('caps sugar cane and cactus at three blocks high', () => {
+    for (const id of ['mc:sugar_cane', 'mc:cactus']) {
+      const base = id === 'mc:sugar_cane'
+        ? [['0,64,0', BLOCKS.get('mc:sand').defaultState], ['1,64,0', BLOCKS.get('mc:water').defaultState]]
+        : [['0,64,0', BLOCKS.get('mc:sand').defaultState]];
+      const plant = BLOCKS.get(id).defaultState.with('age', 15);
+      const world = makeWorld([...base, ['0,65,0', plant], ['0,66,0', plant], ['0,67,0', plant]]);
+      world.seed = 1;
+      tickFarming(world, { x: 0, y: 66, z: 0 }, BLOCK_PLANT_GROWTH_INTERVAL);
+      assertEqual(world.getBlock(0, 68, 0).block.id, 'mc:air');
+    }
+  });
+
+  it('drops each harvested plant and provides sugar and paper recipes', () => {
+    for (const id of ['mc:sugar_cane', 'mc:cactus']) {
+      const drops = blockDrops(BLOCKS.get(id).defaultState, null, 4, 0, 65, 0);
+      assertEqual(drops.length, 1);
+      assertEqual(drops[0].id, id);
+      assertEqual(drops[0].count, 1);
+    }
+    assertEqual(RECIPES.producing('mc:sugar').length, 1);
+    assertEqual(RECIPES.producing('mc:paper').length, 1);
+    assertEqual(RECIPES.producing('mc:paper')[0].count, 3);
   });
 });

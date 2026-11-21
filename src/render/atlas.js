@@ -732,6 +732,27 @@ TEXTURES.hopper = () => {
   }
   return tile;
 };
+TEXTURES.sugar_cane = () => {
+  const tile = new Uint8Array(16 * 16 * 4);
+  const dark = hex(0x477b35), mid = hex(0x65a943), light = hex(0x91c95c);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    if (x < 3 || x > 12 || (x + y) % 7 === 0) continue;
+    const c = ((x + y * 3) % 5 === 0) ? light : ((x + y) % 3 === 0 ? dark : mid);
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+TEXTURES.cactus = () => {
+  const tile = grainy(hex(0x39833b), 0.12, 'cactus');
+  const green = hex(0x4c9b45), dark = hex(0x286b32), pale = hex(0x91bd62);
+  for (let y = 1; y < 15; y++) for (let x = 1; x < 15; x++) {
+    const rib = x === 3 || x === 7 || x === 11;
+    const spine = ((x * 5 + y * 3) % 13 === 0);
+    const c = spine ? pale : rib ? dark : green;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
 TEXTURES.redstone_lamp = () => {
   const tile = grainy(hex(0x8d7856), 0.1, 'redstone_lamp');
   const gold = hex(0xe4b94e), pale = hex(0xffe8a0), dark = hex(0x5d4932);

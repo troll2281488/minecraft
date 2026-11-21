@@ -605,6 +605,19 @@ define('mc:melon', {
   texture: 'melon',
 });
 
+// Sugar cane is a non-solid cross plant; cactus is a full cube with its
+// own survival placement and growth rules.
+define('mc:sugar_cane', {
+  hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
+  replaceable: true, renderShape: 'cross', soundGroup: 'grass',
+  properties: { age: PROPS.age15 }, defaultValues: { age: 0 }, texture: 'sugar_cane',
+});
+define('mc:cactus', {
+  hardness: 0.4, resistance: 0.4, solid: true, opaqueCube: false, opacity: 0,
+  soundGroup: 'wood', properties: { age: PROPS.age15 },
+  defaultValues: { age: 0 }, texture: 'cactus',
+});
+
 define('mc:torch', {
   hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
   lightEmission: 14, renderShape: 'torch', soundGroup: 'wood', texture: 'torch',
@@ -770,6 +783,7 @@ const MATERIALS = [
   ['mc:enchanted_golden_apple', { stackSize: 1, food: { nutrition: 4, saturation: 9.6 } }],
   ['mc:bucket', { stackSize: 16 }],
   ['mc:melon_seeds', {}],
+  ['mc:sugar', {}],
   ['mc:pumpkin_seeds', {}],
   ['mc:melon_slice', { food: { nutrition: 2, saturation: 1.2 } }],
   ['mc:beetroot_seeds', {}],

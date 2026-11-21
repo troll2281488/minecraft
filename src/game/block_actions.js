@@ -19,6 +19,7 @@ import {
 } from './interaction.js';
 import { USABLE_BLOCKS } from './usable_blocks.js';
 import { drainContainer } from './containers.js';
+import { canPlaceSugarCane, canPlaceCactus } from './farming.js';
 import { getVillagerOffers, executeVillagerTrade } from '../entity/villager_trades.js';
 import { pistonVector } from './pistons.js';
 import { hiveHarvestResult, hasCampfireSmoke } from './bee_hives.js';
@@ -497,6 +498,8 @@ export const BlockActionsMixin = {
         : this.world.getBlock(target.x + 1, target.y, target.z);
       if (!support.block.solid || !support.block.opaqueCube) return;
     }
+    if (block.id === 'mc:sugar_cane' && !canPlaceSugarCane(this.world, target.x, target.y, target.z)) return;
+    if (block.id === 'mc:cactus' && !canPlaceCactus(this.world, target.x, target.y, target.z)) return;
     if (block.id === 'mc:hopper') {
       const support = this.world.getBlock(target.x, target.y - 1, target.z);
       if (!support.block.solid) return;

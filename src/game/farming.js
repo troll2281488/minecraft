@@ -15,6 +15,8 @@ export const FARMLAND_MAX_MOISTURE = 7;
 export const FARMLAND_TICK_INTERVAL = 20;
 export const WHEAT_GROWTH_INTERVAL = 600;
 export const DRY_WHEAT_GROWTH_INTERVAL = 1800;
+export const BLOCK_PLANT_GROWTH_INTERVAL = 600;
+export const BLOCK_PLANT_IDS = Object.freeze(['mc:sugar_cane', 'mc:cactus']);
 
 export function nextCropAge(state) {
   if (!CROP_IDS.includes(state?.block?.id)) return null;
@@ -24,6 +26,42 @@ export function nextCropAge(state) {
 
 export function nextWheatAge(state) {
   return state?.block?.id === WHEAT_CROP_ID ? nextCropAge(state) : null;
+}
+
+
+
+const CANE_SOILS = new Set(['mc:dirt', 'mc:grass_block', 'mc:podzol', 'mc:coarse_dirt', 'mc:sand', 'mc:red_sand']);
+const CACTUS_SOILS = new Set(['mc:sand', 'mc:red_sand']);
+
+function isSourceWater(state) {
+  if (state?.block?.id !== 'mc:water') return false;
+  const level = state.get?.('level');
+  return level === undefined || level === 0;
+}
+
+/** Sugar cane needs a valid soil block and adjacent source water at soil level. */
+export function canPlaceSugarCane(world, x, y, z) {
+  if (!world?.getBlock) return false;
+  const below = world.getBlock(x, y - 1, z);
+  if (below?.block?.id === 'mc:sugar_cane') return true;
+  if (!CANE_SOILS.has(below?.block?.id)) return false;
+  return [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) =>
+    isSourceWater(world.getBlock(x + dx, y - 1, z + dz)));
+}
+
+/** Cactus grows only on sand/red sand and requires four clear horizontal sides. */
+export function canPlaceCactus(world, x, y, z) {
+  if (!world?.getBlock) return false;
+  const below = world.getBlock(x, y - 1, z);
+  if (below?.block?.id !== 'mc:cactus' && !CACTUS_SOILS.has(below?.block?.id)) return false;
+  return [[1, 0], [-1, 0], [0, 1], [0, -1]].every(([dx, dz]) =>
+    world.getBlock(x + dx, y, z + dz)?.block?.id === 'mc:air');
+}
+
+function plantColumnBase(world, x, y, z, id) {
+  let baseY = y;
+  for (let n = 0; n < 2 && world.getBlock(x, baseY - 1, z)?.block?.id === id; n++) baseY--;
+  return baseY;
 }
 
 const STEM_FRUIT = Object.freeze({
@@ -151,6 +189,42 @@ export function tickFarming(world, player, tickCount) {
           if (tickCount % interval !== 0) continue;
           const target = chooseStemFruitTarget(world, x, y, z, world.seed, tickCount, stem.block.id);
           if (target) write(target.x, target.y, target.z, target.state);
+        }
+      }
+    }
+  }
+
+
+  // Sugar cane and cactus use their own 0–15 growth counter and a three-block
+  // height cap. Their growth is deterministic per position/tick so all clients
+  // derive identical block changes without extra network polling.
+  if (tickCount % BLOCK_PLANT_GROWTH_INTERVAL === 0) {
+    for (let x = px - 8; x <= px + 8; x++) {
+      for (let z = pz - 8; z <= pz + 8; z++) {
+        for (let y = py - 3; y <= py + 4; y++) {
+          const plant = world.getBlock(x, y, z);
+          const id = plant?.block?.id;
+          if (!BLOCK_PLANT_IDS.includes(id) || changedKeys.has(`${x},${y},${z}`)) continue;
+          if (world.getBlock(x, y + 1, z)?.block?.id !== 'mc:air') continue;
+          const baseY = plantColumnBase(world, x, y, z, id);
+          const height = y - baseY + 1;
+          if (height >= 3) continue;
+          const valid = id === 'mc:sugar_cane'
+            ? canPlaceSugarCane(world, x, baseY, z)
+            : canPlaceCactus(world, x, y, z);
+          if (!valid) continue;
+          const age = plant.get('age') ?? 0;
+          const rng = positionalRandom(world.seed ?? 0, x, y, z, 0x504c414e ^ tickCount);
+          if (rng.nextInt(3) !== 0) continue;
+          if (age < 15) {
+            write(x, y, z, plant.with('age', age + 1));
+          } else {
+            const nextPlant = BLOCKS.get(id)?.defaultState;
+            if (nextPlant) {
+              write(x, y + 1, z, nextPlant);
+              write(x, y, z, plant.with('age', 0));
+            }
+          }
         }
       }
     }
