@@ -1464,7 +1464,6 @@ export class MobSystem {
       if (mob.boostCooldown > 0) mob.boostCooldown--;
       if (mob.type === 'goat') {
         mob.ramCooldown = Math.max(0, (mob.ramCooldown || 0) - 1);
-        mob.ramWindup = Math.max(0, (mob.ramWindup || 0) - 1);
         mob.ramTicks = Math.max(0, (mob.ramTicks || 0) - 1);
       }
       if (mob.playerDamageTicks > 0) mob.playerDamageTicks--;
@@ -1555,14 +1554,16 @@ export class MobSystem {
       }
 
       const endermanAngry = mob.type === 'enderman' && targeted && distance < 16;
-      const goatStartingRam = mob.type === 'goat' && player.gamemode === 'survival' &&
-        mob.ramCooldown === 0 && mob.ramWindup === 0 && mob.ramTicks === 0 && distance >= 4 && distance <= 8;
-      if (goatStartingRam) mob.ramWindup = 30;
-      if (mob.type === 'goat' && mob.ramWindup > 0) mob.targetYaw = Math.atan2(dx, dz);
-      if (mob.type === 'goat' && mob.ramWindup === 0 && mob.ramTicks === 0 && mob.ramCooldown === 0 && distance >= 4 && distance <= 8 && !goatStartingRam) {
-        mob.ramCooldown = 80;
+      if (mob.type === 'goat' && player.gamemode === 'survival') {
+        if (mob.ramWindup > 0) {
+          mob.ramWindup--;
+          mob.targetYaw = Math.atan2(dx, dz);
+          if (mob.ramWindup === 0) mob.ramTicks = 12;
+        } else if (mob.ramCooldown === 0 && mob.ramTicks === 0 && distance >= 4 && distance <= 8) {
+          mob.ramWindup = 30;
+          mob.targetYaw = Math.atan2(dx, dz);
+        }
       }
-      if (mob.type === 'goat' && mob.ramWindup === 0 && goatStartingRam) mob.ramTicks = 12;
       const hostile = hostileType && player.gamemode === 'survival' &&
         distance < profile.detectionRange &&
         (mob.type !== 'enderman' || endermanAngry || distance < 2.5);
