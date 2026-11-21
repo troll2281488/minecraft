@@ -126,7 +126,7 @@ export function combineOnAnvil(left, right, { materialRepair = false } = {}) {
 
   const output = left.clone();
   let cost = 0;
-  if (right.item.id === 'mc:enchanted_book') {
+  if (right.item.id === 'mc:enchanted_book' || right.item.id === left.item.id) {
     for (const [id, incoming] of Object.entries(getEnchantments(right))) {
       if (!canApplyEnchantment(left.item, id) && left.item.id !== 'mc:enchanted_book') continue;
       const existing = enchantmentLevel(output, id);
@@ -142,11 +142,6 @@ export function combineOnAnvil(left, right, { materialRepair = false } = {}) {
     const repaired = Math.min(max, Math.floor(max * 0.12) + (max - left.damage) + (max - right.damage));
     output.damage = Math.max(0, max - repaired);
     cost += 2;
-  }
-  if (output.item.isDamageable && right.item.id === output.item.id && right.damage > 0) {
-    const remaining = Math.max(0, output.item.maxDamage - output.damage);
-    const bonus = Math.floor(output.item.maxDamage * 0.12);
-    output.damage = Math.max(0, output.item.maxDamage - Math.min(output.item.maxDamage, remaining + (output.item.maxDamage - right.damage) + bonus));
   }
   return { ok: true, output, cost: Math.max(1, cost), consumesRight: true };
 }
