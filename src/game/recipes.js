@@ -458,9 +458,7 @@ export const RECIPES = new RecipeBook().addAll(recipes);
 
 const problems = RECIPES.validate();
 if (problems.length > 0) {
-  throw new Error('Recipe validation failed:
-  - ' + problems.join('
-  - '));
+  throw new Error('Recipe validation failed:\n  - ' + problems.join('\n  - '));
 }
 
 export const RECIPE_COUNT = RECIPES.size;
