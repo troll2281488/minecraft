@@ -17,7 +17,7 @@ describe('Java 1.19 fishing loot', () => {
   });
   it('separates junk and treasure category boundaries', () => {
     assertEqual(rollFishingCatch(sequence([0.85, 0])).id, 'mc:lily_pad');
-    assertEqual(rollFishingCatch(sequence([0.949, 0.999])).id, 'mc:lily_pad');
+    assertEqual(rollFishingCatch(sequence([0.949, 0.999])).id, 'mc:tripwire_hook');
     assertEqual(rollFishingCatch(sequence([0.95, 0])).id, 'mc:bow');
     assertEqual(rollFishingCatch(sequence([0.999, 0.999])).id, 'mc:saddle');
   });
