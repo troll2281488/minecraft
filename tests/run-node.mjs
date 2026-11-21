@@ -21,6 +21,7 @@ import './sweet_berry_bush.test.js';
 import './campfire_cooking.test.js';
 import './ender_pearl.test.js';
 import './railways.test.js';
+import './enchantments.test.js';
 import './mob_systems.test.js';
 import './composting.test.js';
 import './hopper.test.js';
