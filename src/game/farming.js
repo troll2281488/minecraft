@@ -211,7 +211,7 @@ export function tickFarming(world, player, tickCount) {
           if (height >= 3) continue;
           const valid = id === 'mc:sugar_cane'
             ? canPlaceSugarCane(world, x, baseY, z)
-            : canPlaceCactus(world, x, baseY, z);
+            : canPlaceCactus(world, x, y, z);
           if (!valid) continue;
           const age = plant.get('age') ?? 0;
           const rng = positionalRandom(world.seed ?? 0, x, y, z, 0x504c414e ^ tickCount);
