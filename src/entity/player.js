@@ -287,7 +287,7 @@ export class Player {
       if (this.input.jump) this.vy = Math.max(this.vy, 0.15);
       if (this.input.sneak) this.vy = Math.min(this.vy, -0.045);
     } else if (this.input.jump && this.onGround) {
-      this.vy = PHYSICS.JUMP_VELOCITY;
+      this.vy = PHYSICS.JUMP_VELOCITY * (this.effects?.has('jump_boost') ? 1 + 0.1 * (this.effects.amplifier('jump_boost') + 1) : 1);
       if (this.sprinting) {
         const yaw = (this.yaw * Math.PI) / 180;
         this.vx += -Math.sin(yaw) * 0.2;
@@ -306,7 +306,7 @@ export class Player {
       this.vy -= 0.02;              // buoyant: much weaker than real gravity
       this.vx *= 0.8; this.vy *= 0.8; this.vz *= 0.8;
     } else {
-      this.vy -= PHYSICS.GRAVITY;
+      this.vy -= this.effects?.has('slow_falling') && this.vy < 0 ? PHYSICS.GRAVITY * 0.125 : PHYSICS.GRAVITY;
       this.vy *= PHYSICS.DRAG_VERTICAL;
       const friction = this.onGround
         ? slipperiness * GROUND_FRICTION_MULT
@@ -372,7 +372,7 @@ export class Player {
       this.airDamageTicks = 0;
       return;
     }
-    if (this.underwater) {
+    if (this.underwater && !this.effects?.has('water_breathing')) {
       this.air = Math.max(0, this.air - 1);
       if (this.air === 0) {
         this.airDamageTicks++;
@@ -382,7 +382,7 @@ export class Player {
         }
       }
     } else {
-      this.air = Math.min(300, this.air + 4);
+      this.air = Math.min(300, this.air + (this.underwater ? 0 : 4));
       this.airDamageTicks = 0;
     }
   }
@@ -508,7 +508,7 @@ export class Player {
     // Vanilla fall damage starts after three blocks; each additional block
     // deals one half-heart (one health point). Apply before clearing distance.
     if (this.gamemode === GAMEMODE.SURVIVAL && this.fallDistance > 3) {
-      const damage = Math.floor(this.fallDistance - 3);
+      const damage = this.effects?.has('slow_falling') ? 0 : Math.floor(this.fallDistance - 3);
       this.health = Math.max(0, this.health - damage);
     }
     this.fallDistance = 0;
