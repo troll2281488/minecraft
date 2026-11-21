@@ -52,7 +52,7 @@ import { SessionMixin } from './game/session.js';
 import { Multiplayer } from './game/multiplayer.js';
 import { MobSystem } from './entity/mobs.js';
 import { GameSounds } from './game/sounds.js';
-import { growNearbyWheat } from './game/farming.js';
+import { tickFarming } from './game/farming.js';
 import { RedstoneDevicesMixin } from './game/redstone_devices.js';
 import { isDown } from './game/keybinds.js';
 
@@ -405,7 +405,7 @@ class Game {
       document.getElementById('death-screen')?.classList.remove('hidden');
       document.body.classList.add('menu-active');
     }
-    for (const change of growNearbyWheat(world, player, this.tickCount)) {
+    for (const change of tickFarming(world, player, this.tickCount)) {
       this.multiplayer?.pushBlockChange(change.x, change.y, change.z, change.state);
     }
     this.multiplayer?.tick(MS_PER_TICK / 1000);
