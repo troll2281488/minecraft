@@ -1,4 +1,4 @@
-import { ItemStack } from '../world/item.js';
+import { ITEMS, ItemStack } from '../world/item.js';
 import { SPAWNER_MOB_TYPES, spawnerMobType, spawnerPlayerInRange, countSpawnerMobs, nextSpawnerDelay, spawnerSpawnPosition } from './spawners.js';
 import { experienceForMob, experienceForFishing, experienceForBreeding, splitExperienceIntoOrbs, mergeExperienceOrbState, isExperienceOrbHazard } from './experience.js';
 import { TerrainGenerator, villageCandidateForCell } from '../world/gen/terrain.js';
@@ -69,6 +69,24 @@ export const MOB_AI_PROFILES = Object.freeze({
   elder_guardian: Object.freeze({ detectionRange: 22, speedMultiplier: 0.65, rangedRange: 16, preferredRange: 10, attackCooldown: 60, damage: 3, role: 'aquatic-ranged' }),
   wither: Object.freeze({ detectionRange: 24, speedMultiplier: 0.85, rangedRange: 18, preferredRange: 10, attackCooldown: 45, damage: 4, role: 'boss' }),
 });
+
+const LEASHABLE_MOB_TYPES = new Set(['cow', 'pig', 'sheep', 'chicken', 'mooshroom', 'rabbit', 'wolf', 'horse', 'bee']);
+
+export function canLeadMob(mob) {
+  return !!mob && LEASHABLE_MOB_TYPES.has(mob.type) && !mob.leashHolder;
+}
+
+export function attachMobLead(mob, owner = 'player') {
+  if (!canLeadMob(mob) || typeof owner !== 'string' || !owner || owner.length > 32) return false;
+  mob.leashHolder = owner;
+  return true;
+}
+
+export function detachMobLead(mob, owner = 'player') {
+  if (!mob || mob.leashHolder !== owner) return false;
+  delete mob.leashHolder;
+  return true;
+}
 
 export const MOB_TYPES_112 = Object.freeze([
   'bat','bee','blaze','cave_spider','chicken','cow','creeper','donkey','elder_guardian',
@@ -396,6 +414,12 @@ export class MobSystem {
       yaw: mob.yaw,
       targetYaw: mob.targetYaw,
       health: mob.health,
+      tamed: !!mob.tamed && ['wolf', 'horse'].includes(mob.type),
+      sitting: mob.type === 'wolf' && !!mob.sitting,
+      tameProgress: Number.isFinite(mob.tameProgress) ? Math.max(0, Math.min(3, mob.tameProgress)) : 0,
+      saddled: mob.type === 'horse' && !!mob.saddled,
+      horseArmor: ['iron', 'golden', 'diamond'].includes(mob.horseArmor) ? mob.horseArmor : null,
+      leashHolder: typeof mob.leashHolder === 'string' && mob.leashHolder.length <= 32 ? mob.leashHolder : null,
       beePollenTicks: Number.isFinite(mob.beePollenTicks) ? mob.beePollenTicks : 0,
       beeHiveWorkTicks: Number.isFinite(mob.beeHiveWorkTicks) ? mob.beeHiveWorkTicks : 0,
       beeSearchTicks: Number.isFinite(mob.beeSearchTicks) ? mob.beeSearchTicks : 0,
@@ -499,6 +523,12 @@ export class MobSystem {
         villagerUsedOffers: Array.isArray(mob.villagerUsedOffers) ? mob.villagerUsedOffers.filter((id) => typeof id === 'string').slice(0, 64) : [],
         villagerOfferUses: mob.villagerOfferUses && typeof mob.villagerOfferUses === 'object' ? mob.villagerOfferUses : {},
         health: mob.health,
+        tamed: !!mob.tamed && ['wolf', 'horse'].includes(mob.type),
+        sitting: mob.type === 'wolf' && !!mob.sitting,
+        tameProgress: Number.isFinite(mob.tameProgress) ? Math.max(0, Math.min(3, mob.tameProgress)) : 0,
+        saddled: mob.type === 'horse' && !!mob.saddled,
+        horseArmor: ['iron', 'golden', 'diamond'].includes(mob.horseArmor) ? mob.horseArmor : null,
+        leashHolder: typeof mob.leashHolder === 'string' && mob.leashHolder.length <= 32 && LEASHABLE_MOB_TYPES.has(mob.type) ? mob.leashHolder : null,
         beePollenTicks: Number.isFinite(mob.beePollenTicks) ? Math.max(0, Math.min(600, mob.beePollenTicks)) : 0,
         beeHiveWorkTicks: Number.isFinite(mob.beeHiveWorkTicks) ? Math.max(0, Math.min(200, mob.beeHiveWorkTicks)) : 0,
         beeSearchTicks: Number.isFinite(mob.beeSearchTicks) ? Math.max(0, Math.min(20, mob.beeSearchTicks)) : 0,
@@ -718,11 +748,36 @@ export class MobSystem {
   }
 
 
+  useLeadFromPlayer() {
+    const mob = this.targetedMob();
+    const held = this.game.inventory?.held;
+    const player = this.game.player;
+    if (!mob || !player || !['survival', 'creative'].includes(player.gamemode)) return false;
+    if (mob.leashHolder === 'player' && (!held || held.isEmpty) &&
+        (this.game.keys?.has('ShiftLeft') || this.game.keys?.has('ShiftRight'))) {
+      if (!detachMobLead(mob)) return false;
+      const leftover = this.game.inventory.addItem('mc:lead', 1);
+      if (leftover > 0) this.spawnItemStackAt(new ItemStack(ITEMS.get('mc:lead'), 1), player.x, player.y + 0.5, player.z);
+      this.game.ui?.toast('Поводок снят');
+      return true;
+    }
+    if (held?.item?.id !== 'mc:lead' || held.count <= 0) return false;
+    if (!attachMobLead(mob)) return false;
+    if (player.gamemode !== 'creative') this.game.inventory.consumeHeld(1);
+    this.game.ui?.toast('Поводок прикреплён');
+    return true;
+  }
   tameFromPlayer() {
     const mob = this.targetedMob();
     const held = this.game.inventory?.held;
     const player = this.game.player;
     if (!mob || !player || !['survival', 'creative'].includes(player.gamemode)) return false;
+
+    if (mob.type === 'wolf' && mob.tamed && (!held || held.isEmpty)) {
+      mob.sitting = !mob.sitting;
+      this.game.ui?.toast(mob.sitting ? 'Волк сидит' : 'Волк следует за тобой');
+      return true;
+    }
 
     if (mob.type === 'wolf' && !mob.tamed && held?.item?.id === 'mc:bone') {
       if (player.gamemode !== 'creative') this.game.inventory.consumeHeld(1);
@@ -1336,15 +1391,20 @@ export class MobSystem {
 
       if (mob.fleeTicks > 0) mob.fleeTicks--;
       const tamedWolf = mob.type === 'wolf' && mob.tamed;
+      const sittingWolf = tamedWolf && mob.sitting;
+      const followingLeash = mob.leashHolder === 'player' && distance > 2.5;
       const fleeing = mob.type !== 'villager' && mob.type !== 'horse' && !tamedWolf &&
         !hostileType && mob.fleeTicks > 0;
-      const followingOwner = tamedWolf && distance > 2.5;
+      const followingOwner = ((tamedWolf && !sittingWolf) || followingLeash) && distance > 2.5;
       if (fleeing) mob.targetYaw = Math.atan2(mob.x - player.x, mob.z - player.z);
       else if (followingOwner) mob.targetYaw = Math.atan2(player.x - mob.x, player.z - mob.z);
 
       // Passive mobs now pause between short wandering bursts instead of
       // sliding and cycling their legs continuously while apparently idle.
-      if (hostile || fleeing || followingOwner) {
+      if (sittingWolf) {
+        mob.moveTicks = 0;
+        mob.pauseTicks = 120;
+      } else if (hostile || fleeing || followingOwner) {
         mob.moveTicks = 2;
         mob.pauseTicks = 0;
       } else {
