@@ -406,7 +406,7 @@ export class MobSystem {
         result.mob.hurtTicks = 8;
         result.mob.anim.hurt = 1;
       }
-      if (result.hit && projectile.type === 'egg') {
+      if (['block', 'mob'].includes(result.hit) && projectile.type === 'egg') {
         const chance = Math.random();
         if (chance < 0.125) {
           const x = Math.floor(projectile.x), z = Math.floor(projectile.z);
