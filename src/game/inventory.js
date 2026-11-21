@@ -20,6 +20,7 @@
 
 import {  } from '../core/constants.js';
 import { ItemStack, ITEMS } from '../world/item.js';
+import { unbreakingDamage } from './enchantments.js';
 
 export const SLOT = {
   HOTBAR_START: 0,
@@ -149,7 +150,9 @@ export class Inventory {
   damageHeld(amount = 1) {
     const slot = this.slots[this.selectedSlot];
     if (slot.isEmpty || !slot.item.isDamageable) return false;
-    const broke = slot.applyDamage(amount);
+    const effectiveDamage = unbreakingDamage(slot, amount);
+    if (effectiveDamage <= 0) { this.version++; return false; }
+    const broke = slot.applyDamage(effectiveDamage);
     if (broke) this.slots[this.selectedSlot] = ItemStack.EMPTY.clone();
     this.version++;
     return broke;
