@@ -21,7 +21,7 @@ import { USABLE_BLOCKS } from './usable_blocks.js';
 import { drainContainer } from './containers.js';
 import { getVillagerOffers, executeVillagerTrade } from '../entity/villager_trades.js';
 import { pistonVector } from './pistons.js';
-import { hiveHarvestResult } from './bee_hives.js';
+import { hiveHarvestResult, hasCampfireSmoke } from './bee_hives.js';
 
 export const BlockActionsMixin = {
   _breakBlock() {
@@ -126,21 +126,7 @@ export const BlockActionsMixin = {
     const heldItem = this.inventory?.held?.item;
     if (this.hit && ['mc:bee_nest', 'mc:beehive'].includes(this.hit.state.block.id)) {
       const { x, y, z, state } = this.hit;
-      const smokeCalmed = (() => {
-        // A campfire must be directly below the hive or within two blocks,
-        // with an unobstructed vertical smoke column reaching the hive.
-        for (let dx = -2; dx <= 2; dx++) for (let dz = -2; dz <= 2; dz++) {
-          const cx = x + dx, cz = z + dz;
-          if (this.world.getBlock(cx, y - 1, cz).block.id !== 'mc:campfire') continue;
-          let clear = true;
-          for (let sy = y - 2; sy > y - 6; sy--) {
-            const id = this.world.getBlock(cx, sy, cz).block.id;
-            if (id !== 'mc:air' && id !== 'mc:short_grass') { clear = false; break; }
-          }
-          if (clear) return true;
-        }
-        return false;
-      })();
+      const smokeCalmed = hasCampfireSmoke(this.world, x, y, z);
       const result = hiveHarvestResult(state, heldItem?.id, smokeCalmed);
       if (result) {
         if (!result.ok) {
