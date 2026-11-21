@@ -491,6 +491,11 @@ function wallBlock(name, texture, hardness = 2) {
     hardness, resistance: 6, tool: 'pickaxe', harvestLevel: 0,
     requiresTool: true, soundGroup: 'stone', texture,
     solid: true, opaqueCube: false, opacity: 0, renderShape: 'wall',
+    properties: {
+      north: PROPS.wallConnection, south: PROPS.wallConnection,
+      east: PROPS.wallConnection, west: PROPS.wallConnection, up: PROPS.up,
+    },
+    defaultValues: { north: 'none', south: 'none', east: 'none', west: 'none', up: true },
   });
 }
 for (const [name, texture] of [
