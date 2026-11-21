@@ -101,6 +101,36 @@ describe('Java hopper inventory and automation primitives', () => {
     assertEqual(entities.droppedItems.length, 0);
     assertEqual(game._hopperDirtyKeys.has('0,0,0'), true);
   });
+  it('returns a partially accepted network stack to the world after the atomic claim', async () => {
+    const blocks = new Map([['0,0,0', BLOCKS.get('mc:hopper').defaultState]]);
+    const world = {
+      getBlock(x,y,z) { return blocks.get(`${x},${y},${z}`) || BLOCKS.get('mc:air').defaultState; },
+      setBlock(x,y,z,state) { blocks.set(`${x},${y},${z}`,state); return true; },
+    };
+    const hopper = new Hopper();
+    hopper.insert(ItemStack.of('mc:coal', 60));
+    for (let i = 1; i < 5; i++) hopper.slots[i] = ItemStack.of('mc:stone', 64);
+    const drop = { networkKey: 'drop-partial', stack: ItemStack.of('mc:coal', 9), x: 0.5, y: 1.08, z: 0.5 };
+    const returned = [];
+    const entities = {
+      droppedItems: [drop],
+      spawnItemStackAt(stack) { returned.push(stack.clone()); return true; },
+    };
+    const game = {
+      world, entities,
+      multiplayer:{ roomId:'ABCDE', isHost:true, claimDroppedItem: async () => true },
+      player:{x:0.5,y:0,z:0.5}, tickCount:8, _containers:new Map(),
+      ...ContainerScreensMixin,
+    };
+    game._hopperAt = () => hopper;
+    game._tickHoppers();
+    await Promise.resolve();
+    assertEqual(hopper.slots[0].count, 64);
+    assertEqual(entities.droppedItems.length, 0);
+    assertEqual(returned.length, 1);
+    assertEqual(returned[0].count, 5);
+    assertEqual(returned[0].item.id, 'mc:coal');
+  });
   it('does not collect a shared item on a non-host client', () => {
     const blocks = new Map([['0,0,0', BLOCKS.get('mc:hopper').defaultState]]);
     const world = { getBlock(x,y,z) { return blocks.get(`${x},${y},${z}`) || BLOCKS.get('mc:air').defaultState; } };
@@ -217,6 +247,7 @@ describe('Java hopper inventory and automation primitives', () => {
     game._hopperAt = () => { throw new Error('powered hopper must not transfer'); };
     game._tickHoppers();
     assertEqual(blocks.get('0,0,0').get('enabled'), false);
+    assertEqual(game.entities.droppedItems.length, 1);
   });
   it('has the vanilla five-iron-and-chest crafting recipe', () => {
     assert(RECIPES.recipes.some((recipe) => recipe.result === 'mc:hopper' &&
