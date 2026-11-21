@@ -981,6 +981,14 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     for (const mob of this.entities?.mobs ?? []) {
       const vanillaModel = this.entityModels?.getModel?.('minecraft:' + mob.type);
       const vanillaParts = vanillaLayerParts(vanillaModel, 'main');
+      const beeFallback = [
+        [[0,1.05,0],[0.48,0.42,0.58],[0.93,0.68,0.12,1]],
+        [[0,1.10,0.29],[0.28,0.28,0.20],[0.18,0.14,0.08,1]],
+        [[-0.23,1.30,0],[0.42,0.035,0.42],[0.86,0.91,0.94,0.72]],
+        [[0.23,1.30,0],[0.42,0.035,0.42],[0.86,0.91,0.94,0.72]],
+        [[-0.18,0.76,0.08],[0.035,0.22,0.035],[0.16,0.12,0.07,1]],
+        [[0.18,0.76,0.08],[0.035,0.22,0.035],[0.16,0.12,0.07,1]],
+      ];
       const villagerFallback = [
         [[0,0.98,0],[0.43,0.72,0.34],[0.48,0.30,0.18,1]],
         [[0,1.62,0],[0.48,0.48,0.42],[0.67,0.50,0.36,1]],
@@ -989,7 +997,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         [[-0.13,0.39,0],[0.20,0.70,0.22],[0.34,0.25,0.18,1]],
         [[0.13,0.39,0],[0.20,0.70,0.22],[0.34,0.25,0.18,1]],
       ];
-      const parts = vanillaParts ?? (mob.type === 'villager' ? villagerFallback
+      const parts = vanillaParts ?? (mob.type === 'bee' ? beeFallback : mob.type === 'villager' ? villagerFallback
         : mob.type === 'zombie' ? zombie
         : mob.type === 'skeleton' || mob.type === 'stray' ? skeleton
         : mob.type === 'creeper' ? creeper
@@ -1003,7 +1011,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         : mob.type === 'pig' ? [3, 6] : mob.type === 'cow' ? [2, 5]
         : mob.type === 'chicken' ? [4, 5] : mob.type === 'enderman' ? [4, 5] : [2, 5];
       const babyScale = mob.ageTicks < 0 ? 0.55 : 1;
-      const animal = ['sheep', 'pig', 'cow', 'chicken', 'mooshroom', 'rabbit', 'wolf', 'polar_bear'].includes(mob.type);
+      const animal = ['sheep', 'pig', 'cow', 'chicken', 'mooshroom', 'rabbit', 'wolf', 'polar_bear', 'bee'].includes(mob.type);
       const humanoid = ['zombie', 'skeleton', 'stray', 'villager'].includes(mob.type);
       // Mob movement advances along +sin(yaw), +cos(yaw); render the model on that same forward axis.
       draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
