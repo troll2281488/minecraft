@@ -6,6 +6,7 @@ import { RECIPES } from '../src/game/recipes.js';
 import {
   COMPOSTER_MAX_LEVEL, COMPOSTABLE_ITEM_IDS, compostChance, isCompostable,
   nextComposterLevel, compostRoll, boneMealAge,
+  composterHopperInsert, composterHopperExtract, composterComparatorOutput,
 } from '../src/game/composting.js';
 
 describe('composter and bone meal farming', () => {
@@ -73,6 +74,30 @@ describe('composter and bone meal farming', () => {
     const boneBlock = RECIPES.producing('mc:bone_block');
     assert(boneBlock.some(recipe => recipe.key?.M === 'mc:bone_meal' || recipe.key?.I === 'mc:bone_meal'));
     assert(RECIPES.producing('mc:bone_meal').some(recipe => recipe.ingredients?.includes('mc:bone_block')));
+  });
+
+  it('lets hoppers insert compostable items and consumes failed compost rolls exactly once', () => {
+    assertEqual(composterHopperInsert(2, 'mc:bread', 0.1).accepted, true);
+    assertEqual(composterHopperInsert(2, 'mc:bread', 0.1).level, 3);
+    const failed = composterHopperInsert(2, 'mc:wheat_seeds', 0.9);
+    assertEqual(failed.accepted, true);
+    assertEqual(failed.level, 2);
+    assertEqual(composterHopperInsert(8, 'mc:bread', 0.1).accepted, false);
+    assertEqual(composterHopperInsert(2, 'mc:diamond', 0.1).accepted, false);
+  });
+
+  it('only extracts bone meal from a full composter', () => {
+    assertEqual(composterHopperExtract(7).extracted, false);
+    assertEqual(composterHopperExtract(8).extracted, true);
+    assertEqual(composterHopperExtract(8).level, 0);
+  });
+
+  it('outputs Java composter comparator strengths for all fill levels', () => {
+    const expected = [0, 1, 3, 5, 7, 9, 11, 13, 15];
+    for (let level = 0; level <= 8; level++) {
+      assertEqual(composterComparatorOutput(level), expected[level]);
+    }
+    assertEqual(composterComparatorOutput(9), 0);
   });
 
   it('provides the vanilla-shaped seven-slab composter recipe', () => {
