@@ -626,6 +626,12 @@ export const RedstoneDevicesMixin = {
         if (rearBlock.block.id === 'mc:chest' || rearBlock.block.id === 'mc:trapped_chest') {
           const chest = this._chestAt?.(rearX, rearY, rearZ);
           if (chest?.slots) containerPower = comparatorContainerOutput(chest.slots, chest.slots.length);
+        } else if (rearBlock.block.id === 'mc:hopper') {
+          const hopper = this._hopperAt?.(rearX, rearY, rearZ);
+          if (hopper?.slots) containerPower = comparatorContainerOutput(hopper.slots, hopper.slots.length);
+        } else if (rearBlock.block.id === 'mc:dropper' || rearBlock.block.id === 'mc:dispenser') {
+          const dropper = this._dropperAt?.(rearX, rearY, rearZ);
+          if (dropper?.slots) containerPower = comparatorContainerOutput(dropper.slots, dropper.slots.length);
         } else if (rearBlock.block.id === 'mc:furnace') {
           const furnace = this._furnaceAt?.(rearX, rearY, rearZ);
           if (furnace) containerPower = comparatorContainerOutput([furnace.input, furnace.fuel, furnace.output], 3);
