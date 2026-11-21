@@ -22,6 +22,7 @@ import { drainContainer } from './containers.js';
 import { getVillagerOffers, executeVillagerTrade } from '../entity/villager_trades.js';
 import { pistonVector } from './pistons.js';
 import { hiveHarvestResult, hasCampfireSmoke } from './bee_hives.js';
+import { compostChance, nextComposterLevel, boneMealAge, compostRoll } from './composting.js';
 
 export const BlockActionsMixin = {
   _breakBlock() {
@@ -124,6 +125,58 @@ export const BlockActionsMixin = {
       return;
     }
     const heldItem = this.inventory?.held?.item;
+    if (this.hit?.state?.block?.id === 'mc:composter') {
+      const { x, y, z, state } = this.hit;
+      const level = state.get('level');
+      if (level >= 8) {
+        if (!this.inventory.held.isEmpty) {
+          this.ui.toast('Освободи руку, чтобы забрать костную муку');
+          return;
+        }
+        const empty = state.with('level', 0);
+        this.world.setBlock(x, y, z, empty);
+        this.multiplayer?.pushBlockChange(x, y, z, empty);
+        if (this.player.gamemode === GAMEMODE.SURVIVAL) this.inventory.addItem('mc:bone_meal', 1);
+        this.sounds?.play('place', 'wood');
+        this.ui.toast('Получена костная мука');
+        return;
+      }
+      const itemId = heldItem?.id;
+      const chance = compostChance(itemId);
+      if (chance === null) {
+        this.ui.toast('Этот предмет нельзя компостировать');
+        return;
+      }
+      const roll = compostRoll(this.world.seed, x, y, z, this.tickCount, itemId);
+      const nextLevel = nextComposterLevel(level, chance, roll);
+      if (this.player.gamemode === GAMEMODE.SURVIVAL) this.inventory.consumeHeld(1);
+      if (nextLevel !== level) {
+        const next = state.with('level', nextLevel);
+        this.world.setBlock(x, y, z, next);
+        this.multiplayer?.pushBlockChange(x, y, z, next);
+      }
+      this.sounds?.play('place', 'wood');
+      this.ui.toast(nextLevel === level ? 'Предмет переработан, но слой не добавлен'
+        : nextLevel >= 8 ? 'Компост готов — забери костную муку'
+        : 'Компостер заполнен: ' + nextLevel + '/8');
+      return;
+    }
+    if (heldItem?.id === 'mc:bone_meal' && this.hit &&
+        ['mc:wheat', 'mc:carrots', 'mc:potatoes', 'mc:beetroots'].includes(this.hit.state.block.id)) {
+      const { x, y, z, state } = this.hit;
+      const nextAge = boneMealAge(state.get('age'), this.world.seed, x, y, z, this.tickCount);
+      if (nextAge === null) {
+        this.ui.toast('Растение уже созрело');
+        return;
+      }
+      const next = state.with('age', nextAge);
+      this.world.setBlock(x, y, z, next);
+      this.multiplayer?.pushBlockChange(x, y, z, next);
+      if (this.player.gamemode === GAMEMODE.SURVIVAL) this.inventory.consumeHeld(1);
+      this.sounds?.play('place', 'grass');
+      this.ui.toast('Рост ускорен костной мукой');
+      return;
+    }
     if (this.hit && ['mc:bee_nest', 'mc:beehive'].includes(this.hit.state.block.id)) {
       const { x, y, z, state } = this.hit;
       const smokeCalmed = hasCampfireSmoke(this.world, x, y, z);

@@ -6,6 +6,7 @@ import './pistons.test.js';
 import './piston_textures.test.js';
 import './bee_hives.test.js';
 import './farming.test.js';
+import './composting.test.js';
 import { applyRemotePlayerState, remoteEquipmentSnapshot, queueChatMessage, canAcquireContainerLease, electRoomHost, isContainerLeaseHeldByOther, isValidContainerKey, listJoinableRooms, ownsContainerLease, queueContainerWrite } from '../src/game/multiplayer.js';
 
 describe('multiplayer container key validation', () => {

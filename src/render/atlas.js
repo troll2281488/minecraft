@@ -543,6 +543,7 @@ const TEXTURES = {
   water:              () => waterTile('water'),
   torch:              () => torchTile('torch'),
   farmland:           () => grainy(hex(0x765638), 0.12, 'farmland', { clumps: 18, clumpColor: hex(0x4d3828) }),
+  composter:          () => grainy(hex(0x8b6238), 0.1, 'composter', { clumps: 12, clumpColor: hex(0x5c3e25) }),
   wheat_crop:         () => crossPlant('wheat_crop', (t, r) => {
     grassBlades(t, r, hex(0x91a83a));
     for (let y = 3; y < 15; y += 3) {
