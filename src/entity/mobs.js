@@ -1561,7 +1561,11 @@ export class MobSystem {
         mob.ramCooldown = ram.cooldown;
         mob.ramWindup = ram.windup;
         mob.ramTicks = ram.active;
-        if (ram.start || ram.windup > 0) mob.targetYaw = Math.atan2(dx, dz);
+        if (ram.start || ram.windup > 0 || ram.active > 0) {
+          mob.targetYaw = Math.atan2(dx, dz);
+          mob.moveTicks = 2;
+          mob.pauseTicks = 0;
+        }
       }
       const hostile = hostileType && player.gamemode === 'survival' &&
         distance < profile.detectionRange &&
@@ -1600,7 +1604,7 @@ export class MobSystem {
           }
         }
       }
-      const moving = hostile || fleeing || followingOwner || mob.moveTicks > 0;
+      const moving = hostile || fleeing || followingOwner || mob.moveTicks > 0 || (mob.type === 'goat' && mob.ramWindup > 0);
       const speed = moving ? (mob.type === 'goat' && mob.ramTicks > 0 ? 0.20 : hostile ? mob.speed * profile.speedMultiplier : fleeing ? 0.105 : followingOwner ? 0.045 : mob.speed) : 0;
       if (moving || Math.abs(mob.knockbackX || 0) + Math.abs(mob.knockbackZ || 0) > 0.005) {
         mob.yaw += Math.atan2(Math.sin(mob.targetYaw - mob.yaw), Math.cos(mob.targetYaw - mob.yaw)) * (fleeing ? 0.38 : 0.12);
