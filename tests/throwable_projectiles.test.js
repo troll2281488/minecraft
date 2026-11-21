@@ -40,6 +40,29 @@ describe('Java throwable eggs and snowballs', () => {
     assertEqual(eggHatchCount(() => 0.9), 0);
   });
 
+  it('damages blazes with snowballs and hatches baby chickens on egg impact', () => {
+    const world = {
+      getHeight: () => 64,
+      getBlock(x, y) { return { block: { solid: y === 64 } }; },
+    };
+    const system = new MobSystem({ world });
+    const blaze = { type: 'blaze', x: 0.5, y: 64.5, z: 1.9, health: 20, hurtTicks: 0, anim: {} };
+    system.mobs.push(blaze);
+    system.projectiles.push(createThrowable(0.5, 65, 0.5, [0, 0, 1], 'snowball'));
+    system._tickProjectiles();
+    assertEqual(blaze.health, 17);
+
+    const originalRandom = Math.random;
+    try {
+      Math.random = () => 0;
+      system.mobs.length = 0;
+      system.projectiles.push(createThrowable(0.5, 65, 0.5, [0, 0, 1], 'egg'));
+      system._tickProjectiles();
+      assertEqual(system.mobs.length, 4);
+      assert(system.mobs.every((mob) => mob.type === 'chicken' && mob.ageTicks === -24000));
+    } finally { Math.random = originalRandom; }
+  });
+
   it('consumes one egg or snowball in survival and none in creative', () => {
     const removed = [];
     const game = {
