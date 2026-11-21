@@ -44,8 +44,7 @@ function soundBucket(path) {
   // Classify by the complete archive path, not only the final filename.
   // Bedrock packs commonly store sounds under category folders such as
   // sounds/blocks, sounds/mob, sounds/player, sounds/item and sounds/ambient.
-  const full = String(path).toLowerCase().replace(/\\\\/g, '/').replace(/\.ogg$/i, '');
-  const name = full.split('/').pop();
+  const full = String(path).toLowerCase().replace(/\\/g, '/').replace(/\.ogg$/i, '');
   const has = (...words) => words.some(word => new RegExp('(^|[._/-])' + word + '(?:[0-9]+)?($|[._/-])').test(full));
   const rules = [
     ['step', () => has('step','footstep','walk','walking','run','running','swim','splash')],
