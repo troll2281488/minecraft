@@ -771,8 +771,13 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           else if (pose.riding && isLeg) swing = -1.05;
           else if (pose.swimming) swing = isArm ? Math.sin(walkPhase * 1.7 + phase) * 0.82 : Math.sin(walkPhase * 1.7 + phase) * 0.52;
           else if (pose.airborne) swing = isArm ? (pose.jumping ? -0.72 : -0.18) : (pose.jumping ? 0.58 : 0.22);
-          else if (pose.sneaking) swing = isArm ? 0.18 + Math.sin(walkPhase + phase) * 0.09 : 0.48 + Math.sin(walkPhase + phase) * 0.10;
-          else swing = Math.sin(walkPhase + phase) * (isArm ? 0.58 : 0.62);
+          else if (pose.sneaking) swing = isArm ? -0.10 : -0.49;
+          else swing = Math.sin(walkPhase + phase) * (isArm ? 0.58 : 1.00);
+          // Ambient's Bedrock player pack adds a very small breathing sway
+          // while standing still. Keep it subtle and skip it during actions.
+          if (!pose.firstPerson && !pose.walking && !pose.sneaking && !pose.attack && isArm) {
+            swing += Math.sin((pose.idle ?? walkPhase) * 1.2) * 0.05;
+          }
           // First-person attack swing is already applied above; do not add a second rotation.
         } else if (!skin && pose.vanillaModel && /head/i.test(partName ?? '')) {
           swing = Math.sin(pose.idle ?? 0) * 0.045 + (pose.walking ? Math.sin(walkPhase * 0.5) * 0.025 : 0);
