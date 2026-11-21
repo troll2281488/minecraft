@@ -308,3 +308,22 @@ describe('new ranged weapon advancements', () => {
     assertEqual(player.recordAdvancementEvent('shot_crossbow', 30).awarded, false);
   });
 });
+
+
+it('detonates a crossbow firework rocket without arrow damage on entity impact', () => {
+  const game = {
+    inventory: new Inventory(), player: new Player(0, 64, 0), tickCount: 1,
+    world: { seed: 1, time: 0, getHeight: () => -64, getBlock: () => ({ block: { solid: false } }) },
+    ui: { toast() {} }, sounds: { play() {} },
+  };
+  const entities = new MobSystem(game);
+  const target = { id: 3, type: 'zombie', x: 0, y: game.player.eyeY - 0.5, z: 2.5, health: 20, anim: {} };
+  entities.mobs.push(target);
+  const rocket = createArrow(0, game.player.eyeY, 0.55, [0, 0, 1], 1);
+  rocket.isFireworkRocket = true;
+  entities.arrows.push(rocket);
+  entities._tickArrows();
+  assertEqual(target.health, 20);
+  assertEqual(entities.arrows.length, 0);
+  assertEqual(entities.blockParticles.length > 0, true);
+});
