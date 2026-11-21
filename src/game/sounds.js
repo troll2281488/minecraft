@@ -59,11 +59,11 @@ function openBedrockPackDb(){
   });
 }
 async function saveBedrockArchive(file){
+  const bytes=await file.arrayBuffer();
   const db=await openBedrockPackDb();
-  try{await new Promise((resolve,reject)=>{const tx=db.transaction(BEDROCK_PACK_STORE,'readwrite');tx.objectStore(BEDROCK_PACK_STORE).put(awaitFileBuffer(file),'bedrock-sounds');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});}
+  try{await new Promise((resolve,reject)=>{const tx=db.transaction(BEDROCK_PACK_STORE,'readwrite');tx.objectStore(BEDROCK_PACK_STORE).put(bytes,'bedrock-sounds');tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});}
   finally{db.close();}
 }
-async function awaitFileBuffer(file){return file.arrayBuffer();}
 async function loadBedrockArchive(){
   const db=await openBedrockPackDb();
   try{return await new Promise((resolve,reject)=>{const request=db.transaction(BEDROCK_PACK_STORE,'readonly').objectStore(BEDROCK_PACK_STORE).get('bedrock-sounds');request.onsuccess=()=>resolve(request.result||null);request.onerror=()=>reject(request.error);});}
