@@ -444,7 +444,11 @@ export class MobSystem {
     const quickCharge = enchantmentLevel(held, 'quick_charge');
     const ammoId = this.game.player?.gamemode === 'creative' ? 'mc:arrow' : (this.game.inventory?.countOf('mc:arrow') > 0 ? 'mc:arrow' : (this.game.inventory?.countOf('mc:firework_rocket') > 0 ? 'mc:firework_rocket' : null));
     const loaded = ammoId ? finishCrossbowLoad(held.data, tick, ammoId, quickCharge) : null;
-    if (!loaded) { held.data = { ...(held.data || {}), loadingSince: null, charged: false, chargedProjectile: null }; return true; }
+    if (!loaded) {
+      held.data = { ...(held.data || {}), loadingSince: null, charged: false, chargedProjectile: null };
+      if (!ammoId) this.game.ui?.toast('Для арбалета нужны стрелы или ракеты!', { error: true });
+      return true;
+    }
     const inventory = this.game.inventory;
     const creative = this.game.player?.gamemode === 'creative';
     if (!creative && inventory.remove(ammoId, 1) !== 1) {
@@ -580,7 +584,7 @@ export class MobSystem {
           this.spawnBlockParticles(mob.x, mob.y + 0.5, mob.z, 'mc:lightning');
           const channelAward = this.game.player?.recordAdvancementEvent?.('channelled_lightning', this.game.tickCount || 0);
           if (channelAward?.completed) this.game.ui?.toast('Достижение: Channeling');
-          if (lightning.transformTo === 'witch') {
+          if (lightning.transformTo === 'witch' && mob.health > 0) {
             const witchAward = this.game.player?.recordAdvancementEvent?.('struck_villager_with_lightning', this.game.tickCount || 0);
             if (witchAward?.completed) this.game.ui?.toast('Достижение: Very Very Frightening');
           }
@@ -1744,10 +1748,11 @@ export class MobSystem {
         mob.anim.fuse = mob.fuseTicks / 30;
         mob.targetYaw = Math.atan2(dx, dz);
         if (mob.fuseTicks >= profile.fuseTicks) {
-          if (distance < profile.blastRange) {
-            const damage = Math.max(0, Math.ceil((profile.blastRange - distance) * 3));
+          const blastRange = mob.charged ? profile.blastRange * 2 : profile.blastRange;
+          if (distance < blastRange) {
+            const damage = Math.max(0, Math.ceil((blastRange - distance) * 3) * (mob.charged ? 2 : 1));
             this._damagePlayer(damage, mob.x, mob.z);
-            const knock = 0.11 / Math.max(distance, 0.2);
+            const knock = (mob.charged ? 0.22 : 0.11) / Math.max(distance, 0.2);
             player.vx += dx * knock; player.vz += dz * knock;
           }
           mob.health = 0;
