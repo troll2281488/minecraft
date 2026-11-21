@@ -1086,7 +1086,9 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       const handX = this.renderPosition.x + forwardX * handDistance + rightX * 0.34;
       const handY = this.renderPosition.y + this.player.eyeHeight + (this.player.ridingHorse ? 1.15 : 0) + forwardY * handDistance - 0.43;
       const handZ = this.renderPosition.z + forwardZ * handDistance + rightZ * 0.34;
-      const handBob = Math.sin(this.player.walkPhase * 2) * 0.006;
+      const moving = this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035;
+      const moveBlend = moving ? 1 : 0;
+      const handBob = Math.sin(this.player.walkPhase * 2) * (0.018 * moveBlend) + Math.sin((this.tickCount || 0) * 0.045) * (0.004 + (this.player.sneaking ? 0.002 : 0));
       const armParts = [
         [[0, 0, 0], [0.001, 0.001, 0.001], [0, 0, 0, 0]],
         [[0, 0, 0], [0.001, 0.001, 0.001], [0, 0, 0, 0]],
@@ -1160,9 +1162,10 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           const itemParts = [[[0, 0, 0], itemSize, [1, 1, 1, 1], null, null, itemRotation]];
           // Translate the Bedrock pack's 1/16-block keyframe offsets into the
           // camera-relative item anchor used by this renderer.
-          const itemX = handX + rightX * (0.018 + itemPose.offset[0]) + forwardX * itemPose.offset[2];
-          const itemY = handY - 0.24 + itemPose.offset[1];
-          const itemZ = handZ + forwardZ * (0.025 + itemPose.offset[2]) + rightZ * (0.018 + itemPose.offset[0]);
+          const walkSway = Math.sin(this.player.walkPhase) * 0.018 * moveBlend;
+          const itemX = handX + rightX * (0.018 + itemPose.offset[0] + walkSway) + forwardX * itemPose.offset[2];
+          const itemY = handY - 0.24 + itemPose.offset[1] + handBob;
+          const itemZ = handZ + forwardZ * (0.025 + itemPose.offset[2]) + rightZ * (0.018 + itemPose.offset[0] + walkSway * 0.35);
           const itemSwing = this.player.attackTime > 0 ? 0 : -0.12;
           draw(itemX, itemY, itemZ, yaw, itemParts, 0, -1, -1, 1,
             { itemModel: true, itemSprite: true, itemSwing });
