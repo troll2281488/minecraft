@@ -233,7 +233,7 @@ export const ScreensMixin = {
     if (!panel || document.getElementById('bedrock-sound-settings')) return;
     const section = document.createElement('section');
     section.id = 'bedrock-sound-settings';
-    section.innerHTML = '<h2>Звуковые ресурспаки</h2><p class="sub">Импорт Bedrock .mcpack или .zip с OGG-звуками. Подходящие события заменят процедурные звуки; для остальных останется запасной звук.</p><div class="settings-row"><button id="btn-import-bedrock-sounds" class="secondary" type="button">Импортировать звуковой пак</button><button id="btn-clear-bedrock-sounds" class="secondary" type="button">Отключить пак</button></div>';
+    section.innerHTML = '<h2>Звуковые ресурспаки</h2><p class="sub">Импорт Bedrock .mcpack или .zip с OGG-звуками. Подходящие события заменят процедурные звуки; для остальных останется запасной звук.</p><div class="settings-row"><button id="btn-import-bedrock-sounds" class="secondary" type="button">Импортировать звуковой пак</button><button id="btn-clear-bedrock-sounds" class="secondary" type="button">Отключить пак</button></div><p id="bedrock-sound-status" role="status" aria-live="polite">Пак не загружен.</p>';
     const back = document.getElementById('btn-settings-back');
     panel.insertBefore(section, back);
     section.querySelector('#btn-import-bedrock-sounds').addEventListener('click', () => {
@@ -245,8 +245,12 @@ export const ScreensMixin = {
         if (!file) return;
         try {
           const result = await this.sounds.importBedrockPack(file);
-          this.ui.toast('Загружено OGG: ' + result.files + ', типов звуков: ' + result.categories + '. Пак активен до перезагрузки.');
+          const status = section.querySelector('#bedrock-sound-status');
+          if (status) status.textContent = 'Готово: загружено OGG-файлов: ' + result.files + '; типов звуков: ' + result.categories + '. Пак сохранён в этом браузере.';
+          this.ui.toast('Звуковой пак загружен: ' + result.files + ' OGG-файлов.');
         } catch (error) {
+          const status = section.querySelector('#bedrock-sound-status');
+          if (status) status.textContent = 'Ошибка импорта: ' + error.message;
           this.ui.toast('Не удалось импортировать пак: ' + error.message, { error: true, duration: 8000 });
         }
       };
@@ -254,6 +258,8 @@ export const ScreensMixin = {
     });
     section.querySelector('#btn-clear-bedrock-sounds').addEventListener('click', () => {
       this.sounds.clearBedrockPack();
+      const status = section.querySelector('#bedrock-sound-status');
+      if (status) status.textContent = 'Звуковой пак отключён.';
       this.ui.toast('Bedrock-звуковой пак отключён');
     });
   },
