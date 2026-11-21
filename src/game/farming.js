@@ -4,6 +4,9 @@
  * Moisture is stored in the farmland blockstate, so it survives chunk saves,
  * reloads and multiplayer block-state replication without a side database.
  */
+import { positionalRandom } from '../core/rng.js';
+import { BLOCKS } from '../world/block.js';
+
 export const WHEAT_CROP_ID = 'mc:wheat';
 export const STEM_IDS = Object.freeze(['mc:pumpkin_stem', 'mc:melon_stem']);
 export const CROP_IDS = Object.freeze(['mc:wheat', 'mc:carrots', 'mc:potatoes', 'mc:beetroots', ...STEM_IDS]);
@@ -12,9 +15,6 @@ export const FARMLAND_MAX_MOISTURE = 7;
 export const FARMLAND_TICK_INTERVAL = 20;
 export const WHEAT_GROWTH_INTERVAL = 600;
 export const DRY_WHEAT_GROWTH_INTERVAL = 1800;
-
-import { positionalRandom } from '../core/rng.js';
-import { BLOCKS } from '../world/block.js';
 
 export function nextCropAge(state) {
   if (!CROP_IDS.includes(state?.block?.id)) return null;
