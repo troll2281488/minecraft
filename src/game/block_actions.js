@@ -496,9 +496,18 @@ export const BlockActionsMixin = {
     const food = stack.item?.food;
     if (!player || player.gamemode !== GAMEMODE.SURVIVAL || stack.isEmpty || !food) return false;
     if (!player.vitals.eat(food)) return false;
+    const itemId = stack.item.id;
+    const containerItem = stack.item.containerItem || (itemId === 'mc:honey_bottle' ? 'mc:glass_bottle' : null);
     this.inventory.consumeHeld(1);
-    if (stack.item.id === 'mc:honey_bottle') this.inventory.addItem('mc:glass_bottle', 1);
-    this.ui.toast('Eating');
+    if (containerItem) {
+      const leftover = this.inventory.addItem(containerItem, 1);
+      if (leftover > 0) {
+        const item = ITEMS.get(containerItem);
+        if (item) this.entities?.spawnItemStackAt(new ItemStack(item, 1), player.x, player.y + 0.5, player.z);
+      }
+    }
+    this.sounds?.play('eat');
+    this.ui.toast('Eating: ' + itemId.replace('mc:', '').replaceAll('_', ' '));
     return true;
   },
 

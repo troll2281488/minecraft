@@ -14,6 +14,7 @@ export const SOUND_EVENTS = Object.freeze({
   'entity.mob.hurt':'mobHurt','entity.mob.death':'mobDeath',
   'entity.villager.trade':'trade','item.equip':'equip','item.cast':'cast',
   'item.reel':'reel','item.fishing.bite':'bite','item.fishing.catch':'catch',
+  'item.eat':'eat',
   'weather.rain':'rain','weather.thunder':'thunder',
   'fluid.water':'water','fluid.lava':'lava','ui.click':'click','ui.toast':'toast',
 });
@@ -23,6 +24,7 @@ export const SOUND_PRESETS = Object.freeze({
   pickup:{f:620,d:.12,type:'sine',volume:.065}, xp:{f:940,d:.10,type:'sine',volume:.045}, drop:{f:250,d:.08,type:'triangle',volume:.06},
   step:{f:120,d:.045,type:'triangle',volume:.035}, equip:{f:440,d:.10,type:'sine',volume:.06},
   cast:{f:520,d:.12,type:'triangle',volume:.065}, reel:{f:360,d:.10,type:'triangle',volume:.06},
+  eat:{f:540,d:.08,type:'triangle',volume:.045},
   bite:{f:880,d:.08,type:'sine',volume:.07}, catch:{f:740,d:.16,type:'sine',volume:.07},
   doorOpen:{f:165,d:.22,type:'square',volume:.055}, doorClose:{f:125,d:.19,type:'square',volume:.055},
   chestOpen:{f:235,d:.16,type:'triangle',volume:.055}, chestClose:{f:175,d:.14,type:'triangle',volume:.055},

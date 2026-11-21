@@ -254,12 +254,20 @@ recipes.push({
 });
 
 recipes.push({ result: 'mc:flint_and_steel', count: 1, pattern: ['F ', ' I'], key: { F: 'mc:flint', I: 'mc:iron_ingot' } });
+recipes.push({ result: 'mc:shield', count: 1, pattern: ['PPP', 'PIP', ' P '], key: { P: '#mc:planks', I: 'mc:iron_ingot' } });
 
 recipes.push({
   result: 'mc:bread', count: 1,
   pattern: ['WWW'],
   key: { W: 'mc:wheat' },
 });
+
+// Expanded Java food crafting: each recipe is reachable from registered items.
+recipes.push({ result: 'mc:golden_carrot', count: 1, pattern: ['NNN', 'NCN', 'NNN'], key: { N: 'mc:gold_nugget', C: 'mc:carrot' } });
+recipes.push({ result: 'mc:bowl', count: 4, pattern: ['P P', ' P '], key: { P: '#mc:planks' } });
+recipes.push({ result: 'mc:mushroom_stew', count: 1, ingredients: ['mc:bowl', 'mc:red_mushroom', 'mc:brown_mushroom'] });
+recipes.push({ result: 'mc:beetroot_soup', count: 1, pattern: ['BBB', 'BBB', ' C '], key: { B: 'mc:beetroot', C: 'mc:bowl' } });
+recipes.push({ result: 'mc:rabbit_stew', count: 1, ingredients: ['mc:bowl', 'mc:cooked_rabbit', 'mc:carrot', 'mc:baked_potato', 'mc:brown_mushroom'] });
 
 recipes.push({
   result: 'mc:shears', count: 1,
