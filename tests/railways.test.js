@@ -80,7 +80,7 @@ describe('Minecart movement and transport', () => {
   });
 
   it('follows ascending rails and clamps speed to the vanilla-style cap', () => {
-    const cart = { x: 0.5, y: 64.12, z: 0.5, speed: 0.39, yaw: Math.PI / 2 };
+    const cart = { x: 0.5, y: 64.12, z: 0.5, speed: 0.39, yaw: -Math.PI / 2 };
     const next = advanceMinecart(cart, state('mc:rail', { shape: 'ascending_east' }), 1);
     assertEqual(next.speed <= 0.4, true);
     assertEqual(next.y > cart.y, true);
