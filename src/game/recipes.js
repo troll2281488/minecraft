@@ -176,6 +176,27 @@ recipes.push({ result: 'mc:white_dye', count: 1, ingredients: ['mc:bone_meal'] }
 recipes.push({ result: 'mc:red_dye', count: 1, ingredients: ['mc:poppy'] });
 recipes.push({ result: 'mc:yellow_dye', count: 1, ingredients: ['mc:dandelion'] });
 recipes.push({ result: 'mc:blue_dye', count: 1, ingredients: ['mc:lapis_lazuli'] });
+for (const color of ['white', 'orange', 'magenta', 'light_blue', 'yellow', 'lime', 'pink', 'gray', 'light_gray', 'cyan', 'purple', 'blue', 'brown', 'green', 'red', 'black']) {
+  // Eight glass blocks plus dye produce eight matching stained-glass blocks.
+  recipes.push({
+    result: `mc:${color}_stained_glass`, count: 8,
+    pattern: ['GGG', 'GDG', 'GGG'],
+    key: { G: 'mc:glass', D: `mc:${color}_dye` },
+  });
+  // Eight terracotta blocks plus dye produce eight matching glazed-colour base blocks.
+  recipes.push({
+    result: `mc:${color}_terracotta`, count: 8,
+    pattern: ['TTT', 'TDT', 'TTT'],
+    key: { T: 'mc:terracotta', D: `mc:${color}_dye` },
+  });
+  // Four sand, four gravel and one dye make eight concrete powder.
+  recipes.push({
+    result: `mc:${color}_concrete_powder`, count: 8,
+    pattern: ['SGS', 'GDG', 'SGS'],
+    key: { S: 'mc:sand', G: 'mc:gravel', D: `mc:${color}_dye` },
+  });
+}
+
 
 // -- Tools -----------------------------------------------------------------
 
