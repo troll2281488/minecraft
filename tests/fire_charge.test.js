@@ -10,6 +10,11 @@ describe('Fire charge and material recipes', () => {
     assertEqual(ITEMS.get('mc:blaze_powder').id, 'mc:blaze_powder');
   });
 
+  it('converts a blaze rod into two blaze powder', () => {
+    const recipe = RECIPES.match([ItemStack.of('mc:blaze_rod', 1)], 2);
+    assertEqual(recipe?.result, 'mc:blaze_powder');
+    assertEqual(recipe?.count, 2);
+  });
   it('crafts three fire charges from gunpowder, blaze powder and coal', () => {
     const recipe = RECIPES.match([
       ItemStack.of('mc:gunpowder', 1),
