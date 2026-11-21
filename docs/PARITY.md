@@ -210,6 +210,10 @@ Player movement now detects ladder contact: forward or jump input climbs at a ca
 
 Redstone ore has a saved lit state. Right-clicking it or stepping on it activates a 30-tick glow; the lit state emits block light level 9 and uses a brighter procedural texture. Repeated contact refreshes the timer. This is a local player-contact approximation; projectile activation, exact vanilla mining-start hooks and mob contact are not included.
 
+### Comparator inventory inputs
+
+Comparators now read fullness from the five-slot hopper and nine-slot dropper inventories as well as chests and furnaces. The output uses the vanilla fullness scaling formula and the existing two-game-tick update delay. Inventory snapshots are read locally; no additional multiplayer polling or per-tick network traffic is introduced.
+
 ### Slime blocks and piston adhesion
 
 Slime blocks can be crafted from nine slime balls. A piston pushing a slime block now plans the connected attached-block group before changing the world; attached ordinary blocks move with it, and the complete group is rejected if any member is immovable, outside build height, in an unloaded chunk, or would exceed the 12-block push cap. Slime/honey cross-adhesion is not implemented because honey blocks and honey acquisition are not yet part of this build.
