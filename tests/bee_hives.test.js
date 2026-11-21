@@ -4,7 +4,7 @@ import { BLOCKS } from '../src/world/block.js';
 import { ITEMS } from '../src/world/item.js';
 import { RECIPES } from '../src/game/recipes.js';
 import { hiveHarvestResult, hasCampfireSmoke, findBeeTarget, tickBeeForaging, HIVE_MAX_HONEY } from '../src/game/bee_hives.js';
-import { MOB_TYPES_112 } from '../src/entity/mobs.js';
+import { MOB_TYPES_112, MobSystem } from '../src/entity/mobs.js';
 import { shouldGenerateBeeNest, beeNestFacing } from '../src/world/gen/bee_nests.js';
 
 describe('bee nest and beehive harvesting', () => {
@@ -145,8 +145,24 @@ describe('bee nest and beehive harvesting', () => {
     assertEqual(blocks.get('2,0,0').get('honey_level'), 1);
   });
 
+  it('persists bee pollen and hive-work progress through mob save data', () => {
+    const original = new MobSystem({});
+    original.mobs.push({
+      id: 4, type: 'bee', x: 1, y: 2, z: 3, yaw: 0.5, targetYaw: 0.5,
+      health: 10, beePollenTicks: 321, beeHiveWorkTicks: 123, beeSearchTicks: 9,
+    });
+    const restored = new MobSystem({});
+    restored.loadFrom(original.toJSON());
+    assertEqual(restored.mobs.length, 1);
+    assertEqual(restored.mobs[0].type, 'bee');
+    assertEqual(restored.mobs[0].beePollenTicks, 321);
+    assertEqual(restored.mobs[0].beeHiveWorkTicks, 123);
+    assertEqual(restored.mobs[0].beeSearchTicks, 9);
+  });
+
   it('registers the beehive and campfire crafting recipes', () => {
     assert(RECIPES.recipes.some((recipe) => recipe.result === 'mc:beehive'));
+    assert(RECIPES.recipes.some((recipe) => recipe.result === 'mc:honeycomb' && recipe.count === 4));
     assert(RECIPES.recipes.some((recipe) => recipe.result === 'mc:campfire'));
   });
 });
