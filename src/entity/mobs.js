@@ -571,7 +571,7 @@ export class MobSystem {
         const hitDamage = arrow.damage + impalingBonus;
         const surfaceY = world.getHeight?.(Math.floor(mob.x), Math.floor(mob.z));
         const skyVisible = Number.isFinite(surfaceY) && surfaceY < Math.floor(mob.y + 1);
-        const lightning = arrow.isTrident && arrow.channeling
+        const lightning = arrow.isTrident && arrow.channeling && world.dimension === 'overworld'
           ? channelingLightningEffect({ channeling: true, thunder: weatherAt(world.seed, world.time) === 'thunder', skyVisible, targetExposed: skyVisible, targetType: mob.type })
           : null;
         const totalDamage = hitDamage + (lightning?.damage || 0);
@@ -626,6 +626,12 @@ export class MobSystem {
         arrow.stuckPitch = Math.atan2(-arrow.vy, Math.hypot(arrow.vx, arrow.vz));
         arrow.vx = arrow.vy = arrow.vz = 0;
         arrow.done = false;
+      }
+      if (arrow.isFireworkRocket && arrow.age >= 20) {
+        this.spawnBlockParticles(arrow.x, arrow.y, arrow.z, 'mc:firework');
+        this.game.sounds?.play('explode');
+        this.arrows.splice(i, 1);
+        continue;
       }
       if (arrow.done) this.arrows.splice(i, 1);
     }
