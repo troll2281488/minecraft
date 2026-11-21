@@ -229,8 +229,5 @@ describe('wheat farming and farmland hydration', () => {
   it('retains bread and wooden hoe crafting recipes', () => {
     assertEqual(RECIPES.producing('mc:bread').length, 1);
     assertEqual(RECIPES.producing('mc:wooden_hoe').length, 1);
-  });  it('retains bread and wooden hoe crafting recipes', () => {
-    assertEqual(RECIPES.producing('mc:bread').length, 1);
-    assertEqual(RECIPES.producing('mc:wooden_hoe').length, 1);
   });
 });
