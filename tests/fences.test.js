@@ -197,6 +197,7 @@ describe('Java wall family geometry and crafting', () => {
       assert(recipe, `${material} wall recipe missing`);
       assertEqual(recipe.count, 6);
       assertDeepEqual(recipe.pattern, ['BBB', 'BBB']);
+      assert(BLOCKS.get(recipe.key.B), `wall ingredient block ${recipe.key.B} missing`);
     }
   });
 });
