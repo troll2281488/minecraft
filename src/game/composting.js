@@ -40,6 +40,8 @@ const CHANCES = {
   'mc:hay_block': 0.85,
 };
 
+export const COMPOSTABLE_ITEM_IDS = Object.freeze(Object.keys(CHANCES));
+
 export function compostChance(itemId) {
   return typeof itemId === 'string' && Object.hasOwn(CHANCES, itemId)
     ? CHANCES[itemId] : null;
