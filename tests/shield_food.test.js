@@ -39,6 +39,6 @@ describe('Java food expansion', () => {
       assertEqual(RECIPES.producing(id).length > 0, true);
     }
     assertEqual(RECIPES.validate().length, 0);
-    assertEqual(ItemStack.of('mc:cookie', 8).count, 8);
+    assertEqual(RECIPES.producing('mc:bowl').length, 1);
   });
 });
