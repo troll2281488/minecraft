@@ -1,4 +1,5 @@
 import { BedrockSoundPack } from '../audio/bedrock_sound_pack.js';
+import { BackgroundMusic } from '../audio/background_music.js';
 /**
  * Original procedural sound events. AudioContext is created lazily after a user
  * gesture; these synthesized cues are not recordings from Minecraft.
@@ -23,7 +24,7 @@ export const SOUND_PRESETS = Object.freeze({
   break:{f:190,d:.13,type:'square',volume:.075}, place:{f:320,d:.075,type:'triangle',volume:.07},
   hit:{f:105,d:.09,type:'sawtooth',volume:.075}, hurt:{f:78,d:.16,type:'triangle',volume:.085},
   pickup:{f:620,d:.12,type:'sine',volume:.065}, xp:{f:940,d:.10,type:'sine',volume:.045}, drop:{f:250,d:.08,type:'triangle',volume:.06},
-  step:{f:120,d:.045,type:'triangle',volume:.035}, equip:{f:440,d:.10,type:'sine',volume:.06},
+  step:{f:95,d:.035,type:'sine',volume:.009}, equip:{f:440,d:.10,type:'sine',volume:.06},
   cast:{f:520,d:.12,type:'triangle',volume:.065}, reel:{f:360,d:.10,type:'triangle',volume:.06},
   eat:{f:540,d:.08,type:'triangle',volume:.045}, goatHorn:{f:185,d:.72,type:'sawtooth',volume:.075},
   bite:{f:880,d:.08,type:'sine',volume:.07}, catch:{f:740,d:.16,type:'sine',volume:.07},
@@ -76,7 +77,7 @@ async function deleteBedrockArchive(){
 }
 
 export class GameSounds {
-  constructor(){this.context=null;this.lastStep=0;this.enabled=true;this.masterVolume=1;this.bedrockPack=null;this._restorePromise=null;this._restoreScheduled=false;}
+  constructor(){this.context=null;this.lastStep=0;this.enabled=true;this.masterVolume=1;this.bedrockPack=null;this._restorePromise=null;this._restoreScheduled=false;this.music=new BackgroundMusic();}
   async importBedrockPack(file){
     const context=this._ctx();
     if(!context)throw new Error('Web Audio недоступен в этом браузере');
@@ -161,7 +162,10 @@ export class GameSounds {
   }
   step(material){
     const now=globalThis.performance?.now?.()??0;
-    if(now-this.lastStep<260)return;
-    this.lastStep=now;this.play('step',material);
+    if(now-this.lastStep<340)return;
+    this.lastStep=now;
+    // Do not layer a harsh synthetic clack over a real imported footstep.
+    if(this.bedrockPack?.sounds?.has?.('step')){this.bedrockPack.play('block.step',this.masterVolume*.42);return;}
+    this.play('step',material);
   }
 }
