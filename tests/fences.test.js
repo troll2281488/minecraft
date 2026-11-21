@@ -339,3 +339,46 @@ describe('wall connection rebuild on chunk load', () => {
     assertEqual(changed.get('0,0,0').get('east'), 'tall');
   });
 });
+
+
+describe('wall chunk seam rebuild', () => {
+  it('updates a wall in an already-loaded chunk when its new neighbour arrives', () => {
+    const wall = BLOCKS.get('mc:cobblestone_wall').defaultState;
+    const stone = BLOCKS.get('mc:stone').defaultState;
+    const air = BLOCKS.get('mc:air').defaultState;
+    const writes = [];
+    const previousChunk = {
+      cx: -1, cz: 0,
+      sections: [{
+        yOffset: 0,
+        blocks: {
+          palette: [wall, air],
+          get(index) { return index === 15 ? wall : air; },
+        },
+      }],
+    };
+    const arrivingChunk = { cx: 0, cz: 0, sections: [] };
+    let previousWall = wall;
+    const world = {
+      getChunk(cx, cz) {
+        if (cx === -1 && cz === 0) return previousChunk;
+        if (cx === 0 && cz === 0) return arrivingChunk;
+        return null;
+      },
+      getBlock(x, y, z) {
+        if (x === -1 && y === 0 && z === 0) return previousWall;
+        if (x === 0 && y === 0 && z === 0) return stone;
+        return air;
+      },
+      setBlock(x, y, z, state, options) {
+        writes.push({ x, y, z, options });
+        if (x === -1 && y === 0 && z === 0) previousWall = state;
+        return true;
+      },
+    };
+    const updated = refreshWallConnectionsInChunk(world, arrivingChunk);
+    assertEqual(updated.length, 1);
+    assertEqual(previousWall.get('east'), 'low');
+    assert(writes.some((write) => write.x === -1 && write.options?.relight === false));
+  });
+});
