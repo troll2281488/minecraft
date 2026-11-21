@@ -23,7 +23,7 @@ export function nextWheatAge(state) {
 }
 
 /**
- * Water hydrates farmland within a four-block horizontal radius. Source water
+ * Water hydrates farmland within a four-block horizontal square radius. Source water
  * may be at the farmland's level or one block above it. Flowing water does not
  * hydrate it. The search is deliberately bounded and only runs for dry soil.
  */
@@ -32,7 +32,6 @@ export function hasNearbyWaterSource(world, x, y, z) {
   for (let dy = 0; dy <= 1; dy++) {
     for (let dx = -4; dx <= 4; dx++) {
       for (let dz = -4; dz <= 4; dz++) {
-        if (dx * dx + dz * dz > 16) continue;
         const state = world.getBlock(x + dx, y + dy, z + dz);
         if (state?.block?.id !== 'mc:water') continue;
         const level = state.get?.('level');
@@ -41,11 +40,6 @@ export function hasNearbyWaterSource(world, x, y, z) {
     }
   }
   return false;
-}
-
-function inSimulationArea(x, y, z, px, py, pz, horizontal = 8) {
-  return Math.abs(x - px) <= horizontal && Math.abs(z - pz) <= horizontal &&
-    y >= py - 3 && y <= py + 4;
 }
 
 /**
