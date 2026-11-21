@@ -4,7 +4,7 @@ import { BLOCKS } from '../src/world/block.js';
 import { ITEMS } from '../src/world/item.js';
 import { RECIPES } from '../src/game/recipes.js';
 import {
-  COMPOSTER_MAX_LEVEL, compostChance, isCompostable,
+  COMPOSTER_MAX_LEVEL, COMPOSTABLE_ITEM_IDS, compostChance, isCompostable,
   nextComposterLevel, compostRoll, boneMealAge,
 } from '../src/game/composting.js';
 
@@ -28,6 +28,10 @@ describe('composter and bone meal farming', () => {
     assertEqual(compostChance('mc:bread'), 0.85);
     assertEqual(isCompostable('mc:diamond'), false);
     assertEqual(compostChance('mc:missing_item'), null);
+  });
+
+  it('only lists compostable item IDs that exist in the item registry', () => {
+    for (const id of COMPOSTABLE_ITEM_IDS) assert(ITEMS.get(id), id + ' is not registered');
   });
 
   it('only adds one level when a valid compost attempt succeeds', () => {
