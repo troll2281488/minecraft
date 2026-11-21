@@ -75,11 +75,14 @@ const LEASHABLE_MOB_TYPES = new Set(['cow', 'pig', 'sheep', 'chicken', 'mooshroo
 
 export function nextGoatRamState(mob, distance) {
   const cooldown = Math.max(0, (mob?.ramCooldown || 0) - 1);
-  const windup = Math.max(0, (mob?.ramWindup || 0) - 1);
-  const active = Math.max(0, (mob?.ramTicks || 0) - 1);
+  const previousWindup = Math.max(0, mob?.ramWindup || 0);
+  let windup = Math.max(0, previousWindup - 1);
+  let active = Math.max(0, (mob?.ramTicks || 0) - 1);
   if (!mob || mob.type !== 'goat') return { cooldown, windup, active, start: false };
-  const start = cooldown === 0 && windup === 0 && active === 0 && distance >= 4 && distance <= 8;
-  return { cooldown, windup: start ? 30 : windup, active, start };
+  if (previousWindup > 0 && windup === 0) active = 12;
+  const start = previousWindup === 0 && active === 0 && cooldown === 0 && distance >= 4 && distance <= 8;
+  if (start) windup = 30;
+  return { cooldown, windup, active, start };
 }
 
 export function canSaddlePig(mob) {
@@ -1462,10 +1465,6 @@ export class MobSystem {
       const mob = this.mobs[i];
       if (mob.ageTicks < 0) mob.ageTicks++;
       if (mob.boostCooldown > 0) mob.boostCooldown--;
-      if (mob.type === 'goat') {
-        mob.ramCooldown = Math.max(0, (mob.ramCooldown || 0) - 1);
-        mob.ramTicks = Math.max(0, (mob.ramTicks || 0) - 1);
-      }
       if (mob.playerDamageTicks > 0) mob.playerDamageTicks--;
       if (mob.loveTicks > 0) mob.loveTicks--;
       if (mob.breedCooldown > 0) mob.breedCooldown--;
@@ -1555,14 +1554,11 @@ export class MobSystem {
 
       const endermanAngry = mob.type === 'enderman' && targeted && distance < 16;
       if (mob.type === 'goat' && player.gamemode === 'survival') {
-        if (mob.ramWindup > 0) {
-          mob.ramWindup--;
-          mob.targetYaw = Math.atan2(dx, dz);
-          if (mob.ramWindup === 0) mob.ramTicks = 12;
-        } else if (mob.ramCooldown === 0 && mob.ramTicks === 0 && distance >= 4 && distance <= 8) {
-          mob.ramWindup = 30;
-          mob.targetYaw = Math.atan2(dx, dz);
-        }
+        const ram = nextGoatRamState(mob, distance);
+        mob.ramCooldown = ram.cooldown;
+        mob.ramWindup = ram.windup;
+        mob.ramTicks = ram.active;
+        if (ram.start || ram.windup > 0) mob.targetYaw = Math.atan2(dx, dz);
       }
       const hostile = hostileType && player.gamemode === 'survival' &&
         distance < profile.detectionRange &&
@@ -1631,7 +1627,7 @@ export class MobSystem {
           // If both axes are blocked, look for a nearby safe step around the
           // obstacle. This prevents hostile mobs from endlessly pushing into
           // the same wall while pursuing the player.
-          if (!xFree && !zFree && mob.type === 'goat' && mob.ramTicks > 0 && (mob.hornsDropped || 0) < 2) {
+          if ((!xFree || !zFree) && mob.type === 'goat' && mob.ramTicks > 0 && (mob.hornsDropped || 0) < 2) {
             mob.hornsDropped = (mob.hornsDropped || 0) + 1;
             mob.ramTicks = 0;
             mob.ramCooldown = 600;
