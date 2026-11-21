@@ -113,10 +113,10 @@ export function railHasRedstonePower(world, x, y, z) {
 
 export function tickRailNetwork(world, player, tick, multiplayer = null) {
   if (!world || !player || tick % 10 !== 0) return 0;
-  let changed = refreshRailNetwork(world, player, multiplayer, 8);
+  let changed = refreshRailNetwork(world, player, multiplayer, 6);
   const bx = Math.floor(player.x), by = Math.floor(player.y), bz = Math.floor(player.z);
-  for (let y = by - 3; y <= by + 3; y++) {
-    for (let z = bz - 8; z <= bz + 8; z++) for (let x = bx - 8; x <= bx + 8; x++) {
+  for (let y = by - 2; y <= by + 2; y++) {
+    for (let z = bz - 6; z <= bz + 6; z++) for (let x = bx - 6; x <= bx + 6; x++) {
       const state = world.getBlock(x, y, z);
       if (state.block.id !== 'mc:powered_rail' && state.block.id !== 'mc:activator_rail') continue;
       const powered = railHasRedstonePower(world, x, y, z);
