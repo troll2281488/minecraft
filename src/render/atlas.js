@@ -478,6 +478,22 @@ function trapdoorPanelTile(base, seed) {
   return tile;
 }
 
+/** Pixel fallback for a wooden fence gate: framed rails with a clear slatted centre. */
+function fenceGateTile(base, seed) {
+  const tile = planks(base, seed);
+  const dark = shade(base, 0.48), light = shade(base, 1.18);
+  const set = (x, y, c) => setPx(tile, x, y, c[0], c[1], c[2]);
+  for (let x = 1; x < 15; x++) {
+    set(x, 1, dark); set(x, 2, light);
+    set(x, 13, dark); set(x, 14, light);
+  }
+  for (const x of [1, 2, 5, 6, 9, 10, 13, 14]) {
+    for (let y = 2; y < 14; y++) set(x, y, x === 1 || x === 14 ? dark : light);
+  }
+  for (const y of [5, 6, 10, 11]) for (let x = 2; x < 14; x++) set(x, y, dark);
+  return tile;
+}
+
 function ironDoorPanelTile(upper) {
   const tile = grainy(hex(0x999999), 0.18, upper ? 'iron_door_top' : 'iron_door_bottom');
   const dark = hex(0x555555), light = hex(0xc9c9c9);
@@ -663,6 +679,8 @@ for (const [species, c] of Object.entries(WOOD)) {
   TEXTURES[`${species}_trapdoor`] = () => trapdoorPanelTile(c.planks, `${species}_trapdoor`);
   TEXTURES[`${species}_button`] = () => buttonTile(c.planks, `${species}_button`);
   TEXTURES[`${species}_pressure_plate`] = () => pressurePlateTile(c.planks, `${species}_pressure_plate`);
+  TEXTURES[`${species}_fence`] = () => planks(c.planks, `${species}_fence`);
+  TEXTURES[`${species}_fence_gate`] = () => fenceGateTile(c.planks, `${species}_fence_gate`);
 }
 
 TEXTURES.iron_door_bottom = () => ironDoorPanelTile(false);

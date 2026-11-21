@@ -320,6 +320,14 @@ export const BlockActionsMixin = {
       this.multiplayer?.pushBlockChange(this.hit.x, this.hit.y, this.hit.z, next);
       return true;
     }
+    if (this.hit && !sneaking && this.hit.state.block.renderShape === 'fence_gate') {
+      const { x, y, z, state } = this.hit;
+      const next = state.with('open', !state.get('open'));
+      this.world.setBlock(x, y, z, next);
+      this.multiplayer?.pushBlockChange(x, y, z, next);
+      this.sounds?.play('place', 'wood');
+      return true;
+    }
     if (this.hit && !sneaking && this.hit.state.block.renderShape === 'trapdoor') {
       const trapdoor = this.hit.state;
       // Iron trapdoors require redstone; wooden variants can be used by hand.

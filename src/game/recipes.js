@@ -33,6 +33,16 @@ for (const wood of WOODS) {
 // Six matching planks craft three doors; iron uses the same 2×3 shape.
 for (const wood of WOODS) {
   recipes.push({
+    result: `mc:${wood}_fence`, count: 3,
+    pattern: ['PSP', 'PSP'],
+    key: { P: `mc:${wood}_planks`, S: 'mc:stick' },
+  });
+  recipes.push({
+    result: `mc:${wood}_fence_gate`, count: 1,
+    pattern: ['SPS', 'SPS'],
+    key: { P: `mc:${wood}_planks`, S: 'mc:stick' },
+  });
+  recipes.push({
     result: `mc:${wood}_door`, count: 3,
     pattern: ['PP', 'PP', 'PP'],
     key: { P: `mc:${wood}_planks` },
@@ -43,6 +53,10 @@ for (const wood of WOODS) {
     key: { P: `mc:${wood}_planks` },
   });
 }
+recipes.push({
+  result: 'mc:nether_brick_fence', count: 6,
+  pattern: ['NNN', 'NNN'], key: { N: 'mc:nether_bricks' },
+});
 recipes.push({
   result: 'mc:iron_door', count: 3,
   pattern: ['II', 'II', 'II'],
