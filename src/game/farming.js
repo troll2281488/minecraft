@@ -5,12 +5,16 @@
  * reloads and multiplayer block-state replication without a side database.
  */
 export const WHEAT_CROP_ID = 'mc:wheat';
-export const CROP_IDS = Object.freeze(['mc:wheat', 'mc:carrots', 'mc:potatoes', 'mc:beetroots']);
+export const STEM_IDS = Object.freeze(['mc:pumpkin_stem', 'mc:melon_stem']);
+export const CROP_IDS = Object.freeze(['mc:wheat', 'mc:carrots', 'mc:potatoes', 'mc:beetroots', ...STEM_IDS]);
 export const FARMLAND_ID = 'mc:farmland';
 export const FARMLAND_MAX_MOISTURE = 7;
 export const FARMLAND_TICK_INTERVAL = 20;
 export const WHEAT_GROWTH_INTERVAL = 600;
 export const DRY_WHEAT_GROWTH_INTERVAL = 1800;
+
+import { positionalRandom } from '../core/rng.js';
+import { BLOCKS } from '../world/block.js';
 
 export function nextCropAge(state) {
   if (!CROP_IDS.includes(state?.block?.id)) return null;
@@ -20,6 +24,31 @@ export function nextCropAge(state) {
 
 export function nextWheatAge(state) {
   return state?.block?.id === WHEAT_CROP_ID ? nextCropAge(state) : null;
+}
+
+const STEM_FRUIT = Object.freeze({
+  'mc:pumpkin_stem': 'mc:pumpkin',
+  'mc:melon_stem': 'mc:melon',
+});
+const FRUIT_SOILS = new Set(['mc:farmland', 'mc:dirt', 'mc:grass_block', 'mc:coarse_dirt', 'mc:podzol']);
+
+/** Pick a deterministic adjacent fruit location for a mature stem. */
+export function chooseStemFruitTarget(world, x, y, z, seed, tickCount, stemId) {
+  const fruitId = STEM_FRUIT[stemId];
+  if (!fruitId || !world?.getBlock) return null;
+  const rng = positionalRandom(seed ?? 0, x, y, z, 0x5354454d ^ tickCount);
+  if (rng.nextInt(3) !== 0) return null;
+  const directions = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  const offset = rng.nextInt(directions.length);
+  for (let i = 0; i < directions.length; i++) {
+    const [dx, dz] = directions[(i + offset) % directions.length];
+    const fx = x + dx, fz = z + dz;
+    if (world.getBlock(fx, y, fz)?.block?.id !== 'mc:air') continue;
+    if (!FRUIT_SOILS.has(world.getBlock(fx, y - 1, fz)?.block?.id)) continue;
+    const fruit = BLOCKS.get(fruitId)?.defaultState;
+    if (fruit) return { x: fx, y, z: fz, state: fruit };
+  }
+  return null;
 }
 
 /**
@@ -106,6 +135,26 @@ export function tickFarming(world, player, tickCount) {
       }
     }
   }
+  // Mature pumpkin/melon stems periodically attempt to place a fruit in
+  // one of the four adjacent air blocks, provided that block has suitable soil.
+  if (tickCount % WHEAT_GROWTH_INTERVAL === 0) {
+    for (let x = px - 8; x <= px + 8; x++) {
+      for (let z = pz - 8; z <= pz + 8; z++) {
+        for (let y = py - 3; y <= py + 4; y++) {
+          const stem = world.getBlock(x, y, z);
+          if (!STEM_IDS.includes(stem?.block?.id) || stem.get('age') !== 7) continue;
+          const soil = world.getBlock(x, y - 1, z);
+          if (soil?.block?.id !== FARMLAND_ID) continue;
+          const moisture = soil.get('moisture') ?? 0;
+          const interval = moisture > 0 ? WHEAT_GROWTH_INTERVAL : DRY_WHEAT_GROWTH_INTERVAL;
+          if (tickCount % interval !== 0) continue;
+          const target = chooseStemFruitTarget(world, x, y, z, world.seed, tickCount, stem.block.id);
+          if (target) write(target.x, target.y, target.z, target.state);
+        }
+      }
+    }
+  }
+
   return changed;
 }
 
