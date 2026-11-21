@@ -27,11 +27,11 @@ describe('sugar cane farming', () => {
     const sand = BLOCKS.get('mc:sand').defaultState;
     const dirt = BLOCKS.get('mc:dirt').defaultState;
     const water = BLOCKS.get('mc:water').defaultState;
-    assertEqual(canPlantSugarCane(makeWorld([['0,64,0', sand], ['1,64,0', water]]), 0, 64, 0), true);
-    assertEqual(canPlantSugarCane(makeWorld([['0,64,0', dirt], ['0,64,1', water]]), 0, 64, 0), true);
+    assertEqual(canPlantSugarCane(makeWorld([['0,64,0', sand], ['1,65,0', water]]), 0, 64, 0), true);
+    assertEqual(canPlantSugarCane(makeWorld([['0,64,0', dirt], ['0,65,1', water]]), 0, 64, 0), true);
     assertEqual(canPlantSugarCane(makeWorld([['0,64,0', sand]]), 0, 64, 0), false);
-    assertEqual(canPlantSugarCane(makeWorld([['0,64,0', BLOCKS.get('mc:stone').defaultState], ['1,64,0', water]]), 0, 64, 0), false);
-    assertEqual(canPlantSugarCane(makeWorld([['0,64,0', sand], ['1,64,0', water.with('level', 2)]]), 0, 64, 0), false);
+    assertEqual(canPlantSugarCane(makeWorld([['0,64,0', BLOCKS.get('mc:stone').defaultState], ['1,65,0', water]]), 0, 64, 0), false);
+    assertEqual(canPlantSugarCane(makeWorld([['0,64,0', sand], ['1,65,0', water.with('level', 2)]]), 0, 64, 0), false);
   });
 
   it('grows one top segment at a time and never exceeds three blocks', () => {
@@ -39,7 +39,7 @@ describe('sugar cane farming', () => {
     const sand = BLOCKS.get('mc:sand').defaultState;
     const water = BLOCKS.get('mc:water').defaultState;
     const world = makeWorld([
-      ['0,64,0', sand], ['1,64,0', water],
+      ['0,64,0', sand], ['1,65,0', water],
       ['0,65,0', cane],
     ]);
     tickFarming(world, { x: 0, y: 65, z: 0 }, 599);
