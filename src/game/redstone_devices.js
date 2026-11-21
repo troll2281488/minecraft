@@ -1,5 +1,6 @@
 import { AIR, BLOCKS } from '../world/block.js';
 import { canPistonMove, planPistonMove, pistonVector } from './pistons.js';
+import { composterComparatorOutput } from './composting.js';
 
 /**
  * Small redstone-device simulation for the Java 1.19 compatibility track.
@@ -629,6 +630,8 @@ export const RedstoneDevicesMixin = {
         } else if (rearBlock.block.id === 'mc:hopper') {
           const hopper = this._hopperAt?.(rearX, rearY, rearZ);
           if (hopper?.slots) containerPower = comparatorContainerOutput(hopper.slots, hopper.slots.length);
+        } else if (rearBlock.block.id === 'mc:composter') {
+          containerPower = composterComparatorOutput(rearBlock.get('level'));
         } else if (rearBlock.block.id === 'mc:dropper' || rearBlock.block.id === 'mc:dispenser') {
           const dropper = this._dropperAt?.(rearX, rearY, rearZ);
           if (dropper?.slots) containerPower = comparatorContainerOutput(dropper.slots, dropper.slots.length);
