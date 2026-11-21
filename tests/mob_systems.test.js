@@ -1,6 +1,6 @@
 import { describe, it, assert, assertEqual } from './framework.js';
 import {
-  MOB_TYPES_112, MOB_AI_PROFILES, chooseMobDetourYaw, shearSheep, rollFishingCatch, calculateArmorDamage, rollMobDrops, shouldBurnInSunlight, canSaddlePig, pigBoostImpulse, MobSystem,
+  MOB_TYPES_112, MOB_AI_PROFILES, chooseMobDetourYaw, shearSheep, rollFishingCatch, calculateArmorDamage, rollMobDrops, shouldBurnInSunlight, canSaddlePig, pigBoostImpulse, MobSystem, nextGoatRamState, canBreedAnimalWith, MOB_TYPES_112,
 } from '../src/entity/mobs.js';
 import { createArrow, stepArrow } from '../src/entity/arrows.js';
 
@@ -148,5 +148,53 @@ describe('Java pig riding', () => {
     restored.loadFrom(saved);
     assertEqual(restored.mobs[0].type, 'pig');
     assertEqual(restored.mobs[0].saddled, true);
+  });
+});
+
+describe('Java mountain goats', () => {
+  it('registers goats and allows wheat breeding', () => {
+    assert(MOB_TYPES_112.includes('goat'));
+    assertEqual(canBreedAnimalWith('goat', 'mc:wheat'), true);
+    assertEqual(canBreedAnimalWith('goat', 'mc:carrot'), false);
+  });
+
+  it('winds up for thirty ticks, charges, then enters cooldown', () => {
+    let state = { type: 'goat', ramCooldown: 0, ramWindup: 0, ramTicks: 0 };
+    let next = nextGoatRamState(state, 6);
+    assertEqual(next.start, true);
+    assertEqual(next.windup, 30);
+    state = { ...state, ...next };
+    for (let i = 0; i < 29; i++) {
+      next = nextGoatRamState(state, 6);
+      state = { ...state, ...next };
+    }
+    assertEqual(state.ramWindup, 1);
+    next = nextGoatRamState(state, 6);
+    state = { ...state, ...next };
+    assertEqual(state.ramWindup, 0);
+    assertEqual(state.ramTicks, 12);
+    next = nextGoatRamState(state, 6);
+    assertEqual(next.active, 11);
+    assertEqual(next.start, false);
+  });
+
+  it('does not start a ram outside the charge distance or during cooldown', () => {
+    assertEqual(nextGoatRamState({ type: 'goat', ramCooldown: 0 }, 10).start, false);
+    assertEqual(nextGoatRamState({ type: 'goat', ramCooldown: 20 }, 6).start, false);
+  });
+
+  it('persists bounded ram and horn-drop state', () => {
+    const source = new MobSystem({});
+    source.mobs.push({
+      id: 1, type: 'goat', x: 1, y: 64, z: 1, yaw: 0, targetYaw: 0, health: 10,
+      ramCooldown: 120, ramWindup: 14, ramTicks: 6, hornsDropped: 1,
+    });
+    const saved = source.toJSON();
+    const restored = new MobSystem({});
+    restored.loadFrom(saved);
+    assertEqual(restored.mobs[0].ramCooldown, 120);
+    assertEqual(restored.mobs[0].ramWindup, 14);
+    assertEqual(restored.mobs[0].ramTicks, 6);
+    assertEqual(restored.mobs[0].hornsDropped, 1);
   });
 });
