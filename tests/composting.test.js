@@ -65,6 +65,16 @@ describe('composter and bone meal farming', () => {
     assertEqual(boneMealAge(-1, 1, 0, 0, 0, 0), null);
   });
 
+  it('supports bone-to-meal crafting and reversible bone-block packing', () => {
+    const fromBone = RECIPES.producing('mc:bone_meal').find(recipe =>
+      recipe.ingredients?.includes('mc:bone'));
+    assert(fromBone, 'bone meal from bone recipe missing');
+    assertEqual(fromBone.count, 3);
+    const boneBlock = RECIPES.producing('mc:bone_block');
+    assert(boneBlock.some(recipe => recipe.key?.M === 'mc:bone_meal' || recipe.key?.I === 'mc:bone_meal'));
+    assert(RECIPES.producing('mc:bone_meal').some(recipe => recipe.ingredients?.includes('mc:bone_block')));
+  });
+
   it('provides the vanilla-shaped seven-slab composter recipe', () => {
     const recipes = RECIPES.producing('mc:composter');
     assertEqual(recipes.length, 1);
