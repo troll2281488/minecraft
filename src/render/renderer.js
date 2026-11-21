@@ -789,8 +789,10 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           // First-person attack swing is already applied above; do not add a second rotation.
         } else if (!skin && pose.vanillaModel && /head/i.test(partName ?? '')) {
           swing = Math.sin(pose.idle ?? 0) * 0.045 + (pose.walking ? Math.sin(walkPhase * 0.5) * 0.025 : 0);
-        } else if (!skin && pose.humanoid && (pose.vanillaModel ? /arm/i.test(partName ?? '') : (partIndex === 3 || partIndex === 4))) {
-          const left = /left/i.test(partName ?? '') || (!/right/i.test(partName ?? '') && partIndex === 3);
+        } else if (!skin && pose.humanoid && (pose.vanillaModel ? /arm/i.test(partName ?? '') : (partIndex === 2 || partIndex === 3))) {
+          // Fallback humanoid arrays follow head/body/left-arm/right-arm/legs.
+          // The old 3/4 test animated the right arm and left leg as if both were arms.
+          const left = /left/i.test(partName ?? '') || (!/right/i.test(partName ?? '') && partIndex === 2);
           const gait = Math.sin(walkPhase) * (pose.sprinting ? 0.92 : 0.58);
           swing = pose.walking ? gait * (left ? 1 : -1) : 0;
           if (pose.attack && !left) swing -= 0.9;
