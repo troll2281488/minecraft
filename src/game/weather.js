@@ -41,7 +41,7 @@ export function shouldLightningRodStrike(seed, x, y, z, time, weather) {
 
 export function nextRainCauldronLevel(level, weather, roll) {
   const current = Number.isInteger(level) ? Math.max(0, Math.min(3, level)) : 0;
-  if (!['clear', 'rain', 'thunder'].includes(weather) || current >= 3 ||
+  if (!['rain', 'thunder'].includes(weather) || current >= 3 ||
       !Number.isFinite(roll) || roll >= 0.001) return current;
   return current + 1;
 }
@@ -53,7 +53,7 @@ export function shouldRainExtinguishCampfire(weather, lit, roll) {
 
 /** Apply precipitation to exposed campfires and cauldrons near the active player. */
 export function tickWeatherBlocks(world, player, weather, time) {
-  if (!world || !player || !['rain', 'thunder'].includes(weather) ||
+  if (!world || !player || !['clear', 'rain', 'thunder'].includes(weather) ||
       typeof world.getHeight !== 'function' || typeof world.getBlock !== 'function') return [];
   const changes = [];
   const centerX = Math.floor(player.x);
