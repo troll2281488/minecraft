@@ -1,8 +1,9 @@
 import { describe, it, assertEqual } from './framework.js';
 import '../src/world/blocks/index.js';
 import { BLOCKS } from '../src/world/block.js';
+import { ITEMS } from '../src/world/item.js';
 import {
-  tickFarming, nextWheatAge, hasNearbyWaterSource,
+  tickFarming, nextWheatAge, nextCropAge, hasNearbyWaterSource,
   FARMLAND_MAX_MOISTURE, DRY_WHEAT_GROWTH_INTERVAL,
 } from '../src/game/farming.js';
 import { RECIPES } from '../src/game/recipes.js';
@@ -81,6 +82,29 @@ describe('wheat farming and farmland hydration', () => {
     tickFarming(world, { x: 0, y: 65, z: 0 }, 600);
     assertEqual(world.getBlock(0, 65, 0).get('age'), 0);
     assertEqual(nextWheatAge(wheat.with('age', 7)), null);
+  });
+
+  it('registers carrot, potato and beetroot crop blocks with seven growth stages', () => {
+    for (const id of ['mc:carrots', 'mc:potatoes', 'mc:beetroots']) {
+      const crop = BLOCKS.get(id);
+      assert(crop, id + ' missing');
+      assertEqual(nextCropAge(crop.defaultState), 1);
+      assertEqual(nextCropAge(crop.defaultState.with('age', 7)), null);
+    }
+    assertEqual(ITEMS.get('mc:beetroot').food.nutrition, 1);
+  });
+
+  it('gives mature carrots, potatoes and beetroot the correct deterministic drops', () => {
+    const mature = id => BLOCKS.get(id).defaultState.with('age', 7);
+    const carrots = blockDrops(mature('mc:carrots'), null, 9, 1, 64, 2);
+    const potatoes = blockDrops(mature('mc:potatoes'), null, 9, 1, 64, 2);
+    const beetroot = blockDrops(mature('mc:beetroots'), null, 9, 1, 64, 2);
+    assertEqual(carrots[0].id, 'mc:carrot');
+    assert(carrots[0].count >= 1 && carrots[0].count <= 4);
+    assertEqual(potatoes[0].id, 'mc:potato');
+    assert(potatoes[0].count >= 1 && potatoes[0].count <= 4);
+    assertEqual(beetroot[0].id, 'mc:beetroot');
+    assertEqual(beetroot[1].id, 'mc:beetroot_seeds');
   });
 
   it('only mature wheat drops wheat and seeds when broken', () => {
