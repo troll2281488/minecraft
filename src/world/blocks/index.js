@@ -562,6 +562,12 @@ define('mc:farmland', {
   defaultValues: { moisture: 0 },
 });
 
+define('mc:composter', {
+  hardness: 0.6, resistance: 0.6, tool: 'axe', soundGroup: 'wood',
+  renderShape: 'slab', opaqueCube: false, texture: 'composter',
+  properties: { level: PROPS.composterLevel }, defaultValues: { level: 0 },
+});
+
 define('mc:wheat', {
   hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
   replaceable: true, renderShape: 'cross', soundGroup: 'grass',
@@ -678,6 +684,10 @@ ITEM_TAGS.define('#mc:logs', [
   'mc:jungle_log', 'mc:acacia_log', 'mc:dark_oak_log',
 ]);
 ITEM_TAGS.define('#mc:stone_tool_materials', ['mc:cobblestone']);
+ITEM_TAGS.define('#mc:wooden_slabs', [
+  'mc:oak_slab', 'mc:birch_slab', 'mc:spruce_slab', 'mc:jungle_slab',
+  'mc:acacia_slab', 'mc:dark_oak_slab',
+]);
 ITEM_TAGS.define('#mc:coals', ['mc:coal', 'mc:charcoal']);
 
 // ---------------------------------------------------------------------------
@@ -719,6 +729,7 @@ const MATERIALS = [
   ['mc:glass_bottle', {}],
   ['mc:glowstone_dust', {}],
   ['mc:bone', {}],
+  ['mc:bone_meal', {}],
   ['mc:leather', {}],
   ['mc:feather', {}],
   ['mc:rabbit_hide', {}],
