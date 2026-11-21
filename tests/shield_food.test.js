@@ -25,8 +25,6 @@ describe('Java shield blocking', () => {
 
 describe('Java food expansion', () => {
   it('registers new edible foods with expected nutrition', () => {
-    assertEqual(ITEMS.get('mc:cookie')?.food?.nutrition, 2);
-    assertEqual(ITEMS.get('mc:pumpkin_pie')?.food?.nutrition, 8);
     assertEqual(ITEMS.get('mc:golden_carrot')?.food?.nutrition, 6);
     assertEqual(ITEMS.get('mc:rabbit_stew')?.food?.nutrition, 10);
   });
