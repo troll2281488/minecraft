@@ -1082,9 +1082,7 @@ const tagProblems = [
   ...ITEM_TAGS.validate((id) => ITEMS.get(id) !== undefined),
 ];
 if (tagProblems.length > 0) {
-  throw new Error('Tag validation failed:
-  - ' + tagProblems.join('
-  - '));
+  throw new Error('Tag validation failed:\n  - ' + tagProblems.join('\n  - '));
 }
 
 export const BLOCK_COUNT = BLOCKS.blockCount;
