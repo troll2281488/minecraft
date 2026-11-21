@@ -9,6 +9,7 @@ import {
 } from '../src/game/farming.js';
 import { RECIPES } from '../src/game/recipes.js';
 import { blockDrops } from '../src/game/interaction.js';
+import { boneMealAge, canApplyBoneMeal } from '../src/game/composting.js';
 
 function makeWorld(entries = []) {
   const blocks = new Map(entries);
@@ -252,7 +253,23 @@ describe('wheat farming and farmland hydration', () => {
     assertEqual(RECIPES.producing('mc:melon')[0].pattern.join('/'), 'MMM/MMM/MMM');
   });
 
+  it('allows bone meal on all six ageable crop families, including both stems', () => {
+    for (const id of ['mc:wheat', 'mc:carrots', 'mc:potatoes', 'mc:beetroots', ...STEM_IDS]) {
+      assertEqual(canApplyBoneMeal(id, 0), true, id + ' should accept bone meal');
+      assertEqual(canApplyBoneMeal(id, 6), true, id + ' should accept bone meal before maturity');
+      assertEqual(canApplyBoneMeal(id, 7), false, id + ' should reject bone meal when mature');
+      const age = boneMealAge(2, 123, 4, 65, 8, 600);
+      assert(age >= 4 && age <= 6, 'bone meal growth must advance by 2–4? bounded stages');
+    }
+    assertEqual(canApplyBoneMeal('mc:pumpkin', 0), false);
+    assertEqual(canApplyBoneMeal('mc:stone', 0), false);
+    assertEqual(canApplyBoneMeal('mc:wheat', 7), false);
+  });
+
   it('retains bread and wooden hoe crafting recipes', () => {
+    assertEqual(RECIPES.producing('mc:bread').length, 1);
+    assertEqual(RECIPES.producing('mc:wooden_hoe').length, 1);
+  });  it('retains bread and wooden hoe crafting recipes', () => {
     assertEqual(RECIPES.producing('mc:bread').length, 1);
     assertEqual(RECIPES.producing('mc:wooden_hoe').length, 1);
   });
