@@ -29,17 +29,18 @@ describe('sponge water absorption', () => {
     assertEqual(world.getBlock(0, 0, 2).block.id, 'mc:water');
   });
 
-  it('caps absorption at 64 blocks and search radius six', () => {
+  it('caps absorption at 64 water blocks and search radius six', () => {
     const water = BLOCKS.get('mc:water').defaultState;
     const entries = {};
-    for (let x = 1; x <= 70; x++) entries[`${x},0,0`] = water;
+    for (let x = -6; x <= 6; x++) for (let y = -6; y <= 6; y++) for (let z = -6; z <= 6; z++) {
+      if (Math.abs(x) + Math.abs(y) + Math.abs(z) > 0 &&
+          Math.abs(x) + Math.abs(y) + Math.abs(z) <= 6) entries[`${x},${y},${z}`] = water;
+    }
     const world = makeWorld(entries);
-    const changes = absorbWaterAround(world, 0, 0, 0);
-    assertEqual(changes.length, 6);
-    const capWorld = makeWorld(Object.fromEntries(
-      Array.from({ length: 70 }, (_, i) => [`${i + 1},0,0`, water]),
-    ));
-    assertEqual(absorbWaterAround(capWorld, 0, 0, 0, 64, 100).length, 6);
+    assertEqual(absorbWaterAround(world, 0, 0, 0).length, 64);
+    const radiusWorld = makeWorld({ '1,0,0': water, '2,0,0': water, '3,0,0': water,
+      '4,0,0': water, '5,0,0': water, '6,0,0': water, '7,0,0': water });
+    assertEqual(absorbWaterAround(radiusWorld, 0, 0, 0).length, 6);
   });
 
   it('does not inspect unloaded chunks or invalid requests', () => {
