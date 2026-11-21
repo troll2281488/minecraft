@@ -944,6 +944,25 @@ export function buildBlockTextureTable(blocks, textureIndex) {
       faces = [single, single, single, single, single, single];
     }
 
+    // Piston faces are oriented by the block's facing property, not by
+    // the world's fixed up/down axes. The contact face shows the piston top;
+    // the other sides use the casing texture. An extended base no longer has
+    // a wooden contact face because its separate head occupies that position.
+    const facingFace = {
+      down: 0, up: 1, north: 2, south: 3, west: 4, east: 5,
+    }[states[i].get('facing')];
+    if (block.id === 'mc:piston' || block.id === 'mc:sticky_piston') {
+      const side = layerFor('piston_side');
+      const front = layerFor(block.id === 'mc:sticky_piston' ? 'sticky_piston_top' : 'piston_top');
+      faces = [layerFor('piston_bottom'), side, side, side, side, side];
+      if (facingFace !== undefined) faces[facingFace] = states[i].get('extended') ? side : front;
+    } else if (block.id === 'mc:piston_head') {
+      const side = layerFor('piston_side');
+      const front = layerFor(states[i].get('sticky') ? 'sticky_piston_top' : 'piston_top');
+      faces = [side, side, side, side, side, side];
+      if (facingFace !== undefined) faces[facingFace] = front;
+    }
+
     if (block.id === 'mc:redstone_ore' && states[i].get('lit')) {
       const glow = layerFor('redstone_ore_lit');
       faces = [glow, glow, glow, glow, glow, glow];
