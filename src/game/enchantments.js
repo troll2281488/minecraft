@@ -27,6 +27,13 @@ export const ENCHANTMENTS = Object.freeze({
   punch: { max: 2, weight: 2, applies: ['bow'] },
   flame: { max: 1, weight: 2, applies: ['bow'] },
   infinity: { max: 1, weight: 1, applies: ['bow'], group: 'arrow_supply' },
+  quick_charge: { max: 3, weight: 5, applies: ['crossbow'] },
+  multishot: { max: 1, weight: 2, applies: ['crossbow'], group: 'crossbow_shot' },
+  piercing: { max: 4, weight: 10, applies: ['crossbow'], group: 'crossbow_shot' },
+  loyalty: { max: 3, weight: 5, applies: ['trident'], group: 'trident_movement' },
+  riptide: { max: 3, weight: 2, applies: ['trident'], group: 'trident_movement' },
+  channeling: { max: 1, weight: 1, applies: ['trident'] },
+  impaling: { max: 5, weight: 2, applies: ['trident'] },
   luck_of_the_sea: { max: 3, weight: 2, applies: ['fishing_rod'] },
   lure: { max: 3, weight: 2, applies: ['fishing_rod'] },
   mending: { max: 1, weight: 2, applies: ['durable'], group: 'arrow_supply', treasure: true },
@@ -39,6 +46,8 @@ const CATEGORY = (item) => {
   if (item.armorSlot) result.push('armor', item.armorSlot);
   if (item.tool) result.push(item.tool);
   if (item.weapon === 'bow' || item.id === 'mc:bow') result.push('bow');
+  if (item.weapon === 'crossbow' || item.id === 'mc:crossbow') result.push('crossbow');
+  if (item.weapon === 'trident' || item.id === 'mc:trident') result.push('trident');
   if (item.id === 'mc:fishing_rod') result.push('fishing_rod');
   if (item.isDamageable) result.push('durable');
   return result;
