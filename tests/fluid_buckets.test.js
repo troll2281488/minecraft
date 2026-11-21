@@ -3,7 +3,7 @@ import '../src/world/blocks/index.js';
 import { ITEMS, ItemStack } from '../src/world/item.js';
 import { RECIPES } from '../src/game/recipes.js';
 import { scoopFluid, emptyBucket, planBucketInteraction } from '../src/game/bucket.js';
-import { Furnace } from '../src/game/containers.js';
+import { Furnace, serializeContainer, deserializeContainer } from '../src/game/containers.js';
 
 describe('Java fluid buckets', () => {
   it('registers non-stackable water and lava buckets with an empty-bucket return', () => {
@@ -52,8 +52,8 @@ describe('Lava bucket furnace fuel', () => {
     furnace.input = ItemStack.of('mc:raw_beef', 1);
     furnace.fuel = ItemStack.of('mc:lava_bucket', 1);
     furnace.tick();
-    const restored = Furnace.fromJSON ? Furnace.fromJSON(furnace.toJSON()) : null;
-    assertEqual(furnace.fuel.item.id, 'mc:bucket');
-    assertEqual(restored === null, true);
+    const restored = deserializeContainer(serializeContainer('furnace', furnace));
+    assertEqual(restored.data.fuel.item.id, 'mc:bucket');
+    assertEqual(restored.data.burnLeft, 20000);
   });
 });
