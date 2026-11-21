@@ -162,6 +162,21 @@ recipes.push({
   key: { W: 'mc:white_wool', P: '#mc:planks' },
 });
 
+// Java 1.19 dye items and the complete recolouring path for wool.
+// Only sources already represented by this project are exposed as recipes;
+// the remaining dye items are registered so future flower/material sources
+// can be added without changing the wool recipe contract.
+for (const color of ['white', 'orange', 'magenta', 'light_blue', 'yellow', 'lime', 'pink', 'gray', 'light_gray', 'cyan', 'purple', 'blue', 'brown', 'green', 'red', 'black']) {
+  recipes.push({
+    result: `mc:${color}_wool`, count: 1,
+    ingredients: ['mc:white_wool', `mc:${color}_dye`],
+  });
+}
+recipes.push({ result: 'mc:white_dye', count: 1, ingredients: ['mc:bone_meal'] });
+recipes.push({ result: 'mc:red_dye', count: 1, ingredients: ['mc:poppy'] });
+recipes.push({ result: 'mc:yellow_dye', count: 1, ingredients: ['mc:dandelion'] });
+recipes.push({ result: 'mc:blue_dye', count: 1, ingredients: ['mc:lapis_lazuli'] });
+
 // -- Tools -----------------------------------------------------------------
 
 /**
