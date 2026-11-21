@@ -78,6 +78,10 @@ export function bedrockHumanoidPose(pose = {}, walkPhase = 0) {
     rightArm = Math.sin(swim + Math.PI) * 0.82 - 0.25;
     leftLeg = Math.cos(swim + Math.PI) * rad(17.1887);
     rightLeg = Math.cos(swim) * rad(17.1887);
+  } else if (pose.inWater) {
+    // Quiet floating pose while the player is submerged but not swimming.
+    leftArm = rightArm = rad(-12);
+    leftLeg = rightLeg = rad(8);
   } else if (pose.airborne) {
     const jump = pose.jumping ? 1 : 0;
     leftArm = rightArm = jump ? rad(-34) : rad(-12);
