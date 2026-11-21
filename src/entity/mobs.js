@@ -71,7 +71,7 @@ export const MOB_AI_PROFILES = Object.freeze({
   wither: Object.freeze({ detectionRange: 24, speedMultiplier: 0.85, rangedRange: 18, preferredRange: 10, attackCooldown: 45, damage: 4, role: 'boss' }),
 });
 
-const LEASHABLE_MOB_TYPES = new Set(['cow', 'pig', 'sheep', 'chicken', 'mooshroom', 'rabbit', 'wolf', 'horse', 'bee']);
+const LEASHABLE_MOB_TYPES = new Set(['cow', 'pig', 'sheep', 'chicken', 'mooshroom', 'rabbit', 'wolf', 'horse', 'bee', 'goat']);
 
 export function nextGoatRamState(mob, distance) {
   const cooldown = Math.max(0, (mob?.ramCooldown || 0) - 1);
@@ -129,6 +129,7 @@ export const BREEDING_FOODS = Object.freeze({
   chicken: Object.freeze(['mc:wheat_seeds', 'mc:pumpkin_seeds', 'mc:melon_seeds']),
   rabbit: Object.freeze(['mc:carrot', 'mc:golden_carrot', 'mc:dandelion']),
   horse: Object.freeze(['mc:golden_carrot', 'mc:golden_apple']),
+  goat: Object.freeze(['mc:wheat']),
 });
 
 export function canBreedAnimalWith(type, itemId) {
@@ -1439,7 +1440,7 @@ export class MobSystem {
             type = roll < 0.78 ? 'mooshroom' : roll < 0.9 ? 'cow' : 'sheep';
           } else if (jungle && roll < 0.22) {
             type = 'rabbit';
-          } else if (['mc:mountains','mc:windswept_hills','mc:mountain_edge','mc:gravelly_mountains','mc:wooded_mountains'].includes(biome) && roll < 0.34) {
+          } else if (['mc:mountains','mc:windswept_hills','mc:extreme_hills_edge','mc:extreme_hills_plus'].includes(biome) && roll < 0.34) {
             type = 'goat';
           } else if (cold && roll < 0.18) {
             type = 'polar_bear';
