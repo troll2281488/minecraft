@@ -267,7 +267,7 @@ recipes.push({ result: 'mc:cookie', count: 8, pattern: ['WCW'], key: { W: 'mc:wh
 recipes.push({ result: 'mc:pumpkin_pie', count: 1, pattern: ['P', 'S', 'E'], key: { P: 'mc:pumpkin', S: 'mc:sugar', E: 'mc:egg' } });
 recipes.push({ result: 'mc:golden_carrot', count: 1, pattern: ['NNN', 'NCN', 'NNN'], key: { N: 'mc:gold_nugget', C: 'mc:carrot' } });
 recipes.push({ result: 'mc:mushroom_stew', count: 1, ingredients: ['mc:bowl', 'mc:red_mushroom', 'mc:brown_mushroom'] });
-recipes.push({ result: 'mc:beetroot_soup', count: 1, pattern: ['BBB', 'BBB', ' B '], key: { B: 'mc:beetroot' } });
+recipes.push({ result: 'mc:beetroot_soup', count: 1, pattern: ['BBB', 'BBB', ' C '], key: { B: 'mc:beetroot', C: 'mc:bowl' } });
 recipes.push({ result: 'mc:rabbit_stew', count: 1, ingredients: ['mc:bowl', 'mc:cooked_rabbit', 'mc:carrot', 'mc:baked_potato', 'mc:brown_mushroom'] });
 
 recipes.push({
