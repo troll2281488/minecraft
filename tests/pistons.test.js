@@ -128,6 +128,22 @@ describe('piston and sticky piston', () => {
     assertEqual(blockEmissionForState(blocks.get('0,0,0')), 0);
   });
 
+  it('restores a finite expiry for saved glowing ore after load', () => {
+    const litOre = BLOCKS.get('mc:redstone_ore').defaultState.with('lit', true);
+    const { world, blocks } = makeWorld([['1,0,1', litOre]]);
+    const game = {
+      world, tickCount: 5,
+      player: { x: 0, y: 0, z: 0, flying: true },
+      ...RedstoneDevicesMixin,
+    };
+    game._tickRedstoneOre(0, 0, 0, true);
+    assertEqual(game._redstoneOreTimers.get('1,0,1'), 35);
+    game.tickCount = 35;
+    game._tickRedstoneOre(0, 0, 0, true);
+    assertEqual(blocks.get('1,0,1').get('lit'), false);
+    assertEqual(game._redstoneOreTimers.has('1,0,1'), false);
+  });
+
   it('slimes provide slime balls needed for sticky piston crafting', () => {
     const drops = rollMobDrops('slime', () => 0.99);
     assertEqual(drops.length, 1);
