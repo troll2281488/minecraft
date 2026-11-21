@@ -26,10 +26,10 @@ function makeWorld(entries = []) {
 
 describe('piston and sticky piston', () => {
   it('registers both piston types, internal head, items and recipes', () => {
-    for (const id of ['mc:piston', 'mc:sticky_piston', 'mc:piston_head']) {
+    for (const id of ['mc:piston', 'mc:sticky_piston', 'mc:piston_head', 'mc:slime_block']) {
       assert(BLOCKS.get(id), `${id} block missing`);
     }
-    for (const id of ['mc:piston', 'mc:sticky_piston']) {
+    for (const id of ['mc:piston', 'mc:sticky_piston', 'mc:slime_block']) {
       assert(RECIPES.recipes.some((recipe) => recipe.result === id), `${id} recipe missing`);
     }
     assertEqual(BLOCKS.get('mc:piston').defaultState.get('extended'), false);
@@ -64,6 +64,30 @@ describe('piston and sticky piston', () => {
     ({ world, blocks } = makeWorld([['1,0,0', BLOCKS.get('mc:obsidian').defaultState]]));
     assertEqual(planPistonMove(world, 0, 0, 0, 'east'), null);
     assertEqual(blocks.get('1,0,0').block.id, 'mc:obsidian');
+  });
+
+  it('slime blocks pull adjacent ordinary blocks as one push group', () => {
+    const piston = BLOCKS.get('mc:piston').defaultState.with('facing', 'east');
+    const slime = BLOCKS.get('mc:slime_block').defaultState;
+    const { world } = makeWorld([
+      ['0,0,0', piston], ['1,0,0', slime], ['1,1,0', STONE],
+    ]);
+    const plan = planPistonMove(world, 0, 0, 0, 'east');
+    assertEqual(plan.length, 2);
+    assertEqual(plan.some((move) => move.from.x === 1 && move.from.y === 0), true);
+    assertEqual(plan.some((move) => move.from.x === 1 && move.from.y === 1), true);
+  });
+
+  it('rejects an entire slime push if any attached block is immovable', () => {
+    const piston = BLOCKS.get('mc:piston').defaultState.with('facing', 'east');
+    const slime = BLOCKS.get('mc:slime_block').defaultState;
+    const obsidian = BLOCKS.get('mc:obsidian').defaultState;
+    const { world, blocks } = makeWorld([
+      ['0,0,0', piston], ['1,0,0', slime], ['1,1,0', obsidian],
+    ]);
+    assertEqual(planPistonMove(world, 0, 0, 0, 'east'), null);
+    assertEqual(blocks.get('1,0,0'), slime);
+    assertEqual(blocks.get('1,1,0'), obsidian);
   });
 
   it('refuses to push beyond build height or into an unloaded chunk', () => {
