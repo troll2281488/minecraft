@@ -1,4 +1,5 @@
 import { readSignal } from './redstone_devices.js';
+import { ITEMS, ItemStack } from '../world/item.js';
 
 export const RAIL_BLOCK_IDS = Object.freeze([
   'mc:rail', 'mc:powered_rail', 'mc:detector_rail', 'mc:activator_rail',
@@ -226,6 +227,30 @@ export class MinecartSystem {
     return cart ? this.mount(cart) : false;
   }
 
+  attackFromPlayer() {
+    const player = this.game.player;
+    if (!player) return false;
+    const yaw = (player.yaw || 0) * Math.PI / 180;
+    const pitch = (player.pitch || 0) * Math.PI / 180;
+    const direction = [-Math.sin(yaw) * Math.cos(pitch), -Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)];
+    let target = null, bestDistance = 5;
+    for (const cart of this.carts) {
+      const dx = cart.x - player.x, dy = cart.y + 0.25 - player.eyeY, dz = cart.z - player.z;
+      const distance = Math.hypot(dx, dy, dz);
+      if (distance < 0.25 || distance > bestDistance) continue;
+      const dot = (dx * direction[0] + dy * direction[1] + dz * direction[2]) / distance;
+      if (dot < 0.94) continue;
+      target = cart; bestDistance = distance;
+    }
+    if (!target) return false;
+    if (player.ridingMinecart === target) this.dismount();
+    this.carts.splice(this.carts.indexOf(target), 1);
+    const item = ITEMS.get('mc:minecart');
+    if (item) this.game.entities?.spawnItemStackAt(new ItemStack(item, 1), target.x, target.y + 0.25, target.z);
+    this.game.sounds?.play('break', 'metal');
+    return true;
+  }
+
   dismount() {
     const player = this.game.player, cart = player?.ridingMinecart;
     if (!player || !cart) return false;
@@ -261,7 +286,6 @@ export class MinecartSystem {
         cart.x += cart.vx; cart.z += cart.vz;
         cart.derailed = true;
         if (player.ridingMinecart === cart) this.dismount();
-        if (cart.speed < 0.001) this.carts.splice(i, 1);
         continue;
       }
       cart.y = Math.max(cart.y, railY + 0.12);
