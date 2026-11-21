@@ -514,7 +514,7 @@ export class Player {
   _boxIntersectsSolid(world, box) {
     const minX = Math.floor(box.minX);
     const maxX = Math.floor(box.maxX - 1e-7);
-    const minY = Math.floor(box.minY);
+    const minY = Math.floor(box.minY) - 1; // include overhanging fence/gate shapes from the block below
     const maxY = Math.floor(box.maxY - 1e-7);
     const minZ = Math.floor(box.minZ);
     const maxZ = Math.floor(box.maxZ - 1e-7);
@@ -526,7 +526,8 @@ export class Player {
           // Per-shape boxes: a full cube returns one box, a slab a half box, a
           // stair two -- the same boxes the mesher draws, so what you see is
           // what you collide with. Non-solid blocks return none.
-          const boxes = collisionBoxes(state);
+          const neighborAt = (dx, dy, dz) => world.getBlock(x + dx, y + dy, z + dz);
+          const boxes = collisionBoxes(state, neighborAt);
           for (let i = 0; i < boxes.length; i++) {
             const b = boxes[i];
             if (box.intersects(new AABB(x + b[0], y + b[1], z + b[2], x + b[3], y + b[4], z + b[5]))) {
