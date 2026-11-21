@@ -3,6 +3,7 @@ import {
   MOB_TYPES_112, MOB_AI_PROFILES, chooseMobDetourYaw, shearSheep, rollFishingCatch, calculateArmorDamage, rollMobDrops, shouldBurnInSunlight, canSaddlePig, pigBoostImpulse, MobSystem, nextGoatRamState, canBreedAnimalWith,
 } from '../src/entity/mobs.js';
 import { createArrow, stepArrow } from '../src/entity/arrows.js';
+import { ITEMS } from '../src/world/item.js';
 
 describe('Java undead sunlight rules', () => {
   it('burns zombies, zombie villagers, skeletons and strays in exposed daylight', () => {
@@ -156,6 +157,7 @@ describe('Java mountain goats', () => {
     assert(MOB_TYPES_112.includes('goat'));
     assertEqual(canBreedAnimalWith('goat', 'mc:wheat'), true);
     assertEqual(canBreedAnimalWith('goat', 'mc:carrot'), false);
+    assertEqual(ITEMS.get('mc:goat_horn')?.stackSize, 1);
   });
 
   it('winds up for thirty ticks, charges, then enters cooldown', () => {
@@ -176,6 +178,10 @@ describe('Java mountain goats', () => {
     next = nextGoatRamState(state, 6);
     assertEqual(next.active, 11);
     assertEqual(next.start, false);
+    state = { ...state, ...next, ramTicks: 1 };
+    next = nextGoatRamState(state, 6);
+    assertEqual(next.active, 0);
+    assertEqual(next.cooldown, 600);
   });
 
   it('does not start a ram outside the charge distance or during cooldown', () => {
