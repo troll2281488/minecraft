@@ -240,3 +240,9 @@ export function repairWithMending(stack, xpPoints) {
   stack.damage = Math.max(0, stack.damage - repaired);
   return { repaired, xpUsed: repaired * 2, xpRemaining: xp - repaired * 2 };
 }
+
+
+export function fishingWaitTicks(baseTicks, rodStack) {
+  const base = Math.max(20, Math.floor(Number(baseTicks) || 20));
+  return Math.max(20, base - enchantmentLevel(rodStack, 'lure') * 100);
+}
