@@ -791,6 +791,18 @@ function redstoneOreTile(lit = false) {
 TEXTURES.redstone_ore = () => redstoneOreTile(false);
 TEXTURES.redstone_ore_lit = () => redstoneOreTile(true);
 
+TEXTURES.slime_block = () => {
+  const tile = grainy(hex(0x78a83b), 0.08, 'slime_block');
+  const edge = hex(0x4f7d28), light = hex(0xa5d45b), mid = hex(0x82b943);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    let c = mid;
+    if (x === 0 || x === 15 || y === 0 || y === 15) c = edge;
+    else if ((x + y) % 7 === 0 || (x * 3 + y) % 11 === 0) c = light;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+
 TEXTURES.piston_side = () => {
   const tile = grainy(hex(0x777777), 0.12, 'piston_side');
   const stone = hex(0x777777), wood = hex(0x9b6a3b), dark = hex(0x4b3423), iron = hex(0xb8b8b8);
