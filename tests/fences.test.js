@@ -2,9 +2,11 @@ import '../src/world/blocks/index.js';
 import { describe, it, assert, assertEqual, assertDeepEqual } from './framework.js';
 import { BLOCKS } from '../src/world/block.js';
 import { shapeBoxes, collisionBoxes, isNonCube } from '../src/world/shapes.js';
-import { orientPlacement, yawToFacing } from '../src/game/interaction.js';
+import { orientPlacement } from '../src/game/interaction.js';
+import { yawToFacing } from '../src/core/math.js';
 import { RECIPES } from '../src/game/recipes.js';
 import { Player } from '../src/entity/player.js';
+import { BlockActionsMixin } from '../src/game/block_actions.js';
 import { AABB } from '../src/core/math.js';
 
 const OAK_FENCE = BLOCKS.get('mc:oak_fence').defaultState;
@@ -82,6 +84,35 @@ describe('Java fence and fence-gate registration and geometry', () => {
       },
     };
     assertEqual(player._boxIntersectsSolid(world, new AABB(0.4, 1.2, 0.4, 0.6, 1.4, 0.6)), true);
+  });
+
+  it('toggles a wooden fence gate on right-click and leaves it unchanged while sneaking', () => {
+    let state = OAK_GATE;
+    const game = {
+      hit: { x: 2, y: 4, z: 3, state },
+      world: {
+        getBlock() { return BLOCKS.get('mc:air').defaultState; },
+        setBlock(x, y, z, next) { state = next; return true; },
+      },
+      inventory: { held: { item: null, isEmpty: true } },
+      player: {},
+      entities: {
+        targetedMob: () => null,
+        tameFromPlayer: () => false,
+        useFishingRod: () => false,
+        shearFromPlayer: () => false,
+        feedAnimalFromPlayer: () => false,
+      },
+      keys: { has: () => false },
+      _farmInteraction: () => false,
+      ...BlockActionsMixin,
+    };
+    game._useOrPlace();
+    assertEqual(state.get('open'), true);
+    game.hit = { x: 2, y: 4, z: 3, state };
+    game.keys = { has: () => true };
+    game._useOrPlace();
+    assertEqual(state.get('open'), true);
   });
 
   it('registers exact wooden fence and fence-gate output recipes', () => {
