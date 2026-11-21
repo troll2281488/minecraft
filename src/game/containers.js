@@ -88,6 +88,29 @@ export class Chest {
 export const HOPPER_SLOTS = 5;
 export const DROPPER_SLOTS = 9;
 
+/**
+ * Whether an item entity intersects the hopper's top intake volume.
+ * The hopper mouth occupies the block footprint above the hopper body.
+ */
+export function isItemInHopperIntake(drop, x, y, z) {
+  if (!drop || ![drop.x, drop.y, drop.z, x, y, z].every(Number.isFinite)) return false;
+  return drop.x >= x + 0.05 && drop.x <= x + 0.95 &&
+    drop.z >= z + 0.05 && drop.z <= z + 0.95 &&
+    drop.y >= y + 0.65 && drop.y <= y + 1.35;
+}
+
+/** Insert as much of a dropped stack as possible; return the remaining count. */
+export function insertDroppedStack(hopper, stack) {
+  if (!(hopper instanceof Hopper) || !stack || stack.isEmpty || !stack.item) {
+    return { inserted: 0, remaining: stack?.count || 0 };
+  }
+  const before = stack.count;
+  const remaining = hopper.insert(stack);
+  return { inserted: before - remaining, remaining };
+}
+
+
+
 /** Five-slot hopper inventory with the same stack rules as a chest. */
 export class Hopper extends Chest {
   constructor() {
