@@ -82,6 +82,16 @@ describe('piston and sticky piston', () => {
     assertEqual(honey.slipperiness, 0.4);
   });
 
+  it('registers honeycomb materials and the four-piece block recipe', () => {
+    assert(BLOCKS.get('mc:honeycomb_block'), 'honeycomb block missing');
+    assert(ITEMS.get('mc:honeycomb'), 'honeycomb item missing');
+    assert(ITEMS.get('mc:honeycomb_block'), 'honeycomb block item missing');
+    assert(RECIPES.recipes.some((recipe) =>
+      recipe.result === 'mc:honeycomb_block' && recipe.count === 1), 'honeycomb recipe missing');
+    assertEqual(pistonBlocksStick(BLOCKS.get('mc:honeycomb_block').defaultState,
+      BLOCKS.get('mc:honey_block').defaultState), false);
+  });
+
   it('honey adheres to ordinary blocks but not slime blocks', () => {
     const honey = BLOCKS.get('mc:honey_block').defaultState;
     const slime = BLOCKS.get('mc:slime_block').defaultState;
