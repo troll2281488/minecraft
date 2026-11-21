@@ -235,6 +235,46 @@ describe('wheat farming and farmland hydration', () => {
     }
   });
 
+  it('requires farmland under the mature stem even when neighboring soil is valid', () => {
+    const entries = [
+      ['0,64,0', BLOCKS.get('mc:dirt').defaultState],
+      ['0,65,0', BLOCKS.get('mc:melon_stem').defaultState.with('age', 7)],
+      ['1,64,0', BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)],
+      ['-1,64,0', BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)],
+      ['0,64,1', BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)],
+      ['0,64,-1', BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)],
+    ];
+    const world = makeWorld(entries);
+    world.seed = 12;
+    tickFarming(world, { x: 0, y: 65, z: 0 }, 600);
+    for (const [x, z] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+      assertEqual(world.getBlock(x, 65, z).block.id, 'mc:air');
+    }
+  });
+
+  it('skips occupied fruit positions instead of replacing existing blocks', () => {
+    const entries = [
+      ['0,64,0', BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)],
+      ['0,65,0', BLOCKS.get('mc:pumpkin_stem').defaultState.with('age', 7)],
+      ['1,64,0', BLOCKS.get('mc:dirt').defaultState],
+      ['-1,64,0', BLOCKS.get('mc:dirt').defaultState],
+      ['0,64,1', BLOCKS.get('mc:dirt').defaultState],
+      ['0,64,-1', BLOCKS.get('mc:dirt').defaultState],
+      ['1,65,0', BLOCKS.get('mc:stone').defaultState],
+    ];
+    let seed = 0, target = null;
+    for (; seed < 100; seed++) {
+      target = chooseStemFruitTarget(makeWorld(entries), 0, 65, 0, seed, 600, 'mc:pumpkin_stem');
+      if (target && target.x !== 1) break;
+    }
+    assert(target, 'no unoccupied fruit position found');
+    const world = makeWorld(entries);
+    world.seed = seed;
+    tickFarming(world, { x: 0, y: 65, z: 0 }, 600);
+    assertEqual(world.getBlock(1, 65, 0).block.id, 'mc:stone');
+    assertEqual(world.getBlock(target.x, target.y, target.z).block.id, 'mc:pumpkin');
+  });
+
   it('does not spawn fruit when all adjacent soil is unsuitable or spaces are blocked', () => {
     const entries = [
       ['0,64,0', BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)],
