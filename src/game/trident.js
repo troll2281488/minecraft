@@ -59,8 +59,8 @@ export function riptideImpulse(yawDeg, pitchDeg, level, inWaterOrRain) {
 export function impalingBonusDamage(level, target, inWater) {
   const impaling = Math.max(0, Math.min(5, Math.floor(level || 0)));
   if (!impaling || !target) return 0;
-  const aquatic = ['guardian', 'elder_guardian', 'drowned', 'squid', 'glow_squid', 'turtle', 'cod', 'salmon', 'pufferfish', 'tropical_fish'].includes(target.type);
-  return (aquatic || inWater) ? impaling * 2.5 : 0;
+  const aquatic = ['axolotl', 'dolphin', 'guardian', 'elder_guardian', 'squid', 'glow_squid', 'turtle', 'cod', 'salmon', 'pufferfish', 'tropical_fish'].includes(target.type);
+  return aquatic ? impaling * 2.5 : 0;
 }
 
 export function canChannelLightning({ thunder, skyVisible, targetExposed }) {
