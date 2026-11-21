@@ -1,4 +1,8 @@
+import '../src/world/blocks/index.js';
 import { describe, it, assertEqual } from './framework.js';
+import { ITEMS } from '../src/world/item.js';
+import { RECIPES } from '../src/game/recipes.js';
+import { Player } from '../src/entity/player.js';
 import { beginCrossbowLoad, crossbowLoadProgress, finishCrossbowLoad, crossbowShotPlan, consumeCrossbowCharge, canPierceAdditionalTarget } from '../src/game/crossbow.js';
 import { createTridentProjectile, stepTrident, tridentReturnVelocity, riptideImpulse, impalingBonusDamage, canChannelLightning } from '../src/game/trident.js';
 import { ADVANCEMENTS, createAdvancementState, awardAdvancementCriterion, processAdvancementEvent, serializeAdvancementState } from '../src/game/advancements.js';
@@ -79,5 +83,33 @@ describe('advancement criteria and save data', () => {
     assertEqual(saved.story_obtain_diamond.criteria.length, 1);
     assertEqual(saved.story_obtain_diamond.completedAt, 50);
     assertEqual(saved.hacked, undefined);
+  });
+});
+
+
+describe('playable crossbow item and saved advancement progress', () => {
+  it('registers a durable crossbow and its vanilla-shaped recipe', () => {
+    assertEqual(ITEMS.get('mc:crossbow').maxDamage, 465);
+    assertEqual(ITEMS.get('mc:crossbow').stackSize, 1);
+    assertEqual(RECIPES.producing('mc:crossbow').length, 1);
+    assertEqual(RECIPES.producing('mc:trident').length, 0);
+    assertEqual(ITEMS.get('mc:trident').maxDamage, 250);
+  });
+  it('persists earned advancement criteria with player state', () => {
+    const player = new Player(3, 70, -4);
+    const result = player.recordAdvancementEvent('acquired_diamond', 900);
+    assertEqual(result.completed, true);
+    const saved = player.toJSON();
+    const restored = new Player();
+    restored.loadFrom(saved);
+    assertEqual(restored.advancements.story_obtain_diamond.done, true);
+    assertEqual(restored.advancements.story_obtain_diamond.completedAt, 900);
+    assertEqual(restored.recordAdvancementEvent('acquired_diamond', 1000).awarded, false);
+  });
+  it('ignores unknown or malformed advancement data during player restore', () => {
+    const player = new Player();
+    player.loadFrom({ advancements: { injected: { criteria: ['fake'] }, story_obtain_diamond: { criteria: ['fake'] } } });
+    assertEqual(player.advancements.injected, undefined);
+    assertEqual(player.advancements.story_obtain_diamond.done, false);
   });
 });
