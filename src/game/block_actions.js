@@ -25,6 +25,7 @@ import { hiveHarvestResult, hasCampfireSmoke } from './bee_hives.js';
 import { compostChance, nextComposterLevel, boneMealAge, compostRoll, canApplyBoneMeal } from './composting.js';
 import { canPlantSugarCane } from './farming.js';
 import { refreshWallConnections } from './wall_updates.js';
+import { planBucketInteraction } from './bucket.js';
 
 export const BlockActionsMixin = {
   _refreshWallConnections(...positions) {
@@ -132,6 +133,36 @@ export const BlockActionsMixin = {
       return;
     }
     const heldItem = this.inventory?.held?.item;
+    if (heldItem && this.hit) {
+      const hitState = this.hit.state;
+      let target = null;
+      if (heldItem.id !== 'mc:bucket') target = placementTarget(this.world, this.hit);
+      const targetState = target ? this.world.getBlock(target.x, target.y, target.z) : null;
+      const plan = planBucketInteraction(
+        heldItem.id, hitState.block.id, hitState.get('level'), targetState?.block,
+      );
+      if (plan) {
+        if (plan.type === 'scoop') {
+          this.world.setBlock(this.hit.x, this.hit.y, this.hit.z, AIR.defaultState);
+          this.multiplayer?.pushBlockChange(this.hit.x, this.hit.y, this.hit.z, AIR.defaultState);
+        } else {
+          const fluidState = BLOCKS.get(plan.fluid)?.defaultState;
+          if (!fluidState || !this.world.setBlock(target.x, target.y, target.z, fluidState)) return;
+          this.multiplayer?.pushBlockChange(target.x, target.y, target.z, fluidState);
+        }
+        if (this.player.gamemode === GAMEMODE.SURVIVAL) {
+          this.inventory.consumeHeld(1);
+          const leftover = this.inventory.addItem(plan.resultItem, 1);
+          if (leftover > 0) {
+            const item = ITEMS.get(plan.resultItem);
+            if (item) this.entities?.spawnItemStackAt(new ItemStack(item, 1), this.player.x, this.player.y + 0.5, this.player.z);
+          }
+        }
+        this.sounds?.play(plan.fluid === 'mc:lava' ? 'lava' : 'water');
+        this.ui.toast(plan.type === 'scoop' ? 'Жидкость набрана в ведро' : 'Жидкость вылита из ведра');
+        return;
+      }
+    }
     if (this.hit?.state?.block?.id === 'mc:composter') {
       const { x, y, z, state } = this.hit;
       const level = state.get('level');

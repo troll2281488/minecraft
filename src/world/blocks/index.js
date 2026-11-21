@@ -862,6 +862,8 @@ const MATERIALS = [
   ['mc:bowl', { stackSize: 64 }],
 ];
 for (const [id, opts] of MATERIALS) ITEMS.define(id, opts);
+ITEMS.define('mc:water_bucket', { stackSize: 1, containerItem: 'mc:bucket' });
+ITEMS.define('mc:lava_bucket', { stackSize: 1, fuelTicks: 20000, containerItem: 'mc:bucket' });
 
 // Food: nutrition restores food points; saturation is nutrition * modifier * 2.
 const FOODS = [

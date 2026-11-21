@@ -21,6 +21,9 @@ const WOODS = ['oak', 'birch', 'spruce', 'jungle', 'acacia', 'dark_oak'];
 
 const recipes = [];
 
+// -- Buckets and fluids ---------------------------------------------------
+recipes.push({ result: 'mc:bucket', count: 1, pattern: ['I I', ' I '], key: { I: 'mc:iron_ingot' } });
+
 // -- Wood ------------------------------------------------------------------
 
 for (const wood of WOODS) {
