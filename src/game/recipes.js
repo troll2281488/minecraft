@@ -61,7 +61,7 @@ recipes.push({
 // Six matching stone blocks craft six walls, as in Java Edition.
 const WALL_MATERIALS = [
   ['cobblestone', 'cobblestone'], ['mossy_cobblestone', 'mossy_cobblestone'],
-  ['brick', 'stone_bricks'], ['prismarine', 'prismarine'],
+  ['brick', 'bricks'], ['prismarine', 'prismarine'],
   ['red_sandstone', 'red_sandstone'], ['mossy_stone_brick', 'stone_bricks'],
   ['granite', 'granite'], ['stone_brick', 'stone_bricks'],
   ['nether_brick', 'nether_bricks'], ['andesite', 'andesite'],
