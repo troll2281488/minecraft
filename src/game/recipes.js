@@ -265,6 +265,9 @@ recipes.push({
 recipes.push({ result: 'mc:flint_and_steel', count: 1, pattern: ['F ', ' I'], key: { F: 'mc:flint', I: 'mc:iron_ingot' } });
 recipes.push({ result: 'mc:shield', count: 1, pattern: ['PPP', 'PIP', ' P '], key: { P: '#mc:planks', I: 'mc:iron_ingot' } });
 recipes.push({ result: 'mc:lead', count: 2, pattern: ['SS ', 'SL ', '  S'], key: { S: 'mc:string', L: 'mc:slime_ball' } });
+recipes.push({ result: 'mc:fire_charge', count: 3, ingredients: ['mc:gunpowder', 'mc:blaze_powder', 'mc:coal'] });
+recipes.push({ result: 'mc:leather', count: 1, ingredients: ['mc:rabbit_hide', 'mc:rabbit_hide', 'mc:rabbit_hide', 'mc:rabbit_hide'] });
+recipes.push({ result: 'mc:book', count: 1, ingredients: ['mc:paper', 'mc:paper', 'mc:paper', 'mc:leather'] });
 
 recipes.push({
   result: 'mc:bread', count: 1,
