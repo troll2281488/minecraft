@@ -85,3 +85,59 @@ export function stepArrow(arrow, isSolid, mobs = []) {
   arrow.vx *= drag; arrow.vy *= drag; arrow.vz *= drag;
   return { hit: null };
 }
+
+
+/** Create a throwable egg or snowball using the shared lightweight projectile path. */
+export function createThrowable(x, y, z, direction, type) {
+  if (!['egg', 'snowball'].includes(type)) throw new TypeError('Unsupported throwable');
+  const speed = 1.5;
+  return {
+    type, x, y, z,
+    vx: direction[0] * speed,
+    vy: direction[1] * speed,
+    vz: direction[2] * speed,
+    age: 0, done: false,
+  };
+}
+
+/** Advance a throwable until it hits a solid block or living mob. */
+export function stepThrowable(projectile, isSolid, mobs = []) {
+  if (projectile.done) return { hit: null };
+  projectile.age++;
+  if (projectile.age > 1200) {
+    projectile.done = true;
+    return { hit: 'expired' };
+  }
+  const steps = Math.max(1, Math.ceil(Math.hypot(projectile.vx, projectile.vy, projectile.vz) * 4));
+  for (let i = 0; i < steps; i++) {
+    projectile.x += projectile.vx / steps;
+    projectile.y += projectile.vy / steps;
+    projectile.z += projectile.vz / steps;
+    for (const mob of mobs) {
+      if (mob.health <= 0) continue;
+      const dx = mob.x - projectile.x;
+      const dy = mob.y + 0.5 - projectile.y;
+      const dz = mob.z - projectile.z;
+      if (dx * dx + dy * dy + dz * dz <= ARROW.MOB_RADIUS * ARROW.MOB_RADIUS) {
+        projectile.done = true;
+        return { hit: 'mob', mob };
+      }
+    }
+    if (isSolid(Math.floor(projectile.x), Math.floor(projectile.y), Math.floor(projectile.z))) {
+      projectile.done = true;
+      return { hit: 'block' };
+    }
+  }
+  projectile.vy -= 0.03;
+  projectile.vx *= 0.99;
+  projectile.vy *= 0.99;
+  projectile.vz *= 0.99;
+  return { hit: null };
+}
+
+/** Java egg hatch outcomes: 1/8 spawns one chick, including 1/32 for four. */
+export function eggHatchCount(random = Math.random) {
+  const roll = random();
+  if (roll >= 0.125) return 0;
+  return roll < (1 / 32) ? 4 : 1;
+}

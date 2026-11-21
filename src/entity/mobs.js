@@ -5,7 +5,7 @@ import { experienceForMob, experienceForFishing, experienceForBreeding, splitExp
 import { TerrainGenerator, villageCandidateForCell } from '../world/gen/terrain.js';
 import { createVillagerProfile } from './villager_trades.js';
 import { drawPower, canFire } from '../game/bow.js';
-import { aimVector, createArrow, stepArrow } from './arrows.js';
+import { aimVector, createArrow, stepArrow, createThrowable, stepThrowable, eggHatchCount } from './arrows.js';
 import { tickBeeForaging } from '../game/bee_hives.js';
 
 /**
@@ -268,6 +268,7 @@ export class MobSystem {
     this.game = game;
     this.mobs = [];
     this.arrows = [];
+    this.projectiles = [];
     this.blockParticles = [];
     this.bowDrawStart = null;
     this.droppedItems = [];
@@ -288,6 +289,7 @@ export class MobSystem {
   reset() {
     this.mobs.length = 0;
     this.arrows.length = 0;
+    this.projectiles.length = 0;
     this.blockParticles.length = 0;
     this.bowDrawStart = null;
     this.droppedItems.length = 0;
@@ -370,6 +372,52 @@ export class MobSystem {
     if (!creative) inventory.damageHeld(1);
     this.game.sounds?.play('bow');
     return true;
+  }
+
+  /** Throw an egg or snowball from the player's hand. */
+  throwItemProjectile(itemId) {
+    const type = itemId === 'mc:egg' ? 'egg' : itemId === 'mc:snowball' ? 'snowball' : null;
+    const player = this.game.player, inventory = this.game.inventory;
+    if (!type || !player || !inventory) return false;
+    const creative = player.gamemode === 'creative';
+    if (!creative && inventory.remove(itemId, 1) !== 1) return false;
+    const direction = aimVector(player.yaw, player.pitch);
+    this.projectiles.push(createThrowable(
+      player.x + direction[0] * 0.45,
+      player.eyeY + direction[1] * 0.45,
+      player.z + direction[2] * 0.45,
+      direction, type,
+    ));
+    this.game.sounds?.play('throw');
+    return true;
+  }
+
+  _tickProjectiles() {
+    const world = this.game.world;
+    for (let i = this.projectiles.length - 1; i >= 0; i--) {
+      const projectile = this.projectiles[i];
+      const result = stepThrowable(
+        projectile,
+        (x, y, z) => world.getBlock(x, y, z).block.solid,
+        this.mobs,
+      );
+      if (result.hit === 'mob' && projectile.type === 'snowball' && result.mob.type === 'blaze') {
+        result.mob.health = Math.max(0, result.mob.health - 3);
+        result.mob.hurtTicks = 8;
+        result.mob.anim.hurt = 1;
+      }
+      if (['block', 'mob'].includes(result.hit) && projectile.type === 'egg') {
+        const count = eggHatchCount();
+        if (count > 0) {
+          const x = Math.floor(projectile.x), z = Math.floor(projectile.z);
+          const y = world.getHeight(x, z) + 1;
+          for (let chick = 0; chick < count; chick++) {
+            this._spawn('chicken', x, z, { y, ageTicks: -24000 });
+          }
+        }
+      }
+      if (projectile.done) this.projectiles.splice(i, 1);
+    }
   }
 
   _tickArrows() {
@@ -1328,6 +1376,7 @@ export class MobSystem {
     }
     if (this.attackCooldown > 0) this.attackCooldown--;
     this._tickArrows();
+    this._tickProjectiles();
     this._tickBlockParticles();
     if (this.game.mobSimulationEnabled === false) return;
     this._tickSpawners();
