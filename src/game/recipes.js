@@ -71,6 +71,7 @@ recipes.push({ result: 'mc:redstone_lamp', count: 1, pattern: [' R ', 'RGR', ' R
 recipes.push({ result: 'mc:hopper', count: 1, pattern: ['I I', 'ICI', ' I '], key: { I: 'mc:iron_ingot', C: 'mc:chest' } });
 recipes.push({ result: 'mc:slime_block', count: 1, pattern: ['SSS', 'SSS', 'SSS'], key: { S: 'mc:slime_ball' } });
 recipes.push({ result: 'mc:honeycomb_block', count: 1, pattern: ['HH', 'HH'], key: { H: 'mc:honeycomb' } });
+recipes.push({ result: 'mc:honeycomb', count: 4, ingredients: ['mc:honeycomb_block'] });
 recipes.push({ result: 'mc:beehive', count: 1, pattern: ['PPP', 'HHH', 'PPP'], key: { P: '#mc:planks', H: 'mc:honeycomb' } });
 recipes.push({ result: 'mc:campfire', count: 1, pattern: [' S ', 'SCS', 'LLL'], key: { S: 'mc:stick', C: 'mc:coal', L: '#mc:logs' } });
 recipes.push({ result: 'mc:piston', count: 1, pattern: ['PPP', 'CIC', 'CRC'], key: { P: '#mc:planks', C: 'mc:cobblestone', I: 'mc:iron_ingot', R: 'mc:redstone' } });
