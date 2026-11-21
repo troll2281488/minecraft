@@ -777,7 +777,6 @@ const MATERIALS = [
   ['mc:melon_seeds', {}],
   ['mc:pumpkin_seeds', {}],
   ['mc:melon_slice', { food: { nutrition: 2, saturation: 1.2 } }],
-  ['mc:sugar_cane', {}],
   ['mc:beetroot_seeds', {}],
   ['mc:beetroot', { food: { nutrition: 1, saturation: 0.6 } }],
 ];
