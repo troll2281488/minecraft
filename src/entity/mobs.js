@@ -1,4 +1,4 @@
-import { ItemStack } from '../world/item.js';
+import { ITEMS, ItemStack } from '../world/item.js';
 import { SPAWNER_MOB_TYPES, spawnerMobType, spawnerPlayerInRange, countSpawnerMobs, nextSpawnerDelay, spawnerSpawnPosition } from './spawners.js';
 import { experienceForMob, experienceForFishing, experienceForBreeding, splitExperienceIntoOrbs, mergeExperienceOrbState, isExperienceOrbHazard } from './experience.js';
 import { TerrainGenerator, villageCandidateForCell } from '../world/gen/terrain.js';
@@ -753,6 +753,14 @@ export class MobSystem {
     const held = this.game.inventory?.held;
     const player = this.game.player;
     if (!mob || !player || !['survival', 'creative'].includes(player.gamemode)) return false;
+    if (mob.leashHolder === 'player' && (!held || held.isEmpty) &&
+        (this.game.keys?.has('ShiftLeft') || this.game.keys?.has('ShiftRight'))) {
+      if (!detachMobLead(mob)) return false;
+      const leftover = this.game.inventory.addItem('mc:lead', 1);
+      if (leftover > 0) this.spawnItemStackAt(new ItemStack(ITEMS.get('mc:lead'), 1), player.x, player.y + 0.5, player.z);
+      this.game.ui?.toast('Поводок снят');
+      return true;
+    }
     if (held?.item?.id !== 'mc:lead' || held.count <= 0) return false;
     if (!attachMobLead(mob)) return false;
     if (player.gamemode !== 'creative') this.game.inventory.consumeHeld(1);
