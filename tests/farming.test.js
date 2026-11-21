@@ -1,4 +1,4 @@
-import { describe, it, assertEqual } from './framework.js';
+import { describe, it, assert, assertEqual } from './framework.js';
 import '../src/world/blocks/index.js';
 import { BLOCKS } from '../src/world/block.js';
 import { ITEMS } from '../src/world/item.js';
@@ -65,6 +65,22 @@ describe('wheat farming and farmland hydration', () => {
     const changed = tickFarming(world, { x: 0.5, y: 65, z: 0.5 }, 600);
     assertEqual(world.getBlock(0, 65, 0).get('age'), 1);
     assertEqual(changed.some((c) => c.x === 0 && c.y === 65 && c.z === 0), true);
+  });
+
+  it('advances all four crop families through the shared hydration loop', () => {
+    const entries = [];
+    const water = BLOCKS.get('mc:water').defaultState;
+    for (const [index, id] of ['mc:wheat', 'mc:carrots', 'mc:potatoes', 'mc:beetroots'].entries()) {
+      const x = index * 2;
+      entries.push([`${x},64,0`, BLOCKS.get('mc:farmland').defaultState.with('moisture', 7)]);
+      entries.push([`${x},65,0`, BLOCKS.get(id).defaultState]);
+      entries.push([`${x + 4},64,0`, water]);
+    }
+    const world = makeWorld(entries);
+    tickFarming(world, { x: 3, y: 65, z: 0 }, 600);
+    for (const [index, id] of ['mc:wheat', 'mc:carrots', 'mc:potatoes', 'mc:beetroots'].entries()) {
+      assertEqual(world.getBlock(index * 2, 65, 0).get('age'), 1, id + ' did not grow');
+    }
   });
 
   it('allows dry farmland to grow wheat at one third the hydrated rate', () => {
