@@ -25,6 +25,7 @@ import { BLOCKS } from '../block.js';
 import { CHUNK_SIZE, MIN_Y, MAX_Y, SEA_LEVEL } from '../../core/constants.js';
 import { clamp } from '../../core/math.js';
 import { buildTree, TREE_MARGIN } from './trees.js';
+import { shouldGenerateBeeNest, beeNestFacing } from './bee_nests.js';
 import { hash01, seedToInt } from './hash.js';
 import { ChunkWriter, mineshaftPlan, placeMineshaftPlan, placeDungeonRoom, placeStrongholdPortalRoom, placeStrongholdRoomNetwork, villagePlan, placeVillagePlan, villageStyleForBiome } from './structures.js';
 
@@ -741,6 +742,21 @@ export class TerrainGenerator {
         if(x<0||x>=CHUNK_SIZE||z<0||z>=CHUNK_SIZE) continue;
         const id=chunk.getBlock(x,tree.y+dy,z).block.id;
         if(passable(id)||/_leaves$/.test(id)) chunk.setBlock(x,tree.y+dy,z,log);
+      }
+      const treeBiome = this.column(wx, wz).biome;
+      if (shouldGenerateBeeNest(this.seed, wx, wz, treeBiome, tree.species)) {
+        const [nx, nz] = [[0,-1],[0,1],[-1,0],[1,0]][
+          ['north','south','west','east'].indexOf(beeNestFacing(this.seed, wx, wz))
+        ];
+        const nestX = wx + nx, nestY = tree.y + 1, nestZ = wz + nz;
+        const lx = nestX - baseX, lz = nestZ - baseZ;
+        if (lx >= 0 && lx < CHUNK_SIZE && lz >= 0 && lz < CHUNK_SIZE) {
+          const existing = chunk.getBlock(lx, nestY, lz).block.id;
+          const nest = S['mc:bee_nest'];
+          if (nest && (existing === 'mc:air' || /_leaves$/.test(existing))) {
+            chunk.setBlock(lx, nestY, lz, nest.with('facing', beeNestFacing(this.seed, wx, wz)));
+          }
+        }
       }
       const vine=S['mc:vine'];
       if(vine) for(const [dx,dy,dz] of tree.vines ?? []) {

@@ -306,6 +306,20 @@ define('mc:mycelium', {
 // Functional
 // ---------------------------------------------------------------------------
 
+define('mc:campfire', {
+  hardness: 2, resistance: 2, tool: 'axe', soundGroup: 'wood',
+  flammability: 5, lightEmission: 15, texture: 'campfire',
+});
+
+for (const id of ['mc:bee_nest', 'mc:beehive']) {
+  define(id, {
+    hardness: 0.6, resistance: 0.6, tool: 'axe', soundGroup: 'wood',
+    flammability: 5, texture: id === 'mc:bee_nest' ? 'bee_nest' : 'beehive',
+    properties: { facing: PROPS.facing, honey_level: PROPS.honeyLevel },
+    defaultValues: { facing: 'north', honey_level: 0 },
+  });
+}
+
 define('mc:crafting_table', {
   hardness: 2.5, resistance: 2.5, tool: 'axe', soundGroup: 'wood', flammability: 5,
   textures: { top: 'crafting_table_top', bottom: 'oak_planks', side: 'crafting_table_side' },
@@ -691,6 +705,7 @@ const MATERIALS = [
   ['mc:quartz', {}],
   ['mc:slime_ball', {}],
   ['mc:honeycomb', {}],
+  ['mc:glass_bottle', {}],
   ['mc:glowstone_dust', {}],
   ['mc:bone', {}],
   ['mc:leather', {}],
@@ -752,6 +767,7 @@ for (const [id, nutrition, saturation] of FOODS) {
  * exactly one place those numbers live. Attack damage and speed per tool type
  * come from the vanilla tables in the same file.
  */
+ITEMS.define('mc:honey_bottle', { stackSize: 16, food: { nutrition: 6, saturation: 0.1 } });
 ITEMS.define('mc:shears', { stackSize: 1, maxDamage: 238, tool: 'shears', attackDamage: 1 });
 ITEMS.define('mc:flint_and_steel', { stackSize: 1, maxDamage: 64, tool: 'flint_and_steel' });
 ITEMS.define('mc:fishing_rod', { stackSize: 1, maxDamage: 64, tool: 'fishing_rod' });
@@ -766,7 +782,7 @@ ITEMS.define('mc:diamond_horse_armor', { stackSize: 1, horseArmor: 'diamond' });
 for (const mobType of [
   'cow','pig','sheep','chicken','zombie','husk','zombie_villager','skeleton','stray','wither_skeleton',
   'creeper','enderman','spider','cave_spider','silverfish','endermite','slime','magma_cube','vex','vindicator','evoker','witch','blaze','ghast','guardian','elder_guardian','wither',
-  'mooshroom','rabbit','wolf','horse','polar_bear','villager',
+  'mooshroom','rabbit','wolf','horse','polar_bear','villager','bee',
 ]) {
   ITEMS.define(`mc:${mobType}_spawn_egg`, {
     stackSize: 64, spawnEggMob: mobType,

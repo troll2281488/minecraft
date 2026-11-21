@@ -21,6 +21,7 @@ import { USABLE_BLOCKS } from './usable_blocks.js';
 import { drainContainer } from './containers.js';
 import { getVillagerOffers, executeVillagerTrade } from '../entity/villager_trades.js';
 import { pistonVector } from './pistons.js';
+import { hiveHarvestResult, hasCampfireSmoke } from './bee_hives.js';
 
 export const BlockActionsMixin = {
   _breakBlock() {
@@ -123,6 +124,30 @@ export const BlockActionsMixin = {
       return;
     }
     const heldItem = this.inventory?.held?.item;
+    if (this.hit && ['mc:bee_nest', 'mc:beehive'].includes(this.hit.state.block.id)) {
+      const { x, y, z, state } = this.hit;
+      const smokeCalmed = hasCampfireSmoke(this.world, x, y, z);
+      const result = hiveHarvestResult(state, heldItem?.id, smokeCalmed);
+      if (result) {
+        if (!result.ok) {
+          this.ui.toast(result.reason === 'not_full' ? 'В улье пока недостаточно мёда'
+            : result.reason === 'bees_angry' ? 'Нужен дым от костра под ульем'
+            : 'Нужны ножницы или стеклянная бутылочка');
+          return;
+        }
+        if (this.player.gamemode === GAMEMODE.SURVIVAL) {
+          if (result.tool === 'shears') this.inventory.damageHeld(1);
+          else this.inventory.consumeHeld(1);
+          for (const drop of result.drops) this.inventory.addItem(drop.id, drop.count);
+        }
+        const next = state.with('honey_level', result.nextLevel);
+        this.world.setBlock(x, y, z, next);
+        this.multiplayer?.pushBlockChange(x, y, z, next);
+        this.sounds?.play('place', 'honey');
+        this.ui.toast(result.tool === 'shears' ? 'Собраны пчелиные соты' : 'Мёд собран в бутылочку');
+        return;
+      }
+    }
     if (this.hit?.state?.block?.id === 'mc:redstone_ore') {
       this._activateRedstoneOre?.(this.hit.x, this.hit.y, this.hit.z);
       return;
@@ -380,6 +405,7 @@ export const BlockActionsMixin = {
     if (!player || player.gamemode !== GAMEMODE.SURVIVAL || stack.isEmpty || !food) return false;
     if (!player.vitals.eat(food)) return false;
     this.inventory.consumeHeld(1);
+    if (stack.item.id === 'mc:honey_bottle') this.inventory.addItem('mc:glass_bottle', 1);
     this.ui.toast('Eating');
     return true;
   },

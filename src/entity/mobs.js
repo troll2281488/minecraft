@@ -5,6 +5,7 @@ import { TerrainGenerator, villageCandidateForCell } from '../world/gen/terrain.
 import { createVillagerProfile } from './villager_trades.js';
 import { drawPower, canFire } from '../game/bow.js';
 import { aimVector, createArrow, stepArrow } from './arrows.js';
+import { tickBeeForaging } from '../game/bee_hives.js';
 
 /**
  * Lightweight voxel creature simulation. Mobs use deterministic game ticks,
@@ -64,7 +65,7 @@ export const MOB_AI_PROFILES = Object.freeze({
 });
 
 export const MOB_TYPES_112 = Object.freeze([
-  'bat','blaze','cave_spider','chicken','cow','creeper','donkey','elder_guardian',
+  'bat','bee','blaze','cave_spider','chicken','cow','creeper','donkey','elder_guardian',
   'ender_dragon','enderman','endermite','evoker','ghast','guardian','horse','husk','illusioner',
   'llama','magma_cube','mooshroom','mule','ocelot','parrot','pig','polar_bear',
   'rabbit','sheep','shulker','silverfish','skeleton','skeleton_horse','slime',
@@ -369,6 +370,9 @@ export class MobSystem {
       yaw: mob.yaw,
       targetYaw: mob.targetYaw,
       health: mob.health,
+      beePollenTicks: Number.isFinite(mob.beePollenTicks) ? mob.beePollenTicks : 0,
+      beeHiveWorkTicks: Number.isFinite(mob.beeHiveWorkTicks) ? mob.beeHiveWorkTicks : 0,
+      beeSearchTicks: Number.isFinite(mob.beeSearchTicks) ? mob.beeSearchTicks : 0,
       sheared: !!mob.sheared,
       fuseTicks: mob.fuseTicks || 0,
       walkPhase: mob.walkPhase || 0,
@@ -450,7 +454,7 @@ export class MobSystem {
         x: mob.x, y: mob.y, z: mob.z,
         yaw: mob.yaw,
         targetYaw: Number.isFinite(mob.targetYaw) ? mob.targetYaw : mob.yaw,
-        speed: ['zombie','skeleton','stray','creeper','spider'].includes(mob.type) ? 0.035 : mob.type === 'enderman' ? 0.045 : 0.018,
+        speed: ['zombie','skeleton','stray','creeper','spider'].includes(mob.type) ? 0.035 : ['enderman','bee'].includes(mob.type) ? 0.045 : 0.018,
         thinkTicks: 0, attackTicks: 0,
         walkPhase: Number.isFinite(mob.walkPhase) ? mob.walkPhase : 0,
         moveTicks: Number.isFinite(mob.moveTicks) ? Math.max(0, mob.moveTicks) : 0,
@@ -469,6 +473,10 @@ export class MobSystem {
         villagerUsedOffers: Array.isArray(mob.villagerUsedOffers) ? mob.villagerUsedOffers.filter((id) => typeof id === 'string').slice(0, 64) : [],
         villagerOfferUses: mob.villagerOfferUses && typeof mob.villagerOfferUses === 'object' ? mob.villagerOfferUses : {},
         health: mob.health,
+        beePollenTicks: Number.isFinite(mob.beePollenTicks) ? Math.max(0, Math.min(600, mob.beePollenTicks)) : 0,
+        beeHiveWorkTicks: Number.isFinite(mob.beeHiveWorkTicks) ? Math.max(0, Math.min(200, mob.beeHiveWorkTicks)) : 0,
+        beeSearchTicks: Number.isFinite(mob.beeSearchTicks) ? Math.max(0, Math.min(20, mob.beeSearchTicks)) : 0,
+        beeTarget: null,
         sheared: !!mob.sheared,
         hurtTicks: 0,
         knockbackX: 0, knockbackZ: 0,
@@ -493,7 +501,7 @@ export class MobSystem {
       speed: MOB_AI_PROFILES[type] ? 0.035 : 0.018,
       thinkTicks: 0, attackTicks: 0, walkPhase: Math.random() * 6,
       moveTicks: 0, pauseTicks: 45 + Math.floor(Math.random() * 100),
-      health: ({ zombie:20, husk:20, zombie_villager:20, skeleton:20, stray:20, wither_skeleton:20, creeper:20, enderman:40, spider:16, cave_spider:12, silverfish:8, endermite:8, slime:16, magma_cube:16, vex:14, vindicator:24, evoker:24, witch:26, blaze:20, ghast:10, guardian:30, elder_guardian:80, wither:300, cow:10, pig:10, chicken:4, sheep:8, mooshroom:10, rabbit:3, wolf:8, horse:30, polar_bear:30, villager:20 })[type] ?? 10,
+      health: ({ bee:10, zombie:20, husk:20, zombie_villager:20, skeleton:20, stray:20, wither_skeleton:20, creeper:20, enderman:40, spider:16, cave_spider:12, silverfish:8, endermite:8, slime:16, magma_cube:16, vex:14, vindicator:24, evoker:24, witch:26, blaze:20, ghast:10, guardian:30, elder_guardian:80, wither:300, cow:10, pig:10, chicken:4, sheep:8, mooshroom:10, rabbit:3, wolf:8, horse:30, polar_bear:30, villager:20 })[type] ?? 10,
       sheared: false, hurtTicks: 0, fuseTicks: 0,
       ageTicks: 0, loveTicks: 0, breedCooldown: 0,
       anim: { walk: 0, idle: Math.random() * Math.PI * 2, attack: 0, hurt: 0, fuse: 0 },
@@ -546,7 +554,7 @@ export class MobSystem {
 
   /** Spawn a supported creature from a creative egg on the clicked block. */
   spawnFromEgg(type, x, z) {
-    if (!['cow','pig','sheep','chicken','mooshroom','rabbit','wolf','horse','polar_bear','zombie','husk','zombie_villager','skeleton','stray','wither_skeleton','creeper','enderman','spider','cave_spider','silverfish','endermite','slime','magma_cube','vex','vindicator','evoker','witch','blaze','ghast','guardian','elder_guardian','wither','villager'].includes(type)) return false;
+    if (!['cow','pig','sheep','chicken','mooshroom','rabbit','wolf','horse','polar_bear','zombie','husk','zombie_villager','skeleton','stray','wither_skeleton','creeper','enderman','spider','cave_spider','silverfish','endermite','slime','magma_cube','vex','vindicator','evoker','witch','blaze','ghast','guardian','elder_guardian','wither','villager','bee'].includes(type)) return false;
     if (type === 'villager') {
       const world = this.game.world;
       const y = world.getHeight(x, z);
@@ -1148,7 +1156,9 @@ export class MobSystem {
           const dry = ['mc:desert','mc:mesa','mc:wooded_badlands','mc:eroded_badlands','mc:savanna','mc:savanna_plateau','mc:shattered_savanna'].includes(biome);
           const jungle = ['mc:jungle','mc:sparse_jungle','mc:bamboo_jungle'].includes(biome);
           const cold = ['mc:snowy_plains','mc:snowy_taiga','mc:ice_spikes','mc:taiga','mc:mega_taiga','mc:giant_spruce_taiga'].includes(biome);
-          if (biome === 'mc:mushroom_island') {
+          if (biome === 'mc:flower_forest' && roll < 0.28) {
+            type = 'bee';
+          } else if (biome === 'mc:mushroom_island') {
             // Mooshrooms are the signature inhabitant of the very rare mushroom biome.
             type = roll < 0.78 ? 'mooshroom' : roll < 0.9 ? 'cow' : 'sheep';
           } else if (jungle && roll < 0.22) {
@@ -1207,6 +1217,13 @@ export class MobSystem {
         mob.walkPhase += Math.hypot(player.vx || 0, player.vz || 0) * 8;
         mob.anim.walking = Math.hypot(player.vx || 0, player.vz || 0) > 0.01;
         continue;
+      }
+
+      if (mob.type === 'bee') {
+        const hiveChange = tickBeeForaging(world, mob);
+        if (hiveChange) this.game.multiplayer?.pushBlockChange(
+          hiveChange.x, hiveChange.y, hiveChange.z, hiveChange.state,
+        );
       }
 
       const profile = MOB_AI_PROFILES[mob.type] ?? null;
