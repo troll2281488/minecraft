@@ -14,7 +14,8 @@ export function hasCampfireSmoke(world, x, y, z) {
   // required so smoke can reach the underside of the hive.
   for (let depth = 2; depth <= 5; depth++) {
     const campY = y - depth;
-    if (world.getBlock(x, campY, z)?.block?.id !== 'mc:campfire') continue;
+    const campfire = world.getBlock(x, campY, z);
+    if (campfire?.block?.id !== 'mc:campfire' || campfire.get?.('lit') === false) continue;
     let clear = true;
     for (let sy = campY + 1; sy < y; sy++) {
       const id = world.getBlock(x, sy, z)?.block?.id;
