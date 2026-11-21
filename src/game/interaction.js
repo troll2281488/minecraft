@@ -333,6 +333,13 @@ export function blockDrops(state, heldStack, worldSeed = 0, x = 0, y = 0, z = 0)
   // A shovel breaks a snow block into four snowballs in Java 1.12.2.
   if (id === 'mc:snow_block') return [{ id: 'mc:snowball', count: 4 }];
 
+  if (id === 'mc:melon') return [{ id: 'mc:melon_slice', count: 3 + rng.nextInt(5) }];
+  if (id === 'mc:pumpkin_stem' || id === 'mc:melon_stem') {
+    const seedId = id === 'mc:pumpkin_stem' ? 'mc:pumpkin_seeds' : 'mc:melon_seeds';
+    const count = rng.nextInt(2);
+    return count ? [{ id: seedId, count }] : [];
+  }
+
   if (['mc:wheat', 'mc:carrots', 'mc:potatoes', 'mc:beetroots'].includes(id)) {
     if (state.get('age') < 7) return [];
     if (id === 'mc:wheat') return [
