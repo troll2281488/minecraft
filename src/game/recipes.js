@@ -276,8 +276,8 @@ recipes.push({
 
 recipes.push({
   result: 'mc:crossbow', count: 1,
-  pattern: ['TIS', 'SRS', ' T '],
-  key: { T: 'mc:stick', I: 'mc:iron_ingot', S: 'mc:string', R: 'mc:tripwire_hook' },
+  pattern: ['SIS', 'THT', ' T '],
+  key: { T: 'mc:stick', I: 'mc:iron_ingot', S: 'mc:string', H: 'mc:tripwire_hook' },
 });
 
 recipes.push({
