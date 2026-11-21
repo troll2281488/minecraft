@@ -92,7 +92,7 @@ function plant(id, texture, tint = null) {
 // ---------------------------------------------------------------------------
 
 stoneLike('mc:stone', 'stone', 1.5, 6);
-stoneLike('mc:smooth_stone', 'smooth_stone', 2, 6);
+stoneLike('mc:smooth_stone', 'stone', 2, 6);
 stoneLike('mc:cobblestone', 'cobblestone', 2, 6);
 stoneLike('mc:mossy_cobblestone', 'mossy_cobblestone', 2, 6);
 stoneLike('mc:granite', 'granite', 1.5, 6);
@@ -895,7 +895,9 @@ const FOODS = [
   ['mc:rotten_flesh', 4, 0.1],
   ['mc:cooked_mutton', 6, 0.8],
   ['mc:raw_cod', 2, 0.2],
+  ['mc:cooked_cod', 5, 0.6],
   ['mc:raw_salmon', 2, 0.2],
+  ['mc:cooked_salmon', 6, 0.8],
   ['mc:pufferfish', 1, 0.1],
   ['mc:tropical_fish', 1, 0.1],
 ];
