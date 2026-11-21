@@ -4,7 +4,7 @@ import '../src/world/blocks/index.js';
 import { BLOCKS } from '../src/world/block.js';
 import { breakTicks, blockDrops } from '../src/game/interaction.js';
 import {
-  ENCHANTMENTS, enchantmentLevel, getEnchantments, canApplyEnchantment,
+  ENCHANTMENTS, enchantmentLevel, getEnchantments, canApplyEnchantment, enchantmentDamageBonus,
   areEnchantmentsCompatible, withEnchantment, unbreakingDamage,
   combineOnAnvil, eligibleEnchantments,
 } from '../src/game/enchantments.js';
@@ -45,6 +45,15 @@ describe('Java 1.19 enchantment data and anvil core', () => {
     assertEqual(areEnchantmentsCompatible('sharpness', 'smite'), false);
     assertEqual(areEnchantmentsCompatible('fortune', 'silk_touch'), false);
     assertEqual(areEnchantmentsCompatible('efficiency', 'unbreaking'), true);
+  });
+  it('calculates Sharpness, Smite and Bane combat bonuses by target family', () => {
+    const sharp = withEnchantment(sword, 'sharpness', 3);
+    assertEqual(enchantmentDamageBonus(sharp, 'cow'), 2);
+    const smite = withEnchantment(sword, 'smite', 2);
+    assertEqual(enchantmentDamageBonus(smite, 'zombie'), 5);
+    assertEqual(enchantmentDamageBonus(smite, 'cow'), 0);
+    const bane = withEnchantment(sword, 'bane_of_arthropods', 1);
+    assertEqual(enchantmentDamageBonus(bane, 'spider'), 2.5);
   });
   it('uses Java Unbreaking chance and leaves non-damageable items alone', () => {
     const enchanted = withEnchantment(pickaxe, 'unbreaking', 2);
