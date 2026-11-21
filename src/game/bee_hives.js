@@ -82,6 +82,7 @@ export function tickBeeForaging(world, mob) {
   }
 
   mob.moveTicks = 0;
+  mob.pauseTicks = Math.max(mob.pauseTicks || 0, 20);
   if (target.kind === 'flower') {
     mob.beePollenTicks = 600;
     mob.beeTarget = null;
