@@ -39,7 +39,6 @@ describe('crossbow loading and firing', () => {
     assertEqual(canPierceAdditionalTarget(shot, 4), true);
     assertEqual(canPierceAdditionalTarget(shot, 5), false);
   });
-  });
 });
 
 describe('trident flight and enchantments', () => {
