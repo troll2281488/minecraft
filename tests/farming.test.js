@@ -435,5 +435,3 @@ describe('sugar cane and cactus farming', () => {
     assertEqual(RECIPES.producing('mc:paper')[0].count, 3);
   });
 });
-
-});
