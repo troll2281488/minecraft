@@ -47,7 +47,23 @@ function soundBucket(path) {
   const full = String(path).toLowerCase().replace(/\\/g, '/').replace(/\.ogg$/i, '');
   const has = (...words) => words.some(word => new RegExp('(^|[._/-])' + word + '(?:[0-9]+)?($|[._/-])').test(full));
   const rules = [
-    ['step', () => has('step','footstep','walk','walking','run','running','swim','splash')],
+    // Keep aquatic effects separate from footfalls: classifying every splash
+    // or swim clip as a step caused water sounds to replace stone/grass steps.
+    ['water', () => has('swim','splash','bubble','underwater','fishing','water')],
+    ['zombie', () => has('zombie','undead','husk','drowned')],
+    ['skeleton', () => has('skeleton','stray','wither_skeleton')],
+    ['creeper', () => has('creeper')],
+    ['spider', () => has('spider','cave_spider')],
+    ['enderman', () => has('enderman')],
+    ['villager', () => has('villager','wandering_trader')],
+    ['cow', () => has('cow','mooshroom')],
+    ['sheep', () => has('sheep')],
+    ['pig', () => has('pig')],
+    ['chicken', () => has('chicken')],
+    ['wolf', () => has('wolf')],
+    ['horse', () => has('horse','donkey','mule')],
+    ['bee', () => has('bee')],
+    ['step', () => has('step','footstep','walk','walking','run','running')],
     ['break', () => has('break','destroy','dig','mine')],
     ['place', () => has('place','put_down','build')],
     ['hit', () => has('hit','impact','attack','punch')],
@@ -60,7 +76,6 @@ function soundBucket(path) {
     ['eat', () => has('eat','burp','chew','drink','gulp')],
     ['shoot', () => has('shoot','fire','launch','bow','crossbow','arrow')],
     ['explode', () => has('explode','explosion','blast')],
-    ['water', () => has('water','underwater','bubble','fishing')],
     ['lava', () => has('lava','fire','burn')],
     ['rain', () => has('rain','drip','weather')],
     ['thunder', () => has('thunder','lightning')],
@@ -113,9 +128,19 @@ export class BedrockSoundPack {
       'entity.generic.explode':'explode','entity.villager.trade':'trade',
       'item.equip':'equip','item.cast':'shoot','item.reel':'water','item.fishing.bite':'water','item.fishing.catch':'water',
       'weather.rain':'rain','weather.thunder':'thunder','fluid.water':'water','fluid.lava':'lava',
-      'ui.click':'click','ui.toast':'toast'
+      'ui.click':'click','ui.toast':'toast',
+      'entity.zombie.ambient':'zombie','entity.zombie.hurt':'zombie','entity.zombie.death':'zombie',
+      'entity.skeleton.ambient':'skeleton','entity.skeleton.hurt':'skeleton','entity.skeleton.death':'skeleton',
+      'entity.creeper.primed':'creeper','entity.creeper.hurt':'creeper','entity.creeper.death':'creeper',
+      'entity.spider.ambient':'spider','entity.spider.hurt':'spider','entity.spider.death':'spider',
+      'entity.enderman.ambient':'enderman','entity.enderman.hurt':'enderman','entity.enderman.death':'enderman',
+      'entity.villager.ambient':'villager','entity.villager.hurt':'villager',
+      'entity.cow.ambient':'cow','entity.sheep.ambient':'sheep','entity.pig.ambient':'pig',
+      'entity.chicken.ambient':'chicken','entity.wolf.ambient':'wolf','entity.horse.ambient':'horse',
+      'entity.bee.ambient':'bee'
     };
-    const choices = this.sounds.get(aliases[String(eventId).toLowerCase()]);
+    const key = String(eventId).toLowerCase();
+    const choices = this.sounds.get(aliases[key] || (key.startsWith('entity.') ? key.split('.')[1] : null));
     if (!choices?.length) return false;
     const source = this.context.createBufferSource(), gain = this.context.createGain();
     source.buffer = choices[Math.floor(Math.random() * choices.length)];
