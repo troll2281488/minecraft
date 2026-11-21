@@ -1,7 +1,7 @@
 import '../src/world/blocks/index.js';
 import { describe, it, assertEqual } from './framework.js';
 import { BLOCKS } from '../src/world/block.js';
-import { RedstoneDevicesMixin, comparatorContainerOutput, comparatorOutput } from '../src/game/redstone_devices.js';
+import { RedstoneDevicesMixin, comparatorContainerOutput, comparatorOutput, readSignal } from '../src/game/redstone_devices.js';
 
 function makeGame(blockId, entities = {}, withPlayer = false) {
   const blocks = new Map([['0,0,0', BLOCKS.get(blockId).defaultState]]);
@@ -158,5 +158,19 @@ describe('comparator inventory signals', () => {
       game._tickComparators(0, 0, 0, true);
       assertEqual(blocks.get('0,0,0').get('power'), expected[level]);
     }
+  });
+});
+
+
+describe('lightning rod redstone output', () => {
+  it('emits full strength only while charged by a thunder strike', () => {
+    const rod = BLOCKS.get('mc:lightning_rod');
+    assertEqual(rod?.id, 'mc:lightning_rod');
+    const world = {
+      getBlock() { return rod.defaultState.with('powered', true); },
+    };
+    assertEqual(readSignal(world, 0, 0, 0, 1, 0, 0), 15);
+    const unpowered = { getBlock() { return rod.defaultState.with('powered', false); } };
+    assertEqual(readSignal(unpowered, 0, 0, 0, 1, 0, 0), 0);
   });
 });
