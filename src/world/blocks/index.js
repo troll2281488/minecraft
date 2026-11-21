@@ -823,7 +823,7 @@ const MATERIALS = [
   ['mc:stick', { fuelTicks: 100 }],
   ['mc:coal', { fuelTicks: 1600 }],
   ['mc:charcoal', { fuelTicks: 1600 }],
-    ['mc:iron_ingot', {}],
+    ['mc:iron_ingot', {}],\n  ['mc:copper_ingot', {}],
   ['mc:gold_ingot', {}],
   ['mc:gold_nugget', {}],
   ['mc:diamond', {}],
