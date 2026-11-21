@@ -35,6 +35,7 @@ const CHANCES = {
   'mc:carrot': 0.65,
   'mc:potato': 0.65,
   'mc:beetroot': 0.65,
+  'mc:melon_slice': 0.65,
   'mc:apple': 0.65,
   'mc:bread': 0.85,
   'mc:hay_block': 0.85,
