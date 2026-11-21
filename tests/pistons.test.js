@@ -78,6 +78,23 @@ describe('piston and sticky piston', () => {
     assertEqual(plan.some((move) => move.from.x === 1 && move.from.y === 1), true);
   });
 
+  it('commits a slime push with attached blocks without losing either block', () => {
+    const piston = BLOCKS.get('mc:piston').defaultState.with('facing', 'east');
+    const source = BLOCKS.get('mc:redstone_block').defaultState;
+    const slime = BLOCKS.get('mc:slime_block').defaultState;
+    const { world, blocks } = makeWorld([
+      ['0,0,0', piston], ['0,0,-1', source],
+      ['1,0,0', slime], ['1,1,0', STONE],
+    ]);
+    const game = { world, player: { x: 0, y: 0, z: 0 }, ...RedstoneDevicesMixin };
+    game._tickPistons(0, 0, 0, true);
+    assertEqual(blocks.get('0,0,0').get('extended'), true);
+    assertEqual(blocks.get('1,0,0').block.id, 'mc:piston_head');
+    assertEqual(blocks.get('2,0,0'), slime);
+    assertEqual(blocks.get('2,1,0'), STONE);
+    assertEqual(blocks.get('1,1,0'), AIR);
+  });
+
   it('rejects an entire slime push if any attached block is immovable', () => {
     const piston = BLOCKS.get('mc:piston').defaultState.with('facing', 'east');
     const slime = BLOCKS.get('mc:slime_block').defaultState;
