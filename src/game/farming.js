@@ -15,11 +15,24 @@ export const FARMLAND_MAX_MOISTURE = 7;
 export const FARMLAND_TICK_INTERVAL = 20;
 export const WHEAT_GROWTH_INTERVAL = 600;
 export const DRY_WHEAT_GROWTH_INTERVAL = 1800;
+export const SUGAR_CANE_GROWTH_INTERVAL = 600;
+export const SUGAR_CANE_MAX_HEIGHT = 3;
+const SUGAR_CANE_SOILS = new Set(['mc:sand', 'mc:dirt', 'mc:grass_block']);
 
 export function nextCropAge(state) {
   if (!CROP_IDS.includes(state?.block?.id)) return null;
   const age = state.get('age');
   return age >= 7 ? null : age + 1;
+}
+
+/** Sugar cane needs a valid substrate and an adjacent source-water block. */
+export function canPlantSugarCane(world, x, y, z) {
+  if (!world?.getBlock || !SUGAR_CANE_SOILS.has(world.getBlock(x, y, z)?.block?.id)) return false;
+  for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const water = world.getBlock(x + dx, y, z + dz);
+    if (water?.block?.id === 'mc:water' && (water.get?.('level') ?? 0) === 0) return true;
+  }
+  return false;
 }
 
 export function nextWheatAge(state) {
