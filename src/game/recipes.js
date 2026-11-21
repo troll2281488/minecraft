@@ -25,6 +25,13 @@ const recipes = [];
 recipes.push({ result: 'mc:bucket', count: 1, pattern: ['I I', ' I '], key: { I: 'mc:iron_ingot' } });
 recipes.push({ result: 'mc:cauldron', count: 1, pattern: ['I I', 'I I', 'III'], key: { I: 'mc:iron_ingot' } });
 
+// -- Rail transport -------------------------------------------------------
+recipes.push({ result: 'mc:minecart', count: 1, pattern: ['I I', 'III'], key: { I: 'mc:iron_ingot' } });
+recipes.push({ result: 'mc:rail', count: 16, pattern: ['I I', 'ISI', 'I I'], key: { I: 'mc:iron_ingot', S: 'mc:stick' } });
+recipes.push({ result: 'mc:powered_rail', count: 6, pattern: ['G G', 'GSG', 'GRG'], key: { G: 'mc:gold_ingot', S: 'mc:stick', R: 'mc:redstone' } });
+recipes.push({ result: 'mc:detector_rail', count: 6, pattern: ['I I', 'IPI', 'IRI'], key: { I: 'mc:iron_ingot', P: 'mc:stone_pressure_plate', R: 'mc:redstone' } });
+recipes.push({ result: 'mc:activator_rail', count: 6, pattern: ['ISI', 'IRI', 'ISI'], key: { I: 'mc:iron_ingot', S: 'mc:stick', R: 'mc:redstone_torch' } });
+
 // -- Processing stations --------------------------------------------------
 recipes.push({ result: 'mc:smoker', count: 1, pattern: [' L ', 'LFL', ' L '], key: { L: '#mc:logs', F: 'mc:furnace' } });
 recipes.push({ result: 'mc:blast_furnace', count: 1, pattern: ['III', 'IFI', 'SSS'], key: { I: 'mc:iron_ingot', F: 'mc:furnace', S: 'mc:smooth_stone' } });
