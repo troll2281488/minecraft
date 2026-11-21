@@ -13,6 +13,7 @@ import './jukebox.test.js';
 import './leads.test.js';
 import './cobweb_drops.test.js';
 import './animal_lifecycle.test.js';
+import './rabbit_horse_breeding.test.js';
 import './fire_charge.test.js';
 import './farming.test.js';
 import './composting.test.js';
