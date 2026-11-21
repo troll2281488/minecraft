@@ -39,6 +39,13 @@ describe('bee nest and beehive harvesting', () => {
     assertEqual(hasCampfireSmoke(world, 0, 10, 0), false);
   });
 
+  it('does not accept smoke from a campfire in a neighboring column', () => {
+    const world = { getBlock(x, y, z) {
+      return { block: { id: x === 1 && y === 8 && z === 0 ? 'mc:campfire' : 'mc:air' } };
+    } };
+    assertEqual(hasCampfireSmoke(world, 0, 10, 0), false);
+  });
+
   it('does not accept campfires outside the five-block smoke range', () => {
     const world = { getBlock(x, y, z) {
       return { block: { id: x === 0 && y === 4 && z === 0 ? 'mc:campfire' : 'mc:air' } };
