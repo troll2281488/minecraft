@@ -3,7 +3,8 @@ import { describe, it, assert, assertEqual } from './framework.js';
 import { BLOCKS } from '../src/world/block.js';
 import { ITEMS } from '../src/world/item.js';
 import { RECIPES } from '../src/game/recipes.js';
-import { hiveHarvestResult, hasCampfireSmoke, HIVE_MAX_HONEY } from '../src/game/bee_hives.js';
+import { hiveHarvestResult, hasCampfireSmoke, findBeeTarget, tickBeeForaging, HIVE_MAX_HONEY } from '../src/game/bee_hives.js';
+import { MOB_TYPES_112 } from '../src/entity/mobs.js';
 
 describe('bee nest and beehive harvesting', () => {
   it('registers both hive blocks with persisted 0..5 honey levels', () => {
@@ -87,6 +88,43 @@ describe('bee nest and beehive harvesting', () => {
   it('does not harvest with unrelated items', () => {
     const hive = BLOCKS.get('mc:beehive').defaultState.with('honey_level', 5);
     assertEqual(hiveHarvestResult(hive, 'mc:stick', true).reason, 'wrong_tool');
+  });
+
+  it('registers bees and a creative bee spawn egg', () => {
+    assertEqual(MOB_TYPES_112.includes('bee'), true);
+    assert(ITEMS.get('mc:bee_spawn_egg'), 'bee spawn egg missing');
+  });
+
+  it('finds the nearest flower and ignores unrelated blocks', () => {
+    const flower = BLOCKS.get('mc:dandelion').defaultState;
+    const world = { getBlock(x, y, z) {
+      return { block: { id: x === 2 && y === 1 && z === 0 ? flower.block.id : 'mc:air' } };
+    } };
+    const target = findBeeTarget(world, 0.5, 1, 0.5, 'flower', 4);
+    assertEqual(target.x, 2);
+    assertEqual(target.y, 1);
+    assertEqual(target.z, 0);
+  });
+
+  it('collects pollen at a flower and delivers it to a nearby hive', () => {
+    const blocks = new Map([
+      ['0,0,0', BLOCKS.get('mc:dandelion').defaultState],
+      ['2,0,0', BLOCKS.get('mc:beehive').defaultState],
+    ]);
+    const world = {
+      getBlock(x, y, z) { return blocks.get(`${x},${y},${z}`) || BLOCKS.get('mc:air').defaultState; },
+      setBlock(x, y, z, state) { blocks.set(`${x},${y},${z}`, state); return true; },
+    };
+    const bee = { type: 'bee', x: 0.5, y: 0, z: 0.5, moveTicks: 0 };
+    tickBeeForaging(world, bee);
+    assertEqual(bee.beePollenTicks, 600);
+    bee.x = 2.5;
+    bee.z = 0.5;
+    let changed = null;
+    for (let i = 0; i < 200; i++) changed = tickBeeForaging(world, bee) || changed;
+    assert(changed, 'bee did not deliver pollen');
+    assertEqual(changed.state.get('honey_level'), 1);
+    assertEqual(blocks.get('2,0,0').get('honey_level'), 1);
   });
 
   it('registers the beehive and campfire crafting recipes', () => {
