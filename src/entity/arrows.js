@@ -134,3 +134,10 @@ export function stepThrowable(projectile, isSolid, mobs = []) {
   projectile.vz *= 0.99;
   return { hit: null };
 }
+
+/** Java egg hatch outcomes: 1/8 spawns one chick, including 1/32 for four. */
+export function eggHatchCount(random = Math.random) {
+  const roll = random();
+  if (roll >= 0.125) return 0;
+  return roll < (1 / 32) ? 4 : 1;
+}
