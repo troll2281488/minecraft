@@ -659,6 +659,8 @@ const DYE_PALETTE = {
   light_gray: 0x9a9a91, cyan: 0x2e8b86, purple: 0x7d3fb2, blue: 0x3546a5,
   brown: 0x68452b, green: 0x536b2f, red: 0x9f302b, black: 0x242424,
 };
+TEXTURES.terracotta = () => grainy(hex(0x985e45), 0.05, 'terracotta');
+
 for (const [color, rgb] of Object.entries(DYE_PALETTE)) {
   const tint = hex(rgb);
   if (color !== 'white') TEXTURES[`${color}_wool`] = () => grainy(tint, 0.08, `${color}_wool`);
