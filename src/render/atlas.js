@@ -855,6 +855,26 @@ TEXTURES.honeycomb_block = () => {
   return tile;
 };
 
+TEXTURES.bee_nest = () => {
+  const tile = grainy(hex(0xb98a4e), 0.14, 'bee_nest');
+  const bark = hex(0x75502d), straw = hex(0xd5b06c), dark = hex(0x382a1c);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    let c = y < 4 || y > 11 ? bark : (y % 3 === 0 ? straw : hex(0xb98a4e));
+    if (x >= 5 && x <= 10 && y >= 6 && y <= 10) c = dark;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+TEXTURES.beehive = () => {
+  const tile = grainy(hex(0xd0a45c), 0.08, 'beehive');
+  const bands = hex(0x98652f), pale = hex(0xe5c17a);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const c = y < 3 || y > 12 ? bands : (y % 4 === 0 ? pale : hex(0xd0a45c));
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+
 TEXTURES.piston_side = () => {
   const tile = grainy(hex(0x777777), 0.12, 'piston_side');
   const stone = hex(0x777777), wood = hex(0x9b6a3b), dark = hex(0x4b3423), iron = hex(0xb8b8b8);
