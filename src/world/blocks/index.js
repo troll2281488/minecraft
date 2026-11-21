@@ -107,7 +107,10 @@ stoneLike('mc:netherrack', 'netherrack', 0.4, 2);
 stoneLike('mc:nether_bricks', 'nether_bricks', 2, 6);
 stoneLike('mc:nether_brick_fence', 'nether_bricks', 2, 6);
 stoneLike('mc:nether_gold_ore', 'nether_gold_ore', 3, 3);
-stoneLike('mc:glowstone', 'sea_lantern', 0.3, 0.3);
+define('mc:glowstone', {
+  hardness: 0.3, resistance: 0.3, tool: 'pickaxe', soundGroup: 'glass',
+  lightEmission: 15, texture: 'glowstone',
+});
 define('mc:soul_sand', { hardness: 0.5, resistance: 0.5, tool: 'shovel', soundGroup: 'sand', texture: 'soul_sand' });
 define('mc:bed', { hardness: 0.2, resistance: 0.2, tool: 'axe', soundGroup: 'wood', texture: 'bed', renderShape: 'slab', opaqueCube: false, properties: { type: PROPS.slabType }, defaultValues: { type: 'bottom' } });
 
@@ -511,11 +514,6 @@ define('mc:redstone_torch', {
   hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
   lightEmission: 7, renderShape: 'torch', soundGroup: 'wood', texture: 'redstone_torch',
   properties: { lit: PROPS.lit }, defaultValues: { lit: true },
-});
-
-define('mc:glowstone', {
-  hardness: 0.3, resistance: 0.3, tool: 'pickaxe', soundGroup: 'glass',
-  lightEmission: 15, texture: 'glowstone',
 });
 
 define('mc:repeater', {
