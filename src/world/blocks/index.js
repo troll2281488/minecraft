@@ -690,7 +690,13 @@ for (const [id, texture] of [
   properties: { age: PROPS.age7 }, defaultValues: { age: 0 }, texture,
 });
 
-define('mc:sweet_berry_bush', {\n  hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,\n  replaceable: true, renderShape: 'cross', soundGroup: 'grass', texture: 'sweet_berry_bush',\n  properties: { age: PROPS.age7 }, defaultValues: { age: 0 },\n});\n\ndefine('mc:sugar_cane', {
+define('mc:sweet_berry_bush', {
+  hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
+  replaceable: true, renderShape: 'cross', soundGroup: 'grass', texture: 'sweet_berry_bush',
+  properties: { age: PROPS.age7 }, defaultValues: { age: 0 },
+});
+
+define('mc:sugar_cane', {
   hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
   replaceable: true, renderShape: 'cross', soundGroup: 'grass', texture: 'sugar_cane',
 });
