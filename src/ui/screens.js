@@ -31,6 +31,7 @@ export const ScreensMixin = {
     byId('btn-duplicate-world').onclick = () => this._duplicateSelectedWorld();
     this._loadSettings();
     this._buildKeybindSettings();
+    this._buildSoundPackSettings();
     byId('setting-distance').oninput = (e) => {
       this.renderDistance = Number(e.target.value);
       byId('setting-distance-value').textContent = this.renderDistance + ' чанков';
@@ -227,6 +228,36 @@ export const ScreensMixin = {
     }
   },
 
+  _buildSoundPackSettings() {
+    const panel = document.querySelector('#settings-screen .panel');
+    if (!panel || document.getElementById('bedrock-sound-settings')) return;
+    const section = document.createElement('section');
+    section.id = 'bedrock-sound-settings';
+    section.innerHTML = '<h2>Звуковые ресурспаки</h2><p class="sub">Импорт Bedrock .mcpack или .zip с OGG-звуками. Подходящие события заменят процедурные звуки; для остальных останется запасной звук.</p><div class="settings-row"><button id="btn-import-bedrock-sounds" class="secondary" type="button">Импортировать звуковой пак</button><button id="btn-clear-bedrock-sounds" class="secondary" type="button">Отключить пак</button></div>';
+    const back = document.getElementById('btn-settings-back');
+    panel.insertBefore(section, back);
+    section.querySelector('#btn-import-bedrock-sounds').addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.mcpack,.zip,application/zip';
+      input.onchange = async () => {
+        const file = input.files?.[0];
+        if (!file) return;
+        try {
+          const result = await this.sounds.importBedrockPack(file);
+          this.ui.toast('Загружено OGG: ' + result.files + ', типов звуков: ' + result.categories + '. Пак активен до перезагрузки.');
+        } catch (error) {
+          this.ui.toast('Не удалось импортировать пак: ' + error.message, { error: true, duration: 8000 });
+        }
+      };
+      input.click();
+    });
+    section.querySelector('#btn-clear-bedrock-sounds').addEventListener('click', () => {
+      this.sounds.clearBedrockPack();
+      this.ui.toast('Bedrock-звуковой пак отключён');
+    });
+  },
+
   _saveSettings() {
     try {
       localStorage.setItem('voxel-game-settings', JSON.stringify({
@@ -247,6 +278,7 @@ export const ScreensMixin = {
     this._settingsReturnScreen = this.running ? 'pause' : 'title';
     this._loadSettings();
     this._buildKeybindSettings();
+    this._buildSoundPackSettings();
     this.ui.showScreen('settings');
   },
 
