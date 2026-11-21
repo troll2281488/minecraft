@@ -568,6 +568,15 @@ const TEXTURES = {
     for (let x = 5; x < 11; x++) setPx(t, x, 4, 83, 144, 54);
     setPx(t, 6, 3, 196, 174, 68); setPx(t, 9, 3, 196, 174, 68);
   }),
+  sugar_cane:         () => crossPlant('sugar_cane', (t) => {
+    for (let y = 1; y < 16; y++) {
+      const stripe = y % 4 === 0;
+      setPx(t, 6, y, stripe ? 190 : 91, stripe ? 218 : 166, stripe ? 139 : 83);
+      setPx(t, 7, y, stripe ? 166 : 73, stripe ? 202 : 145, stripe ? 112 : 68);
+      setPx(t, 8, y, stripe ? 190 : 91, stripe ? 218 : 166, stripe ? 139 : 83);
+    }
+    setPx(t, 7, 0, 116, 176, 84);
+  }),
   pumpkin:            () => grainy(hex(0xe58a22), 0.13, 'pumpkin', { clumps: 7, clumpColor: hex(0xc66a18) }),
   melon:              () => grainy(hex(0x4d8b3c), 0.18, 'melon', { clumps: 9, clumpColor: hex(0x2f672e) }),
 
