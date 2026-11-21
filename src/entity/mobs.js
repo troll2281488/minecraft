@@ -481,19 +481,27 @@ export class MobSystem {
     if (held?.item?.id !== 'mc:bow' || !canFire(ticks)) return true;
     const creative = this.game.player?.gamemode === 'creative';
     const inventory = this.game.inventory;
-    if (!creative && inventory.remove('mc:arrow', 1) !== 1) {
+    const infinity = enchantmentLevel(held, 'infinity') > 0;
+    if (!creative && inventory.countOf('mc:arrow') < 1) {
       this.game.ui?.toast('Нужны стрелы!', { error: true });
       return true;
     }
+    if (!creative && !infinity) inventory.remove('mc:arrow', 1);
     const player = this.game.player;
     const direction = aimVector(player.yaw, player.pitch);
-    const power = drawPower(ticks);
-    this.arrows.push(createArrow(
+    const draw = drawPower(ticks);
+    const powerLevel = enchantmentLevel(held, 'power');
+    const arrow = createArrow(
       player.x + direction[0] * 0.45,
       player.eyeY + direction[1] * 0.45,
       player.z + direction[2] * 0.45,
-      direction, power,
-    ));
+      direction, draw,
+    );
+    // Java Power adds 25% of base damage per level, plus a small flat bonus.
+    arrow.damage += powerLevel > 0 ? Math.floor(arrow.damage * (0.25 * powerLevel) + 0.5) : 0;
+    arrow.punchLevel = enchantmentLevel(held, 'punch');
+    arrow.flame = enchantmentLevel(held, 'flame') > 0;
+    this.arrows.push(arrow);
     if (!creative) inventory.damageHeld(1);
     this.game.sounds?.play('bow');
     return true;
@@ -547,6 +555,14 @@ export class MobSystem {
         mob.hurtTicks = 10;
         mob.anim.hurt = 1;
         mob.playerDamageTicks = 100;
+        if (arrow.flame) mob.fireTicks = Math.max(mob.fireTicks || 0, 100);
+        if (arrow.punchLevel > 0) {
+          const length = Math.max(0.001, Math.hypot(arrow.vx, arrow.vz));
+          const impulse = 0.35 * arrow.punchLevel;
+          mob.knockbackX = (arrow.vx / length) * impulse;
+          mob.knockbackZ = (arrow.vz / length) * impulse;
+          mob.pauseTicks = 0;
+        }
         if (arrow.isTrident && arrow.loyaltyLevel > 0) { arrow.returning = true; continue; }
         if (arrow.isTrident) { this.arrows.splice(i, 1); continue; }
         if (arrow.piercingLevel > 0) {
@@ -1608,6 +1624,13 @@ export class MobSystem {
       if (mob.ageTicks < 0) mob.ageTicks++;
       if (mob.boostCooldown > 0) mob.boostCooldown--;
       if (mob.playerDamageTicks > 0) mob.playerDamageTicks--;
+      if (mob.fireTicks > 0) {
+        mob.fireTicks--;
+        if (mob.fireTicks % 20 === 0) {
+          mob.health = Math.max(0, mob.health - 1);
+          mob.hurtTicks = Math.max(mob.hurtTicks || 0, 4);
+        }
+      }
       if (mob.loveTicks > 0) mob.loveTicks--;
       if (mob.breedCooldown > 0) mob.breedCooldown--;
       mob.thinkTicks--;
