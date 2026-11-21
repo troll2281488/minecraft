@@ -1,5 +1,5 @@
 import { describe, it, assertEqual } from './framework.js';
-import { fireworkBlastImpacts, FIREWORK_BLAST } from '../src/game/firework_explosion.js';
+import { fireworkBlastImpacts, creeperBlastImpacts, FIREWORK_BLAST } from '../src/game/firework_explosion.js';
 import { MobSystem } from '../src/entity/mobs.js';
 import { Player } from '../src/entity/player.js';
 import { Inventory } from '../src/game/inventory.js';
@@ -14,6 +14,18 @@ describe('firework rocket blast damage', () => {
     assertEqual(impacts[0].damage > 0 && impacts[0].damage < FIREWORK_BLAST.MAX_DAMAGE, true);
     assertEqual(impacts[0].knockbackX > 0, true);
     assertEqual(impacts[0].knockbackZ, 0);
+  });
+
+  it('uses a larger, stronger blast for charged creepers and excludes the source', () => {
+    const source = { id: 1, type: 'creeper', x: 0, y: 64, z: 0, health: 20 };
+    const near = { id: 2, type: 'zombie', x: 3, y: 64, z: 0, health: 20 };
+    const distant = { id: 3, type: 'skeleton', x: 6, y: 64, z: 0, health: 20 };
+    const normal = creeperBlastImpacts([source, near, distant], source, false);
+    const charged = creeperBlastImpacts([source, near, distant], source, true);
+    assertEqual(normal.some((impact) => impact.mob === source), false);
+    assertEqual(normal.length, 1);
+    assertEqual(charged.length, 2);
+    assertEqual(charged.find((impact) => impact.mob === near).damage > normal[0].damage, true);
   });
 
   it('ignores dead entities, invalid positions, and targets outside the blast radius', () => {
