@@ -3,7 +3,7 @@ import { describe, it, assert, assertEqual } from './framework.js';
 import { BLOCKS } from '../src/world/block.js';
 import { ITEMS } from '../src/world/item.js';
 import { RECIPES } from '../src/game/recipes.js';
-import { hiveHarvestResult, HIVE_MAX_HONEY } from '../src/game/bee_hives.js';
+import { hiveHarvestResult, hasCampfireSmoke, HIVE_MAX_HONEY } from '../src/game/bee_hives.js';
 
 describe('bee nest and beehive harvesting', () => {
   it('registers both hive blocks with persisted 0..5 honey levels', () => {
@@ -21,6 +21,29 @@ describe('bee nest and beehive harvesting', () => {
     assert(honey, 'honey bottle missing');
     assertEqual(honey.stackSize, 16);
     assertEqual(honey.food.nutrition, 6);
+  });
+
+  it('accepts an unobstructed campfire smoke column below the hive', () => {
+    const world = { getBlock(x, y, z) {
+      return { block: { id: x === 2 && y === 8 && z === 3 ? 'mc:campfire' : 'mc:air' } };
+    } };
+    assertEqual(hasCampfireSmoke(world, 2, 10, 3), true);
+  });
+
+  it('rejects smoke when a solid block blocks the column', () => {
+    const world = { getBlock(x, y, z) {
+      const id = x === 0 && y === 8 && z === 0 ? 'mc:campfire'
+        : x === 0 && y === 9 && z === 0 ? 'mc:stone' : 'mc:air';
+      return { block: { id } };
+    } };
+    assertEqual(hasCampfireSmoke(world, 0, 10, 0), false);
+  });
+
+  it('does not accept campfires outside the five-block smoke range', () => {
+    const world = { getBlock(x, y, z) {
+      return { block: { id: x === 0 && y === 4 && z === 0 ? 'mc:campfire' : 'mc:air' } };
+    } };
+    assertEqual(hasCampfireSmoke(world, 0, 10, 0), false);
   });
 
   it('requires a full hive before harvesting', () => {
