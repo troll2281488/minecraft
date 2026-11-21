@@ -112,6 +112,7 @@ export const PROPS = {
   west: boolProp('west'),
   up: boolProp('up'),
   wallConnection: enumProp('wall_connection', ['none', 'low', 'tall']),
+  railShape: enumProp('shape', ['north_south', 'east_west', 'ascending_east', 'ascending_west', 'ascending_north', 'ascending_south', 'south_east', 'south_west', 'north_west', 'north_east']),
   down: boolProp('down'),
 };
 

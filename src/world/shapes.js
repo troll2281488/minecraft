@@ -281,6 +281,43 @@ function repeaterBoxes() {
 
 
 // ---------------------------------------------------------------------------
+// Rails: low track profile with separate sleepers and metal rails.
+// ---------------------------------------------------------------------------
+function railBoxes(state) {
+  const shape = state.get('shape') || 'north_south';
+  const alongX = shape === 'east_west' || shape === 'ascending_east' || shape === 'ascending_west';
+  const curve = ['south_east', 'south_west', 'north_west', 'north_east'].includes(shape);
+  const boxes = [];
+  const y = 0.0625;
+  const railY = 0.095;
+  if (curve) {
+    // Curves keep a compact cross-shaped footprint until the curved mesh model is available.
+    boxes.push([0.08, y, 0.08, 0.92, railY, 0.92]);
+    boxes.push([0.08, railY, 0.08, 0.16, 0.16, 0.92], [0.84, railY, 0.08, 0.92, 0.16, 0.92]);
+    boxes.push([0.08, railY, 0.08, 0.92, 0.16, 0.16], [0.08, railY, 0.84, 0.92, 0.16, 0.92]);
+    return boxes;
+  }
+  const slope = shape.startsWith('ascending_');
+  const riseSign = shape === 'ascending_east' || shape === 'ascending_south' ? 1 : -1;
+  for (let i = 0; i < 4; i++) {
+    const t = (i + 0.5) / 4;
+    const step = slope ? (riseSign > 0 ? t : 1 - t) * 0.75 : 0;
+    if (alongX) {
+      const x0 = i * 0.25;
+      boxes.push([x0, 0.0125, 0.08, x0 + 0.20, 0.06, 0.92]);
+      boxes.push([x0, 0.07 + step, 0.13, x0 + 0.20, 0.12 + step, 0.19]);
+      boxes.push([x0, 0.07 + step, 0.81, x0 + 0.20, 0.12 + step, 0.87]);
+    } else {
+      const z0 = i * 0.25;
+      boxes.push([0.08, 0.0125, z0, 0.92, 0.06, z0 + 0.20]);
+      boxes.push([0.13, 0.07 + step, z0, 0.19, 0.12 + step, z0 + 0.20]);
+      boxes.push([0.81, 0.07 + step, z0, 0.87, 0.12 + step, z0 + 0.20]);
+    }
+  }
+  return boxes;
+}
+
+// ---------------------------------------------------------------------------
 // Fences and fence gates
 // ---------------------------------------------------------------------------
 
@@ -442,6 +479,7 @@ export function shapeBoxes(state, getNeighbor = null) {
     case 'redstone_wire': return redstoneWireBoxes();
     case 'repeater': return repeaterBoxes();
     case 'piston_head': return pistonHeadBoxes(state);
+    case 'rail': return railBoxes(state);
     default: return FULL_LIST;
   }
 }
@@ -459,8 +497,8 @@ export function collisionBoxes(state, getNeighbor = null) {
 /** True if this block is anything other than a plain full cube. */
 export function isNonCube(state) {
   const shape = state.block.renderShape;
-  return shape === 'slab' || shape === 'stair' || shape === 'pane' || shape === 'ladder' || shape === 'door' || shape === 'trapdoor' || shape === 'fence' || shape === 'wall' || shape === 'fence_gate' || shape === 'button' || shape === 'lever' || shape === 'pressure_plate' || shape === 'weighted_pressure_plate' || shape === 'redstone_wire' || shape === 'repeater' || shape === 'piston_head';
+  return shape === 'slab' || shape === 'stair' || shape === 'pane' || shape === 'ladder' || shape === 'door' || shape === 'trapdoor' || shape === 'fence' || shape === 'wall' || shape === 'fence_gate' || shape === 'button' || shape === 'lever' || shape === 'pressure_plate' || shape === 'weighted_pressure_plate' || shape === 'redstone_wire' || shape === 'repeater' || shape === 'piston_head' || shape === 'rail';
 }
 
 /** The shapes the mesher must render with the box emitter rather than as a cube. */
-export const BOX_SHAPES = Object.freeze(new Set(['slab', 'stair', 'pane', 'ladder', 'door', 'trapdoor', 'fence', 'wall', 'fence_gate', 'button', 'lever', 'pressure_plate', 'weighted_pressure_plate', 'redstone_wire', 'repeater', 'piston_head']));
+export const BOX_SHAPES = Object.freeze(new Set(['slab', 'stair', 'pane', 'ladder', 'door', 'trapdoor', 'fence', 'wall', 'fence_gate', 'button', 'lever', 'pressure_plate', 'weighted_pressure_plate', 'redstone_wire', 'repeater', 'piston_head', 'rail']));

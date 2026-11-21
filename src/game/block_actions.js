@@ -33,6 +33,7 @@ import { absorbWaterAround } from './sponge.js';
 import { POTION_ITEMS } from '../entity/status_effects.js';
 import { planCampfireFoodInteraction } from './campfire_cooking.js';
 import { findEnderPearlLanding } from './ender_pearl.js';
+import { isRailBlock } from './railways.js';
 
 export const BlockActionsMixin = {
   _refreshWallConnections(...positions) {
@@ -134,6 +135,24 @@ export const BlockActionsMixin = {
   },
 
   _useOrPlace() {
+    if (this.hit && isRailBlock(this.hit.state)) {
+      const held = this.inventory?.held;
+      if (held?.item?.id === 'mc:minecart') {
+        if (this.multiplayer?.roomId) {
+          this.ui.toast('Вагонетки пока доступны только в одиночном мире', { error: true });
+          return;
+        }
+        const cart = this.minecarts?.placeAt(this.hit);
+        if (!cart) { this.ui.toast('Нельзя поставить вагонетку здесь'); return; }
+        if (this.player.gamemode === GAMEMODE.SURVIVAL) this.inventory.consumeHeld(1);
+        this.ui.toast('Вагонетка установлена. W — разгон, S — тормоз, Shift — выйти.');
+        return;
+      }
+      if ((!held || held.isEmpty) && this.minecarts?.mountNearest()) {
+        this.ui.toast('Ты сел в вагонетку');
+        return;
+      }
+    }
     if (this.inventory?.held?.item?.id === 'mc:ender_pearl') {
       const last = this.player.lastEnderPearlUse ?? -1000;
       if (this.tickCount - last < 20) {
@@ -230,6 +249,11 @@ export const BlockActionsMixin = {
       let target = null;
       if (heldItem.id !== 'mc:bucket') target = placementTarget(this.world, this.hit);
       const targetState = target ? this.world.getBlock(target.x, target.y, target.z) : null;
+      if (target && heldItem.block && BLOCKS.get(heldItem.block)?.renderShape === 'rail' &&
+          !this.world.getBlock(target.x, target.y - 1, target.z).block.solid) {
+        this.ui.toast('Рельсам нужна твёрдая опора снизу', { error: true });
+        return;
+      }
       const plan = planBucketInteraction(
         heldItem.id, hitState.block.id, hitState.get('level'), targetState?.block,
       );

@@ -734,6 +734,20 @@ define('mc:lava', { hardness: 100, resistance: 100, solid: false, opaqueCube: fa
 define('mc:portal', { hardness: -1, resistance: 0, solid: false, opaqueCube: false, opacity: 0, replaceable: false, renderShape: 'translucent', soundGroup: 'none', texture: 'purple_stained_glass', notInCreative: true });
 
 // ---------------------------------------------------------------------------
+// Rail transport blocks (Java 1.19)
+// ---------------------------------------------------------------------------
+for (const [id, properties, defaults] of [
+  ['mc:rail', { shape: PROPS.railShape }, { shape: 'north_south' }],
+  ['mc:powered_rail', { shape: PROPS.railShape, powered: PROPS.powered }, { shape: 'north_south', powered: false }],
+  ['mc:detector_rail', { shape: PROPS.railShape, powered: PROPS.powered }, { shape: 'north_south', powered: false }],
+  ['mc:activator_rail', { shape: PROPS.railShape, powered: PROPS.powered }, { shape: 'north_south', powered: false }],
+]) define(id, {
+  hardness: 0.7, resistance: 0.7, tool: 'pickaxe', soundGroup: 'metal',
+  solid: false, opaqueCube: false, opacity: 0, renderShape: 'rail',
+  texture: 'iron_block', properties, defaultValues: defaults,
+});
+
+// ---------------------------------------------------------------------------
 // Slabs and stairs (Phase 2 box-model shapes)
 //
 // One definition each, keyed off a base block's material. The box geometry and
@@ -844,6 +858,7 @@ const MATERIALS = [
   ['mc:emerald', {}],
   ['mc:lapis_lazuli', {}],
   ['mc:goat_horn', { stackSize: 1, rarity: 'uncommon' }],
+  ['mc:minecart', { stackSize: 1 }],
   ['mc:redstone', { block: 'mc:redstone_wire' }],
   ['mc:flint', {}],
   ['mc:blaze_powder', {}],
