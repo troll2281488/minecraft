@@ -3,16 +3,35 @@ import { rollFishingCatch } from '../src/entity/mobs.js';
 import '../src/world/blocks/index.js';
 import { ITEMS } from '../src/world/item.js';
 
-describe('fishing', () => {
-  it('catches cod and salmon using the vanilla fish-weight ordering', () => {
-    assertEqual(rollFishingCatch(() => 0.1).id, 'mc:raw_cod');
-    assertEqual(rollFishingCatch(() => 0.7).id, 'mc:raw_salmon');
+function sequence(values) {
+  let index = 0;
+  return () => values[index++] ?? 0;
+}
+
+describe('Java 1.19 fishing loot', () => {
+  it('uses the fish category for 85 percent of unenchanted catches', () => {
+    assertEqual(rollFishingCatch(sequence([0.849, 0.1])).id, 'mc:raw_cod');
+    assertEqual(rollFishingCatch(sequence([0.2, 0.7])).id, 'mc:raw_salmon');
+    assertEqual(rollFishingCatch(sequence([0.2, 0.9])).id, 'mc:pufferfish');
+    assertEqual(rollFishingCatch(sequence([0.2, 0.99])).id, 'mc:tropical_fish');
   });
-  it('can catch pufferfish and tropical fish', () => {
-    assertEqual(rollFishingCatch(() => 0.9).id, 'mc:tropical_fish');
-    assertEqual(rollFishingCatch(() => 0.87).id, 'mc:pufferfish');
+  it('separates junk and treasure category boundaries', () => {
+    assertEqual(rollFishingCatch(sequence([0.85, 0])).id, 'mc:lily_pad');
+    assertEqual(rollFishingCatch(sequence([0.949, 0.999])).id, 'mc:lily_pad');
+    assertEqual(rollFishingCatch(sequence([0.95, 0])).id, 'mc:bow');
+    assertEqual(rollFishingCatch(sequence([0.999, 0.999])).id, 'mc:saddle');
   });
-  it('has a craftable, damageable fishing rod item', () => {
+  it('registers every item returned by the expanded loot table', () => {
+    const catches = [
+      'mc:raw_cod', 'mc:raw_salmon', 'mc:pufferfish', 'mc:tropical_fish',
+      'mc:lily_pad', 'mc:leather_boots', 'mc:rotten_flesh', 'mc:stick',
+      'mc:string', 'mc:water_bottle', 'mc:bone', 'mc:ink_sac',
+      'mc:tripwire_hook', 'mc:bow', 'mc:enchanted_book', 'mc:fishing_rod',
+      'mc:name_tag', 'mc:nautilus_shell', 'mc:saddle',
+    ];
+    for (const id of catches) assertEqual(Boolean(ITEMS.get(id)), true);
+  });
+  it('keeps a craftable, damageable fishing rod item', () => {
     assertEqual(ITEMS.get('mc:fishing_rod').maxDamage, 64);
     assertEqual(ITEMS.get('mc:fishing_rod').tool, 'fishing_rod');
   });
