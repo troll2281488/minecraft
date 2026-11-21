@@ -108,6 +108,7 @@ export const PROPS = {
   east: boolProp('east'),
   west: boolProp('west'),
   up: boolProp('up'),
+  wallConnection: enumProp('wall_connection', ['none', 'low', 'tall']),
   down: boolProp('down'),
 };
 
