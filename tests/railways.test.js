@@ -1,4 +1,5 @@
 import { describe, it, assert, assertEqual } from './framework.js';
+import '../src/world/blocks/index.js';
 import {
   deriveRailShape, refreshRailNetwork, railDirection, advanceMinecart,
   MinecartSystem, isRailBlock, railHasRedstonePower, tickRailNetwork,
@@ -116,6 +117,17 @@ describe('Minecart movement and transport', () => {
     assertEqual(restored.carts[0].speed, cart.speed);
     restored.loadFrom([{ x: NaN, y: 64, z: 0, vx: 0, vz: 0, speed: 0, yaw: 0 }]);
     assertEqual(restored.carts.length, 0);
+  });
+
+  it('lets players break a targeted cart and returns the minecart item', () => {
+    const drops = [];
+    const player = { x: 0.5, y: 64, z: 0.5, yaw: 0, pitch: 0, eyeY: 65.62 };
+    const system = new MinecartSystem({ player, entities: { spawnItemStackAt: (...args) => drops.push(args) }, sounds: { play() {} } });
+    system.carts.push({ id: 1, x: 0.5, y: 64.12, z: 2.5, speed: 0, vx: 0, vz: 0, yaw: 0 });
+    assertEqual(system.attackFromPlayer(), true);
+    assertEqual(system.carts.length, 0);
+    assertEqual(drops.length, 1);
+    assertEqual(drops[0][0].item.id, 'mc:minecart');
   });
 
   it('ejects riders when a powered activator rail is crossed', () => {
