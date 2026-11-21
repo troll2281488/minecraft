@@ -28,7 +28,8 @@ export function awardAdvancementCriterion(state, advancementId, criterion, times
   const definition = ADVANCEMENTS[advancementId];
   const current = state?.[advancementId];
   if (!definition || !current || current.done || !definition.criteria.includes(criterion)) return { awarded: false, completed: false };
-  if (!current.criteria.includes(criterion)) current.criteria.push(criterion);
+  if (current.criteria.includes(criterion)) return { awarded: false, completed: current.done };
+  current.criteria.push(criterion);
   current.done = definition.criteria.every((key) => current.criteria.includes(key));
   if (current.done) current.completedAt = Number.isFinite(timestamp) ? Math.max(0, timestamp) : 0;
   return { awarded: true, completed: current.done, advancementId, criterion };
