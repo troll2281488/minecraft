@@ -728,18 +728,22 @@ export const BlockActionsMixin = {
       this.multiplayer?.pushBlockChange(target.x, target.y + 1, target.z, upper);
     } else {
       if (!this.world.setBlock(target.x, target.y, target.z, state)) return;
-      this.multiplayer?.pushBlockChange(target.x, target.y, target.z, state);
+      if (block.id !== 'mc:sponge') this.multiplayer?.pushBlockChange(target.x, target.y, target.z, state);
     }
     if (block.id === 'mc:sponge') {
       const absorbed = absorbWaterAround(this.world, target.x, target.y, target.z);
       if (absorbed.length > 0) {
-        const wet = BLOCKS.get('mc:wet_sponge')?.defaultState;
+        const wet = this.world.dimension === 'nether'
+          ? BLOCKS.get('mc:sponge')?.defaultState
+          : BLOCKS.get('mc:wet_sponge')?.defaultState;
         if (wet && this.world.setBlock(target.x, target.y, target.z, wet)) {
           this.multiplayer?.pushBlockChanges?.([
             ...absorbed,
             { x: target.x, y: target.y, z: target.z, state: wet },
           ]);
         }
+      } else {
+        this.multiplayer?.pushBlockChange(target.x, target.y, target.z, state);
       }
     }
     this._refreshWallConnections({ x: target.x, y: target.y, z: target.z },
