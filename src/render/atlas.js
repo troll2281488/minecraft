@@ -824,6 +824,37 @@ TEXTURES.slime_block = () => {
   return tile;
 };
 
+TEXTURES.honey_block = () => {
+  const tile = grainy(hex(0xd99b28), 0.1, 'honey_block');
+  const amber = hex(0xb87518), light = hex(0xf2c45b), pale = hex(0xffdf83);
+  // Uneven amber bands and a few bright honey glints keep the tile readable
+  // without using external copyrighted texture assets.
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    let c = (y < 3 || y > 12) ? amber : (y < 6 || y > 9) ? light : hex(0xe5ad3c);
+    if ((x * 5 + y * 3) % 19 === 0) c = pale;
+    setPx(tile, x, y, c[0], c[1], c[2]);
+  }
+  return tile;
+};
+
+TEXTURES.honeycomb_block = () => {
+  const tile = grainy(hex(0xd99a27), 0.07, 'honeycomb_block');
+  const outline = hex(0x9a5d18), edge = hex(0xf4c04b), center = hex(0xffdf75);
+  // Repeating offset hex cells, drawn as pixel-art honeycomb.
+  for (let row = -1; row < 4; row++) for (let col = -1; col < 4; col++) {
+    const cx = col * 8 + (row % 2) * 4 + 4;
+    const cy = row * 6 + 3;
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+      const ax = Math.abs(dx), ay = Math.abs(dy);
+      if (ax + ay * 0.58 > 4.2) continue;
+      const x = (cx + dx + 32) % 16, y = (cy + dy + 32) % 16;
+      const c = ax + ay * 0.58 > 3.3 ? outline : ax + ay * 0.58 > 2.4 ? edge : center;
+      setPx(tile, x, y, c[0], c[1], c[2]);
+    }
+  }
+  return tile;
+};
+
 TEXTURES.piston_side = () => {
   const tile = grainy(hex(0x777777), 0.12, 'piston_side');
   const stone = hex(0x777777), wood = hex(0x9b6a3b), dark = hex(0x4b3423), iron = hex(0xb8b8b8);

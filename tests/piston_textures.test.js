@@ -4,8 +4,8 @@ import { BLOCKS } from '../src/world/block.js';
 import { buildBlockTextureTable } from '../src/render/atlas.js';
 
 const textureIndex = new Map([
-  ['stone', 0], ['piston_side', 1], ['piston_bottom', 2],
-  ['piston_top', 3], ['sticky_piston_top', 4],
+  ['stone', 0], ['piston_side', 1], ['piston_bottom', 2], ['honey_block', 5],
+  ['piston_top', 3], ['sticky_piston_top', 4], ['honeycomb_block', 6],
 ]);
 
 function faceLayers(state) {
@@ -14,6 +14,16 @@ function faceLayers(state) {
 }
 
 describe('piston texture orientation', () => {
+  it('assigns the honeycomb pattern texture to the honeycomb block', () => {
+    const state = BLOCKS.get('mc:honeycomb_block').defaultState;
+    assertEqual(faceLayers(state).every((layer) => layer === 6), true);
+  });
+
+  it('assigns the dedicated honey texture to every honey block face', () => {
+    const state = BLOCKS.get('mc:honey_block').defaultState;
+    assertEqual(faceLayers(state).every((layer) => layer === 5), true);
+  });
+
   it('places the piston top texture on the facing face for all six directions', () => {
     const faces = {
       down: 0, up: 1, north: 2, south: 3, west: 4, east: 5,

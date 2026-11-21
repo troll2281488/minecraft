@@ -125,6 +125,7 @@ export class Player {
     this._applyInput(slipperiness);
     this._applyLadderMovement(world);
     this._applyCobwebSlowdown(world);
+    this._applyHoneyBlockSlide(world);
     this._move(world);
     const moved = Math.hypot(this.x - oldX, this.z - oldZ);
     if (this.inWater) this.walkPhase += 0.12;
@@ -166,6 +167,39 @@ export class Player {
           this.vy *= 0.05;
           this.vz *= 0.25;
           return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Honey blocks let a falling player slide slowly down an adjacent vertical
+   * face. Check only the four horizontal faces; standing on top of honey is
+   * handled by its slipperiness and does not trigger wall sliding.
+   */
+  _applyHoneyBlockSlide(world) {
+    if (this.vy >= 0) return false;
+    const box = this.boundingBox();
+    const epsilon = 0.055;
+    const minX = Math.floor(box.minX) - 1, maxX = Math.floor(box.maxX) + 1;
+    const minY = Math.floor(box.minY), maxY = Math.floor(box.maxY - 1e-7);
+    const minZ = Math.floor(box.minZ) - 1, maxZ = Math.floor(box.maxZ) + 1;
+
+    for (let y = minY; y <= maxY; y++) {
+      for (let z = minZ; z <= maxZ; z++) {
+        for (let x = minX; x <= maxX; x++) {
+          if (world.getBlock(x, y, z).block.id !== 'mc:honey_block') continue;
+          const overlapsY = box.maxY > y + 1e-5 && box.minY < y + 1 - 1e-5;
+          const overlapsX = box.maxX > x + 1e-5 && box.minX < x + 1 - 1e-5;
+          const overlapsZ = box.maxZ > z + 1e-5 && box.minZ < z + 1 - 1e-5;
+          const touchesX = Math.abs(box.maxX - x) <= epsilon || Math.abs(box.minX - (x + 1)) <= epsilon;
+          const touchesZ = Math.abs(box.maxZ - z) <= epsilon || Math.abs(box.minZ - (z + 1)) <= epsilon;
+          if (overlapsY && ((touchesX && overlapsZ) || (touchesZ && overlapsX))) {
+            this.vy = Math.max(this.vy, -0.05);
+            this.fallDistance = 0;
+            return true;
+          }
         }
       }
     }
