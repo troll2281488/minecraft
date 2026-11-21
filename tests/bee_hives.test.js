@@ -25,6 +25,23 @@ describe('bee nest and beehive harvesting', () => {
     assertEqual(honey.food.nutrition, 6);
   });
 
+  it('registers campfires with a persistent lit state', () => {
+    const campfire = BLOCKS.get('mc:campfire');
+    assert(campfire, 'campfire missing');
+    assertEqual(campfire.defaultState.get('lit'), true);
+    assertEqual(campfire.defaultState.with('lit', false).get('lit'), false);
+  });
+
+  it('does not treat an extinguished campfire as a smoke source', () => {
+    const world = { getBlock(x, y, z) {
+      if (x === 2 && y === 8 && z === 3) {
+        return { block: { id: 'mc:campfire' }, get: () => false };
+      }
+      return { block: { id: 'mc:air' }, get: () => undefined };
+    } };
+    assertEqual(hasCampfireSmoke(world, 2, 10, 3), false);
+  });
+
   it('accepts an unobstructed campfire smoke column below the hive', () => {
     const world = { getBlock(x, y, z) {
       return { block: { id: x === 2 && y === 8 && z === 3 ? 'mc:campfire' : 'mc:air' } };
