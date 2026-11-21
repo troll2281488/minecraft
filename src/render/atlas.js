@@ -837,6 +837,24 @@ TEXTURES.honey_block = () => {
   return tile;
 };
 
+TEXTURES.honeycomb_block = () => {
+  const tile = grainy(hex(0xd99a27), 0.07, 'honeycomb_block');
+  const outline = hex(0x9a5d18), edge = hex(0xf4c04b), center = hex(0xffdf75);
+  // Repeating offset hex cells, drawn as pixel-art honeycomb.
+  for (let row = -1; row < 4; row++) for (let col = -1; col < 4; col++) {
+    const cx = col * 8 + (row % 2) * 4 + 4;
+    const cy = row * 6 + 3;
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+      const ax = Math.abs(dx), ay = Math.abs(dy);
+      if (ax + ay * 0.58 > 4.2) continue;
+      const x = (cx + dx + 32) % 16, y = (cy + dy + 32) % 16;
+      const c = ax + ay * 0.58 > 3.3 ? outline : ax + ay * 0.58 > 2.4 ? edge : center;
+      setPx(tile, x, y, c[0], c[1], c[2]);
+    }
+  }
+  return tile;
+};
+
 TEXTURES.piston_side = () => {
   const tile = grainy(hex(0x777777), 0.12, 'piston_side');
   const stone = hex(0x777777), wood = hex(0x9b6a3b), dark = hex(0x4b3423), iron = hex(0xb8b8b8);
