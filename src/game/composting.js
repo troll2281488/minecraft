@@ -80,6 +80,16 @@ export function compostRoll(seed, x, y, z, tick, itemId) {
   return value / 0x100000000;
 }
 
+const BONE_MEAL_CROPS = new Set([
+  'mc:wheat', 'mc:carrots', 'mc:potatoes', 'mc:beetroots',
+  'mc:pumpkin_stem', 'mc:melon_stem',
+]);
+
+/** The registered ageable crop blocks that accept bone meal. */
+export function canApplyBoneMeal(blockId, age) {
+  return BONE_MEAL_CROPS.has(blockId) && Number.isInteger(age) && age >= 0 && age < 7;
+}
+
 /** Bone meal advances ageable crops by 2–5 stages, capped at full maturity. */
 export function boneMealAge(age, seed, x, y, z, tick) {
   if (!Number.isInteger(age) || age < 0 || age >= 7) return null;
