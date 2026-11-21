@@ -6,6 +6,7 @@ import { RECIPES } from '../src/game/recipes.js';
 import {
   withEnchantment, enchantmentLevel, generateEnchantingOffers,
   applyEnchantingOffer, countEnchantingBookshelves, repairWithMending, fishingWaitTicks,
+  protectionEnchantmentPoints, protectionDamageMultiplier,
 } from '../src/game/enchantments.js';
 
 describe('Java 1.19 enchanting table, Mending and Lure', () => {
@@ -51,6 +52,14 @@ describe('Java 1.19 enchanting table, Mending and Lure', () => {
     blocks.set(key(1, 0, 1), 'mc:stone');
     const world = { getBlock: (x, y, z) => ({ block: { id: blocks.get(key(x, y, z)) || 'mc:air' } }) };
     assertEqual(countEnchantingBookshelves(world, 0, 0, 0), 2);
+  });
+  it('applies Protection to armor damage and caps the EPF at twenty', () => {
+    const chest = withEnchantment(ItemStack.of('mc:iron_chestplate'), 'protection', 4);
+    const legs = withEnchantment(ItemStack.of('mc:iron_leggings'), 'protection', 4);
+    assertEqual(protectionEnchantmentPoints([chest, legs]), 8);
+    assertEqual(protectionDamageMultiplier([chest, legs]), 0.68);
+    assertEqual(protectionEnchantmentPoints(Array(6).fill(chest)), 20);
+    assertEqual(protectionDamageMultiplier([]), 1);
   });
   it('reduces fishing wait by 100 ticks per Lure level', () => {
     const rod = ItemStack.of('mc:fishing_rod');
