@@ -642,6 +642,12 @@ define('mc:composter', {
   properties: { level: PROPS.composterLevel }, defaultValues: { level: 0 },
 });
 
+define('mc:cauldron', {
+  hardness: 2, resistance: 2, tool: 'pickaxe', soundGroup: 'stone',
+  texture: 'cauldron',
+  properties: { level: PROPS.level }, defaultValues: { level: 0 },
+});
+
 define('mc:wheat', {
   hardness: 0, resistance: 0, solid: false, opaqueCube: false, opacity: 0,
   replaceable: true, renderShape: 'cross', soundGroup: 'grass',
@@ -826,6 +832,7 @@ const MATERIALS = [
   ['mc:slime_ball', {}],
   ['mc:honeycomb', {}],
   ['mc:glass_bottle', {}],
+  ['mc:water_bottle', {}],
   ['mc:glowstone_dust', {}],
   ['mc:bone', {}],
   ['mc:bone_meal', {}],
