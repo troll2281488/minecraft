@@ -28,6 +28,7 @@ import { refreshWallConnections } from './wall_updates.js';
 import { planBucketInteraction } from './bucket.js';
 import { planCauldronInteraction } from './cauldron.js';
 import { canSleepAt, hasNearbySleepHostile } from './sleep.js';
+import { weatherAt } from './weather.js';
 import { POTION_ITEMS } from '../entity/status_effects.js';
 
 export const BlockActionsMixin = {
@@ -273,7 +274,8 @@ export const BlockActionsMixin = {
       const nearbyHostile = hasNearbySleepHostile(
         this.entities?.mobs, this.player.x, this.player.y, this.player.z,
       );
-      const sleep = canSleepAt(this.world.dimension, this.world.time, nearbyHostile);
+      const sleep = canSleepAt(this.world.dimension, this.world.time, nearbyHostile,
+        weatherAt(this.world.seed, this.world.time));
       if (!sleep.ok) {
         this.ui.toast(sleep.reason, { error: true });
       } else {
@@ -584,11 +586,7 @@ export const BlockActionsMixin = {
     if (!player || !stack || stack.isEmpty || player.gamemode === GAMEMODE.SPECTATOR) return false;
     const itemId = stack.item.id;
     if (itemId === 'mc:milk_bucket') {
-      if (!player.effects?.size) {
-        this.ui.toast('Нет эффектов, которые можно снять');
-        return true;
-      }
-      player.effects.clear();
+      player.effects?.clear();
       if (player.gamemode === GAMEMODE.SURVIVAL) {
         this.inventory.consumeHeld(1);
         const leftover = this.inventory.addItem('mc:bucket', 1);
