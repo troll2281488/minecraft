@@ -311,29 +311,45 @@ function wallConnects(neighbor) {
 }
 
 function wallBoxes(state, getNeighbor) {
-  const connected = {
-    north: wallConnects(getNeighbor?.(0, 0, -1)),
-    south: wallConnects(getNeighbor?.(0, 0, 1)),
-    west: wallConnects(getNeighbor?.(-1, 0, 0)),
-    east: wallConnects(getNeighbor?.(1, 0, 0)),
+  const neighbors = {
+    north: getNeighbor?.(0, 0, -1),
+    south: getNeighbor?.(0, 0, 1),
+    west: getNeighbor?.(-1, 0, 0),
+    east: getNeighbor?.(1, 0, 0),
   };
+  const connected = Object.fromEntries(
+    Object.entries(neighbors).map(([direction, neighbor]) => [direction, wallConnects(neighbor)]),
+  );
   const mask = (connected.north ? 1 : 0) | (connected.south ? 2 : 0) |
     (connected.west ? 4 : 0) | (connected.east ? 8 : 0);
-  if (WALL_CACHE.has(mask)) return WALL_CACHE.get(mask);
-  const boxes = [[0.25, 0, 0.25, 0.75, 1.5, 0.75]];
+  // Java walls use a taller side profile when joining another wall. Connections
+  // to full opaque cubes use the lower profile.
+  const tallMask = Object.entries(neighbors).reduce((value, [direction, neighbor], index) =>
+    value | (neighbor?.block?.renderShape === 'wall' ? (1 << index) : 0), 0);
+  const straight = (connected.north && connected.south && !connected.west && !connected.east) ||
+    (connected.west && connected.east && !connected.north && !connected.south);
+  // In a straight run the post is hidden unless a solid block directly caps it.
+  const above = getNeighbor?.(0, 1, 0);
+  const post = !straight || above?.block?.solid === true;
+  const key = mask | (tallMask << 4) | (post ? 256 : 0);
+  if (WALL_CACHE.has(key)) return WALL_CACHE.get(key);
+  const boxes = [];
+  if (post) boxes.push([0.25, 0, 0.25, 0.75, 1.5, 0.75]);
   const arms = {
     north: [0.25, 0, 0, 0.75, 0, 0.25],
     south: [0.25, 0, 0.75, 0.75, 0, 1],
     west: [0, 0, 0.25, 0.25, 0, 0.75],
     east: [0.75, 0, 0.25, 1, 0, 0.75],
   };
-  for (const direction of ['north', 'south', 'west', 'east']) {
+  const directions = ['north', 'south', 'west', 'east'];
+  for (let i = 0; i < directions.length; i++) {
+    const direction = directions[i];
     if (!connected[direction]) continue;
     const [x0, , z0, x1, , z1] = arms[direction];
-    boxes.push([x0, 0.25, z0, x1, 0.8125, z1]);
+    boxes.push([x0, 0.25, z0, x1, (tallMask & (1 << i)) ? 0.875 : 0.8125, z1]);
   }
   const frozen = Object.freeze(boxes.map((box) => Object.freeze(box)));
-  WALL_CACHE.set(mask, frozen);
+  WALL_CACHE.set(key, frozen);
   return frozen;
 }
 
