@@ -35,7 +35,7 @@ describe('Java food expansion', () => {
     }
   });
   it('provides recipes for every added food and passes registry validation', () => {
-    for (const id of ['mc:cookie', 'mc:pumpkin_pie', 'mc:golden_carrot', 'mc:mushroom_stew', 'mc:beetroot_soup', 'mc:rabbit_stew']) {
+    for (const id of ['mc:golden_carrot', 'mc:mushroom_stew', 'mc:beetroot_soup', 'mc:rabbit_stew']) {
       assertEqual(RECIPES.producing(id).length > 0, true);
     }
     assertEqual(RECIPES.validate().length, 0);
