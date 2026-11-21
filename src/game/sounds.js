@@ -128,6 +128,17 @@ export class GameSounds {
   }
   play(kind,material='stone'){
     const c=this._ctx();if(!c)return;
+    // Route the game's existing sound calls through the imported Bedrock pack
+    // first. Keep the procedural cue as a reliable fallback for missing events.
+    const packEvent = ({
+      break:'block.break', place:'block.place', hit:'block.hit', step:'block.step',
+      doorOpen:'block.door.open', doorClose:'block.door.close',
+      chestOpen:'block.chest.open', chestClose:'block.chest.close',
+      hurt:'entity.player.hurt', mobHurt:'entity.mob.hurt', mobDeath:'entity.mob.death',
+      pickup:'entity.item.pickup', eat:'item.eat', shoot:'entity.arrow.shoot',
+      explode:'entity.generic.explode', ambient:'entity.mob.ambient',
+    })[kind];
+    if(packEvent && this.bedrockPack?.play(packEvent,this.masterVolume))return true;
     const p=SOUND_PRESETS[kind]||SOUND_PRESETS.hit;
     const now=c.currentTime,gain=c.createGain();
     gain.gain.setValueAtTime(p.volume*this.masterVolume,now);

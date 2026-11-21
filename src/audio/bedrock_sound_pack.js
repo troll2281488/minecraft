@@ -42,14 +42,24 @@ async function readZip(file) {
 }
 function soundBucket(path) {
   const name = path.toLowerCase().replace(/\\/g, '/').split('/').pop().replace(/\.ogg$/, '');
+  // Most Bedrock packs number variants directly (break1.ogg, step3.ogg,
+  // explode2.ogg). Accept an optional numeric suffix or the variants silently
+  // decode without ever being assigned to a playable event bucket.
+  const variant = '(?:\\d+)?';
   const rules = [
-    ['break', /(^|[._-])(break|destroy)([._-]|$)/], ['place', /(^|[._-])(place|put_down)([._-]|$)/],
-    ['hit', /(^|[._-])(hit|impact)([._-]|$)/], ['step', /(^|[._-])(step|footstep)([._-]|$)/],
-    ['hurt', /(^|[._-])(hurt|damage)([._-]|$)/], ['death', /(^|[._-])(death|die)([._-]|$)/],
-    ['ambient', /(^|[._-])(ambient|idle|living)([._-]|$)/], ['open', /(^|[._-])open([._-]|$)/],
-    ['close', /(^|[._-])close([._-]|$)/], ['pickup', /(^|[._-])(pickup|pop)([._-]|$)/],
-    ['eat', /(^|[._-])(eat|burp)([._-]|$)/], ['shoot', /(^|[._-])(shoot|fire)([._-]|$)/],
-    ['explode', /(^|[._-])(explode|explosion)([._-]|$)/],
+    ['break', new RegExp('(^|[._-])(break|destroy)' + variant + '([._-]|$)')],
+    ['place', new RegExp('(^|[._-])(place|put_down)' + variant + '([._-]|$)')],
+    ['hit', new RegExp('(^|[._-])(hit|impact)' + variant + '([._-]|$)')],
+    ['step', new RegExp('(^|[._-])(step|footstep)' + variant + '([._-]|$)')],
+    ['hurt', new RegExp('(^|[._-])(hurt|damage)' + variant + '([._-]|$)')],
+    ['death', new RegExp('(^|[._-])(death|die)' + variant + '([._-]|$)')],
+    ['ambient', new RegExp('(^|[._-])(ambient|ambience|idle|living)' + variant + '([._-]|$)')],
+    ['open', new RegExp('(^|[._-])open' + variant + '([._-]|$)')],
+    ['close', new RegExp('(^|[._-])close' + variant + '([._-]|$)')],
+    ['pickup', new RegExp('(^|[._-])(pickup|pop)' + variant + '([._-]|$)')],
+    ['eat', new RegExp('(^|[._-])(eat|burp)' + variant + '([._-]|$)')],
+    ['shoot', new RegExp('(^|[._-])(shoot|fire)' + variant + '([._-]|$)')],
+    ['explode', new RegExp('(^|[._-])(explode|explosion)' + variant + '([._-]|$)')],
   ];
   return rules.find(([, re]) => re.test(name))?.[0] ?? null;
 }
