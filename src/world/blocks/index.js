@@ -306,6 +306,11 @@ define('mc:mycelium', {
 // Functional
 // ---------------------------------------------------------------------------
 
+define('mc:campfire', {
+  hardness: 2, resistance: 2, tool: 'axe', soundGroup: 'wood',
+  flammability: 5, lightEmission: 15, texture: 'campfire',
+});
+
 for (const id of ['mc:bee_nest', 'mc:beehive']) {
   define(id, {
     hardness: 0.6, resistance: 0.6, tool: 'axe', soundGroup: 'wood',
