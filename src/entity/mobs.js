@@ -7,7 +7,7 @@ import { createVillagerProfile } from './villager_trades.js';
 import { drawPower, canFire } from '../game/bow.js';
 import { aimVector, createArrow, stepArrow } from './arrows.js';
 import { tickBeeForaging } from '../game/bee_hives.js';
-import { enchantmentDamageBonus } from '../game/enchantments.js';
+import { enchantmentDamageBonus, enchantmentLevel } from '../game/enchantments.js';
 
 /**
  * Lightweight voxel creature simulation. Mobs use deterministic game ticks,
@@ -209,8 +209,10 @@ const FISHING_LOOT = Object.freeze({
  * category with the vanilla relative weights. The injected RNG keeps this
  * deterministic for regression tests.
  */
-export function rollFishingCatch(random = Math.random) {
+export function rollFishingCatch(random = Math.random, rodStack = null) {
   const categoryRoll = random();
+  const luck = enchantmentLevel(rodStack, 'luck_of_the_sea');
+  const junkBoundary = 0.95 - luck * 0.025;
   if (categoryRoll < 0.85) {
     const fishRoll = random();
     if (fishRoll < 0.60) return { id: 'mc:raw_cod', count: 1 };
@@ -218,7 +220,7 @@ export function rollFishingCatch(random = Math.random) {
     if (fishRoll < 0.98) return { id: 'mc:pufferfish', count: 1 };
     return { id: 'mc:tropical_fish', count: 1 };
   }
-  if (categoryRoll < 0.95) {
+  if (categoryRoll < junkBoundary) {
     const totalWeight = FISHING_LOOT.junk.reduce((sum, entry) => sum + entry[1], 0);
     let ticket = random() * totalWeight;
     for (const [id, weight] of FISHING_LOOT.junk) {
@@ -848,7 +850,7 @@ export class MobSystem {
       this.game.ui?.toast('Ты вытащил удочку слишком рано');
       return true;
     }
-    const caught = rollFishingCatch();
+    const caught = rollFishingCatch(Math.random, this.game.inventory?.held);
     if (player.gamemode !== 'creative') {
       const leftover = this.game.inventory.addItem(caught.id, caught.count);
       if (leftover > 0) this.game.ui?.toast('Инвентарь заполнен: улов потерян', { error: true });
