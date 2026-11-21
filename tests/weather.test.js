@@ -79,7 +79,7 @@ describe('Weather block integration', () => {
 
   it('charges exposed lightning rods during thunder and resets their redstone pulse', () => {
     let seed = 'weather-lightning-rod';
-    while (!shouldLightningRodStrike(seed, 0, 64, 0, 20, 'thunder')) seed += 'x';
+    while (!shouldLightningRodStrike(seed, 0, 64, 0, 20, 'thunder') || shouldLightningRodStrike(seed, 0, 64, 0, 40, 'thunder')) seed += 'x';
     const world = mockWorld(seed, { '0,64,0': state('mc:lightning_rod', { powered: false }) });
     const changes = tickWeatherBlocks(world, { x: 0, z: 0 }, 'thunder', 20);
     assertEqual(changes.length, 1);
