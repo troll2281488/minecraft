@@ -358,49 +358,58 @@ function fenceGateBoxes(state) {
 
 const WALL_CACHE = new Map();
 
-function wallConnects(neighbor) {
-  if (!neighbor?.block) return false;
-  return neighbor.block.renderShape === 'wall' ||
-    (neighbor.block.solid === true && neighbor.block.opaqueCube === true);
+function wallConnectionValue(neighbor) {
+  if (!neighbor?.block) return 'none';
+  if (neighbor.block.renderShape === 'wall') return 'tall';
+  if (neighbor.block.solid === true && neighbor.block.opaqueCube === true) return 'low';
+  return 'none';
 }
 
-function wallBoxes(state, getNeighbor) {
-  const neighbors = {
-    north: getNeighbor?.(0, 0, -1),
-    south: getNeighbor?.(0, 0, 1),
-    west: getNeighbor?.(-1, 0, 0),
-    east: getNeighbor?.(1, 0, 0),
+/** Derive the serialized Java wall state from its four horizontal neighbours. */
+export function wallStateFromNeighbors(state, getNeighbor) {
+  if (state.block.renderShape !== 'wall' || !getNeighbor) return state;
+  const north = wallConnectionValue(getNeighbor(0, 0, -1));
+  const south = wallConnectionValue(getNeighbor(0, 0, 1));
+  const west = wallConnectionValue(getNeighbor(-1, 0, 0));
+  const east = wallConnectionValue(getNeighbor(1, 0, 0));
+  const straight = (north !== 'none' && south !== 'none' && west === 'none' && east === 'none') ||
+    (west !== 'none' && east !== 'none' && north === 'none' && south === 'none');
+  const above = getNeighbor(0, 1, 0);
+  const up = !straight || above?.block?.solid === true;
+  return state.with('north', north).with('south', south)
+    .with('west', west).with('east', east).with('up', up);
+}
+
+function wallBoxes(state) {
+  const connections = {
+    north: state.get('north') || 'none',
+    south: state.get('south') || 'none',
+    west: state.get('west') || 'none',
+    east: state.get('east') || 'none',
   };
-  const connected = Object.fromEntries(
-    Object.entries(neighbors).map(([direction, neighbor]) => [direction, wallConnects(neighbor)]),
-  );
-  const mask = (connected.north ? 1 : 0) | (connected.south ? 2 : 0) |
-    (connected.west ? 4 : 0) | (connected.east ? 8 : 0);
-  // Java walls use a taller side profile when joining another wall. Connections
-  // to full opaque cubes use the lower profile.
-  const tallMask = Object.entries(neighbors).reduce((value, [direction, neighbor], index) =>
-    value | (neighbor?.block?.renderShape === 'wall' ? (1 << index) : 0), 0);
-  const straight = (connected.north && connected.south && !connected.west && !connected.east) ||
-    (connected.west && connected.east && !connected.north && !connected.south);
-  // In a straight run the post is hidden unless a solid block directly caps it.
-  const above = getNeighbor?.(0, 1, 0);
-  const post = !straight || above?.block?.solid === true;
-  const key = mask | (tallMask << 4) | (post ? 256 : 0);
+  const mask = (connections.north !== 'none' ? 1 : 0) |
+    (connections.south !== 'none' ? 2 : 0) |
+    (connections.west !== 'none' ? 4 : 0) |
+    (connections.east !== 'none' ? 8 : 0);
+  const tallMask = (connections.north === 'tall' ? 1 : 0) |
+    (connections.south === 'tall' ? 2 : 0) |
+    (connections.west === 'tall' ? 4 : 0) |
+    (connections.east === 'tall' ? 8 : 0);
+  const key = mask | (tallMask << 4) | (state.get('up') ? 256 : 0);
   if (WALL_CACHE.has(key)) return WALL_CACHE.get(key);
   const boxes = [];
-  if (post) boxes.push([0.25, 0, 0.25, 0.75, 1.5, 0.75]);
+  if (state.get('up')) boxes.push([0.25, 0, 0.25, 0.75, 1.5, 0.75]);
   const arms = {
     north: [0.25, 0, 0, 0.75, 0, 0.25],
     south: [0.25, 0, 0.75, 0.75, 0, 1],
     west: [0, 0, 0.25, 0.25, 0, 0.75],
     east: [0.75, 0, 0.25, 1, 0, 0.75],
   };
-  const directions = ['north', 'south', 'west', 'east'];
-  for (let i = 0; i < directions.length; i++) {
-    const direction = directions[i];
-    if (!connected[direction]) continue;
+  for (const [index, direction] of ['north', 'south', 'west', 'east'].entries()) {
+    const connection = connections[direction];
+    if (connection === 'none') continue;
     const [x0, , z0, x1, , z1] = arms[direction];
-    boxes.push([x0, 0.25, z0, x1, (tallMask & (1 << i)) ? 0.875 : 0.8125, z1]);
+    boxes.push([x0, 0.25, z0, x1, connection === 'tall' ? 0.875 : 0.8125, z1]);
   }
   const frozen = Object.freeze(boxes.map((box) => Object.freeze(box)));
   WALL_CACHE.set(key, frozen);
@@ -418,7 +427,7 @@ function wallBoxes(state, getNeighbor) {
 export function shapeBoxes(state, getNeighbor = null) {
   switch (state.block.renderShape) {
     case 'fence': return fenceBoxes(state, getNeighbor);
-    case 'wall': return wallBoxes(state, getNeighbor);
+    case 'wall': return wallBoxes(state);
     case 'fence_gate': return fenceGateBoxes(state);
     case 'slab': return slabBoxes(state);
     case 'stair': return stairBoxes(state, getNeighbor);

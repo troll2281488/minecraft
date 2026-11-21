@@ -24,8 +24,13 @@ import { pistonVector } from './pistons.js';
 import { hiveHarvestResult, hasCampfireSmoke } from './bee_hives.js';
 import { compostChance, nextComposterLevel, boneMealAge, compostRoll, canApplyBoneMeal } from './composting.js';
 import { canPlantSugarCane } from './farming.js';
+import { refreshWallConnections } from './wall_updates.js';
 
 export const BlockActionsMixin = {
+  _refreshWallConnections(...positions) {
+    return refreshWallConnections(this.world, this.multiplayer, ...positions);
+  },
+
   _breakBlock() {
     if (!this.hit) return;
     const { x, y, z, state } = this.hit;
@@ -75,6 +80,7 @@ export const BlockActionsMixin = {
     this.sounds?.play('break', state.block.soundGroup || 'stone');
     this.world.setBlock(x, y, z, AIR.defaultState);
     this.multiplayer?.pushBlockChange(x, y, z, AIR.defaultState);
+    this._refreshWallConnections({ x, y, z });
     // Breaking either half of an extended piston removes its internal head
     // and clears the paired base state. Internal heads never drop an item.
     if (isPistonHead) {
@@ -564,6 +570,8 @@ export const BlockActionsMixin = {
       if (!this.world.setBlock(target.x, target.y, target.z, state)) return;
       this.multiplayer?.pushBlockChange(target.x, target.y, target.z, state);
     }
+    this._refreshWallConnections({ x: target.x, y: target.y, z: target.z },
+      ...(block.renderShape === 'door' ? [{ x: target.x, y: target.y + 1, z: target.z }] : []));
     this.sounds?.play('place', block.soundGroup || 'stone');
     if (this.player.gamemode !== GAMEMODE.CREATIVE) this.inventory.consumeHeld(1);
   },

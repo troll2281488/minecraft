@@ -1,7 +1,8 @@
 import '../src/world/blocks/index.js';
 import { describe, it, assert, assertEqual, assertDeepEqual } from './framework.js';
 import { BLOCKS } from '../src/world/block.js';
-import { shapeBoxes, collisionBoxes, isNonCube } from '../src/world/shapes.js';
+import { shapeBoxes, collisionBoxes, isNonCube, wallStateFromNeighbors } from '../src/world/shapes.js';
+import { refreshWallConnections } from '../src/game/wall_updates.js';
 import { orientPlacement } from '../src/game/interaction.js';
 import { yawToFacing } from '../src/core/math.js';
 import { RECIPES } from '../src/game/recipes.js';
@@ -164,35 +165,39 @@ describe('Java wall family geometry and crafting', () => {
 
   it('connects wall arms to adjacent walls and opaque cubes', () => {
     const wall = BLOCKS.get('mc:cobblestone_wall').defaultState;
-    const connected = shapeBoxes(wall, (dx, dy, dz) =>
+    const connectedState = wallStateFromNeighbors(wall, (dx, dy, dz) =>
       dx === 0 && dy === 0 && dz === -1 ? wall : null);
+    const connected = shapeBoxes(connectedState);
     assertEqual(connected.length, 2);
     assertDeepEqual(connected[1], [0.25, 0.25, 0, 0.75, 0.8125, 0.25]);
-    const toStone = shapeBoxes(wall, (dx, dy, dz) =>
+    const stoneState = wallStateFromNeighbors(wall, (dx, dy, dz) =>
       dx === 1 && dy === 0 && dz === 0 ? STONE : null);
+    const toStone = shapeBoxes(stoneState);
     assertEqual(toStone.length, 2);
     assertDeepEqual(toStone[1], [0.75, 0.25, 0.25, 1, 0.8125, 0.75]);
   });
 
   it('uses tall side arms when joining another wall, but low arms for opaque cubes', () => {
     const wall = BLOCKS.get('mc:cobblestone_wall').defaultState;
-    const tall = shapeBoxes(wall, (dx, dy, dz) =>
-      dx === 0 && dy === 0 && dz === -1 ? wall : null);
+    const tall = shapeBoxes(wallStateFromNeighbors(wall, (dx, dy, dz) =>
+      dx === 0 && dy === 0 && dz === -1 ? wall : null));
     assertDeepEqual(tall[1], [0.25, 0.25, 0, 0.75, 0.875, 0.25]);
-    const low = shapeBoxes(wall, (dx, dy, dz) =>
-      dx === 0 && dy === 0 && dz === -1 ? STONE : null);
+    const low = shapeBoxes(wallStateFromNeighbors(wall, (dx, dy, dz) =>
+      dx === 0 && dy === 0 && dz === -1 ? STONE : null));
     assertDeepEqual(low[1], [0.25, 0.25, 0, 0.75, 0.8125, 0.25]);
   });
 
   it('hides the central post in an uncapped straight wall run', () => {
     const wall = BLOCKS.get('mc:cobblestone_wall').defaultState;
-    const straight = shapeBoxes(wall, (dx, dy, dz) =>
+    const straightState = wallStateFromNeighbors(wall, (dx, dy, dz) =>
       dy === 0 && dx === 0 && Math.abs(dz) === 1 ? wall : null);
+    const straight = shapeBoxes(straightState);
     assertEqual(straight.length, 2);
     assertDeepEqual(straight[0], [0.25, 0.25, 0, 0.75, 0.8125, 0.25]);
-    const capped = shapeBoxes(wall, (dx, dy, dz) =>
+    const cappedState = wallStateFromNeighbors(wall, (dx, dy, dz) =>
       dy === 1 && dx === 0 && dz === 0 ? STONE
         : dy === 0 && dx === 0 && Math.abs(dz) === 1 ? wall : null);
+    const capped = shapeBoxes(cappedState);
     assertEqual(capped.length, 3);
     assertDeepEqual(capped[0], [0.25, 0, 0.25, 0.75, 1.5, 0.75]);
   });
@@ -223,4 +228,74 @@ describe('Java wall family geometry and crafting', () => {
       assert(BLOCKS.get(recipe.key.B), `wall ingredient block ${recipe.key.B} missing`);
     }
   });
+
+  it('stores all four wall connections and the post flag in blockstate', () => {
+    const wallBlock = BLOCKS.get('mc:cobblestone_wall');
+    for (const direction of ['north', 'south', 'east', 'west']) {
+      assertEqual(wallBlock.properties[direction].stringValues.join(','), 'none,low,tall');
+    }
+    assertEqual(wallBlock.properties.up.stringValues.join(','), 'false,true');
+    const wall = wallBlock.defaultState;
+    const state = wallStateFromNeighbors(wall, (dx, dy, dz) =>
+      dx === 0 && dy === 0 && dz === -1 ? STONE : null);
+    assertEqual(state.get('north'), 'low');
+    assertEqual(state.get('south'), 'none');
+    assertEqual(state.get('up'), true);
+    assert(state.stringId.includes('north=low'));
+  });
+
+  it('refreshes adjacent walls only when a serialized connection actually changes', () => {
+    const wall = BLOCKS.get('mc:cobblestone_wall').defaultState;
+    const worldBlocks = new Map([
+      ['0,0,0', wall],
+      ['0,0,-1', STONE],
+    ]);
+    const writes = [];
+    const world = {
+      getBlock(x, y, z) { return worldBlocks.get(`${x},${y},${z}`) || BLOCKS.get('mc:air').defaultState; },
+      setBlock(x, y, z, state) {
+        worldBlocks.set(`${x},${y},${z}`, state);
+        writes.push({ x, y, z, state });
+        return true;
+      },
+    };
+    const pushes = [];
+    const multiplayer = { pushBlockChange: (...args) => pushes.push(args) };
+    const first = refreshWallConnections(world, multiplayer, { x: 0, y: 0, z: -1 });
+    assertEqual(first.length, 1);
+    assertEqual(world.getBlock(0, 0, 0).get('north'), 'low');
+    assertEqual(pushes.length, 1);
+    const second = refreshWallConnections(world, multiplayer, { x: 0, y: 0, z: -1 });
+    assertEqual(second.length, 0);
+    assertEqual(writes.length, 1);
+    assertEqual(pushes.length, 1);
+  });
+
+  it('serializes straight wall runs without a post unless capped above', () => {
+    const wall = BLOCKS.get('mc:cobblestone_wall').defaultState;
+    const straight = wallStateFromNeighbors(wall, (dx, dy, dz) =>
+      dy === 0 && dx === 0 && Math.abs(dz) === 1 ? wall : null);
+    assertEqual(straight.get('north'), 'tall');
+    assertEqual(straight.get('south'), 'tall');
+    assertEqual(straight.get('up'), false);
+    const capped = wallStateFromNeighbors(wall, (dx, dy, dz) =>
+      dy === 1 && dx === 0 && dz === 0 ? STONE
+        : dy === 0 && dx === 0 && Math.abs(dz) === 1 ? wall : null);
+    assertEqual(capped.get('up'), true);
+  });
+
+
+  it('round-trips wall connection states through the canonical save string', () => {
+    const wall = BLOCKS.get('mc:cobblestone_wall').defaultState;
+    const connected = wallStateFromNeighbors(wall, (dx, dy, dz) =>
+      dx === 1 && dy === 0 && dz === 0 ? STONE : null);
+    const restored = BLOCKS.stateFromString(connected.stringId);
+    assertEqual(restored.stringId, connected.stringId);
+    assertEqual(restored.get('east'), 'low');
+    assertEqual(restored.get('up'), true);
+    const legacy = BLOCKS.stateFromString('mc:cobblestone_wall');
+    assertEqual(legacy.get('east'), 'none');
+    assertEqual(legacy.get('up'), true);
+  });
+
 });
