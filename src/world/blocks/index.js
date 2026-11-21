@@ -455,19 +455,14 @@ trapdoor('iron', 'iron_trapdoor', true);
 // Wood fences and gates use shared box geometry; connections are resolved from
 // neighbouring blocks at render/collision time, so remote edits and old saves
 // do not need a neighbour-state migration.
-const FENCE_PROPERTIES = {
-  north: PROPS.north, south: PROPS.south, west: PROPS.west, east: PROPS.east,
-};
 function fenceBlock(id, texture, material = 'wood') {
   const wood = material === 'wood';
   define(`mc:${id}`, {
-    hardness: wood ? 2 : 2, resistance: wood ? 3 : 6,
+    hardness: 2, resistance: wood ? 3 : 6,
     tool: wood ? 'axe' : 'pickaxe', harvestLevel: wood ? -1 : 0,
     requiresTool: !wood, soundGroup: wood ? 'wood' : 'stone',
     flammability: wood ? 5 : 0, texture,
     solid: true, opaqueCube: false, opacity: 0, renderShape: 'fence',
-    properties: FENCE_PROPERTIES,
-    defaultValues: { north: false, south: false, west: false, east: false },
   });
 }
 function fenceGateBlock(wood) {
