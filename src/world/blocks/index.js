@@ -480,6 +480,28 @@ for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) {
 }
 fenceBlock('nether_brick_fence', 'nether_bricks', 'stone');
 
+// Stone walls from the Java 1.19 block set. The wall profile is shared; each
+// family keeps its own material texture and the same pickaxe harvest rules.
+function wallBlock(name, texture, hardness = 2) {
+  define(`mc:${name}_wall`, {
+    hardness, resistance: 6, tool: 'pickaxe', harvestLevel: 0,
+    requiresTool: true, soundGroup: 'stone', texture,
+    solid: true, opaqueCube: false, opacity: 0, renderShape: 'wall',
+  });
+}
+for (const [name, texture] of [
+  ['cobblestone', 'cobblestone'], ['mossy_cobblestone', 'mossy_cobblestone'],
+  ['brick', 'stone_bricks'], ['prismarine', 'stone'],
+  ['red_sandstone', 'red_sandstone'], ['mossy_stone_brick', 'stone_bricks'],
+  ['granite', 'granite'], ['stone_brick', 'stone_bricks'],
+  ['nether_brick', 'nether_bricks'], ['andesite', 'andesite'],
+  ['red_nether_brick', 'nether_bricks'], ['sandstone', 'sandstone'],
+  ['end_stone_brick', 'end_bricks'], ['diorite', 'diorite'],
+  ['blackstone', 'blackstone'], ['polished_blackstone_brick', 'polished_blackstone'],
+  ['polished_blackstone', 'polished_blackstone'],
+]) wallBlock(name, texture);
+
+
 // Note block: 25 semitone pitches, tuned by right-click and triggered by redstone.
 define('mc:note_block', {
   hardness: 0.8, resistance: 0.8, tool: 'axe', soundGroup: 'wood', texture: 'note_block',
