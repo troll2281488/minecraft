@@ -230,8 +230,9 @@ export function meshChunk(view) {
 
           if (shape === 'cross') { emitCross(opaque, view, state, x, wy, z, idx); continue; }
           if (shape === 'torch') { emitTorch(opaque, view, state, x, wy, z, idx); continue; }
-          if (shape === 'slab' || shape === 'stair' || shape === 'pane' || shape === 'ladder' || shape === 'door' || shape === 'trapdoor' || shape === 'button' || shape === 'lever' || shape === 'pressure_plate' || shape === 'weighted_pressure_plate' || shape === 'redstone_wire' || shape === 'repeater' || shape === 'piston_head') {
-            emitBoxes(opaque, view, state, x, wy, z, idx, shapeBoxes(state));
+          if (shape === 'slab' || shape === 'stair' || shape === 'pane' || shape === 'ladder' || shape === 'door' || shape === 'trapdoor' || shape === 'fence' || shape === 'fence_gate' || shape === 'button' || shape === 'lever' || shape === 'pressure_plate' || shape === 'weighted_pressure_plate' || shape === 'redstone_wire' || shape === 'repeater' || shape === 'piston_head') {
+            const neighborAt = (dx, dy, dz) => S_STATE[idx + (dx === 0 && dy === 0 && dz === -1 ? FACE_DELTA[2] : dx === 0 && dy === 0 && dz === 1 ? FACE_DELTA[3] : dx === -1 && dy === 0 && dz === 0 ? FACE_DELTA[4] : dx === 1 && dy === 0 && dz === 0 ? FACE_DELTA[5] : 0)];
+            emitBoxes(opaque, view, state, x, wy, z, idx, shapeBoxes(state, neighborAt));
             continue;
           }
 
