@@ -142,7 +142,8 @@ export function tickFarming(world, player, tickCount) {
       for (let z = pz - 8; z <= pz + 8; z++) {
         for (let y = py - 3; y <= py + 4; y++) {
           const stem = world.getBlock(x, y, z);
-          if (!STEM_IDS.includes(stem?.block?.id) || stem.get('age') !== 7) continue;
+          if (!STEM_IDS.includes(stem?.block?.id) || stem.get('age') !== 7 ||
+              changedKeys.has(`${x},${y},${z}`)) continue;
           const soil = world.getBlock(x, y - 1, z);
           if (soil?.block?.id !== FARMLAND_ID) continue;
           const moisture = soil.get('moisture') ?? 0;
