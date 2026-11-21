@@ -435,7 +435,7 @@ export const BlockActionsMixin = {
         if (crop && this.world.setBlock(cropPos.x, cropPos.y, cropPos.z, crop)) {
           this.multiplayer?.pushBlockChange(cropPos.x, cropPos.y, cropPos.z, crop);
           if (survival) this.inventory.consumeHeld(1);
-          const labels = { 'mc:wheat': 'Wheat', 'mc:carrots': 'Carrots', 'mc:potatoes': 'Potatoes', 'mc:beetroots': 'Beetroot' };
+          const labels = { 'mc:wheat': 'Wheat', 'mc:carrots': 'Carrots', 'mc:potatoes': 'Potatoes', 'mc:beetroots': 'Beetroot', 'mc:pumpkin_stem': 'Pumpkin', 'mc:melon_stem': 'Melon' };
           this.ui.toast(labels[plantedCrop] + ' planted');
         }
       }
