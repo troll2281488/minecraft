@@ -73,6 +73,15 @@ export const MOB_AI_PROFILES = Object.freeze({
 
 const LEASHABLE_MOB_TYPES = new Set(['cow', 'pig', 'sheep', 'chicken', 'mooshroom', 'rabbit', 'wolf', 'horse', 'bee']);
 
+export function canSaddlePig(mob) {
+  return mob?.type === 'pig' && mob.saddled !== true;
+}
+
+export function pigBoostImpulse(yaw, magnitude = 0.22) {
+  if (!Number.isFinite(yaw) || !Number.isFinite(magnitude) || magnitude <= 0) return { x: 0, z: 0 };
+  return { x: -Math.sin(yaw) * magnitude, z: Math.cos(yaw) * magnitude };
+}
+
 export function canLeadMob(mob) {
   return !!mob && LEASHABLE_MOB_TYPES.has(mob.type) && !mob.leashHolder;
 }
@@ -502,7 +511,7 @@ export class MobSystem {
       tamed: !!mob.tamed && ['wolf', 'horse'].includes(mob.type),
       sitting: mob.type === 'wolf' && !!mob.sitting,
       tameProgress: Number.isFinite(mob.tameProgress) ? Math.max(0, Math.min(3, mob.tameProgress)) : 0,
-      saddled: mob.type === 'horse' && !!mob.saddled,
+      saddled: ['horse', 'pig'].includes(mob.type) && !!mob.saddled,
       horseArmor: ['iron', 'golden', 'diamond'].includes(mob.horseArmor) ? mob.horseArmor : null,
       leashHolder: typeof mob.leashHolder === 'string' && mob.leashHolder.length <= 32 ? mob.leashHolder : null,
       beePollenTicks: Number.isFinite(mob.beePollenTicks) ? mob.beePollenTicks : 0,
@@ -611,7 +620,7 @@ export class MobSystem {
         tamed: !!mob.tamed && ['wolf', 'horse'].includes(mob.type),
         sitting: mob.type === 'wolf' && !!mob.sitting,
         tameProgress: Number.isFinite(mob.tameProgress) ? Math.max(0, Math.min(3, mob.tameProgress)) : 0,
-        saddled: mob.type === 'horse' && !!mob.saddled,
+        saddled: ['horse', 'pig'].includes(mob.type) && !!mob.saddled,
         horseArmor: ['iron', 'golden', 'diamond'].includes(mob.horseArmor) ? mob.horseArmor : null,
         leashHolder: typeof mob.leashHolder === 'string' && mob.leashHolder.length <= 32 && LEASHABLE_MOB_TYPES.has(mob.type) ? mob.leashHolder : null,
         beePollenTicks: Number.isFinite(mob.beePollenTicks) ? Math.max(0, Math.min(600, mob.beePollenTicks)) : 0,
@@ -877,6 +886,25 @@ export class MobSystem {
       return true;
     }
 
+    if (mob.type === 'pig' && held?.item?.id === 'mc:saddle' && canSaddlePig(mob)) {
+      if (player.gamemode !== 'creative') this.game.inventory.consumeHeld(1);
+      mob.saddled = true;
+      this.game.ui?.toast('Седло надето на свинью');
+      return true;
+    }
+
+    if (mob.type === 'pig' && mob.saddled && (!held || held.isEmpty)) {
+      if (player.ridingHorse === mob) {
+        player.ridingHorse = null;
+        this.game.ui?.toast('Ты слез со свиньи');
+      } else if (!player.ridingHorse) {
+        player.ridingHorse = mob;
+        mob.targetYaw = player.yaw * Math.PI / 180;
+        this.game.ui?.toast('Ты сел на свинью. Управляй морковкой на удочке.');
+      }
+      return true;
+    }
+
     if (mob.type === 'horse' && !mob.tamed && (!held || held.isEmpty)) {
       mob.tameProgress = (mob.tameProgress || 0) + 1;
       if (mob.tameProgress >= 3) {
@@ -913,6 +941,25 @@ export class MobSystem {
       return true;
     }
     return false;
+  }
+
+  boostPigFromPlayer() {
+    const player = this.game.player;
+    const pig = player?.ridingHorse;
+    const held = this.game.inventory?.held;
+    if (!player || pig?.type !== 'pig' || !pig.saddled || held?.item?.id !== 'mc:carrot_on_a_stick') return false;
+    if ((pig.boostCooldown || 0) > 0) {
+      this.game.ui?.toast('Морковка на удочке ещё перезаряжается', { duration: 900 });
+      return true;
+    }
+    const impulse = pigBoostImpulse(player.yaw * Math.PI / 180);
+    player.vx += impulse.x;
+    player.vz += impulse.z;
+    pig.boostCooldown = 100;
+    this.game.inventory.damageHeld(1);
+    this.game.ui?.updateHotbar(this.game.inventory);
+    this.game.sounds?.play('bow');
+    return true;
   }
 
   feedAnimalFromPlayer() {
@@ -1395,6 +1442,7 @@ export class MobSystem {
     for (let i = this.mobs.length - 1; i >= 0; i--) {
       const mob = this.mobs[i];
       if (mob.ageTicks < 0) mob.ageTicks++;
+      if (mob.boostCooldown > 0) mob.boostCooldown--;
       if (mob.playerDamageTicks > 0) mob.playerDamageTicks--;
       if (mob.loveTicks > 0) mob.loveTicks--;
       if (mob.breedCooldown > 0) mob.breedCooldown--;
