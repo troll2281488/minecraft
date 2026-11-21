@@ -95,6 +95,8 @@ export const PROPS = {
   age15: intProp('age', 0, 15),
   note: intProp('note', 0, 24),
   record: enumProp('record', ['none', '13', 'cat', 'otherside']),
+  campfireFood: enumProp('food', ['none', 'raw_beef', 'raw_porkchop', 'raw_chicken', 'raw_mutton', 'raw_rabbit', 'raw_cod', 'raw_salmon', 'cooked_beef', 'cooked_porkchop', 'cooked_chicken', 'cooked_mutton', 'cooked_rabbit', 'cooked_cod', 'cooked_salmon']),
+  campfireCookTime: intProp('cook_time', 0, 30),
   comparatorMode: enumProp('mode', ['compare', 'subtract']),
   level: intProp('level', 0, 15),
   power: intProp('power', 0, 15),

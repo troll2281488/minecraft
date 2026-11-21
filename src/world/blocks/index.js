@@ -317,7 +317,7 @@ define('mc:mycelium', {
 define('mc:campfire', {
   hardness: 2, resistance: 2, tool: 'axe', soundGroup: 'wood',
   flammability: 5, lightEmission: 15, texture: 'campfire',
-  properties: { lit: PROPS.lit }, defaultValues: { lit: true },
+  properties: { lit: PROPS.lit, food: PROPS.campfireFood, cook_time: PROPS.campfireCookTime }, defaultValues: { lit: true, food: 'none', cook_time: 0 },
 });
 
 for (const id of ['mc:bee_nest', 'mc:beehive']) {
@@ -969,6 +969,7 @@ ITEMS.define('mc:lily_pad', { stackSize: 64 });
 ITEMS.define('mc:bow', { stackSize: 1, maxDamage: 384, weapon: 'bow' });
 ITEMS.define('mc:arrow', { stackSize: 64 });
 ITEMS.define('mc:saddle', { stackSize: 1 });
+ITEMS.define('mc:carrot_on_a_stick', { stackSize: 1, maxDamage: 25, tool: 'carrot_on_a_stick' });
 ITEMS.define('mc:lead', { stackSize: 64 });
 ITEMS.define('mc:iron_horse_armor', { stackSize: 1, horseArmor: 'iron' });
 ITEMS.define('mc:golden_horse_armor', { stackSize: 1, horseArmor: 'golden' });

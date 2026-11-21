@@ -1,6 +1,6 @@
 import { describe, it, assert, assertEqual } from './framework.js';
 import {
-  MOB_TYPES_112, MOB_AI_PROFILES, chooseMobDetourYaw, shearSheep, rollFishingCatch, calculateArmorDamage, rollMobDrops, shouldBurnInSunlight,
+  MOB_TYPES_112, MOB_AI_PROFILES, chooseMobDetourYaw, shearSheep, rollFishingCatch, calculateArmorDamage, rollMobDrops, shouldBurnInSunlight, canSaddlePig, pigBoostImpulse, MobSystem,
 } from '../src/entity/mobs.js';
 import { createArrow, stepArrow } from '../src/entity/arrows.js';
 
@@ -126,5 +126,27 @@ describe('Mob data and loot', () => {
     });
     assert(drops.some((drop) => drop.id === 'mc:rotten_flesh'));
     assert(drops.some((drop) => drop.id === 'mc:carrot'));
+  });
+});
+
+describe('Java pig riding', () => {
+  it('requires an unsaddled pig and calculates forward carrot boost', () => {
+    assertEqual(canSaddlePig({ type: 'pig', saddled: false }), true);
+    assertEqual(canSaddlePig({ type: 'pig', saddled: true }), false);
+    assertEqual(canSaddlePig({ type: 'cow' }), false);
+    const impulse = pigBoostImpulse(0, 0.22);
+    assertEqual(Math.abs(impulse.x) < 1e-9, true);
+    assertEqual(impulse.z, 0.22);
+  });
+
+  it('persists a pig saddle through mob save data', () => {
+    const source = new MobSystem({});
+    source.mobs.push({ id: 1, type: 'pig', x: 1, y: 64, z: 1, yaw: 0, targetYaw: 0, health: 10, saddled: true });
+    const saved = source.toJSON();
+    assertEqual(saved[0].saddled, true);
+    const restored = new MobSystem({});
+    restored.loadFrom(saved);
+    assertEqual(restored.mobs[0].type, 'pig');
+    assertEqual(restored.mobs[0].saddled, true);
   });
 });

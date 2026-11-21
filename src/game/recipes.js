@@ -252,6 +252,12 @@ recipes.push({
 });
 
 recipes.push({
+  result: 'mc:carrot_on_a_stick', count: 1,
+  pattern: ['  R', ' C '],
+  key: { R: 'mc:fishing_rod', C: 'mc:carrot' },
+});
+
+recipes.push({
   result: 'mc:bow', count: 1,
   pattern: [' ST', 'S T', ' ST'],
   key: { S: 'mc:stick', T: 'mc:string' },

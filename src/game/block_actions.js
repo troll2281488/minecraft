@@ -31,6 +31,7 @@ import { canSleepAt, hasNearbySleepHostile } from './sleep.js';
 import { weatherAt } from './weather.js';
 import { absorbWaterAround } from './sponge.js';
 import { POTION_ITEMS } from '../entity/status_effects.js';
+import { planCampfireFoodInteraction } from './campfire_cooking.js';
 
 export const BlockActionsMixin = {
   _refreshWallConnections(...positions) {
@@ -132,6 +133,7 @@ export const BlockActionsMixin = {
   },
 
   _useOrPlace() {
+    if (this.entities?.boostPigFromPlayer()) return;
     const villager = this.entities?.targetedMob();
     if (villager?.type === 'villager') {
       this._openVillagerTrade(villager);
@@ -315,6 +317,32 @@ export const BlockActionsMixin = {
         this.ui.toast('Точка возрождения установлена. Ночь пропущена.');
       }
       return;
+    }
+    if (this.hit?.state?.block?.id === 'mc:campfire') {
+      const plan = planCampfireFoodInteraction(this.hit.state, heldItem?.id || null);
+      if (plan?.type === 'insert') {
+        if (this.world.setBlock(this.hit.x, this.hit.y, this.hit.z, plan.state)) {
+          this.multiplayer?.pushBlockChange(this.hit.x, this.hit.y, this.hit.z, plan.state);
+          if (this.player.gamemode === GAMEMODE.SURVIVAL) this.inventory.consumeHeld(1);
+          this.sounds?.play('place', 'food');
+          this.ui.toast('Еда помещена на костёр');
+        }
+        return;
+      }
+      if (plan?.type === 'collect') {
+        if (this.world.setBlock(this.hit.x, this.hit.y, this.hit.z, plan.state)) {
+          this.multiplayer?.pushBlockChange(this.hit.x, this.hit.y, this.hit.z, plan.state);
+          const leftover = this.inventory.addItem(plan.itemId, 1);
+          if (leftover > 0) this.entities?.spawnItemStackAt(new ItemStack(ITEMS.get(plan.itemId), 1), this.player.x, this.player.y + 0.5, this.player.z);
+          this.sounds?.play('furnace');
+          this.ui.toast('Готово: ' + plan.itemId.replace('mc:cooked_', '').replace('mc:', ''));
+        }
+        return;
+      }
+      if (heldItem?.food && plan === null && (this.hit.state.get('food') || 'none') !== 'none') {
+        this.ui.toast('На костре уже готовится еда');
+        return;
+      }
     }
     if (this.hit?.state?.block?.id === 'mc:campfire' && heldItem?.id === 'mc:water_bucket') {
       const { x, y, z, state } = this.hit;
