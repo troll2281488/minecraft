@@ -58,14 +58,14 @@ export const InputMixin = {
       this.mouseButtons.add(e.button);
       if (e.button === 0 && this.player) this.player.attackTime = 8;
       if (e.button === 2) {
-        if (!this.entities?.beginCrossbowLoad() && !this.entities?.beginBowDraw()) this._useOrPlace();
+        if (!this.entities?.beginCrossbowLoad() && !this.entities?.beginTridentThrow() && !this.entities?.beginBowDraw()) this._useOrPlace();
       }
       if (e.button === 1) this._pickBlock();
     });
     document.addEventListener('mouseup', (e) => {
       this.mouseButtons.delete(e.button);
       if (e.button === 0) this.mining.reset();
-      if (e.button === 2 && !this.entities?.releaseCrossbowLoad()) this.entities?.releaseBow();
+      if (e.button === 2 && !this.entities?.releaseCrossbowLoad() && !this.entities?.releaseTridentThrow()) this.entities?.releaseBow();
     });
     document.addEventListener('contextmenu', (e) => e.preventDefault());
 

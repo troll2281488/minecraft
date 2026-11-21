@@ -173,3 +173,52 @@ describe('Piercing arrow collision handling', () => {
     assertEqual(arrow.done, true);
   });
 });
+
+
+describe('bow enchantment gameplay integration', () => {
+  it('applies Power, Punch and Flame to fired arrows', () => {
+    const inventory = new Inventory();
+    inventory.addItem('mc:bow', 1);
+    inventory.addItem('mc:arrow', 4);
+    inventory.held.data = { enchantments: { power: 3, punch: 2, flame: 1 } };
+    const player = new Player(0, 64, 0);
+    const game = { inventory, player, tickCount: 0, ui: { toast() {} }, sounds: { play() {} } };
+    const entities = new MobSystem(game);
+    assertEqual(entities.beginBowDraw(), true);
+    game.tickCount = 30;
+    assertEqual(entities.releaseBow(), true);
+    assertEqual(entities.arrows.length, 1);
+    assertEqual(entities.arrows[0].damage > 9, true);
+    assertEqual(entities.arrows[0].punchLevel, 2);
+    assertEqual(entities.arrows[0].flame, true);
+    assertEqual(inventory.countOf('mc:arrow'), 3);
+  });
+
+  it('Infinity preserves the required arrow and does not consume it', () => {
+    const inventory = new Inventory();
+    inventory.addItem('mc:bow', 1);
+    inventory.addItem('mc:arrow', 1);
+    inventory.held.data = { enchantments: { infinity: 1 } };
+    const player = new Player(0, 64, 0);
+    const game = { inventory, player, tickCount: 0, ui: { toast() {} }, sounds: { play() {} } };
+    const entities = new MobSystem(game);
+    entities.beginBowDraw();
+    game.tickCount = 30;
+    entities.releaseBow();
+    assertEqual(entities.arrows.length, 1);
+    assertEqual(inventory.countOf('mc:arrow'), 1);
+  });
+
+  it('Infinity still requires at least one arrow in Survival', () => {
+    const inventory = new Inventory();
+    inventory.addItem('mc:bow', 1);
+    inventory.held.data = { enchantments: { infinity: 1 } };
+    const player = new Player(0, 64, 0);
+    const game = { inventory, player, tickCount: 0, ui: { toast() {} }, sounds: { play() {} } };
+    const entities = new MobSystem(game);
+    entities.beginBowDraw();
+    game.tickCount = 30;
+    entities.releaseBow();
+    assertEqual(entities.arrows.length, 0);
+  });
+});

@@ -300,6 +300,7 @@ export class MobSystem {
     this.blockParticles = [];
     this.bowDrawStart = null;
     this.crossbowLoadStart = null;
+    this.tridentThrowStart = null;
     this.droppedItems = [];
     this.experienceOrbs = [];
     this.experiencePickupCooldown = 0;
@@ -321,6 +322,7 @@ export class MobSystem {
     this.blockParticles.length = 0;
     this.bowDrawStart = null;
     this.crossbowLoadStart = null;
+    this.tridentThrowStart = null;
     this.droppedItems.length = 0;
     this.experienceOrbs.length = 0;
     this.experiencePickupCooldown = 0;
@@ -368,6 +370,52 @@ export class MobSystem {
       p.life--;
       if (p.life <= 0) this.blockParticles.splice(i, 1);
     }
+  }
+
+
+  beginTridentThrow() {
+    const held = this.game.inventory?.held;
+    if (held?.item?.id !== 'mc:trident' || !['survival', 'creative'].includes(this.game.player?.gamemode)) return false;
+    this.tridentThrowStart = this.game.tickCount || 0;
+    this.game.ui?.toast('Готовлю трезубец…', { duration: 650 });
+    return true;
+  }
+
+  releaseTridentThrow() {
+    if (this.tridentThrowStart === null) return false;
+    const started = this.tridentThrowStart;
+    this.tridentThrowStart = null;
+    const held = this.game.inventory?.held;
+    if (held?.item?.id !== 'mc:trident') return true;
+    const chargedTicks = Math.max(0, (this.game.tickCount || 0) - started);
+    if (chargedTicks < 10) return true;
+    const creative = this.game.player?.gamemode === 'creative';
+    const player = this.game.player;
+    const direction = aimVector(player.yaw, player.pitch);
+    const trident = createArrow(
+      player.x + direction[0] * 0.55, player.eyeY + direction[1] * 0.55,
+      player.z + direction[2] * 0.55, direction, 0.9,
+    );
+    trident.isTrident = true;
+    trident.damage = 8;
+    trident.vx = direction[0] * 2.5;
+    trident.vy = direction[1] * 2.5;
+    trident.vz = direction[2] * 2.5;
+    trident.loyaltyLevel = enchantmentLevel(held, 'loyalty');
+    trident.impalingLevel = enchantmentLevel(held, 'impaling');
+    trident.channeling = enchantmentLevel(held, 'channeling') > 0;
+    this.arrows.push(trident);
+    if (!creative) this.game.inventory.damageHeld(1);
+    const riptide = enchantmentLevel(held, 'riptide');
+    if (riptide > 0 && (player.inWater || this.game.world?.isRainingAt?.(player.x, player.y, player.z))) {
+      const impulse = 0.6 + riptide * 0.35;
+      player.vx += direction[0] * impulse;
+      player.vy += direction[1] * impulse;
+      player.vz += direction[2] * impulse;
+    }
+    this.game.sounds?.play('bow');
+    this.game.ui?.toast('Трезубец брошен');
+    return true;
   }
 
   beginCrossbowLoad() {
@@ -433,19 +481,27 @@ export class MobSystem {
     if (held?.item?.id !== 'mc:bow' || !canFire(ticks)) return true;
     const creative = this.game.player?.gamemode === 'creative';
     const inventory = this.game.inventory;
-    if (!creative && inventory.remove('mc:arrow', 1) !== 1) {
+    const infinity = enchantmentLevel(held, 'infinity') > 0;
+    if (!creative && inventory.countOf('mc:arrow') < 1) {
       this.game.ui?.toast('Нужны стрелы!', { error: true });
       return true;
     }
+    if (!creative && !infinity) inventory.remove('mc:arrow', 1);
     const player = this.game.player;
     const direction = aimVector(player.yaw, player.pitch);
-    const power = drawPower(ticks);
-    this.arrows.push(createArrow(
+    const draw = drawPower(ticks);
+    const powerLevel = enchantmentLevel(held, 'power');
+    const arrow = createArrow(
       player.x + direction[0] * 0.45,
       player.eyeY + direction[1] * 0.45,
       player.z + direction[2] * 0.45,
-      direction, power,
-    ));
+      direction, draw,
+    );
+    // Java Power adds 25% of base damage per level, plus a small flat bonus.
+    arrow.damage += powerLevel > 0 ? Math.floor(arrow.damage * (0.25 * powerLevel) + 0.5) : 0;
+    arrow.punchLevel = enchantmentLevel(held, 'punch');
+    arrow.flame = enchantmentLevel(held, 'flame') > 0;
+    this.arrows.push(arrow);
     if (!creative) inventory.damageHeld(1);
     this.game.sounds?.play('bow');
     return true;
@@ -473,6 +529,17 @@ export class MobSystem {
         if (arrow.age > 1200) this.arrows.splice(i, 1);
         continue;
       }
+      if (arrow.isTrident && arrow.returning) {
+        const dx = player.x - arrow.x, dy = player.eyeY - arrow.y, dz = player.z - arrow.z;
+        const distance = Math.hypot(dx, dy, dz);
+        if (distance < 0.8) { this.arrows.splice(i, 1); continue; }
+        const speed = 0.85 + (arrow.loyaltyLevel || 0) * 0.18;
+        arrow.vx = dx / distance * speed; arrow.vy = dy / distance * speed; arrow.vz = dz / distance * speed;
+        arrow.x += arrow.vx; arrow.y += arrow.vy; arrow.z += arrow.vz;
+        arrow.age++;
+        if (arrow.age > 1200) this.arrows.splice(i, 1);
+        continue;
+      }
       const result = stepArrow(arrow,
         (x, y, z) => world.getBlock(x, y, z).block.solid,
         this.mobs,
@@ -480,11 +547,24 @@ export class MobSystem {
       if (result.hit === 'mob' && result.mob) {
         const mob = result.mob;
         const previousHealth = mob.health;
-        mob.health = Math.max(0, mob.health - (mob.type === 'horse' ? calculateHorseArmorDamage(arrow.damage, mob.horseArmor) : arrow.damage));
+        const aquatic = ['guardian', 'elder_guardian', 'drowned', 'squid'].includes(mob.type);
+        const impalingBonus = arrow.isTrident && aquatic ? Math.max(0, arrow.impalingLevel || 0) * 2.5 : 0;
+        const hitDamage = arrow.damage + impalingBonus;
+        mob.health = Math.max(0, mob.health - (mob.type === 'horse' ? calculateHorseArmorDamage(hitDamage, mob.horseArmor) : hitDamage));
         if (previousHealth > 0 && mob.health <= 0 && ['zombie','skeleton','stray','creeper','spider','enderman','witch','slime','magma_cube','ghast','blaze','wither_skeleton','drowned','phantom','guardian','elder_guardian','silverfish','cave_spider'].includes(mob.type)) this.game.player?.recordAdvancementEvent?.('killed_hostile', this.game.tickCount || 0);
         mob.hurtTicks = 10;
         mob.anim.hurt = 1;
         mob.playerDamageTicks = 100;
+        if (arrow.flame) mob.fireTicks = Math.max(mob.fireTicks || 0, 100);
+        if (arrow.punchLevel > 0) {
+          const length = Math.max(0.001, Math.hypot(arrow.vx, arrow.vz));
+          const impulse = 0.35 * arrow.punchLevel;
+          mob.knockbackX = (arrow.vx / length) * impulse;
+          mob.knockbackZ = (arrow.vz / length) * impulse;
+          mob.pauseTicks = 0;
+        }
+        if (arrow.isTrident && arrow.loyaltyLevel > 0) { arrow.returning = true; continue; }
+        if (arrow.isTrident) { this.arrows.splice(i, 1); continue; }
         if (arrow.piercingLevel > 0) {
           // Piercing arrows keep travelling and remember every hit entity so
           // they cannot repeatedly damage the same mob on later ticks.
@@ -495,6 +575,8 @@ export class MobSystem {
         arrow.offsetX = arrow.x - mob.x; arrow.offsetY = arrow.y - mob.y; arrow.offsetZ = arrow.z - mob.z;
         arrow.done = false;
       } else if (result.hit === 'block') {
+        if (arrow.isTrident && arrow.loyaltyLevel > 0) { arrow.returning = true; continue; }
+        if (arrow.isTrident) { this.arrows.splice(i, 1); continue; }
         arrow.stuck = true;
         arrow.stuckYaw = Math.atan2(-arrow.vx, arrow.vz);
         arrow.stuckPitch = Math.atan2(-arrow.vy, Math.hypot(arrow.vx, arrow.vz));
@@ -1542,6 +1624,13 @@ export class MobSystem {
       if (mob.ageTicks < 0) mob.ageTicks++;
       if (mob.boostCooldown > 0) mob.boostCooldown--;
       if (mob.playerDamageTicks > 0) mob.playerDamageTicks--;
+      if (mob.fireTicks > 0) {
+        mob.fireTicks--;
+        if (mob.fireTicks % 20 === 0) {
+          mob.health = Math.max(0, mob.health - 1);
+          mob.hurtTicks = Math.max(mob.hurtTicks || 0, 4);
+        }
+      }
       if (mob.loveTicks > 0) mob.loveTicks--;
       if (mob.breedCooldown > 0) mob.breedCooldown--;
       mob.thinkTicks--;
