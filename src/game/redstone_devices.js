@@ -630,6 +630,8 @@ export const RedstoneDevicesMixin = {
         } else if (rearBlock.block.id === 'mc:hopper') {
           const hopper = this._hopperAt?.(rearX, rearY, rearZ);
           if (hopper?.slots) containerPower = comparatorContainerOutput(hopper.slots, hopper.slots.length);
+        } else if (rearBlock.block.id === 'mc:jukebox') {
+          containerPower = rearBlock.get('record') && rearBlock.get('record') !== 'none' ? 15 : 0;
         } else if (rearBlock.block.id === 'mc:composter') {
           containerPower = composterComparatorOutput(rearBlock.get('level'));
         } else if (rearBlock.block.id === 'mc:dropper' || rearBlock.block.id === 'mc:dispenser') {
