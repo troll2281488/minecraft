@@ -133,3 +133,71 @@ describe('Java fence and fence-gate registration and geometry', () => {
     assertDeepEqual(nether.pattern, ['NNN', 'NNN']);
   });
 });
+
+
+describe('Java wall family geometry and crafting', () => {
+  const materials = [
+    'cobblestone', 'mossy_cobblestone', 'brick', 'prismarine',
+    'red_sandstone', 'mossy_stone_brick', 'granite', 'stone_brick',
+    'nether_brick', 'andesite', 'red_nether_brick', 'sandstone',
+    'end_stone_brick', 'diorite', 'blackstone',
+    'polished_blackstone_brick', 'polished_blackstone',
+  ];
+
+  it('registers all 17 Java wall variants as connected non-cube blocks', () => {
+    for (const material of materials) {
+      const block = BLOCKS.get(`mc:${material}_wall`);
+      assert(block, `${material} wall missing`);
+      assertEqual(block.renderShape, 'wall');
+      assertEqual(block.solid, true);
+      assertEqual(block.opaqueCube, false);
+      assert(isNonCube(block.defaultState));
+    }
+  });
+
+  it('an isolated wall has a 1.5-block-high central post', () => {
+    const wall = BLOCKS.get('mc:cobblestone_wall').defaultState;
+    const boxes = shapeBoxes(wall);
+    assertDeepEqual(boxes, [[0.25, 0, 0.25, 0.75, 1.5, 0.75]]);
+    assertDeepEqual(collisionBoxes(wall), boxes);
+  });
+
+  it('connects wall arms to adjacent walls and opaque cubes', () => {
+    const wall = BLOCKS.get('mc:cobblestone_wall').defaultState;
+    const connected = shapeBoxes(wall, (dx, dy, dz) =>
+      dx === 0 && dy === 0 && dz === -1 ? wall : null);
+    assertEqual(connected.length, 2);
+    assertDeepEqual(connected[1], [0.25, 0.25, 0, 0.75, 0.8125, 0.25]);
+    const toStone = shapeBoxes(wall, (dx, dy, dz) =>
+      dx === 1 && dy === 0 && dz === 0 ? STONE : null);
+    assertEqual(toStone.length, 2);
+    assertDeepEqual(toStone[1], [0.75, 0.25, 0.25, 1, 0.8125, 0.75]);
+  });
+
+  it('does not connect to glass, fences, or fence gates', () => {
+    const wall = BLOCKS.get('mc:cobblestone_wall').defaultState;
+    const glass = BLOCKS.get('mc:glass').defaultState;
+    const fence = BLOCKS.get('mc:oak_fence').defaultState;
+    const gate = BLOCKS.get('mc:oak_fence_gate').defaultState;
+    for (const neighbor of [glass, fence, gate]) {
+      assertEqual(shapeBoxes(wall, () => neighbor).length, 1);
+    }
+  });
+
+  it('provides the vanilla brick block used by the brick-wall recipe', () => {
+    assert(BLOCKS.get('mc:bricks'));
+    const recipe = RECIPES.recipes.find((entry) => entry.result === 'mc:brick_wall');
+    assert(recipe);
+    assertEqual(recipe.key.B, 'mc:bricks');
+  });
+
+  it('registers six-wall recipes for every material variant', () => {
+    for (const material of materials) {
+      const recipe = RECIPES.recipes.find((entry) => entry.result === `mc:${material}_wall`);
+      assert(recipe, `${material} wall recipe missing`);
+      assertEqual(recipe.count, 6);
+      assertDeepEqual(recipe.pattern, ['BBB', 'BBB']);
+      assert(BLOCKS.get(recipe.key.B), `wall ingredient block ${recipe.key.B} missing`);
+    }
+  });
+});

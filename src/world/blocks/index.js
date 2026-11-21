@@ -97,6 +97,8 @@ stoneLike('mc:mossy_cobblestone', 'mossy_cobblestone', 2, 6);
 stoneLike('mc:granite', 'granite', 1.5, 6);
 stoneLike('mc:polished_granite', 'polished_granite', 1.5, 6);
 stoneLike('mc:stone_bricks', 'stone_bricks', 1.5, 6);
+stoneLike('mc:mossy_stone_bricks', 'mossy_stone_bricks', 1.5, 6);
+stoneLike('mc:bricks', 'bricks', 2, 6);
 stoneLike('mc:diorite', 'diorite', 1.5, 6);
 stoneLike('mc:polished_diorite', 'polished_diorite', 1.5, 6);
 stoneLike('mc:andesite', 'andesite', 1.5, 6);
@@ -106,7 +108,9 @@ stoneLike('mc:obsidian', 'obsidian', 50, 1200, 3);
 stoneLike('mc:netherrack', 'netherrack', 0.4, 2);
 stoneLike('mc:blackstone', 'blackstone', 1.5, 6);
 stoneLike('mc:polished_blackstone', 'polished_blackstone', 1.5, 6);
+stoneLike('mc:polished_blackstone_bricks', 'polished_blackstone_bricks', 1.5, 6);
 stoneLike('mc:nether_bricks', 'nether_bricks', 2, 6);
+stoneLike('mc:red_nether_bricks', 'red_nether_bricks', 2, 6);
 stoneLike('mc:nether_gold_ore', 'nether_gold_ore', 3, 3);
 define('mc:glowstone', {
   hardness: 0.3, resistance: 0.3, tool: 'pickaxe', soundGroup: 'glass',
@@ -479,6 +483,28 @@ for (const wood of ['oak', 'spruce', 'birch', 'jungle', 'acacia', 'dark_oak']) {
   fenceGateBlock(wood);
 }
 fenceBlock('nether_brick_fence', 'nether_bricks', 'stone');
+
+// Stone walls from the Java 1.19 block set. The wall profile is shared; each
+// family keeps its own material texture and the same pickaxe harvest rules.
+function wallBlock(name, texture, hardness = 2) {
+  define(`mc:${name}_wall`, {
+    hardness, resistance: 6, tool: 'pickaxe', harvestLevel: 0,
+    requiresTool: true, soundGroup: 'stone', texture,
+    solid: true, opaqueCube: false, opacity: 0, renderShape: 'wall',
+  });
+}
+for (const [name, texture] of [
+  ['cobblestone', 'cobblestone'], ['mossy_cobblestone', 'mossy_cobblestone'],
+  ['brick', 'stone_bricks'], ['prismarine', 'stone'],
+  ['red_sandstone', 'red_sandstone'], ['mossy_stone_brick', 'mossy_stone_bricks'],
+  ['granite', 'granite'], ['stone_brick', 'stone_bricks'],
+  ['nether_brick', 'nether_bricks'], ['andesite', 'andesite'],
+  ['red_nether_brick', 'red_nether_bricks'], ['sandstone', 'sandstone'],
+  ['end_stone_brick', 'end_bricks'], ['diorite', 'diorite'],
+  ['blackstone', 'blackstone'], ['polished_blackstone_brick', 'polished_blackstone_bricks'],
+  ['polished_blackstone', 'polished_blackstone'],
+]) wallBlock(name, texture);
+
 
 // Note block: 25 semitone pitches, tuned by right-click and triggered by redstone.
 define('mc:note_block', {
