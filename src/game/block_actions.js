@@ -364,35 +364,43 @@ export const BlockActionsMixin = {
       return true;
     }
 
-    // Seeds are planted on farmland, occupying the air block directly above it.
-    if (held.item?.id === 'mc:wheat_seeds' && id === 'mc:farmland') {
+    // Wheat, carrots, potatoes and beetroot seeds all plant on farmland.
+    const cropForSeed = {
+      'mc:wheat_seeds': 'mc:wheat',
+      'mc:carrot': 'mc:carrots',
+      'mc:potato': 'mc:potatoes',
+      'mc:beetroot_seeds': 'mc:beetroots',
+    };
+    const plantedCrop = cropForSeed[held.item?.id];
+    if (plantedCrop && id === 'mc:farmland') {
       const cropPos = { x, y: y + 1, z };
       const above = this.world.getBlock(cropPos.x, cropPos.y, cropPos.z);
       if (above.block.id === 'mc:air' || above.block.replaceable) {
-        const crop = BLOCKS.get('mc:wheat').defaultState;
-        if (this.world.setBlock(cropPos.x, cropPos.y, cropPos.z, crop)) {
+        const crop = BLOCKS.get(plantedCrop)?.defaultState;
+        if (crop && this.world.setBlock(cropPos.x, cropPos.y, cropPos.z, crop)) {
           this.multiplayer?.pushBlockChange(cropPos.x, cropPos.y, cropPos.z, crop);
           if (survival) this.inventory.consumeHeld(1);
-          this.ui.toast('Wheat planted');
+          const labels = { 'mc:wheat': 'Wheat', 'mc:carrots': 'Carrots', 'mc:potatoes': 'Potatoes', 'mc:beetroots': 'Beetroot' };
+          this.ui.toast(labels[plantedCrop] + ' planted');
         }
       }
       return true;
     }
 
-    // Mature wheat gives wheat plus a small seed return; immature crops cannot
-    // be harvested early for a guaranteed drop.
-    if (id === 'mc:wheat') {
+    // Harvest all supported crops through the same deterministic drop table
+    // used by normal block breaking.
+    if (['mc:wheat', 'mc:carrots', 'mc:potatoes', 'mc:beetroots'].includes(id)) {
       if (state.get('age') < 7) {
-        this.ui.toast('Wheat is not ripe');
+        this.ui.toast('Crop is not ripe');
         return true;
       }
       this.world.setBlock(x, y, z, AIR.defaultState);
       this.multiplayer?.pushBlockChange(x, y, z, AIR.defaultState);
       if (survival) {
-        this.inventory.addItem('mc:wheat', 1);
-        this.inventory.addItem('mc:wheat_seeds', 1 + Math.floor(Math.random() * 3));
+        const drops = blockDrops(state, this.inventory.held, this.world.seed, x, y, z);
+        for (const drop of drops) this.inventory.addItem(drop.id, drop.count);
       }
-      this.ui.toast('Wheat harvested');
+      this.ui.toast('Crop harvested');
       return true;
     }
     return false;
