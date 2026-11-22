@@ -164,3 +164,9 @@ export function sampleVanillaEntityAnimation(animationFile, state = {}, elapsedS
   }
   return { name, time, bones };
 }
+
+
+/** True only when a sampled source clip actually drives at least one bone. */
+export function hasEntityAnimationPose(animationPose) {
+  return !!animationPose?.bones && Object.keys(animationPose.bones).length > 0;
+}
