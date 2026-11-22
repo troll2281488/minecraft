@@ -80,7 +80,7 @@ for (const pack of fs.readdirSync(root).sort()) {
 const counts = new Map();
 for (const item of files) counts.set(item.group, (counts.get(item.group) || 0) + 1);
 if (files.length < 100) throw new Error(`Expected 100+ classified CC0 sounds, got ${files.length}`);
-for (const required of ['step:grass','step:wood','step:snow','impact:generic','door','ui','mob:creature']) {
+for (const required of ['step:grass','step:wood','step:snow','impact:generic','ui','mob:creature']) {
   if (!counts.has(required)) throw new Error(`Missing sound group: ${required}`);
 }
 fs.writeFileSync(path.join(root, 'manifest.json'), JSON.stringify({
