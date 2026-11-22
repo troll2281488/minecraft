@@ -115,17 +115,20 @@ export async function boot() {
   // Apply locally imported Java resource-pack textures over the community defaults.
   // The ZIP import is user-initiated; saved overrides survive reloads in this browser.
   const savedJavaPack = loadPackRecord();
-  let localTextureAnimations = new Map();\n  let localEntityTextures = new Map();
+  let localTextureAnimations = new Map();
+  let localEntityTextures = new Map();
   if (savedJavaPack) {
-    const [localBlockTextures, localItemTextures, localAnimations] = await Promise.all([
+    const [localBlockTextures, localItemTextures, localAnimations, importedEntityTextures] = await Promise.all([
       decodePack(savedJavaPack),
       decodePackItemTextures(savedJavaPack),
       decodePackAnimations(savedJavaPack),
+      decodePackEntityTextures(savedJavaPack),
     ]);
-    localTextureAnimations = localAnimations;\n    localEntityTextures = importedEntityTextures;
+    localTextureAnimations = localAnimations;
+    localEntityTextures = importedEntityTextures;
     for (const [name, pixels] of localBlockTextures) remoteTextures.blocks.set(name, pixels);
     for (const [name, dataUrl] of localItemTextures) remoteTextures.items.set(name, dataUrl);
-    console.info('[textures] Java resource pack overrides:', localBlockTextures.size, 'blocks,', localItemTextures.size, 'items.');
+    console.info('[textures] Java resource pack overrides:', localBlockTextures.size, 'blocks,', localItemTextures.size, 'items,', importedEntityTextures.size, 'entity skins.');
   }
 
   setHudSprites(remoteTextures.hud);
