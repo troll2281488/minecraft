@@ -110,7 +110,6 @@ export function tickFarming(world, player, tickCount) {
   const px = Math.floor(player.x), py = Math.floor(player.y), pz = Math.floor(player.z);
   const changed = [];
   const changedKeys = new Set();
-
   const write = (x, y, z, state) => {
     if (!world.setBlock(x, y, z, state)) return false;
     changed.push({ x, y, z, state });
@@ -118,28 +117,58 @@ export function tickFarming(world, player, tickCount) {
     return true;
   };
 
-  // Hydration is evaluated once per second, not every simulation tick.
+  // Collect farmland once. Dense fields use a shared summed-area map so
+  // neighbouring farms do not each rescan the same 9x9x2 water region.
   if (tickCount % FARMLAND_TICK_INTERVAL === 0) {
+    const farms = [];
     for (let x = px - 8; x <= px + 8; x++) {
       for (let z = pz - 8; z <= pz + 8; z++) {
         for (let y = py - 3; y <= py + 4; y++) {
           const state = world.getBlock(x, y, z);
-          if (state?.block?.id !== FARMLAND_ID) continue;
-          const moisture = state.get('moisture') ?? 0;
-          let nextMoisture = moisture;
-          if (moisture < FARMLAND_MAX_MOISTURE && hasNearbyWaterSource(world, x, y, z)) {
-            nextMoisture = FARMLAND_MAX_MOISTURE;
-          } else if (moisture > 0) {
-            nextMoisture = moisture - 1;
-          }
-          if (nextMoisture !== moisture) write(x, y, z, state.with('moisture', nextMoisture));
+          if (state?.block?.id === FARMLAND_ID) farms.push({ x, y, z, state });
         }
       }
     }
+
+    let waterAt = null;
+    if (farms.length >= 24) {
+      const minX = px - 12, minZ = pz - 12, side = 25, stride = 26;
+      const planes = new Map();
+      for (let y = py - 3; y <= py + 5; y++) {
+        const prefix = new Uint16Array(stride * stride);
+        for (let z = 0; z < side; z++) {
+          let rowCount = 0;
+          for (let x = 0; x < side; x++) {
+            const block = world.getBlock(minX + x, y, minZ + z);
+            if (block?.block?.id === 'mc:water' &&
+                (block.get?.('level') === undefined || block.get('level') === 0)) rowCount++;
+            prefix[(z + 1) * stride + x + 1] = prefix[z * stride + x + 1] + rowCount;
+          }
+        }
+        planes.set(y, prefix);
+      }
+      const contains = (plane, x, z) => {
+        if (!plane) return false;
+        const x0 = x - 4 - minX, x1 = x + 4 - minX;
+        const z0 = z - 4 - minZ, z1 = z + 4 - minZ;
+        return plane[(z1 + 1) * stride + x1 + 1]
+          - plane[z0 * stride + x1 + 1]
+          - plane[(z1 + 1) * stride + x0]
+          + plane[z0 * stride + x0] > 0;
+      };
+      waterAt = (x, y, z) => contains(planes.get(y), x, z) || contains(planes.get(y + 1), x, z);
+    }
+
+    for (const { x, y, z, state } of farms) {
+      const moisture = state.get('moisture') ?? 0;
+      const hydrated = waterAt ? waterAt(x, y, z) : hasNearbyWaterSource(world, x, y, z);
+      const nextMoisture = hydrated
+        ? Math.min(FARMLAND_MAX_MOISTURE, moisture === FARMLAND_MAX_MOISTURE ? moisture : FARMLAND_MAX_MOISTURE)
+        : Math.max(0, moisture - (moisture > 0 ? 1 : 0));
+      if (nextMoisture !== moisture) write(x, y, z, state.with('moisture', nextMoisture));
+    }
   }
 
-  // Hydrated wheat grows on the normal interval; dry farmland supports slower
-  // growth, matching the important hydrated-vs-dry survival distinction.
   if (tickCount % WHEAT_GROWTH_INTERVAL === 0) {
     for (let x = px - 8; x <= px + 8; x++) {
       for (let z = pz - 8; z <= pz + 8; z++) {
@@ -153,8 +182,6 @@ export function tickFarming(world, player, tickCount) {
           const moisture = soil.get('moisture') ?? 0;
           const interval = moisture > 0 ? WHEAT_GROWTH_INTERVAL : DRY_WHEAT_GROWTH_INTERVAL;
           if (tickCount % interval !== 0) continue;
-          // A block updated earlier in this same pass is read back from world,
-          // so the crop sees the freshly hydrated farmland state.
           if (changedKeys.has(soilKey)) {
             const currentSoil = world.getBlock(x, y - 1, z);
             if ((currentSoil.get('moisture') ?? 0) === 0 && tickCount % DRY_WHEAT_GROWTH_INTERVAL !== 0) continue;
@@ -164,8 +191,7 @@ export function tickFarming(world, player, tickCount) {
       }
     }
   }
-  // Mature pumpkin/melon stems periodically attempt to place a fruit in
-  // one of the four adjacent air blocks, provided that block has suitable soil.
+
   if (tickCount % WHEAT_GROWTH_INTERVAL === 0) {
     for (let x = px - 8; x <= px + 8; x++) {
       for (let z = pz - 8; z <= pz + 8; z++) {
@@ -198,7 +224,6 @@ export function tickFarming(world, player, tickCount) {
       }
     }
   }
-
   return changed;
 }
 
