@@ -17,9 +17,11 @@ export function classifyBundledSound(file, pack) {
   const material = materialOf(name);
   if (pack === 'kenney-footsteps') return `step:${material}`;
   if (pack === 'kenney-impact') {
-    if (/footstep|step/.test(name)) return `step:${material}`;
-    if (/impact|collision|thud|hit/.test(name)) return `impact:${material}`;
+    if (/footstep|step/.test(cleanName)) return `step:${material}`;
+    if (/impact|collision|thud|hit/.test(cleanName)) return `impact:${material}`;
   }
+  if (pack === 'openspades-blocks' && /blockdestroy|blockfall/.test(cleanName)) return 'impact:generic';
+  if (pack === 'openspades-player' && /land/.test(cleanName)) return 'land:generic';
   return null;
 }
 
@@ -77,6 +79,8 @@ export class BundledSoundBank {
       keys = [`step:${materialKey}`, 'step:generic'];
     } else if (['block.break', 'block.place', 'block.hit'].includes(eventId)) {
       keys = [`impact:${materialKey}`, 'impact:generic'];
+    } else if (eventId === 'entity.player.land') {
+      keys = ['land:generic', 'impact:generic'];
     } else if (eventId === 'ui.click') {
       keys = ['ui:click'];
     } else if (eventId === 'ui.toast') {
