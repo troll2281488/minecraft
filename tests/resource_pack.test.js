@@ -1,5 +1,5 @@
 import { describe, it, assert, assertEqual } from './framework.js';
-import { shouldFetchExternalItemTexture, shouldFetchExternalBlockTexture, resolveJavaBlockFaces } from '../src/render/resource_pack.js';
+import { shouldFetchExternalItemTexture, shouldFetchExternalBlockTexture, resolveJavaBlockFaces, javaEntityTextureKey } from '../src/render/resource_pack.js';
 import '../src/world/blocks/index.js';
 import { BLOCKS } from '../src/world/block.js';
 import { buildTextures, buildBlockTextureTable } from '../src/render/atlas.js';
@@ -173,5 +173,16 @@ describe('Java animated texture metadata', () => {
     const animation = parseTextureAnimation({ animation: { frames: [99, 1] } }, 16, 32);
     assertEqual(animation.frames.length, 1);
     assertEqual(animation.frames[0].index, 1);
+  });
+});
+
+
+describe('Java entity texture pack imports', () => {
+  it('maps entity skin paths to stable mob texture keys', () => {
+    assertEqual(javaEntityTextureKey('textures/entity/cow/cow.png'), 'cow');
+    assertEqual(javaEntityTextureKey('assets/minecraft/textures/entity/horse/horse_black.png'), 'horse_black');
+    assertEqual(javaEntityTextureKey('textures/entity/warden/warden.png'), 'warden');
+    assertEqual(javaEntityTextureKey('textures/item/iron_sword.png'), null);
+    assertEqual(javaEntityTextureKey('textures/entity/cow/cow.txt'), null);
   });
 });
