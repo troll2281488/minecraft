@@ -1,5 +1,5 @@
 import { describe, it, assert, assertEqual } from './framework.js';
-import { shouldFetchExternalItemTexture, shouldFetchExternalBlockTexture, resolveJavaBlockFaces, javaEntityTextureKey } from '../src/render/resource_pack.js';
+import { shouldFetchExternalItemTexture, shouldFetchExternalBlockTexture, resolveJavaBlockFaces, resolveJavaItemTextureKeys, javaEntityTextureKey } from '../src/render/resource_pack.js';
 import '../src/world/blocks/index.js';
 import { BLOCKS } from '../src/world/block.js';
 import { buildTextures, buildBlockTextureTable } from '../src/render/atlas.js';
@@ -150,6 +150,39 @@ describe('Java block model texture resolution', () => {
   });
 });
 
+
+describe('Java blockstate multipart and item model imports', () => {
+  it('merges multipart faces while preserving inherited model textures', () => {
+    const models = new Map([
+      ['cube_all', { elements: [{ faces: {
+        down: { texture: '#all' }, up: { texture: '#all' },
+        north: { texture: '#all' }, south: { texture: '#all' },
+        west: { texture: '#all' }, east: { texture: '#all' },
+      } }] }],
+      ['base', { parent: 'minecraft:block/cube_all', textures: { all: 'minecraft:block/stone' } }],
+      ['overlay', { textures: { particle: 'minecraft:block/redstone_dust_dot' },
+        elements: [{ faces: { up: { texture: '#particle' } } }] }],
+    ]);
+    const states = new Map([['wire', { multipart: [
+      { apply: { model: 'minecraft:block/base' } },
+      { apply: [{ model: 'minecraft:block/overlay' }] },
+    ] }]]);
+    const faces = resolveJavaBlockFaces(models, states);
+    assertEqual(faces['mc:wire'].north, 'stone');
+    assertEqual(faces['mc:wire'].up, 'stone');
+  });
+
+  it('resolves layer0 textures through inherited generated item models', () => {
+    const models = new Map([
+      ['generated', { textures: { layer0: 'minecraft:item/shared_icon' } }],
+      ['custom_sword', { parent: 'minecraft:item/generated' }],
+      ['apple', { parent: 'minecraft:item/generated', textures: { layer0: 'minecraft:item/red_apple' } }],
+    ]);
+    const resolved = resolveJavaItemTextureKeys(models);
+    assertEqual(resolved.custom_sword, 'shared_icon');
+    assertEqual(resolved.apple, 'red_apple');
+  });
+});
 
 describe('Java animated texture metadata', () => {
   it('parses vertical sprite sheets and custom frame durations', () => {
