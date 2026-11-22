@@ -24,7 +24,7 @@ import { renderBar } from '../ui/hud_bars.js';
 import { bedrockItemPose, bedrockChargeProgress, bedrockHumanoidPose } from './bedrock_animation_curves.js';
 import { sampleVanillaEntityAnimation, blendEntityAnimationBones, hasEntityAnimationPose } from './entity_animation_runtime.js';
 import { buildPlayerStateAnimation } from './player_animation.js';
-import { humanoidBones, mobLegSwing, deathPose } from './own_animation.js';
+import { humanoidBones, mobLegSwing, deathPose, buildMobAnimationBones } from './own_animation.js';
 import { textureFrameAt } from './texture_animation.js';
 
 /**
@@ -1357,7 +1357,24 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         hasArmor: !!mob.armor || !!mob.hasArmor,
         cyclePhase: (mob.walkPhase ?? 0) / (Math.PI * 2),
       }, idlePhase / 0.9) : null;
-      const mobAnimationBones = smoothEntityAnimation(mob, vanillaAnimation?.bones ?? null);
+      const proceduralMobBones = buildMobAnimationBones(mob, {
+        mobType: mob.type,
+        walkPhase: mob.walkPhase,
+        walking: !!mob.anim?.walking,
+        sprinting: !!mob.sprinting,
+        riding: !!mob.riding,
+        airborne: !!mob.airborne || !!mob.flying,
+        flying: !!mob.flying,
+        inWater: !!mob.inWater,
+        angry: !!mob.angry || !!mob.isAngry,
+        fuse: (mob.anim?.fuse ?? 0) > 0,
+        attackProgress: mob.anim?.attack > 1 ? mob.anim.attack / 8 : (mob.anim?.attack ?? 0),
+        hurtProgress: Math.min(1, (mob.hurtTicks ?? 0) / 10),
+      }, vanillaModel);
+      const mobAnimationBones = smoothEntityAnimation(mob, {
+        ...proceduralMobBones,
+        ...(vanillaAnimation?.bones ?? {}),
+      });
       const sourceAnimated = hasEntityAnimationPose({ bones: mobAnimationBones });
       vanillaParts = vanillaLayerParts(vanillaModel, 'main', mobAnimationBones);
       // Prefer the loaded vanilla geometry after animation poses have been applied.
