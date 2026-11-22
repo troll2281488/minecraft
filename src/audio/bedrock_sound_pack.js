@@ -119,7 +119,7 @@ export class BedrockSoundPack {
     // Preserve music tracks found inside the same resource pack. They are
     // handed to the background player separately from short sound effects.
     this.musicFiles = entries
-      .filter(([path]) => /(^|\\/)music(\\/|[_-])/i.test(path))
+            .filter(([path]) => /(^|\/)music(\/|[_-])/i.test(path))
       .map(([path, bytes]) => new File([bytes], path.split('/').pop(), { type: 'audio/ogg' }));
     const buckets = new Map();
     let decoded = 0;
