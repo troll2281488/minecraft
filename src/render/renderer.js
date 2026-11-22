@@ -158,7 +158,7 @@ function vanillaLayerParts(model, layerName = 'main', animationBones = null) {
 }
 
 const MOB_TEXTURE_FILES = Object.freeze({
-  cow:'cow.png', goat:'goat.png', pig:'pig.png', sheep:'sheep.png', sheep_fur:'sheep_fur.png', chicken:'chicken.png', wolf:'wolf.png', horse:'horse.png', rabbit:'rabbit.png', polar_bear:'polar_bear.png', mooshroom:'mooshroom.png',
+  cow:'cow.png', goat:'goat.png', pig:'pig.png', sheep:'sheep.png', sheep_fur:'sheep_fur.png', chicken:'chicken.png', wolf:'wolf.png', horse:'horse.png', rabbit:'rabbit.png', polar_bear:'polar_bear.png', mooshroom:'mooshroom.png', mooshroom_red:'variants/red_mooshroom.png',
   bee:'bee.png', ender_dragon:'ender_dragon.png',
   axolotl:'axolotl.png', allay:'allay.png', frog:'frog.png', tadpole:'tadpole.png', warden:'warden.png', fox:'fox.png', panda:'panda.png', dolphin:'dolphin.png',
   cod:'cod.png', salmon:'salmon.png', pufferfish:'pufferfish.png', phantom:'phantom.png', iron_golem:'iron_golem.png',
@@ -171,7 +171,7 @@ const MOB_TEXTURE_FILES = Object.freeze({
   slime:'slime.png', snow_golem:'snow_golem.png', squid:'squid.png', vex:'vex.png',
   witch:'witch.png', wither:'wither.png', wither_skeleton:'wither_skeleton.png',
   zombie_villager:'zombie_villager.png', husk:'husk.png', donkey:'donkey.png', mule:'mule.png',
-  skeleton_horse:'skeleton_horse.png', zombie_horse:'zombie_horse.png', llama:'llama.png',
+  skeleton_horse:'skeleton_horse.png', zombie_horse:'zombie_horse.png', llama:'llama.png', llama_brown:'variants/llama_brown.png', llama_gray:'variants/llama_gray.png', llama_white:'variants/llama_white.png',
   creeper:'creeper.png', enderman:'enderman.png', spider:'spider.png', cave_spider:'cave_spider.png',
   // Additional variants live in assets/mob-textures/variants/.
   axolotl_wild:'variants/axolotl_wild.png', axolotl_gold:'variants/axolotl_gold.png',
@@ -183,7 +183,7 @@ const MOB_TEXTURE_FILES = Object.freeze({
   panda_aggressive:'variants/panda_aggressive.png', panda_brown:'variants/panda_brown.png',
   panda_lazy:'variants/panda_lazy.png', panda_playful:'variants/panda_playful.png',
   panda_weak:'variants/panda_weak.png', panda_worried:'variants/panda_worried.png',
-  rabbit_black:'variants/rabbit_black.png', rabbit_cerberus:'variants/rabbit_caerbannog.png',
+  rabbit_black:'variants/rabbit_black.png', rabbit_caerbannog:'variants/rabbit_caerbannog.png',
   rabbit_gold:'variants/rabbit_gold.png', rabbit_salt:'variants/rabbit_salt.png',
   rabbit_toast:'variants/rabbit_toast.png', rabbit_white:'variants/rabbit_white.png',
   rabbit_white_splotched:'variants/rabbit_white_splotched.png',
@@ -1364,8 +1364,10 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           mob.type === 'fox' ? ['fox','fox_snow'][Math.abs(mob.id || 0) % 2] :
           mob.type === 'panda' ? ['panda','panda_aggressive','panda_brown','panda_lazy','panda_playful','panda_weak','panda_worried'][Math.abs(mob.id || 0) % 7] :
           mob.type === 'parrot' ? ['parrot','parrot_blue','parrot_green','parrot_grey','parrot_yellow_blue'][Math.abs(mob.id || 0) % 5] :
-          mob.type === 'rabbit' ? ['rabbit','rabbit_black','rabbit_gold','rabbit_salt','rabbit_toast','rabbit_white','rabbit_white_splotched'][Math.abs(mob.id || 0) % 7] :
+          mob.type === 'rabbit' ? ['rabbit','rabbit_black','rabbit_caerbannog','rabbit_gold','rabbit_salt','rabbit_toast','rabbit_white','rabbit_white_splotched'][Math.abs(mob.id || 0) % 8] :
           mob.type === 'horse' ? ['horse','horse_black','horse_chestnut','horse_creamy','horse_darkbrown','horse_gray','horse_white'][Math.abs(mob.id || 0) % 7] :
+          mob.type === 'llama' ? ['llama','llama_brown','llama_gray','llama_white'][Math.abs(mob.id || 0) % 4] :
+          mob.type === 'mooshroom' ? (Math.abs(mob.id || 0) % 2 ? 'mooshroom_red' : 'mooshroom') :
           mob.type === 'shulker' ? 'shulker_' + ['black','blue','brown','cyan','gray','green','light_blue','light_gray','lime','magenta','orange','pink','purple','red','white','yellow'][Math.abs(mob.id || 0) % 16] :
           mob.type === 'bee' && mob.angry ? (mob.hasNectar ? 'bee_angry_nectar' : 'bee_angry') :
           mob.type === 'bee' && mob.hasNectar ? 'bee_nectar' :
