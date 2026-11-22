@@ -14,10 +14,10 @@ export const SOUND_EVENTS = Object.freeze({
   'entity.arrow.shoot':'shoot','entity.arrow.hit':'arrowHit',
   'entity.generic.explode':'explode','entity.mob.ambient':'ambient',
   'entity.mob.hurt':'mobHurt','entity.mob.death':'mobDeath',
-  'entity.villager.trade':'trade','item.equip':'equip','item.cast':'cast',
+  'entity.villager.trade':'trade','item.equip':'equip','item.cast':'cast','item.ender_pearl.throw':'enderPearl',
   'item.reel':'reel','item.fishing.bite':'bite','item.fishing.catch':'catch',
   'item.eat':'eat','item.goat_horn':'goatHorn',
-  'weather.rain':'rain','weather.thunder':'thunder',
+  'weather.rain':'rain','weather.thunder':'thunder','block.portal.ambient':'portal',
   'fluid.water':'water','fluid.lava':'lava','ui.click':'click','ui.toast':'toast',
 });
 export const SOUND_PRESETS = Object.freeze({
@@ -86,7 +86,7 @@ const WAV_EVENTS = Object.freeze({
   water:'water_splash', doorOpen:'door_open', doorClose:'door_open',
   chestOpen:'chest_open', chestClose:'chest_open', cast:'fishing_cast',
   bite:'fishing_bite', catch:'fishing_catch', trade:'villager_trade',
-  click:'ui_click', toast:'ui_toast', note:'note_block',
+  click:'ui_click', toast:'ui_toast', note:'note_block', enderPearl:'ender_pearl_throw', portal:'portal_ambient',
 });
 const WAV_SURFACES = Object.freeze({
   stone:'stone', metal:'stone', glass:'stone', generic:'stone',
