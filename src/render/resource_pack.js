@@ -481,7 +481,14 @@ export function resolveJavaBlockFaces(models, blockstates) {
   return facesByBlock;
 }
 
-export function javaEntityTextureKey(path) {\n  const normalized = String(path || '').replaceAll('\\\\', '/').replace(/^assets\\/minecraft\\//, '').replace(/^textures\\/entity\\//, '');\n  if (!normalized.toLowerCase().endsWith('.png')) return null;\n  const basename = normalized.split('/').pop().replace(/\\.png$/i, '');\n  return /^[a-z0-9_]+$/i.test(basename) ? basename.toLowerCase() : null;\n}\n\nexport async function importJavaResourcePackZip(file) {
+export function javaEntityTextureKey(path) {
+  const normalized = String(path || '').replaceAll('\\', '/').replace(/^assets\/minecraft\//, '').replace(/^textures\/entity\//, '');
+  if (!normalized.toLowerCase().endsWith('.png')) return null;
+  const basename = normalized.split('/').pop().replace(/\.png$/i, '');
+  return /^[a-z0-9_]+$/i.test(basename) ? basename.toLowerCase() : null;
+}
+
+export async function importJavaResourcePackZip(file) {
   if (!file || !/\.zip$/i.test(file.name)) throw new Error('Выбери ZIP-архив ресурспака');
   const { bytes, entries } = await readZipPngEntries(file);
   const existing = loadPackRecord() || { name: 'Java resource pack', textures: {}, items: {} };
