@@ -1,5 +1,5 @@
 import { describe, it, assert, assertEqual } from './framework.js';
-import { humanoidBones, mobLegSwing, deathPose } from '../src/render/own_animation.js';
+import { humanoidBones, mobLegSwing, deathPose, buildMobAnimationBones } from '../src/render/own_animation.js';
 
 describe('Project-authored humanoid animation', () => {
   it('returns all six bones with three-axis rotations', () => {
@@ -63,5 +63,33 @@ describe('Project-authored mob death', () => {
       assert(next.sink >= last.sink - 1e-9 && next.scale <= last.scale + 1e-9, 'pose should only sink and shrink');
       last = next;
     }
+  });
+});
+
+
+describe('Procedural articulated mob animation', () => {
+  const modelWith = (...names) => ({ layers: { main: { root: { children: Object.fromEntries(names.map(name => [name, {}])) } } } });
+  it('creates zombie arm and leg poses on the actual model bone names', () => {
+    const model = modelWith('head','body','leftArm','rightArm','leftLeg','rightLeg');
+    const bones = buildMobAnimationBones({}, { dt: 1/60, mobType: 'zombie', walking: true, walkPhase: 1, attackProgress: 0.5 }, model);
+    assert(bones.leftArm && bones.rightArm, 'both zombie arms should animate');
+    assert(bones.leftArm.rotation[0] < -1.4, 'zombie arms stay outstretched');
+    assert(bones.leftLeg && bones.rightLeg, 'both zombie legs should animate');
+    assert(bones.leftArm.rotation[0] < 0, 'zombie arm pose points forward');
+  });
+  it('aims skeleton arms during bow attack and animates spider legs in alternating pairs', () => {
+    const skeleton = buildMobAnimationBones({}, { dt: 1/60, mobType: 'skeleton', attackProgress: 0.5 }, modelWith('rightArm','leftArm'));
+    assert(skeleton.rightArm && skeleton.leftArm, 'skeleton arms should be present');
+    assert(skeleton.rightArm.rotation[0] < -1.4, 'right arm aims during attack');
+    const spider = buildMobAnimationBones({}, { dt: 1/60, mobType: 'spider', walking: true, walkPhase: 1 }, modelWith('leg1','leg2','leg3','leg4','leg5','leg6','leg7','leg8'));
+    assertEqual(Object.keys(spider).length, 8);
+  });
+  it('animates wings, creeper fuse and hurt recoil without requiring a source animation clip', () => {
+    const bee = buildMobAnimationBones({}, { dt: 1/60, mobType: 'bee', airborne: true }, modelWith('leftWing','rightWing'));
+    assert(bee.leftWing && bee.rightWing);
+    const creeper = buildMobAnimationBones({}, { dt: 1/60, mobType: 'creeper', fuse: true }, modelWith('body','head'));
+    assert(creeper.body.rotation[2] !== 0 || creeper.head.rotation[0] !== 0);
+    const hurt = buildMobAnimationBones({}, { dt: 1/60, mobType: 'cow', hurtProgress: 0.5 }, modelWith('body','head','leg1'));
+    assert(hurt.body.rotation[0] < 0 && hurt.head.rotation[0] < 0);
   });
 });
