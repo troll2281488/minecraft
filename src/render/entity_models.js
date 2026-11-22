@@ -1,5 +1,5 @@
 /**
- * Loader for InventivetalentDev's Minecraft 1.20.1 entity-model dataset.
+ * Loader for InventivetalentDev's Minecraft 1.17.1 entity-model dataset (legacy-compatible base).
  *
  * The upstream JSON format stores hierarchical model parts, cubes, UV offsets,
  * texture dimensions and animation keyframes. Keep the original JSON intact:
@@ -57,7 +57,7 @@ async function loadEntityModelPackUnsafe() {
     console.warn('[models] Model pack unavailable; using built-in mob rendering.', error);
     return emptyEntityModelPack();
   }
-  if (manifest.minecraftVersion !== '1.20.1' || !Array.isArray(manifest.models) || !Array.isArray(manifest.animations)) {
+  if (manifest.minecraftVersion !== '1.17.1' || !Array.isArray(manifest.models) || !Array.isArray(manifest.animations)) {
     console.warn('[models] Model pack manifest is invalid; using built-in mob rendering.');
     return emptyEntityModelPack();
   }
