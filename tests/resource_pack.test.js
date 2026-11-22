@@ -1,5 +1,5 @@
 import { describe, it, assert, assertEqual } from './framework.js';
-import { shouldFetchExternalItemTexture, shouldFetchExternalBlockTexture } from '../src/render/resource_pack.js';
+import { shouldFetchExternalItemTexture, shouldFetchExternalBlockTexture, resolveJavaBlockFaces } from '../src/render/resource_pack.js';
 import '../src/world/blocks/index.js';
 import { BLOCKS } from '../src/world/block.js';
 import { buildTextures, buildBlockTextureTable } from '../src/render/atlas.js';
@@ -101,5 +101,50 @@ describe('Snow leaf tint channel', () => {
     assert(TERRAIN_VERTEX_SHADER.includes('uLeavesColor'));
     assert(TERRAIN_VERTEX_SHADER.includes('tintKind == 4u'));
     assert(TERRAIN_FRAGMENT_SHADER.includes('vTintKind == 4u && uLeavesColor.r > 0.9'));
+  });
+});
+
+describe('Java block model texture resolution', () => {
+  it('resolves inherited cube model texture variables into six block faces', () => {
+    const models = new Map([
+      ['cube_all', {
+        elements: [{
+          faces: Object.fromEntries(['down', 'up', 'north', 'south', 'west', 'east']
+            .map(face => [face, { texture: '#all' }])),
+        }],
+      }],
+      ['stone', {
+        parent: 'minecraft:block/cube_all',
+        textures: { all: 'minecraft:block/stone' },
+      }],
+    ]);
+    const blockstates = new Map([
+      ['stone', { variants: { '': { model: 'minecraft:block/stone' } } }],
+    ]);
+    const faces = resolveJavaBlockFaces(models, blockstates);
+    assertEqual(faces['mc:stone'].up, 'stone');
+    assertEqual(faces['mc:stone'].down, 'stone');
+    assertEqual(faces['mc:stone'].north, 'stone');
+  });
+
+  it('uses per-face model textures rather than replacing all faces with one tile', () => {
+    const models = new Map([
+      ['log', {
+        textures: { end: 'minecraft:block/oak_log_top', side: 'minecraft:block/oak_log' },
+        elements: [{
+          faces: {
+            up: { texture: '#end' }, down: { texture: '#end' },
+            north: { texture: '#side' }, south: { texture: '#side' },
+            west: { texture: '#side' }, east: { texture: '#side' },
+          },
+        }],
+      }],
+    ]);
+    const blockstates = new Map([
+      ['oak_log', { variants: { '': { model: 'minecraft:block/log' } } }],
+    ]);
+    const faces = resolveJavaBlockFaces(models, blockstates);
+    assertEqual(faces['mc:oak_log'].up, 'oak_log_top');
+    assertEqual(faces['mc:oak_log'].east, 'oak_log');
   });
 });
