@@ -1,6 +1,5 @@
 import { BedrockSoundPack } from '../audio/bedrock_sound_pack.js';
 import { BackgroundMusic } from '../audio/background_music.js';
-import { BundledSoundBank } from '../audio/bundled_sound_bank.js';
 /**
  * Original procedural sound events. AudioContext is created lazily after a user
  * gesture; these synthesized cues are not recordings from Minecraft.
@@ -15,10 +14,10 @@ export const SOUND_EVENTS = Object.freeze({
   'entity.arrow.shoot':'shoot','entity.arrow.hit':'arrowHit',
   'entity.generic.explode':'explode','entity.mob.ambient':'ambient',
   'entity.mob.hurt':'mobHurt','entity.mob.death':'mobDeath',
-  'entity.villager.trade':'trade','item.equip':'equip','item.cast':'cast','item.ender_pearl.throw':'enderPearl',
+  'entity.villager.trade':'trade','item.equip':'equip','item.cast':'cast',
   'item.reel':'reel','item.fishing.bite':'bite','item.fishing.catch':'catch',
   'item.eat':'eat','item.goat_horn':'goatHorn',
-  'weather.rain':'rain','weather.thunder':'thunder','block.portal.ambient':'portal',
+  'weather.rain':'rain','weather.thunder':'thunder',
   'fluid.water':'water','fluid.lava':'lava','ui.click':'click','ui.toast':'toast',
 });
 export const SOUND_PRESETS = Object.freeze({
@@ -39,7 +38,6 @@ export const SOUND_PRESETS = Object.freeze({
   rain:{f:310,d:.09,type:'triangle',volume:.018}, thunder:{f:48,d:.65,type:'sawtooth',volume:.09},
   water:{f:230,d:.18,type:'sine',volume:.025}, lava:{f:72,d:.24,type:'sawtooth',volume:.03},
   click:{f:520,d:.035,type:'square',volume:.035}, toast:{f:720,d:.10,type:'sine',volume:.045},
-  enderPearl:{f:440,d:.2,type:'sine',volume:.06}, portal:{f:120,d:1,type:'sine',volume:.04},
 });
 const MATERIAL_PITCH = Object.freeze({wood:.78,grass:1.28,stone:1,sand:.92,metal:1.55,glass:1.8});
 
@@ -78,32 +76,8 @@ async function deleteBedrockArchive(){
   finally{db.close();}
 }
 
-
-const WAV_ROOT = new URL('../../assets/sound_library/', import.meta.url);
-const WAV_EVENTS = Object.freeze({
-  break:'block_break', step:'step', place:'block_place', hit:'block_hit',
-  hurt:'player_hurt', mobHurt:'mob_hurt', mobDeath:'mob_death', pickup:'item_pickup',
-  xp:'xp_orb', drop:'item_drop', levelup:'level_up', equip:'equip', eat:'eat',
-  shoot:'bow_shoot', arrowHit:'arrow_hit', explode:'explosion', thunder:'thunder',
-  water:'water_splash', doorOpen:'door_open', doorClose:'door_open',
-  chestOpen:'chest_open', chestClose:'chest_open', cast:'fishing_cast',
-  bite:'fishing_bite', catch:'fishing_catch', trade:'villager_trade',
-  click:'ui_click', toast:'ui_toast', note:'note_block', enderPearl:'ender_pearl_throw', portal:'portal_ambient',
-});
-const WAV_SURFACES = Object.freeze({
-  stone:'stone', metal:'stone', glass:'stone', generic:'stone',
-  wood:'wood', grass:'grass', dirt:'grass', wool:'grass', snow:'grass', sand:'sand',
-});
-function soundSurface(material='stone') {
-  const id=String(material).toLowerCase().replace(/^.*:/,'');
-  if(/sand/.test(id))return 'sand';
-  if(/wood|log|plank|door|chest|fence/.test(id))return 'wood';
-  if(/grass|leaves|leaf|dirt|mud|farmland|wheat|crop|moss|hay/.test(id))return 'grass';
-  return 'stone';
-}
-
 export class GameSounds {
-  constructor(){this.context=null;this.lastStep=0;this.lastMobSoundAt=0;this.enabled=true;this.masterVolume=1;this.bedrockPack=null;this.bundledBank=new BundledSoundBank();this._restorePromise=null;this._restoreScheduled=false;this.wavs=new Map();this.wavLoads=new Map();this.music=new BackgroundMusic();}
+  constructor(){this.context=null;this.lastStep=0;this.lastMobSoundAt=0;this.enabled=true;this.masterVolume=1;this.bedrockPack=null;this._restorePromise=null;this._restoreScheduled=false;this.music=new BackgroundMusic();}
   async importBedrockPack(file){
     const context=this._ctx();
     if(!context)throw new Error('Web Audio недоступен в этом браузере');
@@ -137,7 +111,7 @@ export class GameSounds {
     if(!this.enabled)return null;
     const Audio=globalThis.AudioContext||globalThis.webkitAudioContext;
     if(!Audio)return null;
-    if(!this.context){this.context=new Audio();this.bundledBank.load(this.context).catch(error=>console.warn('[audio] Built-in sound bank unavailable:',error));}
+    if(!this.context)this.context=new Audio();
     if(!this._restoreScheduled){
       this._restoreScheduled=true;
       Promise.resolve().then(()=>this.restoreSavedPack().catch(error=>console.warn('Не удалось восстановить звуковой пак:',error)));
@@ -173,13 +147,7 @@ export class GameSounds {
       explode:'entity.generic.explode', ambient:'entity.mob.ambient',
     })[kind];
     if(packEvent && this.bedrockPack?.play(packEvent,this.masterVolume))return true;
-    if(packEvent && this.bundledBank?.play(packEvent,material,this.masterVolume))return true;
-    const base=WAV_EVENTS[kind];
-    if(base){
-      const surface=(kind==='break'||kind==='step') ? WAV_SURFACES[soundSurface(material)] : null;
-      this._playWav(surface ? base+'_'+surface : base, kind==='step' ? .22 : .42);
-      return true;
-    }
+    // Do not play generic synthesized or unrelated CC0 samples as Minecraft audio.
     return false;
   }
   playMob(type, action = 'ambient', volume = 0.35){
@@ -193,47 +161,11 @@ export class GameSounds {
       if (action === 'ambient') this.lastMobSoundAt = now;
       return true;
     }
-    const name = action==='ambient' ? `${mob}_ambient`
-      : action==='fuse' && mob==='creeper' ? 'creeper_fuse'
-      : action==='hurt' ? 'mob_hurt'
-      : action==='death' ? 'mob_death' : '';
-    if(name && this._playWav(name, Math.min(.35, volume))) {
-      if(action==='ambient')this.lastMobSoundAt=now;
-      return true;
-    }
     return false;
   }
   playNote(note, material = 'wood'){
-    const c=this._ctx();
-    if(!c)return false;
-    if(this.bedrockPack?.play('block.note',this.masterVolume))return true;
-    return this._playWav('note_block',.4);
-  }
-  _playWav(name,gain=.35){
-    const c=this.context;
-    if(!c||!this.enabled)return false;
-    const play=buffer=>{
-      if(!buffer||!this.enabled)return;
-      const source=c.createBufferSource();
-      const volume=c.createGain();
-      source.buffer=buffer;
-      volume.gain.value=Math.max(0,Math.min(1,this.masterVolume*gain));
-      source.connect(volume).connect(c.destination);
-      source.start();
-    };
-    const cached=this.wavs.get(name);
-    if(cached){play(cached);return true;}
-    if(!this.wavLoads.has(name)){
-      const task=fetch(new URL(name+'.wav',WAV_ROOT))
-        .then(response=>{if(!response.ok)throw new Error('Sound not found: '+name);return response.arrayBuffer();})
-        .then(bytes=>c.decodeAudioData(bytes))
-        .then(buffer=>{this.wavs.set(name,buffer);return buffer;})
-        .catch(error=>{console.warn('[audio] Could not load sound:',name,error);return null;})
-        .finally(()=>this.wavLoads.delete(name));
-      this.wavLoads.set(name,task);
-      task.then(play);
-    }
-    return true;
+    this._ctx();
+    return this.bedrockPack?.play('block.note', this.masterVolume) ?? false;
   }
   step(material){
     const now=globalThis.performance?.now?.()??0;
