@@ -161,12 +161,14 @@ export async function boot() {
 // ---------------------------------------------------------------------------
 
 class Game {
-  constructor({ canvas, gl, textureArray, textureTable, icons, textures, entityModels }) {
+  constructor({ canvas, gl, textureArray, textureTable, icons, textures, entityModels, textureAnimations = new Map() }) {
     this.canvas = canvas;
     this.gl = gl;
     this.textureArray = textureArray;
     this.textureTable = textureTable;
     this.textures = textures;
+    this.textureAnimations = textureAnimations;
+    this._animatedFrameByName = new Map();
     this.entityModels = entityModels; // Full upstream geometry + animation data, loaded locally.
 
     this.ui = new UI(icons);
