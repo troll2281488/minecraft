@@ -338,6 +338,12 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       this.mobTextures.set(type,{texture,width:64,height:32,ready:false});
       const image=new Image();
       image.onload=()=>{
+        // A user-imported resource pack has priority over bundled defaults,
+        // regardless of which image finishes decoding first.
+        if (this.customMobTextures?.has(type)) {
+          gl.deleteTexture(texture);
+          return;
+        }
         gl.bindTexture(gl.TEXTURE_2D,texture);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
         gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);
