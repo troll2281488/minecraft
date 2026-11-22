@@ -38,6 +38,7 @@ export const SOUND_PRESETS = Object.freeze({
   rain:{f:310,d:.09,type:'triangle',volume:.018}, thunder:{f:48,d:.65,type:'sawtooth',volume:.09},
   water:{f:230,d:.18,type:'sine',volume:.025}, lava:{f:72,d:.24,type:'sawtooth',volume:.03},
   click:{f:520,d:.035,type:'square',volume:.035}, toast:{f:720,d:.10,type:'sine',volume:.045},
+  enderPearl:{f:440,d:.2,type:'sine',volume:.06}, portal:{f:120,d:1,type:'sine',volume:.04},
 });
 const MATERIAL_PITCH = Object.freeze({wood:.78,grass:1.28,stone:1,sand:.92,metal:1.55,glass:1.8});
 
