@@ -5,26 +5,26 @@
 const ROOT = new URL('../../assets/sound_library/', import.meta.url);
 
 const FILES = Object.freeze({
-  break: { wood: 'block_break_wood.ogg', grass: 'block_break_grass.ogg', sand: 'block_break_sand.ogg', stone: 'block_break_stone.ogg' },
-  place: 'block_place.ogg',
-  hit: 'block_hit.ogg',
-  step: { wood: 'step_wood.ogg', grass: 'step_grass.ogg', dirt: 'step_grass.ogg', sand: 'step_sand.ogg', stone: 'step_stone.ogg' },
-  hurt: 'player_hurt.ogg', mobHurt: 'mob_hurt.ogg', mobDeath: 'mob_death.ogg',
-  pickup: 'item_pickup.ogg', drop: 'item_drop.ogg', xp: 'xp_orb.ogg', levelup: 'level_up.ogg',
-  shoot: 'bow_shoot.ogg', bow: 'bow_shoot.ogg', arrowHit: 'arrow_hit.ogg',
-  explode: 'explosion.ogg', chestOpen: 'chest_open.ogg', doorOpen: 'door_open.ogg',
-  equip: 'equip.ogg', eat: 'eat.ogg', cast: 'fishing_cast.ogg', reel: 'fishing_catch.ogg',
-  bite: 'fishing_bite.ogg', catch: 'fishing_catch.ogg', note: 'note_block.ogg',
-  trade: 'villager_trade.ogg', thunder: 'thunder.ogg', water: 'water_splash.ogg',
-  click: 'ui_click.ogg', toast: 'ui_toast.ogg', creeper: 'creeper_fuse.ogg',
-  portal: 'portal_ambient.ogg',
+  break: { wood: 'block_break_wood.wav', grass: 'block_break_grass.wav', sand: 'block_break_sand.wav', stone: 'block_break_stone.wav' },
+  place: 'block_place.wav',
+  hit: 'block_hit.wav',
+  step: { wood: 'step_wood.wav', grass: 'step_grass.wav', dirt: 'step_grass.wav', sand: 'step_sand.wav', stone: 'step_stone.wav' },
+  hurt: 'player_hurt.wav', mobHurt: 'mob_hurt.wav', mobDeath: 'mob_death.wav',
+  pickup: 'item_pickup.wav', drop: 'item_drop.wav', xp: 'xp_orb.wav', levelup: 'level_up.wav',
+  shoot: 'bow_shoot.wav', bow: 'bow_shoot.wav', arrowHit: 'arrow_hit.wav',
+  explode: 'explosion.wav', chestOpen: 'chest_open.wav', doorOpen: 'door_open.wav',
+  equip: 'equip.wav', eat: 'eat.wav', cast: 'fishing_cast.wav', reel: 'fishing_catch.wav',
+  bite: 'fishing_bite.wav', catch: 'fishing_catch.wav', note: 'note_block.wav',
+  trade: 'villager_trade.wav', thunder: 'thunder.wav', water: 'water_splash.wav',
+  click: 'ui_click.wav', toast: 'ui_toast.wav', creeper: 'creeper_fuse.wav',
+  portal: 'portal_ambient.wav',
 });
 const MOB_FILES = Object.freeze({
-  zombie: 'zombie_ambient.ogg', skeleton: 'skeleton_ambient.ogg', spider: 'spider_ambient.ogg',
-  wolf: 'wolf_ambient.ogg', horse: 'horse_ambient.ogg', villager: 'villager_ambient.ogg',
-  pig: 'pig_ambient.ogg', chicken: 'chicken_ambient.ogg', cow: 'cow_ambient.ogg',
-  sheep: 'sheep_ambient.ogg', cat: 'cat_ambient.ogg', bee: 'bee_ambient.ogg',
-  rabbit: 'rabbit_ambient.ogg',
+  zombie: 'zombie_ambient.wav', skeleton: 'skeleton_ambient.wav', spider: 'spider_ambient.wav',
+  wolf: 'wolf_ambient.wav', horse: 'horse_ambient.wav', villager: 'villager_ambient.wav',
+  pig: 'pig_ambient.wav', chicken: 'chicken_ambient.wav', cow: 'cow_ambient.wav',
+  sheep: 'sheep_ambient.wav', cat: 'cat_ambient.wav', bee: 'bee_ambient.wav',
+  rabbit: 'rabbit_ambient.wav',
 });
 
 export class UserSoundBank {
