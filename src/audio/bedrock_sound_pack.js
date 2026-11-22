@@ -40,12 +40,37 @@ async function readZip(file) {
   }
   return entries;
 }
+function materialBucket(path) {
+  const full = String(path).toLowerCase().replace(/\\/g, '/');
+  const rules = [
+    ['wood', /wood|wooden|plank|log|bamboo|stem|hyphae|ladder|door/],
+    ['grass', /grass|dirt|leaves|leaf|moss|mud|root|crop|plant/],
+    ['stone', /stone|rock|brick|cobble|deepslate|granite|diorite|andesite|ore/],
+    ['sand', /sand|gravel/],
+    ['snow', /snow|ice/],
+    ['metal', /metal|iron|gold|copper|anvil|chain/],
+    ['glass', /glass/],
+    ['cloth', /wool|cloth|carpet/],
+  ];
+  return rules.find(([, pattern]) => pattern.test(full))?.[0] ?? null;
+}
+
 function soundBucket(path) {
   // Classify by the complete archive path, not only the final filename.
   // Bedrock packs commonly store sounds under category folders such as
   // sounds/blocks, sounds/mob, sounds/player, sounds/item and sounds/ambient.
   const full = String(path).toLowerCase().replace(/\\/g, '/').replace(/\.ogg$/i, '');
   const has = (...words) => words.some(word => new RegExp('(^|[._/-])' + word + '(?:[0-9]+)?($|[._/-])').test(full));
+  const material = materialBucket(full);
+  const blockEvents = [
+    ['step', () => has('step','footstep','walk','walking','run','running')],
+    ['break', () => has('break','destroy','dig','mine')],
+    ['place', () => has('place','put_down','build')],
+    ['hit', () => has('hit','impact','collision','thud')],
+  ];
+  const blockEvent = blockEvents.find(([, match]) => match());
+  if (blockEvent) return material ? blockEvent[0] + ':' + material : blockEvent[0];
+
   const rules = [
     // Keep aquatic effects separate from footfalls: classifying every splash
     // or swim clip as a step caused water sounds to replace stone/grass steps.
@@ -63,10 +88,6 @@ function soundBucket(path) {
     ['wolf', () => has('wolf')],
     ['horse', () => has('horse','donkey','mule')],
     ['bee', () => has('bee')],
-    ['step', () => has('step','footstep','walk','walking','run','running')],
-    ['break', () => has('break','destroy','dig','mine')],
-    ['place', () => has('place','put_down','build')],
-    ['hit', () => has('hit','impact','attack','punch')],
     ['hurt', () => has('hurt','damage','injured')],
     ['death', () => has('death','die','dying')],
     ['ambient', () => has('ambient','ambience','idle','living','cave','environment','weather')],
@@ -117,7 +138,7 @@ export class BedrockSoundPack {
     this.sounds = buckets; this.fileCount = decoded;
     return { files: decoded, categories: buckets.size };
   }
-  play(eventId, volume = 0.75) {
+  play(eventId, volume = 0.75, material = 'stone') {
     const aliases = {
       'block.break':'break','block.place':'place','block.hit':'hit','block.step':'step',
       'block.door.open':'open','block.door.close':'close','block.chest.open':'open','block.chest.close':'close',
@@ -147,7 +168,9 @@ export class BedrockSoundPack {
       'entity.wither_skeleton.ambient':'skeleton','entity.cave_spider.ambient':'spider'
     };
     const key = String(eventId).toLowerCase();
-    const choices = this.sounds.get(aliases[key] || (key.startsWith('entity.') ? key.split('.')[1] : null));
+    const bucket = aliases[key] || (key.startsWith('entity.') ? key.split('.')[1] : null);
+    const materialKey = materialBucket(material) || 'stone';
+    const choices = this.sounds.get(['step','break','place','hit'].includes(bucket) ? (this.sounds.has(bucket + ':' + materialKey) ? bucket + ':' + materialKey : bucket) : bucket);
     if (!choices?.length) return false;
     const source = this.context.createBufferSource(), gain = this.context.createGain();
     source.buffer = choices[Math.floor(Math.random() * choices.length)];
