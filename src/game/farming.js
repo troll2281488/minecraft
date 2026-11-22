@@ -131,14 +131,19 @@ export function tickFarming(world, player, tickCount) {
     }
 
     let waterAt = null;
-    if (farms.length >= 24) {
-      const minX = px - 12, minZ = pz - 12, side = 25, stride = 26;
+    if (farms.length >= 8) {
+      const minX = Math.min(...farms.map(farm => farm.x)) - 4;
+      const maxX = Math.max(...farms.map(farm => farm.x)) + 4;
+      const minZ = Math.min(...farms.map(farm => farm.z)) - 4;
+      const maxZ = Math.max(...farms.map(farm => farm.z)) + 4;
+      const width = maxX - minX + 1, height = maxZ - minZ + 1, stride = width + 1;
       const planes = new Map();
-      for (let y = py - 3; y <= py + 5; y++) {
-        const prefix = new Uint16Array(stride * stride);
-        for (let z = 0; z < side; z++) {
+      const planeYs = new Set(farms.flatMap(farm => [farm.y, farm.y + 1]));
+      for (const y of planeYs) {
+        const prefix = new Uint16Array(stride * (height + 1));
+        for (let z = 0; z < height; z++) {
           let rowCount = 0;
-          for (let x = 0; x < side; x++) {
+          for (let x = 0; x < width; x++) {
             const block = world.getBlock(minX + x, y, minZ + z);
             if (block?.block?.id === 'mc:water' &&
                 (block.get?.('level') === undefined || block.get('level') === 0)) rowCount++;
