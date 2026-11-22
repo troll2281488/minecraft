@@ -21,6 +21,7 @@ import { ChunkRenderer } from './chunk_renderer.js';
 import { raycast } from '../game/interaction.js';
 import { renderBar } from '../ui/hud_bars.js';
 import { bedrockItemPose, bedrockChargeProgress, bedrockHumanoidPose } from './bedrock_animation_curves.js';
+import { sampleVanillaEntityAnimation } from './entity_animation_runtime.js';
 
 /**
  * A unit cube as 36 vertices of (x, y, z, u, v), two triangles per face.
@@ -857,10 +858,20 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         } else if (!skin && partIndex >= legStart && partIndex <= legEnd) {
           swing = pose.walking ? Math.sin(walkPhase + phase) * (pose.animal ? 0.34 : 0.24) : 0;
         }
+        const vanillaBone = pose.animationBones?.[partName];
+        const animatedRotation = vanillaBone?.rotation ?? [0, 0, 0];
+        const animatedPosition = vanillaBone?.position ?? [0, 0, 0];
+        const animatedScale = vanillaBone?.scale ?? [1, 1, 1];
+        partOffset[0] += (animatedPosition[0] ?? 0) / 16;
+        partOffset[1] -= (animatedPosition[1] ?? 0) / 16;
+        partOffset[2] -= (animatedPosition[2] ?? 0) / 16;
         gl.uniform3f(uniforms.uPartOffset, partOffset[0], partOffset[1], partOffset[2]);
-        gl.uniform3f(uniforms.uPartScale, scale[0] * pulse, scale[1] * pulse, scale[2] * pulse);
+        gl.uniform3f(uniforms.uPartScale, scale[0] * pulse * (animatedScale[0] ?? 1), scale[1] * pulse * (animatedScale[1] ?? 1), scale[2] * pulse * (animatedScale[2] ?? 1));
         gl.uniform1f(uniforms.uPartSwing, swing);
-        gl.uniform3f(uniforms.uPartRotation, partRotation?.[0] ?? 0, partRotation?.[1] ?? 0, partRotation?.[2] ?? 0);
+        gl.uniform3f(uniforms.uPartRotation,
+          (partRotation?.[0] ?? 0) + (animatedRotation[0] ?? 0),
+          (partRotation?.[1] ?? 0) - (animatedRotation[1] ?? 0),
+          (partRotation?.[2] ?? 0) - (animatedRotation[2] ?? 0));
         gl.uniform1f(uniforms.uPartPivotY, pivotY);
         gl.uniform1f(uniforms.uSkinPart, skin ? partIndex : -1);
         gl.uniform1f(uniforms.uSkinLayer, pose.skinLayer ? 1 : 0);
@@ -1087,6 +1098,14 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         : mob.type === 'pig' || mob.type === 'rabbit' ? pig : mob.type === 'cow' || mob.type === 'goat' || mob.type === 'mooshroom' || mob.type === 'polar_bear' ? cow
         : mob.type === 'chicken' ? chicken : sheep);
       const idlePhase = mob.anim?.idle ?? 0;
+      const vanillaAnimationFile = this.entityModels?.getAnimations?.('minecraft:' + mob.type);
+      const vanillaAnimation = vanillaAnimationFile ? sampleVanillaEntityAnimation(vanillaAnimationFile, {
+        inWater: !!mob.inWater,
+        airborne: !!mob.airborne || !!mob.flying,
+        attacking: (mob.anim?.attack ?? 0) > 0,
+        walking: !!mob.anim?.walking,
+        cyclePhase: (mob.walkPhase ?? 0) / (Math.PI * 2),
+      }, idlePhase / 0.9) : null;
       const pulse = mob.type === 'creeper' && mob.anim?.fuse > 0
         ? 1 + Math.sin(mob.anim.fuse * Math.PI * 12) * 0.10 * mob.anim.fuse
         : ['slime','magma_cube'].includes(mob.type)
@@ -1109,6 +1128,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         hurt: (mob.hurtTicks || 0) > 0, animal, humanoid, vanillaModel: !!vanillaParts,
         mobType: mob.type, mobTextureKey: mob.type === 'villager' ? 'villager_' + (mob.villagerCareer === 'archer' ? 'fletcher' : (mob.villagerCareer || 'farmer')) : mob.type,
         idle: mob.anim?.idle ?? 0, walking: !!mob.anim?.walking, sprinting: !!mob.sprinting, attack: (mob.anim?.attack ?? 0) > 0, attackTime: mob.anim?.attack ?? 0, airborne: !!mob.airborne, jumping: !!mob.jumping, swimming: !!mob.inWater, riding: !!mob.riding, humanoid,
+        animationBones: vanillaAnimation?.bones ?? null, animationName: vanillaAnimation?.name ?? null,
       });
       if (mob.type === 'goat' && !vanillaParts) {
         draw(mob.x, mob.y, mob.z, mob.yaw, [
