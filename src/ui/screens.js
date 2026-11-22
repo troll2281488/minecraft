@@ -287,7 +287,7 @@ export const ScreensMixin = {
         const status = section.querySelector('#java-resource-pack-status');
         try {
           const result = await importJavaResourcePackZip(file);
-          status.textContent = 'Импортировано текстур блоков: ' + result.blocks + '; предметов: ' + result.items + '. Пропущено: ' + result.skipped + '. Перезагрузка игры...';
+          status.textContent = 'Импортировано текстур блоков: ' + result.blocks + '; предметов: ' + result.items + '. Моделей: ' + result.modelFiles + '; blockstates: ' + result.blockstateFiles + '; сопоставлено блоков: ' + result.mappedBlocks + '. Пропущено: ' + result.skipped + '. Перезагрузка игры...';
           this.ui.toast('Java-текстуры импортированы. Перезагрузи игру.');
           setTimeout(() => location.reload(), 900);
         } catch (error) {
