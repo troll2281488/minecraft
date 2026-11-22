@@ -1743,6 +1743,17 @@ export class MobSystem {
       if (mob.hurtTicks > 0) mob.hurtTicks--;
       mob.anim.hurt = mob.hurtTicks > 0 ? mob.hurtTicks / 8 : 0;
 
+      // Nearby creatures occasionally vocalize. A shared throttle in GameSounds
+      // prevents a crowded pen from turning into a constant wall of audio.
+      mob.ambientSoundTicks = Number.isFinite(mob.ambientSoundTicks)
+        ? mob.ambientSoundTicks - 1
+        : 100 + Math.floor(Math.random() * 220);
+      if (mob.ambientSoundTicks <= 0 && distance < 18) {
+        const audibleVolume = Math.max(0.12, 1 - distance / 20) * 0.32;
+        this.game.sounds?.playMob?.(mob.type, 'ambient', audibleVolume);
+        mob.ambientSoundTicks = 140 + Math.floor(Math.random() * 260);
+      }
+
       const above = world.getBlock(Math.floor(mob.x), Math.floor(mob.y + 2), Math.floor(mob.z)).block;
       if (shouldBurnInSunlight(mob.type, this.game.daylight, !above.solid && !above.liquid)) {
         mob.sunBurnTicks = (mob.sunBurnTicks || 0) + 1;
