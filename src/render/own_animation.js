@@ -212,8 +212,8 @@ export function buildMobAnimationBones(entity, state = {}, model = null) {
 
   for (const name of names) {
     const lower = name.toLowerCase();
-    const left = /left|_l\\b|\\bl_/.test(lower);
-    const right = /right|_r\\b|\\br_/.test(lower);
+    const left = /left|_l\b|\bl_/.test(lower);
+    const right = /right|_r\b|\br_/.test(lower);
     const rotation = [0, 0, 0];
 
     if (/head|neck/.test(lower)) {
