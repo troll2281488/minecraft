@@ -346,6 +346,26 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       image.src=new URL('../../assets/mob-textures/'+file,import.meta.url).href;
     }
 
+    // User-imported Java resource packs can override mob skins by texture basename
+    // (for example textures/entity/cow/cow.png -> "cow"). Keep exact skin dimensions
+    // so legacy and modern UV layouts remain intact.
+    for (const [key, dataUrl] of this.customMobTextures ?? []) {
+      const texture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255,255,255,255]));
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      const image = new Image();
+      image.onload = () => {
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+        this.mobTextures.set(key, { texture, width: image.naturalWidth, height: image.naturalHeight, ready: true });
+      };
+      image.onerror = () => gl.deleteTexture(texture);
+      image.src = dataUrl;
+    }
+
     // Compose the vanilla villager base skin with its profession overlay. This
     // keeps career clothing distinct without downloading a whole duplicate skin
     // for every career.
