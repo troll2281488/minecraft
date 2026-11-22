@@ -1,21 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Pull the original Java Edition 1.19.4 entity skins from Mojang's official
-# version asset index. No hand-drawn or third-party replacement textures.
+# Extract the original Java Edition 1.19.4 mob skins directly from Mojang's
+# official client JAR. This avoids third-party redraws or placeholder textures.
 python3 <<'PY'
 import json
+import tempfile
 import urllib.request
+import zipfile
 from pathlib import Path
 
-BASE = "https://resources.download.minecraft.net/"
 VERSION = "1.19.4"
 OUT = Path("assets/mob-textures")
 OUT.mkdir(parents=True, exist_ok=True)
 
 def get_json(url):
     request = urllib.request.Request(url, headers={"User-Agent": "Donorcraft-asset-builder/1.0"})
-    with urllib.request.urlopen(request, timeout=30) as response:
+    with urllib.request.urlopen(request, timeout=45) as response:
         return json.load(response)
 
 manifest = get_json("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json")
@@ -23,10 +24,8 @@ version_entry = next((v for v in manifest["versions"] if v["id"] == VERSION), No
 if not version_entry:
     raise SystemExit(f"Mojang version {VERSION} not found")
 version_data = get_json(version_entry["url"])
-asset_index = get_json(version_data["assetIndex"]["url"])
-objects = asset_index["objects"]
+client_url = version_data["downloads"]["client"]["url"]
 
-# Output filename -> path inside the official Java client asset index.
 textures = {
     "cow.png": "cow/cow.png",
     "goat.png": "goat/goat.png",
@@ -77,19 +76,26 @@ for career in ("farmer", "fisherman", "shepherd", "librarian", "cleric",
                "armorer", "toolsmith", "butcher", "leatherworker", "fletcher", "nitwit"):
     textures[f"villager_{career}.png"] = f"villager/profession/{career}.png"
 
-for output_name, asset_path in textures.items():
-    key = f"minecraft/textures/entity/{asset_path}"
-    asset = objects.get(key)
-    if not asset:
-        raise SystemExit(f"Official {VERSION} asset missing: {key}")
-    digest = asset["hash"]
-    url = f"{BASE}{digest[:2]}/{digest}"
-    request = urllib.request.Request(url, headers={"User-Agent": "Donorcraft-asset-builder/1.0"})
-    with urllib.request.urlopen(request, timeout=30) as response:
-        data = response.read()
-    if not data:
-        raise SystemExit(f"Empty Mojang texture: {key}")
-    (OUT / output_name).write_bytes(data)
+with tempfile.TemporaryDirectory() as temp_dir:
+    jar_path = Path(temp_dir) / "minecraft-client.jar"
+    request = urllib.request.Request(client_url, headers={"User-Agent": "Donorcraft-asset-builder/1.0"})
+    with urllib.request.urlopen(request, timeout=120) as response, jar_path.open("wb") as output:
+        while True:
+            chunk = response.read(1024 * 1024)
+            if not chunk:
+                break
+            output.write(chunk)
 
-print(f"Downloaded {len(textures)} original Mojang Java {VERSION} entity textures.")
+    with zipfile.ZipFile(jar_path) as client:
+        available = set(client.namelist())
+        for output_name, relative_path in textures.items():
+            archive_path = f"assets/minecraft/textures/entity/{relative_path}"
+            if archive_path not in available:
+                raise SystemExit(f"Official {VERSION} client texture missing: {archive_path}")
+            data = client.read(archive_path)
+            if not data:
+                raise SystemExit(f"Empty Mojang texture: {archive_path}")
+            (OUT / output_name).write_bytes(data)
+
+print(f"Extracted {len(textures)} original Mojang Java {VERSION} mob textures.")
 PY
