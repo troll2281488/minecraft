@@ -211,7 +211,7 @@ export class GameSounds {
     const c=this.context;
     if(!c||!this.enabled)return false;
     const play=buffer=>{
-      if(!buffer)return;
+      if(!buffer||!this.enabled)return;
       const source=c.createBufferSource();
       const volume=c.createGain();
       source.buffer=buffer;
@@ -229,8 +229,8 @@ export class GameSounds {
         .catch(error=>{console.warn('[audio] Could not load sound:',name,error);return null;})
         .finally(()=>this.wavLoads.delete(name));
       this.wavLoads.set(name,task);
+      task.then(play);
     }
-    this.wavLoads.get(name).then(play);
     return true;
   }
   step(material){
