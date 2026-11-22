@@ -138,7 +138,13 @@ export class BedrockSoundPack {
       'entity.villager.ambient':'villager','entity.villager.hurt':'villager',
       'entity.cow.ambient':'cow','entity.sheep.ambient':'sheep','entity.pig.ambient':'pig',
       'entity.chicken.ambient':'chicken','entity.wolf.ambient':'wolf','entity.horse.ambient':'horse',
-      'entity.bee.ambient':'bee'
+      'entity.bee.ambient':'bee','entity.rabbit.ambient':'rabbit','entity.goat.ambient':'goat',
+      'entity.polar_bear.ambient':'polar_bear','entity.donkey.ambient':'horse','entity.mule.ambient':'horse',
+      'entity.cow.hurt':'cow','entity.sheep.hurt':'sheep','entity.pig.hurt':'pig',
+      'entity.chicken.hurt':'chicken','entity.wolf.hurt':'wolf','entity.horse.hurt':'horse',
+      'entity.bee.hurt':'bee','entity.rabbit.hurt':'rabbit','entity.goat.hurt':'goat',
+      'entity.zombie_villager.ambient':'zombie','entity.husk.ambient':'zombie','entity.drowned.ambient':'zombie',
+      'entity.wither_skeleton.ambient':'skeleton','entity.cave_spider.ambient':'spider'
     };
     const key = String(eventId).toLowerCase();
     const choices = this.sounds.get(aliases[key] || (key.startsWith('entity.') ? key.split('.')[1] : null));
