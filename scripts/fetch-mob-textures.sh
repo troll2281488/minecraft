@@ -59,6 +59,8 @@ download "spider/cave_spider.png" "cave_spider.png"
 
 
 # Additional Java mobs through 1.19 (including the 1.19 additions).
+download "bee/bee.png" "bee.png"
+download "enderdragon/dragon.png" "ender_dragon.png"
 download "goat/goat.png" "goat.png"
 download "axolotl/axolotl_lucy.png" "axolotl.png"
 download "allay/allay.png" "allay.png"
