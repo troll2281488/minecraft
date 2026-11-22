@@ -36,12 +36,13 @@ export class BackgroundMusic{
   this.retryHandler=()=>{if(this.active&&this.playbackDue)this._tryPlay();};
  }
  async restore(){
-  if(this.tracks.length)return this.tracks.length;
+  if(this.builtinLoaded)return this.tracks.length;
   if(this.loading)return this.loading;
   this.loading=(async()=>{
    const [saved,builtin]=await Promise.all([readTracks(),readBuiltinTracks()]);
    this.builtinTracks=builtin;
    this._setTracks([...saved,...builtin]);
+   this.builtinLoaded=true;
    return this.tracks.length;
   })();
   try{return await this.loading;}finally{this.loading=null;}
