@@ -413,8 +413,8 @@ async function readZipPngEntries(file) {
     const localOffset = view.getUint32(cursor + 42, true);
     const name = new TextDecoder().decode(bytes.slice(cursor + 46, cursor + 46 + nameLength));
     cursor += 46 + nameLength + extraLength + commentLength;
-    if (!name.toLowerCase().endsWith('.png')) continue;
-    if (!/^(?:assets\/minecraft\/)?textures\/(?:block|item)\//.test(name)) continue;
+    if (!/\.(?:png|json)$/i.test(name)) continue;
+    if (!/^(?:assets\/minecraft\/)?(?:textures\/(?:block|item)\/|blockstates\/|models\/block\/)/.test(name)) continue;
     if (view.getUint32(localOffset, true) !== 0x04034b50) continue;
     const localNameLength = view.getUint16(localOffset + 26, true);
     const localExtraLength = view.getUint16(localOffset + 28, true);
@@ -480,9 +480,17 @@ export async function importJavaResourcePackZip(file) {
   const items = { ...(existing.items || {}) };
   let usedBlocks = 0, usedItems = 0, skipped = 0, modelFiles = 0, blockstateFiles = 0;\n  const modelJson = new Map(), blockstateJson = new Map();
   for (const entry of entries) {
+    if (entry.name.endsWith('.json')) {
+      try {
+        const raw = await unzipEntry(bytes, entry.method, entry.dataStart, entry.compressedSize);
+        const parsed = JSON.parse(new TextDecoder().decode(raw));
+        if (entry.name.startsWith('models/block/')) { modelJson.set(entry.name.slice('models/block/'.length, -5), parsed); modelFiles++; }
+        else if (entry.name.startsWith('blockstates/')) { blockstateJson.set(entry.name.slice('blockstates/'.length, -5), parsed); blockstateFiles++; }
+      } catch { skipped++; }
+      continue;
+    }
     const category = entry.name.includes('/block/') ? 'block' : 'item';
     const base = entry.name.split('/').pop().replace(/\.png$/i, '');
-    if (category === 'block' && !Object.prototype.hasOwnProperty.call(TEXTURES, base)) { skipped++; continue; }
     try {
       const raw = await unzipEntry(bytes, entry.method, entry.dataStart, entry.compressedSize);
       const bitmap = await createImageBitmap(new Blob([raw], { type: 'image/png' }));
