@@ -22,7 +22,7 @@ import { ChunkRenderer } from './chunk_renderer.js';
 import { raycast } from '../game/interaction.js';
 import { renderBar } from '../ui/hud_bars.js';
 import { bedrockItemPose, bedrockChargeProgress, bedrockHumanoidPose } from './bedrock_animation_curves.js';
-import { sampleVanillaEntityAnimation, blendEntityAnimationBones } from './entity_animation_runtime.js';
+import { sampleVanillaEntityAnimation, blendEntityAnimationBones, hasEntityAnimationPose } from './entity_animation_runtime.js';
 import { buildPlayerStateAnimation } from './player_animation.js';
 import { humanoidBones, mobLegSwing, deathPose } from './own_animation.js';
 import { textureFrameAt } from './texture_animation.js';
@@ -1272,7 +1272,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         hasArmor: !!mob.armor || !!mob.hasArmor,
         cyclePhase: (mob.walkPhase ?? 0) / (Math.PI * 2),
       }, idlePhase / 0.9) : null;
-      const mobAnimationBones = smoothEntityAnimation(mob, vanillaAnimation?.bones ?? null);
+      const mobAnimationBones = smoothEntityAnimation(mob, vanillaAnimation?.bones ?? null);\n      const sourceAnimated = hasEntityAnimationPose({ bones: mobAnimationBones });
       vanillaParts = vanillaLayerParts(vanillaModel, 'main', mobAnimationBones);
       // Prefer the loaded vanilla geometry after animation poses have been applied.
       if (vanillaParts) parts = vanillaParts;
@@ -1299,7 +1299,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         hurt: (mob.hurtTicks || 0) > 0, animal, humanoid, vanillaModel: !!vanillaParts,
         mobType: mob.type, mobTextureKey: mob.type === 'villager' ? 'villager_' + (mob.villagerCareer === 'archer' ? 'fletcher' : (mob.villagerCareer || 'farmer')) : mob.type,
         idle: mob.anim?.idle ?? 0, walking: !!mob.anim?.walking, sprinting: !!mob.sprinting, attack: (mob.anim?.attack ?? 0) > 0, attackTime: mob.anim?.attack ?? 0, airborne: !!mob.airborne, jumping: !!mob.jumping, swimming: !!mob.inWater, riding: !!mob.riding, humanoid,
-        sourceAnimated: !!vanillaParts, animationName: vanillaAnimation?.name ?? null,
+        sourceAnimated, animationName: vanillaAnimation?.name ?? null,
         ownSwing: vanillaParts ? null : mobLegSwing(mob, { legStart: legs[0], legEnd: legs[1], walking: !!mob.anim?.walking, sprinting: !!mob.sprinting, riding: !!mob.riding, swimming: !!mob.inWater, walkPhase: mob.walkPhase }),
       });
       if (mob.type === 'goat' && !vanillaParts) {
@@ -1321,7 +1321,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         if (furParts) draw(mob.x, mob.y, mob.z, mob.yaw + Math.PI, furParts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
           hurt: (mob.hurtTicks || 0) > 0, animal: true, vanillaModel: true,
           mobType: mob.type, mobTextureKey: 'sheep_fur', idle: mob.anim?.idle ?? 0,
-          walking: !!mob.anim?.walking, sourceAnimated: true,
+          walking: !!mob.anim?.walking, sourceAnimated,
         });
       }
     }
