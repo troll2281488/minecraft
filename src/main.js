@@ -28,7 +28,7 @@ import { ITEMS } from './world/item.js';
 
 import { buildTextures, buildBlockTextureTable, TILE_SIZE } from './render/atlas.js';
 import { buildItemIconCache } from './render/item_icons.js';
-import { loadItsBrianTextures, setMinecraftUiTextures } from './render/resource_pack.js';
+import { loadItsBrianTextures, setMinecraftUiTextures, loadPackRecord, decodePack, decodePackItemTextures } from './render/resource_pack.js';
 import { setHudSprites } from './ui/hud_bars.js';
 import { loadEntityModelPack } from './render/entity_models.js';
 import { createContext, createTextureArray } from './render/gl.js';
@@ -112,6 +112,19 @@ export async function boot() {
     withBootFallback(texturePromise, emptyTextures, 'textures'),
     withBootFallback(modelPromise, emptyModels, 'models'),
   ]);
+  // Apply locally imported Java resource-pack textures over the community defaults.
+  // The ZIP import is user-initiated; saved overrides survive reloads in this browser.
+  const savedJavaPack = loadPackRecord();
+  if (savedJavaPack) {
+    const [localBlockTextures, localItemTextures] = await Promise.all([
+      decodePack(savedJavaPack),
+      decodePackItemTextures(savedJavaPack),
+    ]);
+    for (const [name, pixels] of localBlockTextures) remoteTextures.blocks.set(name, pixels);
+    for (const [name, dataUrl] of localItemTextures) remoteTextures.items.set(name, dataUrl);
+    console.info('[textures] Java resource pack overrides:', localBlockTextures.size, 'blocks,', localItemTextures.size, 'items.');
+  }
+
   setHudSprites(remoteTextures.hud);
   setMinecraftUiTextures(remoteTextures.ui);
   const textures = buildTextures(remoteTextures.blocks);
