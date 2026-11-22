@@ -63,7 +63,7 @@ describe('Mob data and loot', () => {
       'zombie', 'husk', 'zombie_villager', 'skeleton', 'stray', 'wither_skeleton',
       'creeper', 'spider', 'cave_spider', 'enderman', 'silverfish', 'endermite',
       'slime', 'magma_cube', 'vex', 'vindicator', 'evoker', 'witch', 'blaze',
-      'ghast', 'guardian', 'elder_guardian', 'wither',
+      'ghast', 'guardian', 'elder_guardian', 'wither', 'warden',
     ]) assert(MOB_AI_PROFILES[type], 'missing hostile profile: ' + type);
   });
 
