@@ -16,6 +16,7 @@ import {
 import { encodeChunk } from '../save/format.js';
 import { DATA_VERSION } from '../save/migrate.js';
 import { actionRows, bindKey, resetKeys, keyLabel } from '../game/keybinds.js';
+import { importJavaResourcePackZip } from '../render/resource_pack.js';
 
 export const ScreensMixin = {
   _setupScreens() {
@@ -32,6 +33,7 @@ export const ScreensMixin = {
     this._loadSettings();
     this._buildKeybindSettings();
     this._buildSoundPackSettings();
+    this._buildJavaResourcePackSettings();
     this._buildMusicSettings();
     byId('setting-distance').oninput = (e) => {
       this.renderDistance = Number(e.target.value);
@@ -265,6 +267,37 @@ export const ScreensMixin = {
     });
   },
 
+
+
+  _buildJavaResourcePackSettings() {
+    const panel = document.querySelector('#settings-screen .panel');
+    if (!panel || document.getElementById('java-resource-pack-settings')) return;
+    const section = document.createElement('section');
+    section.id = 'java-resource-pack-settings';
+    section.innerHTML = '<h2>Ресурспак Minecraft Java</h2><p class="sub">Импорт ZIP с Java-текстурами блоков и предметов. Подходящие текстуры заменят встроенные; модели и blockstates пока сохраняются в архиве, но не отображаются автоматически.</p><div class="settings-row"><button id="btn-import-java-pack" class="secondary" type="button">Импортировать texts.zip</button></div><p id="java-resource-pack-status" role="status" aria-live="polite">Java-ресурспак не импортирован.</p>';
+    const back = document.getElementById('btn-settings-back');
+    panel.insertBefore(section, back);
+    section.querySelector('#btn-import-java-pack').addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.zip,application/zip';
+      input.onchange = async () => {
+        const file = input.files?.[0];
+        if (!file) return;
+        const status = section.querySelector('#java-resource-pack-status');
+        try {
+          const result = await importJavaResourcePackZip(file);
+          status.textContent = 'Импортировано текстур блоков: ' + result.blocks + '; предметов: ' + result.items + '. Пропущено: ' + result.skipped + '. Перезагрузка игры...';
+          this.ui.toast('Java-текстуры импортированы. Перезагрузи игру.');
+          setTimeout(() => location.reload(), 900);
+        } catch (error) {
+          status.textContent = 'Ошибка импорта: ' + error.message;
+          this.ui.toast('Не удалось импортировать Java-ресурспак: ' + error.message, { error: true, duration: 8000 });
+        }
+      };
+      input.click();
+    });
+  },
 
   _buildMusicSettings() {
     const panel = document.querySelector('#settings-screen .panel');
