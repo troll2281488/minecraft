@@ -105,7 +105,7 @@ function rotateModelPoint(point, rotation) {
 }
 function add3(a, b) { return [a[0] + b[0], a[1] + b[1], a[2] + b[2]]; }
 const PLAYER_BONE_PIVOTS = [
-  [0, 1.50, 0], [0, 1.375, 0], [-0.375, 1.375, 0],
+  [0, 1.50, 0], [0, 0.75, 0], [-0.375, 1.375, 0],
   [0.375, 1.375, 0], [-0.125, 0.75, 0], [0.125, 0.75, 0],
 ];
 function multiply3(a, b) { return [a[0] * b[0], a[1] * b[1], a[2] * b[2]]; }
@@ -826,6 +826,11 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
               : pose.sneaking ? -0.30
               : -0.42;
           }
+          else if (animationBone) {
+            // Player bone animation already supplies the complete limb pose.
+            // Do not stack the legacy procedural swing on top of it.
+            swing = 0;
+          }
           else if (pose.attack && isArm && partIndex === 3) {
             const attackProgress = Math.max(0, Math.min(1, (8 - (pose.attackTime ?? 0)) / 8));
             swing = -1.45 * Math.sin(attackProgress * Math.PI);
@@ -932,7 +937,13 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         // The six-part player fallback rig needs joint pivots too: rotate the
         // limb centre around its shoulder/hip, not around the cube's own centre.
         if (animationBone && skin && partIndex < PLAYER_BONE_PIVOTS.length) {
-          const pivot = PLAYER_BONE_PIVOTS[partIndex];
+          const bodyTilt = pose.animationBones?.body?.rotation?.[0] ?? 0;
+          const pivot = [...PLAYER_BONE_PIVOTS[partIndex]];
+          if (partIndex === 0 || partIndex === 2 || partIndex === 3) {
+            const dy = pivot[1] - 0.75;
+            pivot[1] = 0.75 + dy * Math.cos(bodyTilt);
+            pivot[2] += dy * Math.sin(bodyTilt);
+          }
           const relative = [offset[0] - pivot[0], offset[1] - pivot[1], offset[2] - pivot[2]];
           const rotated = rotateModelPoint(relative, animatedRotation);
           partOffset[0] = pivot[0] + rotated[0];
@@ -1094,6 +1105,9 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         jumping: playerAirborne && (this.player.vy ?? 0) > 0.05,
         sprinting: !!this.player.sprinting,
         sneaking: !!this.player.sneaking,
+        pitch: this.player.pitch ?? 0,
+        riding: !!this.player.ridingHorse || !!this.player.ridingMinecart,
+        holdingItem: !!this.inventory?.held && !this.inventory.held.isEmpty,
         attackTime: this.player.attackTime ?? 0,
       });
       const playerAnimationPose = { animationBones: smoothEntityAnimation(this.player, { ...(playerTargetBones ?? {}), ...authoredPlayerBones }) };
@@ -1141,6 +1155,8 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         jumping: !!remote.jumping,
         sprinting: !!remote.sprinting,
         sneaking: !!remote.sneaking,
+        pitch: remote.pitch ?? 0,
+        holdingItem: !!remote.heldItem,
         attackTime: remote.attacking ? (remote.attackTime ?? 8) : 0,
       });
       const remoteAnimationPose = { animationBones: smoothEntityAnimation(remote, { ...(remoteAnimation?.bones ?? {}), ...authoredRemoteBones }) };
