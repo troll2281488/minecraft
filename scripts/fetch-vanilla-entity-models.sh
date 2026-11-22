@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Pinned upstream snapshot; do not follow a moving branch at build time.
-MODEL_PACK_COMMIT="a2ce75c09ea64225ce236ddb8f4cafc2715cd651"
+MODEL_PACK_COMMIT="69eab7929d749fa33d64daa8776cce83970ffd12"
 MODEL_PACK_URL="https://codeload.github.com/InventivetalentDev/minecraft-entity-models/zip/${MODEL_PACK_COMMIT}"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -32,7 +32,7 @@ const collect = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e
 const manifest = {
   source: 'https://github.com/InventivetalentDev/minecraft-entity-models',
   commit: 'a2ce75c09ea64225ce236ddb8f4cafc2715cd651',
-  minecraftVersion: '1.20.1',
+  minecraftVersion: '1.17.1',
   models: collect(path.join(root, 'minecraft')),
   animations: collect(path.join(root, 'animations')),
 };
