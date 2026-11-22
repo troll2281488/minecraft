@@ -158,7 +158,11 @@ function vanillaLayerParts(model, layerName = 'main', animationBones = null) {
 }
 
 const MOB_TEXTURE_FILES = Object.freeze({
-  cow:'cow.png', goat:'cow.png', pig:'pig.png', sheep:'sheep.png', sheep_fur:'sheep_fur.png', chicken:'chicken.png', wolf:'wolf.png', horse:'horse.png', rabbit:'rabbit.png', polar_bear:'polar_bear.png', mooshroom:'mooshroom.png',
+  cow:'cow.png', goat:'goat.png', pig:'pig.png', sheep:'sheep.png', sheep_fur:'sheep_fur.png', chicken:'chicken.png', wolf:'wolf.png', horse:'horse.png', rabbit:'rabbit.png', polar_bear:'polar_bear.png', mooshroom:'mooshroom.png',
+  axolotl:'axolotl.png', allay:'allay.png', fox:'fox.png', panda:'panda.png', dolphin:'dolphin.png',
+  cod:'cod.png', salmon:'salmon.png', pufferfish:'pufferfish.png', phantom:'phantom.png', iron_golem:'iron_golem.png',
+  pillager:'pillager.png', evoker:'evoker.png', vindicator:'vindicator.png', ravager:'ravager.png',
+  piglin:'piglin.png', zombified_piglin:'zombified_piglin.png', piglin_brute:'piglin_brute.png', hoglin:'hoglin.png', zoglin:'zoglin.png',
   zombie:'zombie.png', skeleton:'skeleton.png', stray:'stray.png',
   bat:'bat.png', blaze:'blaze.png', ghast:'ghast.png', guardian:'guardian.png',
   elder_guardian:'guardian_elder.png', endermite:'endermite.png', magma_cube:'magmacube.png',
