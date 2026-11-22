@@ -478,7 +478,8 @@ export async function importJavaResourcePackZip(file) {
   const existing = loadPackRecord() || { name: 'Java resource pack', textures: {}, items: {} };
   const textures = { ...(existing.textures || {}) };
   const items = { ...(existing.items || {}) };
-  let usedBlocks = 0, usedItems = 0, skipped = 0, modelFiles = 0, blockstateFiles = 0;\n  const modelJson = new Map(), blockstateJson = new Map();
+  let usedBlocks = 0, usedItems = 0, skipped = 0, modelFiles = 0, blockstateFiles = 0;
+  const modelJson = new Map(), blockstateJson = new Map();
   for (const entry of entries) {
     if (entry.name.endsWith('.json')) {
       try {
@@ -505,7 +506,8 @@ export async function importJavaResourcePackZip(file) {
       else { items[base] = url; usedItems++; }
     } catch { skipped++; }
   }
-  if (!usedBlocks && !usedItems && !modelFiles && !blockstateFiles) throw new Error('Не найдено совместимых текстур, моделей или blockstates');\n  const blockFaces = resolveJavaBlockFaces(modelJson, blockstateJson);
+  if (!usedBlocks && !usedItems && !modelFiles && !blockstateFiles) throw new Error('Не найдено совместимых текстур, моделей или blockstates');
+  const blockFaces = resolveJavaBlockFaces(modelJson, blockstateJson);
   try {
     savePackRecord({ name: file.name, textures, items, blockFaces, modelFiles, blockstateFiles });
   } catch {
