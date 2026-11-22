@@ -172,7 +172,8 @@ class Game {
     this.textures = textures;
     this.textureAnimations = textureAnimations;
     this._animatedFrameByName = new Map();
-    this.entityModels = entityModels; // Full upstream geometry + animation data, loaded locally.\n    this.customMobTextures = customMobTextures;
+    this.entityModels = entityModels; // Full upstream geometry + animation data, loaded locally.
+    this.customMobTextures = customMobTextures;
 
     this.ui = new UI(icons);
     this.sounds = new GameSounds();
