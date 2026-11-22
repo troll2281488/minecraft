@@ -221,6 +221,7 @@ export function buildMobAnimationBones(entity, state = {}, model = null) {
       rotation[1] = Math.sin(idle * 0.85 + (entity.id ?? 0)) * 0.07;
       if (isEnderman && (state.angry || attack > 0)) rotation[0] -= 0.20 + Math.sin(idle * 25) * 0.025;
       if (isVillager && attack > 0) rotation[0] -= 0.18;
+      if (isCreeper && state.fuse) rotation[0] -= 0.16 + Math.sin(idle * 38) * 0.035;
       if (attack > 0 && ['wolf','polar_bear','goat','ravager','hoglin','zoglin'].includes(type)) rotation[0] += 0.32 * attackWave;
       if (hurt > 0) rotation[0] -= hurtWave * 0.24;
       put(name, rotation);
