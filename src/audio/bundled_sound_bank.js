@@ -24,7 +24,7 @@ function groupFor(eventId, material) {
   }
   if (eventId.startsWith('block.door') || eventId.startsWith('block.chest')) return ['door'];
   if (eventId.startsWith('ui.')) return ['ui'];
-  if (eventId.includes('item.') || eventId.includes('experience') || eventId.includes('levelup') || eventId === 'item.equip') return ['inventory'];
+  if (eventId.includes('item.') || eventId.includes('experience') || eventId.includes('levelup')) return ['inventory', 'ui'];
   if (eventId === 'entity.villager.trade') return ['inventory', 'ui'];
   if (eventId.startsWith('entity.')) return ['mob:creature', 'impact:generic'];
   return [];
