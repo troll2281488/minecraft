@@ -1240,7 +1240,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         [[-0.13,0.39,0],[0.20,0.70,0.22],[0.34,0.25,0.18,1]],
         [[0.13,0.39,0],[0.20,0.70,0.22],[0.34,0.25,0.18,1]],
       ];
-      const parts = vanillaParts ?? (mob.type === 'bee' ? beeFallback : mob.type === 'villager' ? villagerFallback
+      let parts = vanillaParts ?? (mob.type === 'bee' ? beeFallback : mob.type === 'villager' ? villagerFallback
         : mob.type === 'zombie' ? zombie
         : mob.type === 'skeleton' || mob.type === 'stray' ? skeleton
         : mob.type === 'creeper' ? creeper
@@ -1273,6 +1273,8 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       }, idlePhase / 0.9) : null;
       const mobAnimationBones = smoothEntityAnimation(mob, vanillaAnimation?.bones ?? null);
       vanillaParts = vanillaLayerParts(vanillaModel, 'main', mobAnimationBones);
+      // Prefer the loaded vanilla geometry after animation poses have been applied.
+      if (vanillaParts) parts = vanillaParts;
       const pulse = mob.type === 'creeper' && mob.anim?.fuse > 0
         ? 1 + Math.sin(mob.anim.fuse * Math.PI * 12) * 0.10 * mob.anim.fuse
         : ['slime','magma_cube'].includes(mob.type)
