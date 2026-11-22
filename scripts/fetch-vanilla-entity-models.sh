@@ -20,7 +20,7 @@ cp -R "$SOURCE_DIR/minecraft" assets/vanilla-models/
 cp -R "$SOURCE_DIR/animations" assets/vanilla-models/
 
 # Record the exact upstream snapshot and an index for the future WebGL model loader.
-node --input-type=module <<'NODE'
+MODEL_PACK_COMMIT="$MODEL_PACK_COMMIT" node --input-type=module <<'NODE'
 import fs from 'node:fs';
 import path from 'node:path';
 const root = 'assets/vanilla-models';
@@ -31,7 +31,7 @@ const collect = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e
 }).sort();
 const manifest = {
   source: 'https://github.com/InventivetalentDev/minecraft-entity-models',
-  commit: 'a2ce75c09ea64225ce236ddb8f4cafc2715cd651',
+  commit: process.env.MODEL_PACK_COMMIT,
   minecraftVersion: '1.17.1',
   models: collect(path.join(root, 'minecraft')),
   animations: collect(path.join(root, 'animations')),
