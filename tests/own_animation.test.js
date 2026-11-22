@@ -11,7 +11,7 @@ describe('Project-authored humanoid animation', () => {
   it('swings opposite legs while walking and returns them to rest when stopped', () => {
     const entity = {};
     let bones;
-    for (let i = 0; i < 60; i++) bones = humanoidBones(entity, { dt: 1 / 60, walkPhase: Math.PI / 2, onGround: true, speedBlocksPerSecond: 4.3 });
+    for (let i = 0; i < 60; i++) bones = humanoidBones(entity, { dt: 1 / 60, walkPhase: 0, onGround: true, speedBlocksPerSecond: 4.3 });
     assert(bones.left_leg.rotation[0] > 0.3, 'left leg should swing forward');
     assert(bones.right_leg.rotation[0] < -0.3, 'right leg should swing back');
     for (let i = 0; i < 240; i++) bones = humanoidBones(entity, { dt: 1 / 60, walkPhase: 0, onGround: true, speedBlocksPerSecond: 0 });
@@ -20,7 +20,7 @@ describe('Project-authored humanoid animation', () => {
   it('eases rather than snapping on the first frame after a state change', () => {
     const entity = {};
     humanoidBones(entity, { walkPhase: 0, onGround: true, speedBlocksPerSecond: 0, dt: 1 / 60 });
-    const next = humanoidBones(entity, { dt: 1 / 60, walkPhase: Math.PI / 2, onGround: true, speedBlocksPerSecond: 4.3 });
+    const next = humanoidBones(entity, { dt: 1 / 60, walkPhase: 0, onGround: true, speedBlocksPerSecond: 4.3 });
     assert(Math.abs(next.left_leg.rotation[0]) < 0.5, 'a single frame must not reach the full walk pose');
   });
   it('raises the right arm during an attack', () => {
