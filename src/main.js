@@ -89,9 +89,11 @@ export async function boot() {
   // so players with fast internet keep the full visual experience.
   const connection = navigator.connection;
   const slowConnection = !!(connection?.saveData || /(^|-)2g/.test(connection?.effectiveType || ''));
-  const texturePromise = slowConnection
-    ? Promise.resolve(emptyTextures)
-    : loadItsBrianTextures(BLOCKS, ITEMS);
+  // Always load the complete block/item/UI texture set, including on mobile
+  // and data-saver connections. Skipping it made the game fall back to procedural
+  // placeholder textures, which looked like the texture pack had been removed.
+  // Model JSON remains optional on constrained connections; textures do not.
+  const texturePromise = loadItsBrianTextures(BLOCKS, ITEMS);
   const modelPromise = slowConnection
     ? Promise.resolve(emptyModels)
     : loadEntityModelPack();
