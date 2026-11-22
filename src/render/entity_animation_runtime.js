@@ -140,9 +140,18 @@ export function sampleVanillaEntityAnimation(animationFile, state = {}, elapsedS
   // Locomotion is phase-locked to actual movement; idle, attack, hurt and other
   // one-shot clips must advance with world time instead of freezing at phase 0.
   const syncToMovement = /walk|run|locomotion|cycle/i.test(name);
+  const oneShotProgress = state.hurt
+    ? (Number.isFinite(state.hurtProgress) ? 1 - clamp(state.hurtProgress, 0, 1) : null)
+    : (state.attacking || state.fuse || state.ramming)
+      ? (Number.isFinite(state.actionProgress) ? clamp(state.actionProgress, 0, 1) : null)
+      : null;
+  // One-shot clips must use the action's own progress, not world time. Otherwise
+  // an attack sampled after the clip duration starts and stays frozen at its end.
   const phaseTime = syncToMovement && Number.isFinite(state.cyclePhase)
     ? ((state.cyclePhase % 1 + 1) % 1) * clip.length
-    : elapsedSeconds;
+    : oneShotProgress !== null
+      ? oneShotProgress * clip.length
+      : elapsedSeconds;
   const time = clip.loop ? (Math.max(0, phaseTime) % clip.length) : clamp(phaseTime, 0, clip.length);
   const bones = {};
   for (const [boneName, channels] of Object.entries(clip.bones)) {
