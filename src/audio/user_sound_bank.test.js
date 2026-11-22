@@ -7,8 +7,8 @@ describe('User supplied sound bank', () => {
     assert(bank.has('step'));
     assert(bank.has('break'));
   });
-  it('does not invent a clip for unknown mobs', () => {
+  it('does not invent a clip for unknown mobs', async () => {
     const bank = new UserSoundBank(null);
-    assertEqual(bank.playMob('unknown_mob', 'ambient'), false);
+    assertEqual(await bank.playMob('unknown_mob', 'ambient'), false);
   });
 });
