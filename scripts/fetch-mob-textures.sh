@@ -92,4 +92,103 @@ for career in farmer fisherman shepherd librarian cleric armorer toolsmith butch
   download "villager/profession/$career.png" "villager_$career.png"
 done
 
+
+# Additional Java 1.19 variants and attached entity skins. These are loaded
+# alongside the default species textures and selected deterministically by the
+# renderer, so different animals no longer all share one identical skin.
+mkdir -p "$OUT/variants"
+download_variant() {
+  local source="$1" target="$2"
+  curl --fail --location --retry 3 "$BASE/$source" --output "$OUT/variants/$target"
+  test -s "$OUT/variants/$target"
+}
+
+# Axolotl colour morphs, all three frog climates, fox coats and sleep poses.
+download_variant "axolotl/axolotl_wild.png" "axolotl_wild.png"
+download_variant "axolotl/axolotl_gold.png" "axolotl_gold.png"
+download_variant "axolotl/axolotl_cyan.png" "axolotl_cyan.png"
+download_variant "axolotl/axolotl_blue.png" "axolotl_blue.png"
+download_variant "frog/cold_frog.png" "frog_cold.png"
+download_variant "frog/warm_frog.png" "frog_warm.png"
+download_variant "fox/snow_fox.png" "fox_snow.png"
+download_variant "fox/fox_sleep.png" "fox_sleep.png"
+download_variant "fox/snow_fox_sleep.png" "fox_snow_sleep.png"
+
+# All Java cat, parrot, rabbit and panda coats/patterns.
+for variant in all_black black british_shorthair calico jellie persian ragdoll red siamese tabby white; do
+  download_variant "cat/$variant.png" "cat_$variant.png"
+done
+for variant in blue green grey red_blue yellow_blue; do
+  download_variant "parrot/parrot_$variant.png" "parrot_$variant.png"
+done
+for variant in black brown caerbannog gold salt toast white white_splotched; do
+  download_variant "rabbit/$variant.png" "rabbit_$variant.png"
+done
+for variant in aggressive brown lazy playful weak worried; do
+  download_variant "panda/${variant}_panda.png" "panda_$variant.png"
+done
+
+# Horse coat/marking variants and equipment overlays.
+for variant in black brown chestnut creamy darkbrown gray white; do
+  download_variant "horse/horse_$variant.png" "horse_$variant.png"
+done
+for variant in black white whitedots whitefield; do
+  download_variant "horse/horse_markings_$variant.png" "horse_markings_$variant.png"
+done
+for variant in diamond gold iron leather; do
+  download_variant "horse/armor/horse_armor_$variant.png" "horse_armor_$variant.png"
+done
+
+# Other visible states: bee anger/nectar, golem damage, pig saddle, ghast attack,
+# stray overlay, enderman/phantom/spider eyes, and shulker colour palette.
+for variant in bee_angry bee_angry_nectar bee_nectar bee_stinger; do
+  download_variant "bee/$variant.png" "$variant.png"
+done
+for variant in low medium high; do
+  download_variant "iron_golem/iron_golem_crackiness_$variant.png" "iron_golem_crackiness_$variant.png"
+done
+download_variant "pig/pig_saddle.png" "pig_saddle.png"
+download_variant "ghast/ghast_shooting.png" "ghast_shooting.png"
+download_variant "skeleton/stray_overlay.png" "stray_overlay.png"
+download_variant "enderman/enderman_eyes.png" "enderman_eyes.png"
+download_variant "phantom_eyes.png" "phantom_eyes.png"
+download_variant "spider_eyes.png" "spider_eyes.png"
+for color in black blue brown cyan gray green light_blue light_gray lime magenta orange pink purple red white yellow; do
+  download_variant "shulker/shulker_$color.png" "shulker_$color.png"
+done
+
+# Fish colour/pattern atlases and additional rideable/transport textures.
+for variant in tropical_a tropical_b tropical_a_pattern_1 tropical_a_pattern_2 tropical_a_pattern_3 tropical_a_pattern_4 tropical_a_pattern_5 tropical_a_pattern_6 tropical_b_pattern_1 tropical_b_pattern_2 tropical_b_pattern_3 tropical_b_pattern_4 tropical_b_pattern_5 tropical_b_pattern_6; do
+  download_variant "fish/$variant.png" "$variant.png"
+done
+for wood in oak spruce birch jungle acacia dark_oak mangrove; do
+  download_variant "boat/$wood.png" "boat_$wood.png"
+done
+for color in black blue brown cyan gray green light_blue light_gray lime magenta orange pink purple red white yellow; do
+  download_variant "bed/$color.png" "bed_$color.png"
+done
+download_variant "armorstand/wood.png" "armor_stand.png"
+download_variant "elytra.png" "elytra.png"
+download_variant "minecart.png" "minecart.png"
+download_variant "experience_orb.png" "experience_orb.png"
+download_variant "fishing_hook.png" "fishing_hook.png"
+download_variant "lead_knot.png" "lead_knot.png"
+
+node --input-type=module <<'NODE'
+import fs from 'node:fs';
+import path from 'node:path';
+const root = 'assets/mob-textures';
+const files = [];
+for (const file of fs.readdirSync(path.join(root, 'variants')).sort()) {
+  if (file.endsWith('.png')) files.push(file);
+}
+fs.writeFileSync(path.join(root, 'variants', 'manifest.json'), JSON.stringify({
+  source: 'ItsBrian/minecraft-textures',
+  commit: process.env.SOURCE_COMMIT ?? '894006ad417c27f767b66bbcfc1afd1b77655531',
+  minecraftVersion: '1.19.x',
+  files,
+}, null, 2) + '\n');
+console.log(`Downloaded ${files.length} additional mob, creature-variant and entity textures.`);
+NODE
+
 echo "Downloaded $(find "$OUT" -maxdepth 1 -name '*.png' | wc -l) mob skins."
