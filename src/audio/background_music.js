@@ -5,8 +5,8 @@
  */
 const DB='donorcraft-resource-packs', STORE='archives', KEY='background-music';
 const MUSIC_ROOT = new URL('../../assets/audio/music/', import.meta.url);
-const FIRST_TRACK_MIN=20_000, FIRST_TRACK_MAX=45_000;
-const TRACK_GAP_MIN=120_000, TRACK_GAP_MAX=240_000;
+const FIRST_TRACK_MIN=1_500, FIRST_TRACK_MAX=4_000;
+const TRACK_GAP_MIN=45_000, TRACK_GAP_MAX=90_000;
 const randomBetween=(min,max)=>Math.floor(min+Math.random()*(max-min+1));
 
 function openDB(){return new Promise((resolve,reject)=>{if(!globalThis.indexedDB){reject(new Error('IndexedDB недоступен'));return;}const req=indexedDB.open(DB,1);req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(STORE))req.result.createObjectStore(STORE);};req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error||new Error('Не удалось открыть хранилище музыки'));});}
@@ -14,9 +14,26 @@ async function saveTracks(files){const db=await openDB();try{await new Promise((
 async function readTracks(){const db=await openDB();try{return await new Promise((resolve,reject)=>{const req=db.transaction(STORE,'readonly').objectStore(STORE).get(KEY);req.onsuccess=()=>resolve(req.result||[]);req.onerror=()=>reject(req.error);});}finally{db.close();}}
 async function deleteTracks(){const db=await openDB();try{await new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(KEY);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});}finally{db.close();}}
 async function readBuiltinTracks(){
- // Never substitute unrelated music for Minecraft's soundtrack.
- // Built-in music is only enabled when a compatible licensed pack is provided.
- return [];
+ // Load the project's bundled, properly licensed background soundtrack.
+ // These are original CC0 game-music tracks, not recordings from Minecraft.
+ try {
+  const response=await fetch(new URL('manifest.json',MUSIC_ROOT),{cache:'no-cache'});
+  if(!response.ok)throw new Error('Music manifest unavailable ('+response.status+')');
+  const manifest=await response.json();
+  if(!Array.isArray(manifest.tracks))throw new Error('Music manifest has no tracks');
+  const tracks=[];
+  for(const entry of manifest.tracks){
+   if(!entry||typeof entry.file!=='string')continue;
+   const url=new URL(encodeURIComponent(entry.file),MUSIC_ROOT);
+   const check=await fetch(url,{method:'HEAD'});
+   if(check.ok)tracks.push({name:entry.name||entry.file,src:url.href});
+  }
+  console.info('[music] Loaded '+tracks.length+' built-in CC0 tracks.');
+  return tracks;
+ } catch(error) {
+  console.warn('[music] Built-in soundtrack unavailable:',error);
+  return [];
+ }
 }
 
 export class BackgroundMusic{
