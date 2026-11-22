@@ -434,25 +434,10 @@ export function resolveJavaBlockFaces(models, blockstates) {
     const model = models.get(key);
     if (!model) return null;
     const parent = resolveModel(model.parent, seen);
-    const textures = { ...(parent?.textures || {}), ...(model.textures || {}) };
-    const elements = model.elements || parent?.elements || [];
-    const result = {};
-    const directions = ['down', 'up', 'north', 'south', 'west', 'east'];
-    for (const direction of directions) {
-      let faceTexture = null;
-      for (const element of elements) {
-        const raw = element.faces?.[direction]?.texture;
-        if (raw) { faceTexture = raw; break; }
-      }
-      if (!faceTexture && directions.includes(direction)) {
-        const fallback = direction === 'up' || direction === 'down' ? (textures.end || textures.all) : (textures.side || textures.all);
-        faceTexture = fallback || null;
-      }
-      let guard = 0;
-      while (faceTexture?.startsWith('#') && guard++ < 12) faceTexture = textures[faceTexture.slice(1)] || null;
-      if (faceTexture) result[direction] = faceTexture.replace(/^minecraft:block\//, '').replace(/^block\//, '').split('/').pop();
-    }
-    return Object.keys(result).length ? result : null;
+    return {
+      textures: { ...(parent?.textures || {}), ...(model.textures || {}) },
+      elements: model.elements || parent?.elements || [],
+    };
   };
   for (const [blockName, state] of blockstates) {
     const variants = state.variants;
@@ -466,8 +451,31 @@ export function resolveJavaBlockFaces(models, blockstates) {
       modelId = state.multipart[0]?.apply?.[0]?.model || state.multipart[0]?.apply?.model;
     }
     if (!modelId) continue;
-    const faces = resolveModel(modelId);
-    if (faces) facesByBlock['mc:' + blockName] = faces;
+    const compiled = resolveModel(modelId);
+    if (!compiled) continue;
+    const result = {};
+    for (const direction of ['down', 'up', 'north', 'south', 'west', 'east']) {
+      let texture = null;
+      for (const element of compiled.elements) {
+        const candidate = element.faces?.[direction]?.texture;
+        if (candidate) { texture = candidate; break; }
+      }
+      if (!texture) texture = (direction === 'up' || direction === 'down')
+        ? (compiled.textures.end || compiled.textures.all)
+        : (compiled.textures.side || compiled.textures.all);
+      let guard = 0;
+      while (texture?.startsWith('#') && guard++ < 12) {
+        texture = compiled.textures[texture.slice(1)] || null;
+      }
+      if (texture) {
+        result[direction] = texture
+          .replace(/^minecraft:block\//, '')
+          .replace(/^block\//, '')
+          .split('/')
+          .pop();
+      }
+    }
+    if (Object.keys(result).length) facesByBlock['mc:' + blockName] = result;
   }
   return facesByBlock;
 }
