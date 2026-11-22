@@ -13,13 +13,16 @@ const materialOf = (name) => {
 };
 
 export function classifyBundledSound(file, pack) {
-  const name = String(file).toLowerCase().replace(/\\/g, '/').split('/').pop() ?? '';
-  const material = materialOf(name);
+  const normalized = String(file).toLowerCase().replace(/\\\\/g, '/');
+  const name = normalized.split('/').pop() ?? '';
+  const cleanName = name.replace(/\\.(ogg|opus|wav)$/i, '');
+  const material = materialOf(cleanName);
   if (pack === 'kenney-footsteps') return `step:${material}`;
   if (pack === 'kenney-impact') {
     if (/footstep|step/.test(cleanName)) return `step:${material}`;
-    if (/impact|collision|thud|hit/.test(cleanName)) return `impact:${material}`;
+    if (/impact|collision|thud|hit|mining/.test(cleanName)) return `impact:${material}`;
   }
+  if (pack === 'oga-rpg-sfx' && /creature|monster|beast/.test(cleanName)) return 'mob:creature';
   return null;
 }
 
@@ -29,6 +32,7 @@ export class BundledSoundBank {
     this.ready = false;
     this.loadPromise = null;
     this.context = null;
+    this.lastAmbientAt = 0;
   }
 
   async load(context) {
@@ -77,10 +81,8 @@ export class BundledSoundBank {
       keys = [`step:${materialKey}`, 'step:generic'];
     } else if (['block.break', 'block.place', 'block.hit'].includes(eventId)) {
       keys = [`impact:${materialKey}`, 'impact:generic'];
-    } else if (eventId === 'ui.click') {
-      keys = ['ui:click'];
-    } else if (eventId === 'ui.toast') {
-      keys = ['ui:confirm', 'ui:click'];
+    } else if (['entity.mob.ambient', 'entity.mob.hurt', 'entity.mob.death'].includes(eventId)) {
+      keys = ['mob:creature'];
     }
     let choices = null;
     for (const key of keys) {
@@ -90,8 +92,7 @@ export class BundledSoundBank {
     const source = this.context.createBufferSource();
     const gain = this.context.createGain();
     source.buffer = choices[Math.floor(Math.random() * choices.length)];
-    const eventGain = eventId === 'block.step' ? 0.34
-      : eventId === 'ui.click' || eventId === 'ui.toast' ? 0.55 : 0.72;
+    const eventGain = eventId === 'block.step' ? 0.34 : 0.72;
     gain.gain.value = clamp(Number(volume) || 0, 0, 1) * eventGain;
     source.connect(gain).connect(this.context.destination);
     source.start();
