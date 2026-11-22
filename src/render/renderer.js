@@ -21,7 +21,7 @@ import { ChunkRenderer } from './chunk_renderer.js';
 import { raycast } from '../game/interaction.js';
 import { renderBar } from '../ui/hud_bars.js';
 import { bedrockItemPose, bedrockChargeProgress, bedrockHumanoidPose } from './bedrock_animation_curves.js';
-import { sampleVanillaEntityAnimation } from './entity_animation_runtime.js';
+import { sampleVanillaEntityAnimation, blendEntityAnimationBones } from './entity_animation_runtime.js';
 import { buildPlayerStateAnimation } from './player_animation.js';
 
 /**
@@ -106,6 +106,16 @@ const PLAYER_BONE_PIVOTS = [
   [0.375, 1.375, 0], [-0.125, 0.75, 0], [0.125, 0.75, 0],
 ];
 function multiply3(a, b) { return [a[0] * b[0], a[1] * b[1], a[2] * b[2]]; }
+
+function smoothEntityAnimation(entity, target, now = (globalThis.performance?.now?.() ?? Date.now())) {
+  const firstFrame = !Number.isFinite(entity._animationBlendTime);
+  const delta = firstFrame ? 1 : Math.min(0.1, Math.max(0, (now - entity._animationBlendTime) / 1000));
+  entity._animationBlendTime = now;
+  const alpha = firstFrame ? 1 : 1 - Math.exp(-delta / 0.10);
+  entity._animationBlendBones = blendEntityAnimationBones(entity._animationBlendBones ?? null, target, alpha);
+  return entity._animationBlendBones;
+}
+
 function vanillaLayerParts(model, layerName = 'main', animationBones = null) {
   const layer = model?.layers?.[layerName];
   if (!layer?.root) return null;
@@ -1045,9 +1055,10 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         sprinting: !!this.player.sprinting,
       });
       const useStatePose = playerSwimming || playerSneaking || playerAttacking || playerAirborne;
-      const playerAnimationPose = { animationBones: useStatePose ? statePose : playerAnimation?.bones ?? null };
+      const playerTargetBones = useStatePose ? statePose : playerAnimation?.bones ?? null;
+      const playerAnimationPose = { animationBones: smoothEntityAnimation(this.player, playerTargetBones) };
       draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : this.player.ridingMinecart ? 0.42 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { inWater: this.player.inWater, swimming: this.player.inWater && Math.hypot(this.player.vx ?? 0, this.player.vy ?? 0, this.player.vz ?? 0) > 0.025, airborne: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround, sprinting: !!this.player.sprinting, jumping: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking || !!this.player.ridingHorse || !!this.player.ridingMinecart, riding: !!this.player.ridingHorse || !!this.player.ridingMinecart, walking: playerMoving, attack: this.player.attackTime > 0, attackTime: this.player.attackTime, ...playerAnimationPose }, true);
-      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, outerHuman, this.player.walkPhase, 4, 5, 1, { inWater: this.player.inWater, swimming: this.player.inWater && Math.hypot(this.player.vx ?? 0, this.player.vy ?? 0, this.player.vz ?? 0) > 0.025, airborne: !this.player.ridingHorse && !this.player.onGround, sneaking: this.player.sneaking || !!this.player.ridingHorse, riding: !!this.player.ridingHorse, skinLayer: true }, true);
+      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, outerHuman, this.player.walkPhase, 4, 5, 1, { inWater: this.player.inWater, swimming: this.player.inWater && Math.hypot(this.player.vx ?? 0, this.player.vy ?? 0, this.player.vz ?? 0) > 0.025, airborne: !this.player.ridingHorse && !this.player.onGround, sneaking: this.player.sneaking || !!this.player.ridingHorse, riding: !!this.player.ridingHorse, skinLayer: true, animationBones: playerAnimationPose.animationBones }, true);
       const armorColors = ['#b8b8b8','#8f8f9b','#b17a45','#6c778a'];
       const armorParts = [];
       for (let slot = 36; slot <= 39; slot++) {
@@ -1081,9 +1092,9 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         walking: !!remote.walking, sprinting: !!remote.sprinting,
         cyclePhase: (remote.walkPhase ?? 0) / (Math.PI * 2),
       }, (remote.ageTicks ?? 0) / 20);
-      const remoteAnimationPose = { animationBones: remoteAnimation?.bones ?? null };
+      const remoteAnimationPose = { animationBones: smoothEntityAnimation(remote, remoteAnimation?.bones ?? null) };
       draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, human, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, jumping: !!remote.jumping, sneaking: !!remote.sneaking, walking: !!remote.walking, attack: !!remote.attacking, attackTime: remote.attackTime ?? 0, ...remoteAnimationPose }, true);
-      draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, outerHuman, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, sneaking: !!remote.sneaking, skinLayer: true }, true);
+      draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, outerHuman, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, sneaking: !!remote.sneaking, skinLayer: true, animationBones: remoteAnimationPose.animationBones }, true);
       const remoteArmorParts = [];
       for (const id of remote.armor ?? []) {
         if (!id) continue;
@@ -1187,7 +1198,8 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         hasArmor: !!mob.armor || !!mob.hasArmor,
         cyclePhase: (mob.walkPhase ?? 0) / (Math.PI * 2),
       }, idlePhase / 0.9) : null;
-      vanillaParts = vanillaLayerParts(vanillaModel, 'main', vanillaAnimation?.bones ?? null);
+      const mobAnimationBones = smoothEntityAnimation(mob, vanillaAnimation?.bones ?? null);
+      vanillaParts = vanillaLayerParts(vanillaModel, 'main', mobAnimationBones);
       const pulse = mob.type === 'creeper' && mob.anim?.fuse > 0
         ? 1 + Math.sin(mob.anim.fuse * Math.PI * 12) * 0.10 * mob.anim.fuse
         : ['slime','magma_cube'].includes(mob.type)
