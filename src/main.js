@@ -28,7 +28,7 @@ import { ITEMS } from './world/item.js';
 
 import { buildTextures, buildBlockTextureTable, TILE_SIZE } from './render/atlas.js';
 import { buildItemIconCache } from './render/item_icons.js';
-import { loadItsBrianTextures, setMinecraftUiTextures, loadPackRecord, decodePack, decodePackAnimations, decodePackItemTextures } from './render/resource_pack.js';
+import { loadItsBrianTextures, setMinecraftUiTextures, loadPackRecord, decodePack, decodePackAnimations, decodePackItemTextures, decodePackEntityTextures } from './render/resource_pack.js';
 import { setHudSprites } from './ui/hud_bars.js';
 import { loadEntityModelPack } from './render/entity_models.js';
 import { createContext, createTextureArray } from './render/gl.js';
@@ -115,14 +115,14 @@ export async function boot() {
   // Apply locally imported Java resource-pack textures over the community defaults.
   // The ZIP import is user-initiated; saved overrides survive reloads in this browser.
   const savedJavaPack = loadPackRecord();
-  let localTextureAnimations = new Map();
+  let localTextureAnimations = new Map();\n  let localEntityTextures = new Map();
   if (savedJavaPack) {
     const [localBlockTextures, localItemTextures, localAnimations] = await Promise.all([
       decodePack(savedJavaPack),
       decodePackItemTextures(savedJavaPack),
       decodePackAnimations(savedJavaPack),
     ]);
-    localTextureAnimations = localAnimations;
+    localTextureAnimations = localAnimations;\n    localEntityTextures = importedEntityTextures;
     for (const [name, pixels] of localBlockTextures) remoteTextures.blocks.set(name, pixels);
     for (const [name, dataUrl] of localItemTextures) remoteTextures.items.set(name, dataUrl);
     console.info('[textures] Java resource pack overrides:', localBlockTextures.size, 'blocks,', localItemTextures.size, 'items.');
@@ -135,7 +135,7 @@ export async function boot() {
   const textureTable = buildBlockTextureTable(BLOCKS, textures.index, savedJavaPack?.blockFaces);
   const icons = buildItemIconCache(ITEMS, BLOCKS, textures.data, textures.index, remoteTextures.items);
 
-  const game = new Game({ canvas, gl, textureArray, textureTable, icons, textures, entityModels, textureAnimations: localTextureAnimations });
+  const game = new Game({ canvas, gl, textureArray, textureTable, icons, textures, entityModels, textureAnimations: localTextureAnimations, customMobTextures: localEntityTextures });
   // The boot timeout must not permanently discard mob models on slower phones.
   // If the first 10 seconds elapsed, install the full model/animation pack later.
   if (entityModels === emptyModels) {
@@ -161,7 +161,7 @@ export async function boot() {
 // ---------------------------------------------------------------------------
 
 class Game {
-  constructor({ canvas, gl, textureArray, textureTable, icons, textures, entityModels, textureAnimations = new Map() }) {
+  constructor({ canvas, gl, textureArray, textureTable, icons, textures, entityModels, textureAnimations = new Map(), customMobTextures = new Map() }) {
     this.canvas = canvas;
     this.gl = gl;
     this.textureArray = textureArray;
@@ -169,7 +169,7 @@ class Game {
     this.textures = textures;
     this.textureAnimations = textureAnimations;
     this._animatedFrameByName = new Map();
-    this.entityModels = entityModels; // Full upstream geometry + animation data, loaded locally.
+    this.entityModels = entityModels; // Full upstream geometry + animation data, loaded locally.\n    this.customMobTextures = customMobTextures;
 
     this.ui = new UI(icons);
     this.sounds = new GameSounds();
