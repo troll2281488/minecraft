@@ -1,6 +1,6 @@
 import { BedrockSoundPack } from '../audio/bedrock_sound_pack.js';
 import { BackgroundMusic } from '../audio/background_music.js';
-import { UserSoundBank } from '../audio/user_sound_bank.js';
+import { BundledSoundBank } from '../audio/bundled_sound_bank.js';
 /**
  * Original procedural sound events. AudioContext is created lazily after a user
  * gesture; these synthesized cues are not recordings from Minecraft.
@@ -78,7 +78,7 @@ async function deleteBedrockArchive(){
 }
 
 export class GameSounds {
-  constructor(){this.context=null;this.lastStep=0;this.lastMobSoundAt=0;this.enabled=true;this.masterVolume=1;this.bedrockPack=null;this._restorePromise=null;this._restoreScheduled=false;this.music=new BackgroundMusic();this.userBank=null;}
+  constructor(){this.context=null;this.lastStep=0;this.lastMobSoundAt=0;this.enabled=true;this.masterVolume=1;this.bedrockPack=null;this._restorePromise=null;this._restoreScheduled=false;this.music=new BackgroundMusic();this.bundledBank=null;}
   async importBedrockPack(file){
     const context=this._ctx();
     if(!context)throw new Error('Web Audio недоступен в этом браузере');
@@ -122,7 +122,7 @@ export class GameSounds {
     const Audio=globalThis.AudioContext||globalThis.webkitAudioContext;
     if(!Audio)return null;
     if(!this.context)this.context=new Audio();
-    if(!this.userBank)this.userBank=new UserSoundBank(this.context,()=>this.masterVolume);
+    if(!this.bundledBank){this.bundledBank=new BundledSoundBank();this.bundledBank.context=this.context;}
     if(!this._restoreScheduled){
       this._restoreScheduled=true;
       Promise.resolve().then(()=>this.restoreSavedPack().catch(error=>console.warn('Не удалось восстановить звуковой пак:',error)));
@@ -141,9 +141,7 @@ export class GameSounds {
   }
   play(kind,material='stone'){
     const c=this._ctx();if(!c)return false;
-    if(this.userBank?.has(kind))return this.userBank.play(kind,material,1);
-    // Route the game's existing sound calls through the imported Bedrock pack
-    // first. Keep the procedural cue as a reliable fallback for missing events.
+    // Route existing game events through the imported pack or the built-in CC0 bank.
     const packEvent = ({
       break:'block.break', place:'block.place', hit:'block.hit', step:'block.step',
       doorOpen:'block.door.open', doorClose:'block.door.close',
@@ -159,8 +157,7 @@ export class GameSounds {
       explode:'entity.generic.explode', ambient:'entity.mob.ambient',
     })[kind];
     if(packEvent && this.bedrockPack?.play(packEvent,this.masterVolume,material))return true;
-    // Do not play generic synthesized or unrelated CC0 samples as Minecraft audio.
-    return false;
+    return packEvent ? (this.bundledBank?.play(packEvent,material,this.masterVolume) ?? false) : false;
   }
   playMob(type, action = 'ambient', volume = 0.35){
     const mob = String(type || '').toLowerCase().replace(/^minecraft:/, '');
@@ -169,11 +166,10 @@ export class GameSounds {
     if (action === 'ambient' && now - this.lastMobSoundAt < 900) return false;
     const context = this._ctx();
     if (!context) return false;
-    if (this.userBank?.playMob(mob, action, volume)) {
-      if (action === 'ambient') this.lastMobSoundAt = now;
-      return true;
-    }
-    return false;
+    if (this.bedrockPack?.play(event, volume)) return true;
+    const played = this.bundledBank?.play(event, mob, volume) ?? false;
+    if (played && action === 'ambient') this.lastMobSoundAt = now;
+    return played;
   }
   playNote(note, material = 'wood'){
     return this.play('note', material);
