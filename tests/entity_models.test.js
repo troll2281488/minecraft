@@ -46,4 +46,22 @@ describe('Entity model pack startup resilience', () => {
       globalThis.fetch = originalFetch;
     }
   });
+  it('rejects model packs newer than the supported legacy asset baseline', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => new Response(JSON.stringify({
+      minecraftVersion: '1.20.1',
+      source: 'unsupported-test-pack',
+      commit: 'test',
+      models: ['models/camel.json'],
+      animations: [],
+    }), { status: 200 });
+    try {
+      const pack = await loadEntityModelPack();
+      assertEqual(pack.minecraftVersion, null);
+      assertEqual(pack.getModel('camel'), null);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
 });
