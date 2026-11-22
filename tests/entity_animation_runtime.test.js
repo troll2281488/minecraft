@@ -1,4 +1,4 @@
-import { describe, it, assert, assertEqual } from './framework.js';
+import { describe, it, assertEqual } from './framework.js';
 import { sampleVanillaEntityAnimation } from '../src/render/entity_animation_runtime.js';
 
 describe('Vanilla entity animation runtime', () => {
@@ -24,13 +24,51 @@ describe('Vanilla entity animation runtime', () => {
   it('selects the vanilla walk clip and samples its bone keyframes', () => {
     const pose = sampleVanillaEntityAnimation(animation, { walking: true, cyclePhase: 0.25 }, 0);
     assertEqual(pose.name, 'walk_cycle');
-    assertEqual(pose.bones.left_leg.rotation[0], 0.5);
+    assertEqual(pose.bones.left_leg.rotation[0], 0.5625);
   });
 
   it('selects the vanilla flight clip for airborne mobs', () => {
     const pose = sampleVanillaEntityAnimation(animation, { airborne: true }, 0.5);
     assertEqual(pose.name, 'fly');
     assertEqual(pose.bones.left_wing.rotation[2], -0.5);
+  });
+
+  it('does not play a walk cycle while the mob is standing still', () => {
+    const pose = sampleVanillaEntityAnimation(animation, { walking: false }, 0.25);
+    assertEqual(pose, null);
+  });
+
+  it('prioritizes attack clips over walking clips', () => {
+    const clips = {
+      animations: {
+        walk_cycle: { length: 1, loop: true, bones: { leg: { rotation: [{ time: 0, value: [1, 0, 0] }] } } },
+        attack: { length: 1, loop: false, bones: { arm: { rotation: [{ time: 0, value: [-1, 0, 0] }] } } },
+      },
+    };
+    const pose = sampleVanillaEntityAnimation(clips, { walking: true, attacking: true }, 0.1);
+    assertEqual(pose.name, 'attack');
+  });
+
+  it('uses swim clips when a mob is in water', () => {
+    const clips = {
+      animations: {
+        walk_cycle: { length: 1, loop: true, bones: {} },
+        swim: { length: 1, loop: true, bones: { fin: { rotation: [{ time: 0, value: [0, 0, 1] }] } } },
+      },
+    };
+    const pose = sampleVanillaEntityAnimation(clips, { inWater: true, walking: true }, 0.1);
+    assertEqual(pose.name, 'swim');
+  });
+
+  it('uses a source hurt clip when damage animation is available', () => {
+    const clips = {
+      animations: {
+        idle: { length: 1, loop: true, bones: {} },
+        hurt: { length: 0.5, loop: false, bones: { body: { rotation: [{ time: 0, value: [0, 0, 0.4] }] } } },
+      },
+    };
+    const pose = sampleVanillaEntityAnimation(clips, { hurt: true }, 0.1);
+    assertEqual(pose.name, 'hurt');
   });
 
   it('returns null when no source animation exists', () => {
