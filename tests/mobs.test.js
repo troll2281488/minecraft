@@ -30,7 +30,10 @@ describe('Minecraft Java 1.12.2 mob catalogue', () => {
       assertEqual(MOB_TYPES_112.includes(type), true);
     }
   });
-  it('registers the additional 1.19-era creatures supported by the game', () => {\n    for (const type of ['allay', 'axolotl', 'frog', 'tadpole', 'warden']) assertEqual(MOB_TYPES_112.includes(type), true);\n  });\n  it('excludes mobs introduced after 1.12.2', () => {
+  it('registers the additional 1.19-era creatures supported by the game', () => {
+    for (const type of ['allay', 'axolotl', 'frog', 'tadpole', 'warden']) assertEqual(MOB_TYPES_112.includes(type), true);
+  });
+  it('excludes mobs introduced after 1.12.2', () => {
     assertEqual(MOB_TYPES_112.includes('drowned'), false);
     assertEqual(MOB_TYPES_112.includes('pillager'), false);
   });
