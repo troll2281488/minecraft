@@ -30,6 +30,25 @@ function groupFor(eventId, material) {
   return [];
 }
 
+
+export function classifyBundledSound(file, pack = '') {
+  const name = String(file).toLowerCase().split(/[\\/]/).pop() || '';
+  const clean = name.replace(/\\.(ogg|opus|wav)$/i, '');
+  if (pack === 'oga-creatures' || pack === 'oga-rpg-sfx') return 'mob:creature';
+  const step = clean.match(/^footstep_(carpet|concrete|grass|snow|wood)_/);
+  if (step) return 'step:' + step[1];
+  if (/^footstep\\d+/.test(clean) && pack === 'kenney-footsteps') return 'step:generic';
+  if (/impactmining/.test(clean)) return 'impact:generic';
+  if (/impact.*(wood|plank)/.test(clean)) return 'impact:wood';
+  if (/impact.*glass/.test(clean)) return 'impact:glass';
+  if (/impact.*(metal|plate|tin)/.test(clean)) return 'impact:metal';
+  if (/impact/.test(clean)) return 'impact:generic';
+  if (/door|creak/.test(clean)) return 'door';
+  if (/click|confirm|error|select|toggle|open|close|hover|switch|button/.test(clean)) return 'ui';
+  if (/coin|pickup|drop|handle|book|cloth|leather|latch|equip/.test(clean)) return 'inventory';
+  return null;
+}
+
 export class BundledSoundBank {
   constructor() {
     this.context = null;
