@@ -527,6 +527,31 @@ export async function importJavaResourcePackZip(file) {
   return { blocks: usedBlocks, items: usedItems, skipped, modelFiles, blockstateFiles, mappedBlocks: Object.keys(blockFaces).length };
 }
 
+export async function decodePackAnimations(record) {
+  const out = new Map();
+  for (const [name, entry] of Object.entries(record?.animations || {})) {
+    if (!Array.isArray(entry?.frames) || !entry.frames.length) continue;
+    const frames = [];
+    for (const url of entry.frames) {
+      try {
+        const bitmap = await createImageBitmap(await (await fetch(url)).blob());
+        const canvas = document.createElement('canvas');
+        canvas.width = TILE_SIZE; canvas.height = TILE_SIZE;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(bitmap, 0, 0, TILE_SIZE, TILE_SIZE);
+        bitmap.close();
+        frames.push(new Uint8Array(ctx.getImageData(0, 0, TILE_SIZE, TILE_SIZE).data));
+      } catch { /* An incomplete animation falls back to its static first frame. */ }
+    }
+    if (frames.length) out.set(name, {
+      frames,
+      times: Array.isArray(entry.times) ? entry.times.slice(0, frames.length) : frames.map(() => 1),
+    });
+  }
+  return out;
+}
+
 export async function decodePackItemTextures(record) {
   const out = new Map();
   for (const [name, url] of Object.entries(record?.items || {})) {
