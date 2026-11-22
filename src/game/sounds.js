@@ -141,7 +141,7 @@ export class GameSounds {
   }
   play(kind,material='stone'){
     const c=this._ctx();if(!c)return false;
-    if(this.userBank?.has(kind))return this.userBank.play(kind,material,this.masterVolume);
+    if(this.userBank?.has(kind))return this.userBank.play(kind,material,1);
     // Route the game's existing sound calls through the imported Bedrock pack
     // first. Keep the procedural cue as a reliable fallback for missing events.
     const packEvent = ({
@@ -182,6 +182,6 @@ export class GameSounds {
     const now=globalThis.performance?.now?.()??0;
     if(now-this.lastStep<340)return;
     this.lastStep=now;
-    this.play('step',material, this.masterVolume*.55);
+    this.play('step',material);
   }
 }
