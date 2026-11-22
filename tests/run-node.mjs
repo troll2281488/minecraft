@@ -1,6 +1,7 @@
 import { describe, it, assertEqual } from './framework.js';
 import './stronghold_library.test.js';
 import './entity_animation_runtime.test.js';
+import './bundled_sound_bank.test.js';
 import './redstone_wire.test.js';
 import './redstone_devices.test.js';
 import './pistons.test.js';
