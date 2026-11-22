@@ -4,6 +4,7 @@ import '../src/world/blocks/index.js';
 import { BLOCKS } from '../src/world/block.js';
 import { buildTextures, buildBlockTextureTable } from '../src/render/atlas.js';
 import { packSurface } from '../src/render/mesher.js';
+import { parseTextureAnimation, textureFrameAt } from '../src/render/texture_animation.js';
 
 describe('External item texture selection', () => {
   it('uses built-in generated icons for spawn eggs', () => {
@@ -146,5 +147,31 @@ describe('Java block model texture resolution', () => {
     const faces = resolveJavaBlockFaces(models, blockstates);
     assertEqual(faces['mc:oak_log'].up, 'oak_log_top');
     assertEqual(faces['mc:oak_log'].east, 'oak_log');
+  });
+});
+
+
+describe('Java animated texture metadata', () => {
+  it('parses vertical sprite sheets and custom frame durations', () => {
+    const animation = parseTextureAnimation({ animation: { frametime: 2, frames: [0, { index: 2, time: 5 }] } }, 16, 48);
+    assertEqual(animation.frameCount, 3);
+    assertEqual(animation.frames.length, 2);
+    assertEqual(animation.frames[1].time, 5);
+    assertEqual(animation.duration, 7);
+  });
+
+  it('selects the correct animation frame over time', () => {
+    const animation = parseTextureAnimation({ animation: { frames: [0, { index: 2, time: 3 }] } }, 16, 48);
+    assertEqual(textureFrameAt(animation, 0), 0);
+    assertEqual(textureFrameAt(animation, 1), 2);
+    assertEqual(textureFrameAt(animation, 3), 2);
+    assertEqual(textureFrameAt(animation, 4), 0);
+  });
+
+  it('rejects invalid dimensions and ignores out-of-range frame indices', () => {
+    assertEqual(parseTextureAnimation({ animation: {} }, 16, 30), null);
+    const animation = parseTextureAnimation({ animation: { frames: [99, 1] } }, 16, 32);
+    assertEqual(animation.frames.length, 1);
+    assertEqual(animation.frames[0].index, 1);
   });
 });
