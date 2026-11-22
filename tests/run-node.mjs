@@ -275,3 +275,5 @@ describe('multiplayer offline chat queue', () => {
     assertEqual(queue.get('ROOM1:c').text, 'c');
   });
 });
+
+import './own_animation.test.js';
