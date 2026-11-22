@@ -6,6 +6,7 @@ import './redstone_wire.test.js';
 import './redstone_devices.test.js';
 import './pistons.test.js';
 import './piston_textures.test.js';
+import './item_icons.test.js';
 import './bee_hives.test.js';
 import './weather.test.js';
 import './status_effects.test.js';
