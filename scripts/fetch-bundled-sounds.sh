@@ -10,7 +10,7 @@ mkdir -p "$OUT"
 
 fetch_zip() {
   local url="$1" name="$2"
-  curl --fail --location --retry 3 --silent --show-error "$url" -o "$TMP/$name.zip"
+  curl --fail --location --retry 3 --retry-all-errors --silent --show-error --user-agent "Mozilla/5.0 (compatible; Donorcraft audio asset fetcher)" --referer "https://kenney.nl/" "$url" -o "$TMP/$name.zip"
   mkdir -p "$TMP/$name"
   python3 - "$TMP/$name.zip" "$TMP/$name" <<'PY'
 import pathlib, sys, zipfile
