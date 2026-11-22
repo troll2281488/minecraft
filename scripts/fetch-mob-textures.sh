@@ -132,7 +132,7 @@ done
 for variant in black brown chestnut creamy darkbrown gray white; do
   download_variant "horse/horse_$variant.png" "horse_$variant.png"
 done
-for variant in black white whitedots whitefield; do
+for variant in blackdots white whitedots whitefield; do
   download_variant "horse/horse_markings_$variant.png" "horse_markings_$variant.png"
 done
 for variant in diamond gold iron leather; do
