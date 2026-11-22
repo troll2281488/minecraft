@@ -13,7 +13,7 @@ fetch_pack() {
   mkdir -p "$TMP/$name"
   curl --fail --location --retry 3 "$url" --output "$TMP/$name.zip"
   unzip -q "$TMP/$name.zip" -d "$TMP/$name"
-  find "$TMP/$name" -type f \\( -iname '*.ogg' -o -iname '*.wav' \\) -print0 |
+  find "$TMP/$name" -type f \( -iname '*.ogg' -o -iname '*.wav' \) -print0 |
     while IFS= read -r -d '' file; do
       cp "$file" "$destination/$(basename "$file")"
     done
@@ -34,7 +34,7 @@ const files = [];
 for (const pack of ['kenney-impact', 'kenney-ui']) {
   const dir = path.join(root, pack);
   for (const file of fs.readdirSync(dir).sort()) {
-    if (/\\.(ogg|wav)$/i.test(file)) files.push({ pack, file });
+    if (/\.(ogg|wav)$/i.test(file)) files.push({ pack, file });
   }
 }
 if (!files.length) throw new Error('No bundled audio files were downloaded');
@@ -42,7 +42,7 @@ fs.writeFileSync(path.join(root, 'manifest.json'), JSON.stringify({
   source: 'Kenney Impact Sounds + Kenney UI Audio',
   license: 'CC0-1.0',
   files,
-}, null, 2) + '\\n');
+}, null, 2) + '\n');
 console.log(`Prepared ${files.length} built-in CC0 audio files.`);
 NODE
 
