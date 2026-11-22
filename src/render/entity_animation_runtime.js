@@ -105,7 +105,12 @@ export function sampleVanillaEntityAnimation(animationFile, state = {}, elapsedS
   const name = chooseAnimation(animations, state);
   const clip = name ? animations[name] : null;
   if (!clip?.bones || !Number.isFinite(clip.length) || clip.length <= 0) return null;
-  const phaseTime = Number.isFinite(state.cyclePhase) ? ((state.cyclePhase % 1 + 1) % 1) * clip.length : elapsedSeconds;
+  // Locomotion is phase-locked to actual movement; idle, attack, hurt and other
+  // one-shot clips must advance with world time instead of freezing at phase 0.
+  const syncToMovement = /walk|run|locomotion|cycle/i.test(name);
+  const phaseTime = syncToMovement && Number.isFinite(state.cyclePhase)
+    ? ((state.cyclePhase % 1 + 1) % 1) * clip.length
+    : elapsedSeconds;
   const time = clip.loop ? (Math.max(0, phaseTime) % clip.length) : clamp(phaseTime, 0, clip.length);
   const bones = {};
   for (const [boneName, channels] of Object.entries(clip.bones)) {
