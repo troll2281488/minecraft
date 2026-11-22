@@ -99,6 +99,38 @@ function chooseAnimation(animations, state) {
   return idle;
 }
 
+/**
+ * Blend state changes instead of snapping between idle, locomotion, attack and
+ * hurt poses. Missing target channels fade back to their neutral transforms.
+ */
+export function blendEntityAnimationBones(previous, target, amount = 1) {
+  if (!previous && !target) return null;
+  const alpha = clamp(Number.isFinite(amount) ? amount : 1, 0, 1);
+  const boneNames = new Set([
+    ...Object.keys(previous ?? {}),
+    ...Object.keys(target ?? {}),
+  ]);
+  const result = {};
+  for (const boneName of boneNames) {
+    const from = previous?.[boneName] ?? {};
+    const to = target?.[boneName] ?? {};
+    const channels = {};
+    for (const channel of ['rotation', 'position', 'scale']) {
+      if (!from[channel] && !to[channel]) continue;
+      const neutral = channel === 'scale' ? [1, 1, 1] : [0, 0, 0];
+      const a = from[channel] ?? neutral;
+      const b = to[channel] ?? neutral;
+      channels[channel] = neutral.map((fallback, axis) => {
+        const start = Number.isFinite(a[axis]) ? a[axis] : fallback;
+        const end = Number.isFinite(b[axis]) ? b[axis] : fallback;
+        return start + (end - start) * alpha;
+      });
+    }
+    if (Object.keys(channels).length) result[boneName] = channels;
+  }
+  return result;
+}
+
 export function sampleVanillaEntityAnimation(animationFile, state = {}, elapsedSeconds = 0) {
   const animations = animationFile?.animations;
   if (!animations || typeof animations !== 'object') return null;
