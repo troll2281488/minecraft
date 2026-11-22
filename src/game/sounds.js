@@ -1,5 +1,6 @@
 import { BedrockSoundPack } from '../audio/bedrock_sound_pack.js';
 import { BackgroundMusic } from '../audio/background_music.js';
+import { BundledSoundBank } from '../audio/bundled_sound_bank.js';
 /**
  * Original procedural sound events. AudioContext is created lazily after a user
  * gesture; these synthesized cues are not recordings from Minecraft.
@@ -102,7 +103,7 @@ function soundSurface(material='stone') {
 }
 
 export class GameSounds {
-  constructor(){this.context=null;this.lastStep=0;this.lastMobSoundAt=0;this.enabled=true;this.masterVolume=1;this.bedrockPack=null;this._restorePromise=null;this._restoreScheduled=false;this.wavs=new Map();this.wavLoads=new Map();this.music=new BackgroundMusic();}
+  constructor(){this.context=null;this.lastStep=0;this.lastMobSoundAt=0;this.enabled=true;this.masterVolume=1;this.bedrockPack=null;this.bundledBank=new BundledSoundBank();this._restorePromise=null;this._restoreScheduled=false;this.wavs=new Map();this.wavLoads=new Map();this.music=new BackgroundMusic();}
   async importBedrockPack(file){
     const context=this._ctx();
     if(!context)throw new Error('Web Audio недоступен в этом браузере');
@@ -136,7 +137,7 @@ export class GameSounds {
     if(!this.enabled)return null;
     const Audio=globalThis.AudioContext||globalThis.webkitAudioContext;
     if(!Audio)return null;
-    if(!this.context)this.context=new Audio();
+    if(!this.context){this.context=new Audio();this.bundledBank.load(this.context).catch(error=>console.warn('[audio] Built-in sound bank unavailable:',error));}
     if(!this._restoreScheduled){
       this._restoreScheduled=true;
       Promise.resolve().then(()=>this.restoreSavedPack().catch(error=>console.warn('Не удалось восстановить звуковой пак:',error)));
@@ -172,6 +173,7 @@ export class GameSounds {
       explode:'entity.generic.explode', ambient:'entity.mob.ambient',
     })[kind];
     if(packEvent && this.bedrockPack?.play(packEvent,this.masterVolume))return true;
+    if(packEvent && this.bundledBank?.play(packEvent,material,this.masterVolume))return true;
     const base=WAV_EVENTS[kind];
     if(base){
       const surface=(kind==='break'||kind==='step') ? WAV_SURFACES[soundSurface(material)] : null;
