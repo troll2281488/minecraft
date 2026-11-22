@@ -280,6 +280,8 @@ export function rollMobDrops(type, random = Math.random, lootingLevel = 0) {
     { id: 'mc:feather', count: amount(0, 2) },
   ];
   if (type === 'sheep') return [{ id: 'mc:raw_mutton', count: amount(1, 2) }];
+  // Java 1.19 frogs occasionally drop a slimeball; tadpoles and allays have no item drops.
+  if (type === 'frog') return [{ id: 'mc:slime_ball', count: amount(0, 1) }].filter((drop) => drop.count > 0);
   if (type === 'rabbit') return [{ id: 'mc:raw_rabbit', count: amount(1, 1) }, ...(random() < 0.5 ? [{ id: 'mc:rabbit_hide', count: 1 }] : [])];
   if (type === 'mooshroom') return [{ id: 'mc:raw_beef', count: amount(1, 3) }, { id: 'mc:leather', count: amount(0, 2) }];
   if (type === 'skeleton' || type === 'stray') return [{ id: 'mc:bone', count: amount(0, 2) }];
