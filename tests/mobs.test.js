@@ -19,6 +19,13 @@ describe('mob drops', () => {
     assertEqual(rollMobDrops('zombie', () => 0.999)[0].id, 'mc:rotten_flesh');
   });
 
+  it('frogs have the Java slimeball drop while allays, tadpoles and wardens do not drop items', () => {
+    assertEqual(rollMobDrops('frog', () => 0).length, 0);
+    assertEqual(rollMobDrops('frog', () => 0.999)[0].id, 'mc:slime_ball');
+    assertEqual(rollMobDrops('frog', () => 0.999)[0].count, 1);
+    for (const type of ['allay', 'tadpole', 'warden']) assertEqual(rollMobDrops(type).length, 0);
+  });
+
   it('unknown mob types have no drops', () => {
     assertEqual(rollMobDrops('unknown').length, 0);
   });
