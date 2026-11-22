@@ -323,6 +323,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     this.heldItemTextureId = null;
     this.heldItemTextureReady = false;
     this.mobTextures = new Map();
+    this._customMobTextureReady = new Set();
     this.mobFallbackTexture = gl.createTexture();
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, this.mobFallbackTexture);
@@ -340,10 +341,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       image.onload=()=>{
         // A user-imported resource pack has priority over bundled defaults,
         // regardless of which image finishes decoding first.
-        if (this.customMobTextures?.has(type)) {
-          gl.deleteTexture(texture);
-          return;
-        }
+        if (this._customMobTextureReady?.has(type)) return;
         gl.bindTexture(gl.TEXTURE_2D,texture);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
         gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);
@@ -366,6 +364,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+        this._customMobTextureReady?.add(key);
         this.mobTextures.set(key, { texture, width: image.naturalWidth, height: image.naturalHeight, ready: true });
       };
       image.onerror = () => gl.deleteTexture(texture);
