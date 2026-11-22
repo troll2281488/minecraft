@@ -277,3 +277,5 @@ describe('multiplayer offline chat queue', () => {
 });
 
 import './own_animation.test.js';
+
+import '../src/audio/user_sound_bank.test.js';
