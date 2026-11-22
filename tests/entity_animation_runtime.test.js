@@ -91,6 +91,30 @@ describe('Vanilla entity animation runtime', () => {
     assertEqual(blended.wing.scale[0], 1.5);
   });
 
+  it('advances non-looping attack clips from action progress, not world time', () => {
+    const clips = { animations: {
+      attack: { length: 1, loop: false, bones: { arm: { rotation: [
+        { time: 0, value: [0, 0, 0] },
+        { time: 1, value: [1, 0, 0] },
+      ] } } },
+    } };
+    const pose = sampleVanillaEntityAnimation(clips, { attacking: true, actionProgress: 0.4 }, 900);
+    assertEqual(pose.time, 0.4);
+    assertEqual(pose.bones.arm.rotation[0], 0.4);
+  });
+
+  it('plays the beginning of a hurt clip when hurt progress is full', () => {
+    const clips = { animations: {
+      hurt: { length: 0.5, loop: false, bones: { body: { rotation: [
+        { time: 0, value: [0, 0, 0] },
+        { time: 0.5, value: [0.5, 0, 0] },
+      ] } } },
+    } };
+    const pose = sampleVanillaEntityAnimation(clips, { hurt: true, hurtProgress: 1 }, 40);
+    assertEqual(pose.time, 0);
+    assertEqual(pose.bones.body.rotation[0], 0);
+  });
+
   it('returns null when no source animation exists', () => {
     assertEqual(sampleVanillaEntityAnimation(null, { walking: true }, 0), null);
   });
