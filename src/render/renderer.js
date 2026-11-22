@@ -9,6 +9,7 @@
  */
 
 import { RENDER, MS_PER_TICK } from '../core/constants.js';
+import { TILE_SIZE } from './atlas.js';
 import { mat4 } from '../core/mat4.js';
 import {
   createProgram, createQuadIndexBuffer,
