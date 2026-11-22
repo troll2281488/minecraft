@@ -1,4 +1,4 @@
-import { describe, it, assert, assertEqual } from '../tests/framework.js';
+import { describe, it, assert, assertEqual } from '../../tests/framework.js';
 import { UserSoundBank } from './user_sound_bank.js';
 
 describe('User supplied sound bank', () => {
