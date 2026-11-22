@@ -11,6 +11,7 @@
  */
 
 import { TILE_SIZE, TEXTURES } from './atlas.js';
+import { parseTextureAnimation } from './texture_animation.js';
 
 const STORAGE_KEY = 'mc-resource-pack';
 
@@ -486,9 +487,19 @@ export async function importJavaResourcePackZip(file) {
   const existing = loadPackRecord() || { name: 'Java resource pack', textures: {}, items: {} };
   const textures = { ...(existing.textures || {}) };
   const items = { ...(existing.items || {}) };
+  const animations = { ...(existing.animations || {}) };
+  const metadataByPath = new Map();
+  for (const entry of entries) {
+    if (!entry.name.endsWith('.png.mcmeta')) continue;
+    try {
+      const raw = await unzipEntry(bytes, entry.method, entry.dataStart, entry.compressedSize);
+      metadataByPath.set(entry.name.slice(0, -'.mcmeta'.length), JSON.parse(new TextDecoder().decode(raw)));
+    } catch { skipped++; }
+  }
   let usedBlocks = 0, usedItems = 0, skipped = 0, modelFiles = 0, blockstateFiles = 0;
   const modelJson = new Map(), blockstateJson = new Map();
   for (const entry of entries) {
+    if (entry.name.endsWith('.png.mcmeta')) continue;
     if (entry.name.endsWith('.json')) {
       try {
         const raw = await unzipEntry(bytes, entry.method, entry.dataStart, entry.compressedSize);
@@ -511,6 +522,23 @@ export async function importJavaResourcePackZip(file) {
       // Keep the first 16x16 frame instead of shrinking the entire strip into one tile.
       const frameSize = Math.min(bitmap.width, bitmap.height, TILE_SIZE);
       ctx.drawImage(bitmap, 0, 0, frameSize, frameSize, 0, 0, TILE_SIZE, TILE_SIZE);
+      const animation = category === 'block'
+        ? parseTextureAnimation(metadataByPath.get(entry.name), bitmap.width, bitmap.height)
+        : null;
+      if (animation) {
+        const frameUrls = [];
+        for (const frame of animation.frames) {
+          const frameCanvas = document.createElement('canvas');
+          frameCanvas.width = TILE_SIZE; frameCanvas.height = TILE_SIZE;
+          const frameContext = frameCanvas.getContext('2d');
+          frameContext.imageSmoothingEnabled = false;
+          const sx = (frame.index % animation.columns) * animation.width;
+          const sy = Math.floor(frame.index / animation.columns) * animation.height;
+          frameContext.drawImage(bitmap, sx, sy, animation.width, animation.height, 0, 0, TILE_SIZE, TILE_SIZE);
+          frameUrls.push(frameCanvas.toDataURL('image/png'));
+        }
+        animations[base] = { frames: frameUrls, times: animation.frames.map((frame) => frame.time) };
+      }
       bitmap.close();
       const url = canvas.toDataURL('image/png');
       if (category === 'block') { textures[base] = url; usedBlocks++; }
@@ -520,7 +548,7 @@ export async function importJavaResourcePackZip(file) {
   if (!usedBlocks && !usedItems && !modelFiles && !blockstateFiles) throw new Error('Не найдено совместимых текстур, моделей или blockstates');
   const blockFaces = resolveJavaBlockFaces(modelJson, blockstateJson);
   try {
-    savePackRecord({ name: file.name, textures, items, blockFaces, modelFiles, blockstateFiles });
+    savePackRecord({ name: file.name, textures, items, animations, blockFaces, modelFiles, blockstateFiles });
   } catch {
     throw new Error('Не хватило места в хранилище браузера для ресурспака');
   }
