@@ -38,6 +38,34 @@ jobs:
           done
       - name: Download bundled CC0 background music
         run: bash scripts/fetch-bundled-music.sh
+      - name: Verify audio assets before publishing
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+
+          wavs = list(Path('assets/sound_library').glob('*.wav'))
+          if len(wavs) != 49:
+              raise SystemExit(f'Expected 49 generated WAV effects, found {len(wavs)}')
+          if not Path('assets/sound_library.zip').is_file():
+              raise SystemExit('Generated sound archive is missing')
+
+          effects = json.loads(Path('assets/audio/manifest.json').read_text())
+          if len(effects.get('files', [])) < 7:
+              raise SystemExit('Bundled CC0 effects manifest is incomplete')
+
+          music = json.loads(Path('assets/audio/music/manifest.json').read_text())
+          tracks = music.get('tracks', [])
+          if len(tracks) != 5:
+              raise SystemExit(f'Expected 5 background tracks, found {len(tracks)}')
+          for track in tracks:
+              path = Path('assets/audio/music') / track['file']
+              if not path.is_file() or path.stat().st_size == 0:
+                  raise SystemExit(f'Missing or empty music track: {path}')
+
+          print(f'Audio check passed: {len(wavs)} generated WAV effects, '
+                f'{len(effects["files"])} bundled CC0 effects, {len(tracks)} music tracks.')
+          PY
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload site
