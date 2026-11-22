@@ -16,6 +16,8 @@ jobs:
         run: bash scripts/fetch-vanilla-entity-models.sh
       - name: Download authorized mob textures
         run: bash scripts/fetch-mob-textures.sh
+      - name: Download bundled CC0 sound effects
+        run: bash scripts/fetch-bundled-sounds.sh
       - name: Build standalone textures and models library
         run: bash scripts/package-assets-library.sh
       - uses: actions/upload-artifact@v4
