@@ -2,7 +2,7 @@
  * Project-authored animation for the player and procedural mobs.
  * Curves are project-authored and eased frame-rate independently.
  */
-import { damp } from './motion.js';
+const damp = (current, target, rate, dt) => current + (target - current) * (1 - Math.exp(-Math.max(0, rate) * Math.max(0, dt)));
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const nowSeconds = () => (globalThis.performance?.now?.() ?? Date.now()) / 1000;
