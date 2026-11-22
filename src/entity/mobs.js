@@ -74,6 +74,7 @@ export const MOB_AI_PROFILES = Object.freeze({
   guardian: Object.freeze({ detectionRange: 18, speedMultiplier: 0.8, rangedRange: 14, preferredRange: 9, attackCooldown: 55, damage: 2, role: 'aquatic-ranged' }),
   elder_guardian: Object.freeze({ detectionRange: 22, speedMultiplier: 0.65, rangedRange: 16, preferredRange: 10, attackCooldown: 60, damage: 3, role: 'aquatic-ranged' }),
   wither: Object.freeze({ detectionRange: 24, speedMultiplier: 0.85, rangedRange: 18, preferredRange: 10, attackCooldown: 45, damage: 4, role: 'boss' }),
+  warden: Object.freeze({ detectionRange: 20, speedMultiplier: 0.72, meleeRange: 2.1, attackCooldown: 50, damage: 6, role: 'pursuer' }),
 });
 
 const LEASHABLE_MOB_TYPES = new Set(['cow', 'pig', 'sheep', 'chicken', 'mooshroom', 'rabbit', 'wolf', 'horse', 'bee', 'goat']);
@@ -175,7 +176,7 @@ export const MOB_TYPES_112 = Object.freeze([
   'llama','magma_cube','mooshroom','mule','ocelot','parrot','pig','polar_bear',
   'rabbit','sheep','shulker','silverfish','skeleton','skeleton_horse','slime',
   'snow_golem','spider','squid','stray','vex','villager','vindicator','witch',
-  'wither','wither_skeleton','wolf','zombie','zombie_horse','zombie_villager','goat',
+  'wither','wither_skeleton','wolf','zombie','zombie_horse','zombie_villager','goat',\n  'allay','axolotl','frog','tadpole','warden',
 ]);
 
 export function shearSheep(mob, random = Math.random) {
@@ -911,7 +912,7 @@ export class MobSystem {
       speed: MOB_AI_PROFILES[type] ? 0.035 : 0.018,
       thinkTicks: 0, attackTicks: 0, walkPhase: Math.random() * 6,
       moveTicks: 0, pauseTicks: 45 + Math.floor(Math.random() * 100),
-      health: ({ goat:10, bee:10, zombie:20, husk:20, zombie_villager:20, skeleton:20, stray:20, wither_skeleton:20, creeper:20, enderman:40, spider:16, cave_spider:12, silverfish:8, endermite:8, slime:16, magma_cube:16, vex:14, vindicator:24, evoker:24, witch:26, blaze:20, ghast:10, guardian:30, elder_guardian:80, wither:300, cow:10, pig:10, chicken:4, sheep:8, mooshroom:10, rabbit:3, wolf:8, horse:30, polar_bear:30, villager:20 })[type] ?? 10,
+      health: ({ goat:10, bee:10, allay:20, axolotl:14, frog:10, tadpole:6, warden:500, zombie:20, husk:20, zombie_villager:20, skeleton:20, stray:20, wither_skeleton:20, creeper:20, enderman:40, spider:16, cave_spider:12, silverfish:8, endermite:8, slime:16, magma_cube:16, vex:14, vindicator:24, evoker:24, witch:26, blaze:20, ghast:10, guardian:30, elder_guardian:80, wither:300, cow:10, pig:10, chicken:4, sheep:8, mooshroom:10, rabbit:3, wolf:8, horse:30, polar_bear:30, villager:20 })[type] ?? 10,
       sheared: false, eggLayTicks: type === 'chicken' ? 6000 + Math.floor(Math.random() * 6001) : 0, grazeTicks: 600 + Math.floor(Math.random() * 601), hurtTicks: 0, fuseTicks: 0,
       ageTicks: 0, loveTicks: 0, breedCooldown: 0,
       anim: { walk: 0, idle: Math.random() * Math.PI * 2, attack: 0, hurt: 0, fuse: 0 },
@@ -964,7 +965,7 @@ export class MobSystem {
 
   /** Spawn a supported creature from a creative egg on the clicked block. */
   spawnFromEgg(type, x, z) {
-    if (!['cow','pig','sheep','chicken','mooshroom','rabbit','wolf','horse','polar_bear','zombie','husk','zombie_villager','skeleton','stray','wither_skeleton','creeper','enderman','spider','cave_spider','silverfish','endermite','slime','magma_cube','vex','vindicator','evoker','witch','blaze','ghast','guardian','elder_guardian','wither','villager','bee','goat'].includes(type)) return false;
+    if (!['cow','pig','sheep','chicken','mooshroom','rabbit','wolf','horse','polar_bear','zombie','husk','zombie_villager','skeleton','stray','wither_skeleton','creeper','enderman','spider','cave_spider','silverfish','endermite','slime','magma_cube','vex','vindicator','evoker','witch','blaze','ghast','guardian','elder_guardian','wither','villager','bee','goat','allay','axolotl','frog','tadpole','warden'].includes(type)) return false;
     if (type === 'villager') {
       const world = this.game.world;
       const y = world.getHeight(x, z);
