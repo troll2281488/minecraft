@@ -1025,7 +1025,7 @@ export function buildTextures(overrides = null) {
  *
  * Face order matches FACES in core/math.js: down, up, north, south, west, east.
  */
-export function buildBlockTextureTable(blocks, textureIndex) {
+export function buildBlockTextureTable(blocks, textureIndex, javaBlockFaces = null) {
   const states = blocks.statesById;
   const table = new Uint16Array(states.length * 6);
   const missing = textureIndex.get('__missing');
@@ -1063,6 +1063,14 @@ export function buildBlockTextureTable(blocks, textureIndex) {
     } else {
       const single = layerFor(block.texture);
       faces = [single, single, single, single, single, single];
+    }
+
+    const javaFaces = javaBlockFaces?.[block.id];
+    if (javaFaces) {
+      const faceNames = ['down', 'up', 'north', 'south', 'west', 'east'];
+      faces = faceNames.map((name, faceIndex) => javaFaces[name]
+        ? layerFor(javaFaces[name])
+        : faces[faceIndex]);
     }
 
     // Piston faces are oriented by the block's facing property, not by
