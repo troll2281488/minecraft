@@ -112,10 +112,15 @@ function soundBucket(path) {
   return rules.find(([, match]) => match())?.[0] ?? null;
 }
 export class BedrockSoundPack {
-  constructor(context) { this.context = context; this.sounds = new Map(); this.fileCount = 0; }
+  constructor(context) { this.context = context; this.sounds = new Map(); this.fileCount = 0; this.musicFiles = []; }
   async import(file) {
     const entries = await readZip(file);
     if (!entries.length) throw new Error('В архиве не найдены OGG-звуки');
+    // Preserve music tracks found inside the same resource pack. They are
+    // handed to the background player separately from short sound effects.
+    this.musicFiles = entries
+      .filter(([path]) => /(^|\\/)music(\\/|[_-])/i.test(path))
+      .map(([path, bytes]) => new File([bytes], path.split('/').pop(), { type: 'audio/ogg' }));
     const buckets = new Map();
     let decoded = 0;
     for (let i = 0; i < entries.length; i += 4) {
