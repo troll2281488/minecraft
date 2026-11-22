@@ -24,6 +24,7 @@ import { bedrockItemPose, bedrockChargeProgress, bedrockHumanoidPose } from './b
 import { sampleVanillaEntityAnimation, blendEntityAnimationBones } from './entity_animation_runtime.js';
 import { buildPlayerStateAnimation } from './player_animation.js';
 import { humanoidBones, mobLegSwing, deathPose } from './own_animation.js';
+import { textureFrameAt } from './texture_animation.js';
 
 /**
  * A unit cube as 36 vertices of (x, y, z, u, v), two triangles per face.
@@ -402,7 +403,32 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     this.view = mat4.create();
   },
 
+  _updateTextureAnimations(now = (globalThis.performance?.now?.() ?? Date.now())) {
+    if (!this.textureAnimations?.size) return;
+    const gl = this.gl;
+    let changed = false;
+    gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.textureArray);
+    for (const [name, animation] of this.textureAnimations) {
+      const layer = this.textures?.index?.get(name);
+      if (layer === undefined || !animation.frames?.length) continue;
+      const times = animation.times.map((time) => Math.max(1, time || 1));
+      const duration = times.reduce((sum, time) => sum + time, 0);
+      const frame = textureFrameAt({
+        frames: animation.frames.map((_, index) => ({ index, time: times[index] })),
+        duration,
+      }, Math.floor(now / 50));
+      if (this._animatedFrameByName?.get(name) === frame) continue;
+      this._animatedFrameByName ||= new Map();
+      this._animatedFrameByName.set(name, frame);
+      gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, layer, TILE_SIZE, TILE_SIZE, 1,
+        gl.RGBA, gl.UNSIGNED_BYTE, animation.frames[frame]);
+      changed = true;
+    }
+    if (changed) gl.generateMipmap(gl.TEXTURE_2D_ARRAY);
+  },
+
   _render() {
+    this._updateTextureAnimations();
     const gl = this.gl;
     const player = this.player;
     const feedback = this.damageFeedback || 0;
