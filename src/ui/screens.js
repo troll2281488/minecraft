@@ -274,7 +274,7 @@ export const ScreensMixin = {
     if (!panel || document.getElementById('java-resource-pack-settings')) return;
     const section = document.createElement('section');
     section.id = 'java-resource-pack-settings';
-    section.innerHTML = '<h2>Ресурспак Minecraft Java</h2><p class="sub">Импорт ZIP с Java-текстурами блоков и предметов. Кубические модели и blockstates используются для назначения текстур сторонам блоков; сложная геометрия и повороты пока поддерживаются не полностью.</p><div class="settings-row"><button id="btn-import-java-pack" class="secondary" type="button">Импортировать texts.zip</button></div><p id="java-resource-pack-status" role="status" aria-live="polite">Java-ресурспак не импортирован.</p>';
+    section.innerHTML = '<h2>Ресурспак Minecraft Java</h2><p class="sub">Импортируй ZIP-ресурспак Java 1.19: текстуры блоков, предметов и существ (с сохранением UV-размеров), а также blockstates, кубические модели и анимации текстур. Сложная геометрия моделей существ пока не заменяется.</p><div class="settings-row"><button id="btn-import-java-pack" class="secondary" type="button">Импортировать ZIP-ресурспак</button></div><p id="java-resource-pack-status" role="status" aria-live="polite">Java-ресурспак не импортирован.</p>';
     const back = document.getElementById('btn-settings-back');
     panel.insertBefore(section, back);
     section.querySelector('#btn-import-java-pack').addEventListener('click', () => {
@@ -287,7 +287,7 @@ export const ScreensMixin = {
         const status = section.querySelector('#java-resource-pack-status');
         try {
           const result = await importJavaResourcePackZip(file);
-          status.textContent = 'Импортировано текстур блоков: ' + result.blocks + '; предметов: ' + result.items + '. Моделей: ' + result.modelFiles + '; blockstates: ' + result.blockstateFiles + '; сопоставлено блоков: ' + result.mappedBlocks + '. Пропущено: ' + result.skipped + '. Перезагрузка игры...';
+          status.textContent = 'Импортировано текстур блоков: ' + result.blocks + '; предметов: ' + result.items + '; существ: ' + (result.entities || 0) + '. Моделей: ' + result.modelFiles + '; blockstates: ' + result.blockstateFiles + '; сопоставлено блоков: ' + result.mappedBlocks + '. Пропущено: ' + result.skipped + '. Перезагрузка игры...';
           this.ui.toast('Java-текстуры импортированы. Перезагрузи игру.');
           setTimeout(() => location.reload(), 900);
         } catch (error) {
