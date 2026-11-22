@@ -494,29 +494,45 @@ export async function importJavaResourcePackZip(file) {
   const existing = loadPackRecord() || { name: 'Java resource pack', textures: {}, items: {} };
   const textures = { ...(existing.textures || {}) };
   const items = { ...(existing.items || {}) };
+  const entities = { ...(existing.entities || {}) };
   const animations = { ...(existing.animations || {}) };
   const metadataByPath = new Map();
+  let usedBlocks = 0, usedItems = 0, usedEntities = 0, skipped = 0;
+  let modelFiles = 0, blockstateFiles = 0;
+
   for (const entry of entries) {
     if (!entry.name.endsWith('.png.mcmeta')) continue;
     try {
       const raw = await unzipEntry(bytes, entry.method, entry.dataStart, entry.compressedSize);
-      metadataByPath.set(entry.name.slice(0, -'.mcmeta'.length), JSON.parse(new TextDecoder().decode(raw)));
+      metadataByPath.set(entry.name.slice(0, -'.mcmeta'.length),
+        JSON.parse(new TextDecoder().decode(raw)));
     } catch { skipped++; }
   }
-  let usedBlocks = 0, usedItems = 0, skipped = 0, modelFiles = 0, blockstateFiles = 0;
-  const modelJson = new Map(), blockstateJson = new Map();
+
+  const modelJson = new Map();
+  const blockstateJson = new Map();
   for (const entry of entries) {
     if (entry.name.endsWith('.png.mcmeta')) continue;
     if (entry.name.endsWith('.json')) {
       try {
         const raw = await unzipEntry(bytes, entry.method, entry.dataStart, entry.compressedSize);
         const parsed = JSON.parse(new TextDecoder().decode(raw));
-        if (entry.name.startsWith('models/block/')) { modelJson.set(entry.name.slice('models/block/'.length, -5), parsed); modelFiles++; }
-        else if (entry.name.startsWith('blockstates/')) { blockstateJson.set(entry.name.slice('blockstates/'.length, -5), parsed); blockstateFiles++; }
+        if (entry.name.startsWith('models/block/')) {
+          modelJson.set(entry.name.slice('models/block/'.length, -5), parsed);
+          modelFiles++;
+        } else if (entry.name.startsWith('blockstates/')) {
+          blockstateJson.set(entry.name.slice('blockstates/'.length, -5), parsed);
+          blockstateFiles++;
+        }
       } catch { skipped++; }
       continue;
     }
-    const category = entry.name.includes('/block/') ? 'block' : 'item';
+
+    const category = entry.name.startsWith('textures/block/') ? 'block'
+      : entry.name.startsWith('textures/item/') ? 'item'
+      : entry.name.startsWith('textures/entity/') ? 'entity' : null;
+    if (!category) continue;
+
     const base = entry.name.split('/').pop().replace(/\.png$/i, '');
     try {
       const raw = await unzipEntry(bytes, entry.method, entry.dataStart, entry.compressedSize);
@@ -525,29 +541,33 @@ export async function importJavaResourcePackZip(file) {
       const animation = category === 'block'
         ? parseTextureAnimation(metadataByPath.get(entry.name), bitmap.width, bitmap.height)
         : null;
+
       if (category === 'entity') {
         // Entity skins use model-specific UV layouts (commonly 64x64 or 64x32).
-        // Preserve their native dimensions; resizing them to a 16px block tile
-        // would destroy every UV island and make the imported skin unusable.
+        // Preserve native dimensions; shrinking them to 16x16 destroys the UV map.
         canvas.width = bitmap.width;
         canvas.height = bitmap.height;
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(bitmap, 0, 0);
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        context.imageSmoothingEnabled = false;
+        context.drawImage(bitmap, 0, 0);
       } else {
-        canvas.width = TILE_SIZE; canvas.height = TILE_SIZE;
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        ctx.imageSmoothingEnabled = false;
-        // Java animated block textures are vertical frame strips (e.g. water_still 16x512).
-        // Keep the first 16x16 frame instead of shrinking the entire strip into one tile.
-        const frameSize = Math.min(bitmap.width, bitmap.height, TILE_SIZE);
-        ctx.drawImage(bitmap, 0, 0, frameSize, frameSize, 0, 0, TILE_SIZE, TILE_SIZE);
+        canvas.width = TILE_SIZE;
+        canvas.height = TILE_SIZE;
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        context.imageSmoothingEnabled = false;
+        // Animated block textures are vertical or horizontal sprite sheets.
+        // The first frame supplies the static fallback while metadata drives animation.
+        const frameWidth = animation?.width ?? Math.min(bitmap.width, bitmap.height, TILE_SIZE);
+        const frameHeight = animation?.height ?? Math.min(bitmap.width, bitmap.height, TILE_SIZE);
+        context.drawImage(bitmap, 0, 0, frameWidth, frameHeight, 0, 0, TILE_SIZE, TILE_SIZE);
       }
+
       if (animation) {
         const frameUrls = [];
         for (const frame of animation.frames) {
           const frameCanvas = document.createElement('canvas');
-          frameCanvas.width = TILE_SIZE; frameCanvas.height = TILE_SIZE;
+          frameCanvas.width = TILE_SIZE;
+          frameCanvas.height = TILE_SIZE;
           const frameContext = frameCanvas.getContext('2d');
           frameContext.imageSmoothingEnabled = false;
           const sx = (frame.index % animation.columns) * animation.width;
@@ -555,22 +575,51 @@ export async function importJavaResourcePackZip(file) {
           frameContext.drawImage(bitmap, sx, sy, animation.width, animation.height, 0, 0, TILE_SIZE, TILE_SIZE);
           frameUrls.push(frameCanvas.toDataURL('image/png'));
         }
-        animations[base] = { frames: frameUrls, times: animation.frames.map((frame) => frame.time) };
+        animations[base] = {
+          frames: frameUrls,
+          times: animation.frames.map((frame) => frame.time),
+        };
       }
+
       bitmap.close();
       const url = canvas.toDataURL('image/png');
-      if (category === 'block') { textures[base] = url; usedBlocks++; }
-      else { items[base] = url; usedItems++; }
-    } catch { skipped++; }
+      if (category === 'block') {
+        textures[base] = url;
+        usedBlocks++;
+      } else if (category === 'item') {
+        items[base] = url;
+        usedItems++;
+      } else {
+        const key = javaEntityTextureKey(entry.name);
+        if (key) {
+          entities[key] = url;
+          usedEntities++;
+        } else {
+          skipped++;
+        }
+      }
+    } catch {
+      skipped++;
+    }
   }
-  if (!usedBlocks && !usedItems && !usedEntities && !modelFiles && !blockstateFiles) throw new Error('Не найдено совместимых текстур, моделей или blockstates');
-  const blockFaces = resolveJavaBlockFaces(modelJson, blockstateJson);
+
+  if (!usedBlocks && !usedItems && !usedEntities && !modelFiles && !blockstateFiles) {
+    throw new Error('Не найдено совместимых текстур, моделей или blockstates');
+  }
+  const importedFaces = resolveJavaBlockFaces(modelJson, blockstateJson);
+  const blockFaces = { ...(existing.blockFaces || {}), ...importedFaces };
   try {
-    savePackRecord({ name: file.name, textures, items, entities, animations, blockFaces, modelFiles, blockstateFiles });
+    savePackRecord({
+      name: file.name, textures, items, entities, animations, blockFaces,
+      modelFiles, blockstateFiles,
+    });
   } catch {
     throw new Error('Не хватило места в хранилище браузера для ресурспака');
   }
-  return { blocks: usedBlocks, items: usedItems, entities: usedEntities, skipped, modelFiles, blockstateFiles, mappedBlocks: Object.keys(blockFaces).length };
+  return {
+    blocks: usedBlocks, items: usedItems, entities: usedEntities, skipped,
+    modelFiles, blockstateFiles, mappedBlocks: Object.keys(importedFaces).length,
+  };
 }
 
 export async function decodePackAnimations(record) {
