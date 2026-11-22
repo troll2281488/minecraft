@@ -97,7 +97,23 @@ export async function boot() {
   const modelPromise = slowConnection
     ? Promise.resolve(emptyModels)
     : loadEntityModelPack();
-  const [remoteTextures, entityModels] = await Promise.all([texturePromise, modelPromise]);
+  // Optional remote art must never leave the player staring at a black screen.
+  // Start the title screen with safe fallback textures if a mobile connection is
+  // slow; the asset requests continue in the background but cannot block boot.
+  const withBootFallback = (promise, fallback, label) => Promise.race([
+    promise.catch((error) => {
+      console.warn(`[${label}] Optional assets failed; using built-in fallbacks.`, error);
+      return fallback;
+    }),
+    new Promise((resolve) => setTimeout(() => {
+      console.warn(`[${label}] Optional assets took too long; starting without them.`);
+      resolve(fallback);
+    }, 10000)),
+  ]);
+  const [remoteTextures, entityModels] = await Promise.all([
+    withBootFallback(texturePromise, emptyTextures, 'textures'),
+    withBootFallback(modelPromise, emptyModels, 'models'),
+  ]);
   setHudSprites(remoteTextures.hud);
   setMinecraftUiTextures(remoteTextures.ui);
   const textures = buildTextures(remoteTextures.blocks);
