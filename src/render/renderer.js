@@ -1272,7 +1272,8 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         hasArmor: !!mob.armor || !!mob.hasArmor,
         cyclePhase: (mob.walkPhase ?? 0) / (Math.PI * 2),
       }, idlePhase / 0.9) : null;
-      const mobAnimationBones = smoothEntityAnimation(mob, vanillaAnimation?.bones ?? null);\n      const sourceAnimated = hasEntityAnimationPose({ bones: mobAnimationBones });
+      const mobAnimationBones = smoothEntityAnimation(mob, vanillaAnimation?.bones ?? null);
+      const sourceAnimated = hasEntityAnimationPose({ bones: mobAnimationBones });
       vanillaParts = vanillaLayerParts(vanillaModel, 'main', mobAnimationBones);
       // Prefer the loaded vanilla geometry after animation poses have been applied.
       if (vanillaParts) parts = vanillaParts;
