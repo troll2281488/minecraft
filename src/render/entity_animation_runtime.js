@@ -34,16 +34,69 @@ function sampleTrack(track, time) {
 
 function chooseAnimation(animations, state) {
   const names = Object.keys(animations ?? {});
-  const prefer = state.inWater ? ['swim', 'water', 'walk_cycle']
-    : state.airborne ? ['fly', 'air', 'walk_cycle']
-    : state.attacking ? ['attack', 'walk_cycle']
-    : state.walking ? ['walk_cycle', 'walk', 'move']
-    : ['idle', 'look_at_target', 'walk_cycle'];
-  for (const token of prefer) {
-    const found = names.find(name => name.toLowerCase().includes(token));
-    if (found) return found;
+  const find = (tokens) => {
+    for (const token of tokens) {
+      const found = names.find(name => name.toLowerCase() === token)
+        ?? names.find(name => name.toLowerCase().includes(token));
+      if (found) return found;
+    }
+    return null;
+  };
+
+  // Specific actions win over locomotion, and locomotion wins over idle.
+  // The source pack uses names such as walk_cycle, walk_cycle_armor,
+  // look_at_target, fly, swim, attack and unhappy across different species.
+  if (state.hurt) {
+    const clip = find(['hurt', 'damage', 'hit', 'stun']);
+    if (clip) return clip;
   }
-  return names.find(name => name.toLowerCase().includes('idle')) ?? names[0] ?? null;
+  if (state.attacking || state.fuse || state.ramming) {
+    const clip = find(state.fuse
+      ? ['fuse', 'swelling', 'explode', 'attack']
+      : state.ramming
+        ? ['ram', 'charge', 'attack']
+        : ['attack', 'melee', 'bite', 'shoot', 'cast', 'strike']);
+    if (clip) return clip;
+  }
+  if (state.sitting) {
+    const clip = find(['sit', 'sitting', 'rest']);
+    if (clip) return clip;
+  }
+  if (state.sleeping) {
+    const clip = find(['sleep', 'sleeping']);
+    if (clip) return clip;
+  }
+  if (state.eating) {
+    const clip = find(['eat', 'eating', 'graze']);
+    if (clip) return clip;
+  }
+  if (state.inWater) {
+    const clip = find(['swim', 'water', 'paddle']);
+    if (clip) return clip;
+  }
+  if (state.flying || state.airborne) {
+    const clip = find(['fly', 'flying', 'glide', 'hover']);
+    if (clip) return clip;
+  }
+  if (state.walking || state.sprinting) {
+    const variants = [
+      ...(state.hasArmor ? ['walk_cycle_armor'] : []),
+      ...(state.saddled ? ['walk_cycle_saddle'] : []),
+      ...(state.baby ? ['walk_cycle_baby'] : []),
+      state.sprinting ? 'run' : 'walk_cycle',
+      'walk', 'run', 'move', 'locomotion',
+    ];
+    const clip = find(variants);
+    if (clip) return clip;
+  }
+  if (state.angry) {
+    const clip = find(['angry', 'aggressive', 'unhappy']);
+    if (clip) return clip;
+  }
+  const idle = find(['idle', 'look_at_target', 'stand', 'standing', 'rest']);
+  // Do not play a walking cycle on a stationary mob just because it is the
+  // only clip available in its source file.
+  return idle;
 }
 
 export function sampleVanillaEntityAnimation(animationFile, state = {}, elapsedSeconds = 0) {
