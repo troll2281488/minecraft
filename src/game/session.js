@@ -22,6 +22,9 @@ const SAVE_DIMENSION = { overworld: 'mc:overworld', nether: 'mc:the_nether', end
 
 export const SessionMixin = {
   async _enterWorld(meta, playerJson) {
+    // Warm the built-in sound bank while the loading screen is shown; the player
+    // never needs to import a resource pack manually.
+    void this.sounds?.preload?.();
     this.worldMeta = meta;
     this.ui.showScreen('loading');
     this.ui.setLoadingProgress(0, 'Starting terrain workers...');
