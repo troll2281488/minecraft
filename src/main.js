@@ -87,16 +87,14 @@ export async function boot() {
   // On normal connections, wait for the full community texture/model packs.
   // Only connections explicitly reported as 2G or data-saver skip optional assets,
   // so players with fast internet keep the full visual experience.
-  const connection = navigator.connection;
-  const slowConnection = !!(connection?.saveData || /(^|-)2g/.test(connection?.effectiveType || ''));
   // Always load the complete block/item/UI texture set, including on mobile
   // and data-saver connections. Skipping it made the game fall back to procedural
   // placeholder textures, which looked like the texture pack had been removed.
-  // Model JSON remains optional on constrained connections; textures do not.
+  // Always request the full mob geometry and animation pack. On slow mobile
+  // connections the game may boot with fallback models, but the same request
+  // continues and replaces the fallback as soon as the complete pack arrives.
   const texturePromise = loadItsBrianTextures(BLOCKS, ITEMS);
-  const modelPromise = slowConnection
-    ? Promise.resolve(emptyModels)
-    : loadEntityModelPack();
+  const modelPromise = loadEntityModelPack();
   // Optional remote art must never leave the player staring at a black screen.
   // Start the title screen with safe fallback textures if a mobile connection is
   // slow; the asset requests continue in the background but cannot block boot.
@@ -122,6 +120,16 @@ export async function boot() {
   const icons = buildItemIconCache(ITEMS, BLOCKS, textures.data, textures.index, remoteTextures.items);
 
   const game = new Game({ canvas, gl, textureArray, textureTable, icons, textures, entityModels });
+  // The boot timeout must not permanently discard mob models on slower phones.
+  // If the first 10 seconds elapsed, install the full model/animation pack later.
+  if (entityModels === emptyModels) {
+    modelPromise.then((loadedModels) => {
+      if (loadedModels?.models?.size) {
+        game.entityModels = loadedModels;
+        console.info('[models] Full mob models and animations loaded after startup.');
+      }
+    }).catch((error) => console.warn('[models] Late mob model load failed:', error));
+  }
 
   // Development handle. Cheap, and the alternative when something looks wrong
   // in a running world is adding one temporarily and reloading, which loses the
