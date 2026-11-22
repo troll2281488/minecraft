@@ -1106,8 +1106,20 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       const vanillaAnimation = vanillaAnimationFile ? sampleVanillaEntityAnimation(vanillaAnimationFile, {
         inWater: !!mob.inWater,
         airborne: !!mob.airborne || !!mob.flying,
-        attacking: (mob.anim?.attack ?? 0) > 0,
+        flying: !!mob.flying,
+        attacking: (mob.anim?.attack ?? 0) > 0 || (mob.attackTicks ?? 0) > 0,
+        hurt: (mob.anim?.hurt ?? 0) > 0,
+        fuse: (mob.anim?.fuse ?? 0) > 0,
+        ramming: (mob.ramWindup ?? 0) > 0 || (mob.ramTicks ?? 0) > 0,
         walking: !!mob.anim?.walking,
+        sprinting: !!mob.sprinting,
+        sitting: !!mob.sitting,
+        sleeping: !!mob.sleeping,
+        eating: !!mob.eating || !!mob.grazing,
+        angry: !!mob.angry || !!mob.isAngry,
+        baby: (mob.ageTicks ?? 0) < 0,
+        saddled: !!mob.saddled,
+        hasArmor: !!mob.armor || !!mob.hasArmor,
         cyclePhase: (mob.walkPhase ?? 0) / (Math.PI * 2),
       }, idlePhase / 0.9) : null;
       const pulse = mob.type === 'creeper' && mob.anim?.fuse > 0
