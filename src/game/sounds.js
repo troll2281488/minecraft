@@ -1,5 +1,4 @@
 import { BedrockSoundPack } from '../audio/bedrock_sound_pack.js';
-import { BundledSoundBank } from '../audio/bundled_sound_bank.js';
 import { BackgroundMusic } from '../audio/background_music.js';
 /**
  * Original procedural sound events. AudioContext is created lazily after a user
@@ -78,7 +77,7 @@ async function deleteBedrockArchive(){
 }
 
 export class GameSounds {
-  constructor(){this.context=null;this.lastStep=0;this.lastMobSoundAt=0;this.enabled=true;this.masterVolume=1;this.bedrockPack=null;this.bundledBank=new BundledSoundBank();this._bundledLoadPromise=null;this._restorePromise=null;this._restoreScheduled=false;this.music=new BackgroundMusic();}
+  constructor(){this.context=null;this.lastStep=0;this.lastMobSoundAt=0;this.enabled=true;this.masterVolume=1;this.bedrockPack=null;this._restorePromise=null;this._restoreScheduled=false;this.music=new BackgroundMusic();}
   async importBedrockPack(file){
     const context=this._ctx();
     if(!context)throw new Error('Web Audio недоступен в этом браузере');
@@ -107,25 +106,12 @@ export class GameSounds {
     finally{this._restorePromise=null;}
   }
   async clearBedrockPack(){this.bedrockPack=null;try{await deleteBedrockArchive();}catch(error){console.warn('Не удалось удалить сохранённый пак:',error);}}
-  _loadBundledSounds(){
-    if(!this.context)return Promise.resolve(false);
-    if(!this._bundledLoadPromise){
-      this._bundledLoadPromise=this.bundledBank.load(this.context).catch(error=>{
-        console.warn('Не удалось загрузить встроенные звуки:',error);return false;
-      }).finally(()=>{this._bundledLoadPromise=null;});
-    }
-    return this._bundledLoadPromise;
-  }
-  preload(){
-    const context=this._ctx();
-    return context?this._loadBundledSounds():Promise.resolve(false);
-  }
+  preload(){ return Promise.resolve(false); }
   _ctx(){
     if(!this.enabled)return null;
     const Audio=globalThis.AudioContext||globalThis.webkitAudioContext;
     if(!Audio)return null;
     if(!this.context)this.context=new Audio();
-    void this._loadBundledSounds();
     if(!this._restoreScheduled){
       this._restoreScheduled=true;
       Promise.resolve().then(()=>this.restoreSavedPack().catch(error=>console.warn('Не удалось восстановить звуковой пак:',error)));
@@ -161,15 +147,8 @@ export class GameSounds {
       explode:'entity.generic.explode', ambient:'entity.mob.ambient',
     })[kind];
     if(packEvent && this.bedrockPack?.play(packEvent,this.masterVolume))return true;
-    if(packEvent && this.bundledBank?.play(packEvent,material,this.masterVolume))return true;
-    const p=SOUND_PRESETS[kind]||SOUND_PRESETS.hit;
-    const now=c.currentTime,gain=c.createGain();
-    gain.gain.setValueAtTime(p.volume*this.masterVolume,now);
-    gain.gain.exponentialRampToValueAtTime(.001,now+p.d);gain.connect(c.destination);
-    const osc=c.createOscillator(),frequency=p.f*(MATERIAL_PITCH[material]||1);
-    osc.type=p.type;osc.frequency.setValueAtTime(frequency,now);
-    osc.frequency.exponentialRampToValueAtTime(Math.max(30,frequency*.55),now+p.d);
-    osc.connect(gain);osc.start(now);osc.stop(now+p.d+.015);
+    // Do not play generic synthesized or unrelated CC0 samples as Minecraft audio.
+    return false;
   }
   playMob(type, action = 'ambient', volume = 0.35){
     const mob = String(type || '').toLowerCase().replace(/^minecraft:/, '');
@@ -182,23 +161,11 @@ export class GameSounds {
       if (action === 'ambient') this.lastMobSoundAt = now;
       return true;
     }
-    const hostile = ['zombie','husk','zombie_villager','skeleton','stray','creeper','spider','cave_spider','enderman','witch','blaze','ghast','wither_skeleton','silverfish','endermite','vindicator','evoker','guardian','elder_guardian'].includes(mob);
-    if (hostile && this.bundledBank?.play('entity.mob.ambient', 'generic', this.masterVolume * volume)) {
-      if (action === 'ambient') this.lastMobSoundAt = now;
-      return true;
-    }
     return false;
   }
   playNote(note, material = 'wood'){
-    const c=this._ctx();if(!c)return false;
-    const now=c.currentTime,gain=c.createGain(),osc=c.createOscillator();
-    const instrument=material==='metal'?'square':material==='stone'||material==='sand'?'triangle':'sine';
-    const frequency=noteBlockFrequency(note);
-    gain.gain.setValueAtTime(.085*this.masterVolume,now);
-    gain.gain.exponentialRampToValueAtTime(.001,now+.32);gain.connect(c.destination);
-    osc.type=instrument;osc.frequency.setValueAtTime(frequency,now);
-    osc.connect(gain);osc.start(now);osc.stop(now+.34);
-    return true;
+    this._ctx();
+    return this.bedrockPack?.play('block.note', this.masterVolume) ?? false;
   }
   step(material){
     const now=globalThis.performance?.now?.()??0;
