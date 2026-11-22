@@ -1,45 +1,41 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Only CC0 footsteps and generic material impacts are bundled. The game never
+# downloads or redistributes Mojang's proprietary Minecraft audio.
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 OUT="assets/audio"
-mkdir -p "$OUT/kenney-impact" "$OUT/kenney-ui"
+mkdir -p "$OUT/kenney-footsteps" "$OUT/kenney-impact"
 
-fetch_pack() {
-  local name="$1"
-  local url="$2"
-  local destination="$3"
-  mkdir -p "$TMP/$name"
-  curl --fail --location --retry 3 "$url" --output "$TMP/$name.zip"
-  unzip -q "$TMP/$name.zip" -d "$TMP/$name"
-  find "$TMP/$name" -type f \( -iname '*.ogg' -o -iname '*.wav' \) -print0 |
-    while IFS= read -r -d '' file; do
-      cp "$file" "$destination/$(basename "$file")"
-    done
+BASE="https://raw.githubusercontent.com/euuuuuuan/moonshard-warden-public/897d26af64aab4003b057b3910a7118279b927d8/src/assets"
+fetch_one() {
+  local source="$1"
+  local destination="$2"
+  curl --fail --location --retry 3 "$source" --output "$destination"
 }
 
-fetch_pack "impact" \
-  "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip" \
-  "$OUT/kenney-impact"
-fetch_pack "ui" \
-  "https://kenney.nl/media/pages/assets/ui-audio/490d233f68-1677590494/kenney_ui-audio.zip" \
-  "$OUT/kenney-ui"
+for file in footstep00.ogg footstep02.ogg footstep06.ogg footstep09.ogg; do
+  fetch_one "$BASE/kenney-rpg-audio/$file" "$OUT/kenney-footsteps/$file"
+done
+for file in impactMining_002.ogg impactMetal_heavy_001.ogg; do
+  fetch_one "$BASE/kenney-impact/$file" "$OUT/kenney-impact/$file"
+done
 
 node --input-type=module <<'NODE'
 import fs from 'node:fs';
 import path from 'node:path';
 const root = 'assets/audio';
 const files = [];
-for (const pack of ['kenney-impact', 'kenney-ui']) {
+for (const pack of ['kenney-footsteps', 'kenney-impact']) {
   const dir = path.join(root, pack);
   for (const file of fs.readdirSync(dir).sort()) {
     if (/\.(ogg|wav)$/i.test(file)) files.push({ pack, file });
   }
 }
-if (!files.length) throw new Error('No bundled audio files were downloaded');
+if (files.length < 6) throw new Error(`Expected 6 built-in audio files, got ${files.length}`);
 fs.writeFileSync(path.join(root, 'manifest.json'), JSON.stringify({
-  source: 'Kenney Impact Sounds + Kenney UI Audio',
+  source: 'Kenney CC0 footsteps and impact effects',
   license: 'CC0-1.0',
   files,
 }, null, 2) + '\n');
@@ -51,9 +47,10 @@ Built-in sound effects included in the game build:
 
 - Kenney Impact Sounds 1.0 — https://kenney.nl/assets/impact-sounds
   License: Creative Commons CC0 1.0 Universal.
-- Kenney UI Audio 1.0 — https://kenney.nl/assets/ui-audio
+- Kenney RPG Audio 1.0 (footstep samples only) — https://kenney.nl/assets/rpg-audio
   License: Creative Commons CC0 1.0 Universal.
 
-The original assets are downloaded during the GitHub Actions build and are not
-part of the source repository. No Mojang/Minecraft original audio is included.
+Only the named footstep samples and two generic impact samples are fetched.
+No other audio from those packs is included. No Mojang/Minecraft original audio
+is included.
 EOF
