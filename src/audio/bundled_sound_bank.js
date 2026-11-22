@@ -15,14 +15,10 @@ const materialOf = (name) => {
 export function classifyBundledSound(file, pack) {
   const name = String(file).toLowerCase().replace(/\\/g, '/').split('/').pop() ?? '';
   const material = materialOf(name);
+  if (pack === 'kenney-footsteps') return `step:${material}`;
   if (pack === 'kenney-impact') {
     if (/footstep|step/.test(name)) return `step:${material}`;
     if (/impact|collision|thud|hit/.test(name)) return `impact:${material}`;
-  }
-  if (pack === 'kenney-ui') {
-    if (/click|button|press|tap|switch|select|hover/.test(name)) return 'ui:click';
-    if (/confirm|success|complete|accept/.test(name)) return 'ui:confirm';
-    if (/cancel|error|deny|back/.test(name)) return 'ui:cancel';
   }
   return null;
 }
