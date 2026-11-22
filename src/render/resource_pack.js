@@ -507,7 +507,10 @@ export async function importJavaResourcePackZip(file) {
       canvas.width = TILE_SIZE; canvas.height = TILE_SIZE;
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       ctx.imageSmoothingEnabled = false;
-      // Java animated block textures are vertical frame strips (e.g. water_still 16x512).\n      // Keep the first 16x16 frame instead of shrinking the entire strip into one tile.\n      const frameSize = Math.min(bitmap.width, bitmap.height, TILE_SIZE);\n      ctx.drawImage(bitmap, 0, 0, frameSize, frameSize, 0, 0, TILE_SIZE, TILE_SIZE);
+      // Java animated block textures are vertical frame strips (e.g. water_still 16x512).
+      // Keep the first 16x16 frame instead of shrinking the entire strip into one tile.
+      const frameSize = Math.min(bitmap.width, bitmap.height, TILE_SIZE);
+      ctx.drawImage(bitmap, 0, 0, frameSize, frameSize, 0, 0, TILE_SIZE, TILE_SIZE);
       bitmap.close();
       const url = canvas.toDataURL('image/png');
       if (category === 'block') { textures[base] = url; usedBlocks++; }
