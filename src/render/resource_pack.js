@@ -425,7 +425,7 @@ async function readZipPngEntries(file) {
 }
 
 
-function resolveJavaBlockFaces(models, blockstates) {
+export function resolveJavaBlockFaces(models, blockstates) {
   const facesByBlock = {};
   const resolveModel = (id, seen = new Set()) => {
     const key = String(id || '').replace(/^minecraft:/, '').replace(/^block\//, '');
