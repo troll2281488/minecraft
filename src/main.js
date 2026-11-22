@@ -129,7 +129,7 @@ export async function boot() {
   setMinecraftUiTextures(remoteTextures.ui);
   const textures = buildTextures(remoteTextures.blocks);
   const textureArray = createTextureArray(gl, textures, TILE_SIZE);
-  const textureTable = buildBlockTextureTable(BLOCKS, textures.index);
+  const textureTable = buildBlockTextureTable(BLOCKS, textures.index, savedJavaPack?.blockFaces);
   const icons = buildItemIconCache(ITEMS, BLOCKS, textures.data, textures.index, remoteTextures.items);
 
   const game = new Game({ canvas, gl, textureArray, textureTable, icons, textures, entityModels });
