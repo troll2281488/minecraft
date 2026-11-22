@@ -68,6 +68,9 @@ jobs:
           PY
       - name: Configure Pages
         uses: actions/configure-pages@v5
+      # Keep exactly one upload-pages-artifact step per fresh workflow run.
+      # If deployment fails after upload, start a fresh run instead of rerunning this job,
+      # because a job rerun can leave duplicate github-pages artifacts in the same run.
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
