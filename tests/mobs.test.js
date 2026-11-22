@@ -45,6 +45,28 @@ describe('Minecraft Java 1.12.2 mob catalogue', () => {
   });
 });
 
+describe('1.19-era creature registration', () => {
+  it('allows creative spawning of all five added creature types', () => {
+    const game = { world: {
+      getHeight: () => 64,
+      getBlock: (x, y) => ({ block: { solid: y === 64, id: 'mc:air' } }),
+    } };
+    const system = new MobSystem(game);
+    for (const type of ['allay', 'axolotl', 'frog', 'tadpole', 'warden']) {
+      assertEqual(system.spawnFromEgg(type, 0, 0), true);
+    }
+    assertEqual(system.mobs.length, 5);
+  });
+
+  it('restores new creature types from world saves', () => {
+    const system = new MobSystem({});
+    system.loadFrom(['allay', 'axolotl', 'frog', 'tadpole', 'warden'].map((type, index) => ({
+      id: index + 1, type, x: index, y: 70, z: 0, yaw: 0, health: 10,
+    })));
+    assertEqual(system.mobs.map((mob) => mob.type).join(','), 'allay,axolotl,frog,tadpole,warden');
+  });
+});
+
 describe('mob world persistence', () => {
   it('round-trips living mobs and sheep state', () => {
     const system = new MobSystem({});
