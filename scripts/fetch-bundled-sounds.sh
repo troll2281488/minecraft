@@ -40,7 +40,6 @@ PY
 }
 
 fetch_zip "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip" "kenney-impact"
-fetch_zip "https://kenney.nl/media/pages/assets/rpg-audio/8e99002d76-1677590336/kenney_rpg-audio.zip" "kenney-rpg"
 fetch_zip "https://kenney.nl/media/pages/assets/ui-audio/490d233f68-1677590494/kenney_ui-audio.zip" "kenney-ui"
 fetch_zip "https://kenney.nl/media/pages/assets/interface-sounds/fa43c1dd4d-1677589452/kenney_interface-sounds.zip" "kenney-interface"
 fetch_zip "https://opengameart.org/sites/default/files/80-CC0-creature-SFX_0.zip" "oga-creatures"
@@ -81,7 +80,7 @@ for (const pack of fs.readdirSync(root).sort()) {
 const counts = new Map();
 for (const item of files) counts.set(item.group, (counts.get(item.group) || 0) + 1);
 if (files.length < 100) throw new Error(`Expected 100+ classified CC0 sounds, got ${files.length}`);
-for (const required of ['step:grass','step:wood','step:snow','impact:generic','door','ui','inventory','mob:creature']) {
+for (const required of ['step:grass','step:wood','step:snow','impact:generic','door','ui','mob:creature']) {
   if (!counts.has(required)) throw new Error(`Missing sound group: ${required}`);
 }
 fs.writeFileSync(path.join(root, 'manifest.json'), JSON.stringify({
