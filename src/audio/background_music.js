@@ -14,16 +14,9 @@ async function saveTracks(files){const db=await openDB();try{await new Promise((
 async function readTracks(){const db=await openDB();try{return await new Promise((resolve,reject)=>{const req=db.transaction(STORE,'readonly').objectStore(STORE).get(KEY);req.onsuccess=()=>resolve(req.result||[]);req.onerror=()=>reject(req.error);});}finally{db.close();}}
 async function deleteTracks(){const db=await openDB();try{await new Promise((resolve,reject)=>{const tx=db.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(KEY);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);});}finally{db.close();}}
 async function readBuiltinTracks(){
- try{
-  const response=await fetch(new URL('manifest.json',MUSIC_ROOT));
-  if(!response.ok)throw new Error('Встроенный музыкальный список недоступен');
-  const manifest=await response.json();
-  return (manifest.tracks||[]).filter(track=>track?.file).map(track=>({
-   name:track.name||track.file,
-   src:new URL(track.file,MUSIC_ROOT).href,
-   builtin:true,
-  }));
- }catch(error){console.warn('[music] Не удалось загрузить встроенный плейлист:',error);return [];}
+ // Never substitute unrelated music for Minecraft's soundtrack.
+ // Built-in music is only enabled when a compatible licensed pack is provided.
+ return [];
 }
 
 export class BackgroundMusic{
