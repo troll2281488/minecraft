@@ -6,7 +6,7 @@ set -euo pipefail
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 OUT="assets/audio"
-mkdir -p "$OUT/kenney-footsteps" "$OUT/kenney-impact" "$OUT/openspades-blocks" "$OUT/openspades-player"
+mkdir -p "$OUT/kenney-footsteps" "$OUT/kenney-impact"
 
 BASE="https://raw.githubusercontent.com/euuuuuuan/moonshard-warden-public/897d26af64aab4003b057b3910a7118279b927d8/src/assets"
 fetch_one() {
@@ -22,19 +22,12 @@ for file in impactMining_002.ogg impactMetal_heavy_001.ogg; do
   fetch_one "$BASE/kenney-impact/$file" "$OUT/kenney-impact/$file"
 done
 
-# CC0-only general block/landing effects from the OpenSpades Free Assets pack.
-# The source credits file explicitly marks these three files CC0.
-OPENSPADES="https://raw.githubusercontent.com/DeathByDenim/openspades-free-pak/1e6b28721a2e5e51f84a572d101079bf186c66d5/Sounds"
-fetch_one "$OPENSPADES/Misc/BlockDestroy.opus" "$OUT/openspades-blocks/BlockDestroy.opus"
-fetch_one "$OPENSPADES/Misc/BlockFall.opus" "$OUT/openspades-blocks/BlockFall.opus"
-fetch_one "$OPENSPADES/Player/Land.opus" "$OUT/openspades-player/Land.opus"
-
 node --input-type=module <<'NODE'
 import fs from 'node:fs';
 import path from 'node:path';
 const root = 'assets/audio';
 const files = [];
-for (const pack of ['kenney-footsteps', 'kenney-impact', 'openspades-blocks', 'openspades-player']) {
+for (const pack of ['kenney-footsteps', 'kenney-impact']) {
   const dir = path.join(root, pack);
   for (const file of fs.readdirSync(dir).sort()) {
     if (/\.(ogg|wav)$/i.test(file)) files.push({ pack, file });
