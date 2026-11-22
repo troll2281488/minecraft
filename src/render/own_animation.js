@@ -20,12 +20,12 @@ function advance(rig) {
   return dt;
 }
 
-function ease(rig, name, target, dt) {
+function ease(rig, name, target, dt, rate = 22) {
   const current = rig.bones[name] ?? [0, 0, 0];
   const next = [
-    damp(current[0], target[0], 16, dt),
-    damp(current[1], target[1], 16, dt),
-    damp(current[2], target[2], 16, dt),
+    damp(current[0], target[0], rate, dt),
+    damp(current[1], target[1], rate, dt),
+    damp(current[2], target[2], rate, dt),
   ];
   rig.bones[name] = next;
   return { rotation: next };
@@ -36,59 +36,104 @@ export function humanoidBones(entity, state) {
   const rig = rigFor(entity);
   const dt = state.dt ?? advance(rig);
   const target = {
-    head: [0, 0, 0], body: [0, 0, 0],
-    left_arm: [0, 0, -0.03], right_arm: [0, 0, 0.03],
-    left_leg: [0, 0, 0], right_leg: [0, 0, 0],
+    head: [0, 0, 0],
+    body: [0, 0, 0],
+    left_arm: [0, 0, -0.02],
+    right_arm: [0, 0, 0.02],
+    left_leg: [0, 0, 0],
+    right_leg: [0, 0, 0],
   };
-  const breath = Math.sin(rig.t * 2.1);
+
+  // Follow the camera pitch, while keeping the neck movement smooth.
+  const pitchRad = clamp(((state.pitch ?? 0) * Math.PI) / 180, -1.35, 1.35);
+  target.head[0] = pitchRad;
+
+  // Idle breathing: tiny alternating arm motion, never a rigid T-pose.
+  const idleX = Math.sin(rig.t * 1.34) * 0.035;
+  const idleZ = Math.cos(rig.t * 1.8) * 0.035 + 0.035;
   const phase = Number.isFinite(state.walkPhase) ? state.walkPhase : 0;
-  const speed = clamp((state.speedBlocksPerSecond ?? 0) / 4.3, 0, 1.4);
+  const speed = clamp((state.speedBlocksPerSecond ?? 0) / 4.317, 0, 1.45);
   const grounded = !!state.onGround && !state.airborne;
 
-  if (state.inWater) {
-    const stroke = phase * 1.4;
-    target.body[0] = 0.9;
-    target.head[0] = -0.15;
-    target.left_arm[0] = Math.sin(stroke) * 1.1 - 0.35;
-    target.right_arm[0] = Math.sin(stroke + Math.PI) * 1.1 - 0.35;
-    target.left_leg[0] = Math.sin(stroke + Math.PI) * 0.45;
-    target.right_leg[0] = Math.sin(stroke) * 0.45;
+  if (state.riding) {
+    target.left_arm[0] = -0.628;
+    target.right_arm[0] = -0.628;
+    target.left_leg[0] = -1.256;
+    target.right_leg[0] = -1.256;
+    target.left_leg[1] = -0.18;
+    target.right_leg[1] = 0.18;
+  } else if (state.inWater) {
+    const stroke = phase * 1.35;
+    target.body[0] = 0.85;
+    target.head[0] = pitchRad * 0.5 - 0.35;
+    target.left_arm[0] = Math.sin(stroke) * 1.15 - 0.45;
+    target.right_arm[0] = Math.sin(stroke + Math.PI) * 1.15 - 0.45;
+    target.left_arm[2] = -0.18;
+    target.right_arm[2] = 0.18;
+    target.left_leg[0] = Math.sin(stroke + Math.PI) * 0.52;
+    target.right_leg[0] = Math.sin(stroke) * 0.52;
   } else if (state.airborne) {
-    const lift = state.jumping ? -0.75 : -0.25;
-    target.left_arm[0] = lift;
-    target.right_arm[0] = lift;
-    target.left_arm[2] = -0.2;
-    target.right_arm[2] = 0.2;
-    target.left_leg[0] = state.jumping ? 0.35 : 0.15;
-    target.right_leg[0] = state.jumping ? 0.5 : 0.25;
+    const isJumping = !!state.jumping;
+    target.left_arm[0] = isJumping ? -0.68 : -0.25 + idleX;
+    target.right_arm[0] = isJumping ? -0.68 : -0.25 - idleX;
+    target.left_arm[2] = -0.16 - idleZ;
+    target.right_arm[2] = 0.16 + idleZ;
+    target.left_leg[0] = isJumping ? 0.38 : 0.14;
+    target.right_leg[0] = isJumping ? -0.28 : -0.10;
   } else if (grounded && speed > 0.02) {
-    const amp = (state.sprinting ? 0.95 : 0.7) * Math.min(1, speed);
-    const swing = Math.sin(phase) * amp;
-    target.left_leg[0] = swing;
-    target.right_leg[0] = -swing;
-    target.left_arm[0] = -swing * 0.8;
-    target.right_arm[0] = swing * 0.8;
-    target.body[1] = Math.sin(phase) * 0.05;
+    const swingAmount = Math.min(1, speed) * (state.sprinting ? 1.18 : 0.88);
+    const legSwing = Math.cos(phase) * 1.15 * swingAmount;
+    const armSwing = Math.cos(phase) * 0.92 * swingAmount;
+    target.left_leg[0] = legSwing;
+    target.right_leg[0] = -legSwing;
+    target.left_arm[0] = -armSwing + idleX * 0.3;
+    target.right_arm[0] = armSwing - idleX * 0.3;
+    target.left_arm[2] = -idleZ;
+    target.right_arm[2] = idleZ;
+    if (state.sprinting) {
+      target.body[0] = 0.14;
+      target.head[0] = pitchRad - 0.08;
+    }
   } else {
-    target.left_arm[0] = breath * 0.03;
-    target.right_arm[0] = -breath * 0.03;
-    target.head[1] = Math.sin(rig.t * 0.6) * 0.04;
+    target.left_arm[0] = idleX;
+    target.right_arm[0] = -idleX;
+    target.left_arm[2] = -idleZ;
+    target.right_arm[2] = idleZ;
   }
 
-  if (state.sneaking && grounded) {
-    target.body[0] = 0.35;
-    target.head[0] = 0.12;
-    target.left_leg[0] = Math.sin(phase) * 0.25;
-    target.right_leg[0] = -Math.sin(phase) * 0.25;
+  // Sneaking bends the torso at the waist pivot; the head counter-tilts.
+  if (state.sneaking && grounded && !state.riding) {
+    target.body[0] = 0.5;
+    target.head[0] = pitchRad - 0.12;
+    target.left_arm[0] += 0.4;
+    target.right_arm[0] += 0.4;
   }
-  if ((state.attackTime ?? 0) > 0) {
-    const progress = clamp((8 - state.attackTime) / 8, 0, 1);
-    target.right_arm[0] = -1.4 * Math.sin(progress * Math.PI);
-    target.right_arm[2] = -0.05;
+
+  if (state.holdingItem && !state.inWater && !state.riding) {
+    target.right_arm[0] = target.right_arm[0] * 0.5 - 0.314;
+  }
+
+  const attackTime = Number(state.attackTime ?? 0);
+  if (attackTime > 0) {
+    const swingProgress = clamp((8 - attackTime) / 8, 0, 1);
+    const bodyTwist = Math.sin(Math.sqrt(swingProgress) * Math.PI * 2) * 0.2;
+    target.body[1] += bodyTwist;
+    target.right_arm[1] += bodyTwist;
+    target.left_arm[1] += bodyTwist;
+    target.left_arm[0] += bodyTwist;
+    const f1 = 1 - Math.pow(1 - swingProgress, 3);
+    const f2 = Math.sin(f1 * Math.PI);
+    const f3 = Math.sin(swingProgress * Math.PI) * -(target.head[0] - 0.7) * 0.75;
+    target.right_arm[0] = target.right_arm[0] - (f2 * 1.2 + f3);
+    target.right_arm[1] += bodyTwist * 2;
+    target.right_arm[2] += Math.sin(swingProgress * Math.PI) * -0.4;
   }
 
   const bones = {};
-  for (const name of Object.keys(target)) bones[name] = ease(rig, name, target[name], dt);
+  for (const name of Object.keys(target)) {
+    const rate = name === 'head' ? 35 : attackTime > 0 && name === 'right_arm' ? 45 : 22;
+    bones[name] = ease(rig, name, target[name], dt, rate);
+  }
   return bones;
 }
 
