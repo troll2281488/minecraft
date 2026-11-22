@@ -306,6 +306,65 @@ export function generateItemIcon(item) {
     plot(icon, TOOL_SHAPES.fishing_rod.H, HANDLE[0], HANDLE[1]);
     return icon;
   }
+
+  // Armour silhouettes are drawn separately from generic materials so every
+  // equipment slot reads clearly at the game's native 16px inventory scale.
+  if (item.armorSlot) {
+    const material = item.id.split(':')[1].split('_')[0];
+    const palette = {
+      leather: ['#9b633b', '#633b27'], chainmail: ['#b5bdc2', '#737d84'],
+      iron: ['#d9dfe2', '#929da4'], golden: ['#f2cf45', '#a77c20'],
+      diamond: ['#55d8cc', '#278e87'], netherite: ['#62575b', '#342d32'],
+    }[material] ?? ['#a9adb0', '#666b70'];
+    const shapes = {
+      helmet: [[5,3],[6,2],[7,2],[8,2],[9,2],[10,3],[4,4],[5,4],[6,4],[7,4],[8,4],[9,4],[10,4],[11,4],[4,5],[11,5],[5,6],[10,6]],
+      chestplate: [[4,3],[5,2],[6,2],[9,2],[10,2],[11,3],[3,4],[4,4],[5,4],[6,4],[7,4],[8,4],[9,4],[10,4],[11,4],[12,4],[3,5],[4,5],[5,5],[6,5],[7,5],[8,5],[9,5],[10,5],[11,5],[12,5],[4,6],[5,6],[6,6],[7,6],[8,6],[9,6],[10,6],[11,6],[5,7],[6,7],[7,7],[8,7],[9,7],[10,7]],
+      leggings: [[4,2],[5,2],[6,2],[7,2],[8,2],[9,2],[10,2],[11,2],[4,3],[5,3],[6,3],[9,3],[10,3],[11,3],[5,4],[6,4],[9,4],[10,4],[5,5],[6,5],[9,5],[10,5],[5,6],[6,6],[9,6],[10,6],[5,7],[6,7],[9,7],[10,7],[5,8],[6,8],[9,8],[10,8],[5,9],[6,9],[9,9],[10,9]],
+      boots: [[4,8],[5,8],[6,8],[4,9],[5,9],[6,9],[4,10],[5,10],[6,10],[9,8],[10,8],[11,8],[9,9],[10,9],[11,9],[9,10],[10,10],[11,10]],
+    };
+    plot(icon, shapes[item.armorSlot] ?? shapes.chestplate, palette[0], palette[1]);
+    return icon;
+  }
+
+  if (item.id.startsWith('mc:potion_') || item.id === 'mc:water_bottle') {
+    const potionColors = {
+      swiftness: '#65b9ee', strength: '#d34b36', regeneration: '#d68ac7',
+      fire_resistance: '#ee8a32', healing: '#ed5c91', poison: '#75a83d',
+      water_breathing: '#4d9bc4', slow_falling: '#d9c6ee', leaping: '#8bce54',
+      weakness: '#777c84',
+    };
+    const potion = item.id.split('_').slice(1).join('_');
+    const liquid = item.id === 'mc:water_bottle' ? '#55a9e0' : (potionColors[potion] ?? '#8c65bd');
+    const bottle = [];
+    for (let y = 6; y <= 13; y++) {
+      for (let x = 5; x <= 10; x++) {
+        if ((y >= 8 && x >= 5 && x <= 10) || (y >= 6 && y <= 7 && x >= 6 && x <= 9)) bottle.push([x,y]);
+      }
+    }
+    plot(icon, bottle, liquid, '#315d8a');
+    plot(icon, [[6,3],[7,3],[8,3],[9,3],[6,4],[7,4],[8,4],[9,4],[7,5],[8,5]], '#d9e5e7', '#84969b');
+    return icon;
+  }
+
+  if (item.id === 'mc:shield') {
+    const shield = [[6,2],[7,2],[8,2],[9,2],[5,3],[6,3],[7,3],[8,3],[9,3],[10,3],[5,4],[6,4],[7,4],[8,4],[9,4],[10,4],[5,5],[6,5],[7,5],[8,5],[9,5],[10,5],[6,6],[7,6],[8,6],[9,6],[7,7],[8,7]];
+    plot(icon, shield, '#a8794c', '#63432d');
+    plot(icon, [[7,3],[8,3],[7,4],[8,4],[7,5],[8,5]], '#c6cbd0', '#7b858d');
+    return icon;
+  }
+
+  if (item.id === 'mc:bow' || item.id === 'mc:crossbow') {
+    const bow = [[10,2],[9,3],[8,4],[7,5],[6,6],[6,7],[7,8],[8,9],[9,10],[10,11],[10,12]];
+    plot(icon, bow, '#9c7045', '#5d3d27');
+    plot(icon, [[5,5],[5,6],[5,7],[5,8],[5,9]], '#d7d0bf', '#8e887b');
+    if (item.id === 'mc:crossbow') plot(icon, [[3,6],[4,6],[5,6],[6,6],[7,6],[8,6],[9,6],[10,6],[11,6]], '#aeb7bc', '#626e76');
+    return icon;
+  }
+
+  if (item.id === 'mc:trident') {
+    plot(icon, [[8,3],[7,4],[8,4],[9,4],[8,5],[8,6],[8,7],[8,8],[8,9],[8,10],[8,11],[8,12],[8,13]], '#82c6c4', '#3b7f82');
+    return icon;
+  }
   if (item.tool === 'shears') {
     plot(icon, TOOL_SHAPES.shears.M, '#c9d0d6', '#858e98');
     plot(icon, TOOL_SHAPES.shears.H, '#b7a17b', '#826b4c');
