@@ -724,6 +724,8 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         const [offset, scale, color, partUv, partBox, partRotation, partName, partPivotY] = parts[partIndex];
         const isArm = skin && (partIndex === 2 || partIndex === 3);
         const isLeg = skin && (partIndex === 4 || partIndex === 5);
+        const animationBoneName = partName ?? (skin ? ['head', 'body', 'left_arm', 'right_arm', 'left_leg', 'right_leg'][partIndex] : null);
+        const animationBone = animationBoneName ? pose.animationBones?.[animationBoneName] : null;
         // Steve's opposite arm/leg pairs swing against each other, as in
         // the classic Minecraft walk cycle.
         const phase = /left/i.test(partName ?? '') ? 0 : /right/i.test(partName ?? '') ? Math.PI : (partIndex === 2 || partIndex === 5) ? Math.PI : 0;
@@ -862,10 +864,10 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         } else if (!skin && partIndex >= legStart && partIndex <= legEnd) {
           swing = pose.walking ? Math.sin(walkPhase + phase) * (pose.animal ? 0.34 : 0.24) : 0;
         }
-        const vanillaBone = pose.animationBones?.[partName];
-        const animatedRotation = vanillaBone?.rotation ?? [0, 0, 0];
-        const animatedPosition = vanillaBone?.position ?? [0, 0, 0];
-        const animatedScale = vanillaBone?.scale ?? [1, 1, 1];
+        if (animationBone) swing = 0;
+        const animatedRotation = animationBone?.rotation ?? [0, 0, 0];
+        const animatedPosition = animationBone?.position ?? [0, 0, 0];
+        const animatedScale = animationBone?.scale ?? [1, 1, 1];
         partOffset[0] += (animatedPosition[0] ?? 0) / 16;
         partOffset[1] -= (animatedPosition[1] ?? 0) / 16;
         partOffset[2] -= (animatedPosition[2] ?? 0) / 16;
@@ -987,7 +989,17 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     }
     if (this.thirdPerson) {
       document.getElementById('held-item-view')?.classList.add('hidden');
-      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : this.player.ridingMinecart ? 0.42 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { inWater: this.player.inWater, swimming: this.player.inWater && Math.hypot(this.player.vx ?? 0, this.player.vy ?? 0, this.player.vz ?? 0) > 0.025, airborne: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround, sprinting: !!this.player.sprinting, jumping: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking || !!this.player.ridingHorse || !!this.player.ridingMinecart, riding: !!this.player.ridingHorse || !!this.player.ridingMinecart, walking: !this.player.ridingHorse && !this.player.ridingMinecart && this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035, attack: this.player.attackTime > 0, attackTime: this.player.attackTime }, true);
+      const playerMoving = !this.player.ridingHorse && !this.player.ridingMinecart && this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035;
+      const playerAnimation = sampleVanillaEntityAnimation(this.entityModels?.getAnimations?.('minecraft:player'), {
+        inWater: !!this.player.inWater,
+        airborne: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround,
+        attacking: this.player.attackTime > 0,
+        walking: playerMoving,
+        sprinting: !!this.player.sprinting,
+        cyclePhase: (this.player.walkPhase ?? 0) / (Math.PI * 2),
+      }, (this.player.ageTicks ?? 0) / 20);
+      const playerAnimationPose = { animationBones: playerAnimation?.bones ?? null };
+      draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : this.player.ridingMinecart ? 0.42 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { inWater: this.player.inWater, swimming: this.player.inWater && Math.hypot(this.player.vx ?? 0, this.player.vy ?? 0, this.player.vz ?? 0) > 0.025, airborne: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround, sprinting: !!this.player.sprinting, jumping: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking || !!this.player.ridingHorse || !!this.player.ridingMinecart, riding: !!this.player.ridingHorse || !!this.player.ridingMinecart, walking: playerMoving, attack: this.player.attackTime > 0, attackTime: this.player.attackTime, ...playerAnimationPose }, true);
       draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, outerHuman, this.player.walkPhase, 4, 5, 1, { inWater: this.player.inWater, swimming: this.player.inWater && Math.hypot(this.player.vx ?? 0, this.player.vy ?? 0, this.player.vz ?? 0) > 0.025, airborne: !this.player.ridingHorse && !this.player.onGround, sneaking: this.player.sneaking || !!this.player.ridingHorse, riding: !!this.player.ridingHorse, skinLayer: true }, true);
       const armorColors = ['#b8b8b8','#8f8f9b','#b17a45','#6c778a'];
       const armorParts = [];
@@ -1017,7 +1029,13 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       if (armorParts.length) draw(this.renderPosition.x, this.renderPosition.y, this.renderPosition.z, this.player.yaw * Math.PI / 180, armorParts, 0, -1, -1, 1, {});
     }
     for (const remote of this.multiplayer?.remotePlayers?.values?.() ?? []) {
-      draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, human, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, jumping: !!remote.jumping, sneaking: !!remote.sneaking, walking: !!remote.walking, attack: !!remote.attacking, attackTime: remote.attackTime ?? 0 }, true);
+      const remoteAnimation = sampleVanillaEntityAnimation(this.entityModels?.getAnimations?.('minecraft:player'), {
+        inWater: !!remote.inWater, airborne: !!remote.airborne, attacking: !!remote.attacking,
+        walking: !!remote.walking, sprinting: !!remote.sprinting,
+        cyclePhase: (remote.walkPhase ?? 0) / (Math.PI * 2),
+      }, (remote.ageTicks ?? 0) / 20);
+      const remoteAnimationPose = { animationBones: remoteAnimation?.bones ?? null };
+      draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, human, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, jumping: !!remote.jumping, sneaking: !!remote.sneaking, walking: !!remote.walking, attack: !!remote.attacking, attackTime: remote.attackTime ?? 0, ...remoteAnimationPose }, true);
       draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, outerHuman, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, sneaking: !!remote.sneaking, skinLayer: true }, true);
       const remoteArmorParts = [];
       for (const id of remote.armor ?? []) {
