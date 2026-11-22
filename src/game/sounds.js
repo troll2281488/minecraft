@@ -78,7 +78,7 @@ async function deleteBedrockArchive(){
 }
 
 export class GameSounds {
-  constructor(){this.context=null;this.lastStep=0;this.enabled=true;this.masterVolume=1;this.bedrockPack=null;this.bundledBank=new BundledSoundBank();this._bundledLoadPromise=null;this._restorePromise=null;this._restoreScheduled=false;this.music=new BackgroundMusic();}
+  constructor(){this.context=null;this.lastStep=0;this.lastMobSoundAt=0;this.enabled=true;this.masterVolume=1;this.bedrockPack=null;this.bundledBank=new BundledSoundBank();this._bundledLoadPromise=null;this._restorePromise=null;this._restoreScheduled=false;this.music=new BackgroundMusic();}
   async importBedrockPack(file){
     const context=this._ctx();
     if(!context)throw new Error('Web Audio недоступен в этом браузере');
@@ -170,6 +170,24 @@ export class GameSounds {
     osc.type=p.type;osc.frequency.setValueAtTime(frequency,now);
     osc.frequency.exponentialRampToValueAtTime(Math.max(30,frequency*.55),now+p.d);
     osc.connect(gain);osc.start(now);osc.stop(now+p.d+.015);
+  }
+  playMob(type, action = 'ambient', volume = 0.35){
+    const mob = String(type || '').toLowerCase().replace(/^minecraft:/, '');
+    const event = `entity.${mob}.${action}`;
+    const now = globalThis.performance?.now?.() ?? Date.now();
+    if (action === 'ambient' && now - this.lastMobSoundAt < 900) return false;
+    const context = this._ctx();
+    if (!context) return false;
+    if (this.bedrockPack?.play(event, this.masterVolume * volume)) {
+      if (action === 'ambient') this.lastMobSoundAt = now;
+      return true;
+    }
+    const hostile = ['zombie','husk','zombie_villager','skeleton','stray','creeper','spider','cave_spider','enderman','witch','blaze','ghast','wither_skeleton','silverfish','endermite','vindicator','evoker','guardian','elder_guardian'].includes(mob);
+    if (hostile && this.bundledBank?.play('entity.mob.ambient', 'generic', this.masterVolume * volume)) {
+      if (action === 'ambient') this.lastMobSoundAt = now;
+      return true;
+    }
+    return false;
   }
   playNote(note, material = 'wood'){
     const c=this._ctx();if(!c)return false;
