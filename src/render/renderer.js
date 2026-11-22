@@ -788,8 +788,31 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
             else swing = partIndex === 4 ? humanoid.leftLeg : humanoid.rightLeg;
           }
           // First-person attack swing is already applied above; do not add a second rotation.
+        } else if (!skin && pose.vanillaModel && /tail/i.test(partName ?? '')) {
+          // Tails have their own gait: relaxed sway at rest, counter-swing while moving.
+          const tailRate = ['wolf','ocelot','cat','horse','donkey','mule'].includes(pose.mobType) ? 1.45 : 1;
+          swing = Math.sin((pose.idle ?? 0) * 1.7 + walkPhase * (pose.walking ? tailRate : 0.15)) * (pose.walking ? 0.22 : 0.09);
+          if (pose.mobType === 'wolf' && pose.angry) swing -= 0.28;
+        } else if (!skin && pose.vanillaModel && /wing/i.test(partName ?? '')) {
+          const winged = ['bee','bat','parrot','chicken','phantom','ender_dragon','ghast'].includes(pose.mobType);
+          const flapRate = pose.mobType === 'bee' ? 3.2 : pose.mobType === 'chicken' ? 5.5 : 2.4;
+          const flapAmount = pose.mobType === 'chicken' ? 0.62 : pose.mobType === 'bee' ? 0.48 : 0.38;
+          swing = winged ? Math.sin((pose.idle ?? 0) * flapRate + (partIndex % 2) * Math.PI) * flapAmount : 0;
+        } else if (!skin && pose.vanillaModel && /tentacle/i.test(partName ?? '')) {
+          const tentacle = partIndex * 0.73;
+          swing = Math.sin((pose.idle ?? 0) * (pose.mobType === 'squid' ? 1.7 : 1.1) + tentacle) * (pose.mobType === 'squid' ? 0.42 : 0.20);
+          partOffset[1] += Math.cos((pose.idle ?? 0) * 1.4 + tentacle) * 0.035;
+        } else if (!skin && pose.vanillaModel && /rod/i.test(partName ?? '') && pose.mobType === 'blaze') {
+          swing = Math.sin((pose.idle ?? 0) * 2.6 + partIndex * 0.9) * 0.28;
+        } else if (!skin && pose.vanillaModel && /spike/i.test(partName ?? '') && pose.mobType === 'guardian') {
+          swing = Math.sin((pose.idle ?? 0) * 2 + partIndex) * 0.08;
         } else if (!skin && pose.vanillaModel && /head/i.test(partName ?? '')) {
-          swing = Math.sin(pose.idle ?? 0) * 0.045 + (pose.walking ? Math.sin(walkPhase * 0.5) * 0.025 : 0);
+          const look = Math.sin((pose.idle ?? 0) * 0.65) * 0.045;
+          swing = look + (pose.walking ? Math.sin(walkPhase * 0.5) * 0.025 : 0);
+          if (pose.mobType === 'cow' || pose.mobType === 'sheep' || pose.mobType === 'goat') {
+            // Small grazing nods make passive herd mobs feel less statue-like.
+            swing += Math.max(0, Math.sin((pose.idle ?? 0) * 0.19 - 1.2)) ** 8 * 0.48;
+          }
         } else if (!skin && pose.humanoid && (pose.vanillaModel ? /arm/i.test(partName ?? '') : (pose.mobType === 'villager' ? partIndex === 3 : (partIndex === 2 || partIndex === 3)))) {
           // Fallback humanoid arrays follow head/body/left-arm/right-arm/legs.
           // The old 3/4 test animated the right arm and left leg as if both were arms.
@@ -800,10 +823,13 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           if (pose.riding) swing = -0.35;
         } else if (!skin && pose.vanillaModel && /leg|foot/i.test(partName ?? '')) {
           const left = /left/i.test(partName ?? '') || (!/right/i.test(partName ?? '') && partIndex % 2 === 0);
-          const gait = Math.sin(walkPhase) * (pose.sprinting ? 0.72 : 0.48);
-          swing = pose.walking ? gait * (left ? 1 : -1) : 0;
+          const diagonal = /front|hind|back/i.test(partName ?? '') ? (/front/i.test(partName ?? '') ? 1 : -1) : (left ? 1 : -1);
+          const gaitRate = ['horse','donkey','mule','skeleton_horse','zombie_horse'].includes(pose.mobType) ? 1.25 : pose.mobType === 'chicken' ? 1.65 : 1;
+          const gait = Math.sin(walkPhase * gaitRate) * (pose.sprinting ? 0.82 : 0.52);
+          swing = pose.walking ? gait * diagonal : 0;
           if (pose.riding) swing = -0.82;
           if (pose.swimming) swing = Math.sin(walkPhase * 1.7 + (left ? Math.PI : 0)) * 0.42;
+          if (pose.mobType === 'chicken') partOffset[1] += Math.abs(Math.sin(walkPhase * 1.65)) * 0.018;
         } else if (!skin && pose.vanillaModel && /wing/i.test(partName ?? '')) {
           const flying = ['bee','bat','parrot','chicken','phantom','ender_dragon'].includes(pose.mobType);
           swing = flying ? Math.sin((pose.idle ?? 0) * (pose.mobType === 'bee' ? 3.2 : 2.4)) * (pose.mobType === 'bee' ? 0.48 : 0.34) : 0;
@@ -1060,8 +1086,14 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         : mob.type === 'spider' || mob.type === 'cave_spider' ? spider
         : mob.type === 'pig' || mob.type === 'rabbit' ? pig : mob.type === 'cow' || mob.type === 'goat' || mob.type === 'mooshroom' || mob.type === 'polar_bear' ? cow
         : mob.type === 'chicken' ? chicken : sheep);
+      const idlePhase = mob.anim?.idle ?? 0;
       const pulse = mob.type === 'creeper' && mob.anim?.fuse > 0
-        ? 1 + Math.sin(mob.anim.fuse * Math.PI * 12) * 0.10 * mob.anim.fuse : 1;
+        ? 1 + Math.sin(mob.anim.fuse * Math.PI * 12) * 0.10 * mob.anim.fuse
+        : ['slime','magma_cube'].includes(mob.type)
+          ? 1 + Math.sin(idlePhase * 2.2) * 0.035
+          : mob.type === 'ghast'
+            ? 1 + Math.sin(idlePhase * 0.8) * 0.018
+            : 1;
       const legs = mob.type === 'bee' ? [-1, -1]
         : mob.type === 'spider' || mob.type === 'cave_spider' ? [4, 11]
         : mob.type === 'creeper' ? [2, 5]
