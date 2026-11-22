@@ -8,7 +8,7 @@ describe('Entity model pack startup resilience', () => {
       const path = String(url);
       if (path.endsWith('/manifest.json')) {
         return new Response(JSON.stringify({
-          minecraftVersion: '1.20.1',
+          minecraftVersion: '1.17.1',
           source: 'test',
           commit: 'test',
           models: ['models/zombie.json', 'models/missing.json'],
