@@ -22,7 +22,7 @@ function groupFor(eventId, material) {
     if (m === 'glass') return ['impact:glass', 'impact:generic'];
     return ['impact:generic'];
   }
-  if (eventId.startsWith('block.door') || eventId.startsWith('block.chest')) return ['door'];
+  if (eventId.startsWith('block.door') || eventId.startsWith('block.chest')) return ['door', 'impact:wood', 'ui'];
   if (eventId.startsWith('ui.')) return ['ui'];
   if (eventId.includes('item.') || eventId.includes('experience') || eventId.includes('levelup')) return ['inventory', 'ui'];
   if (eventId === 'entity.villager.trade') return ['inventory', 'ui'];
