@@ -34,6 +34,8 @@ jobs:
           find src -name '*.js' -print0 | while IFS= read -r -d '' file; do
             node --input-type=module --check < "$file" || exit 1
           done
+      - name: Download bundled CC0 background music
+        run: bash scripts/fetch-bundled-music.sh
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Upload site
