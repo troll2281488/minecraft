@@ -378,3 +378,99 @@ export function setMinecraftUiTextures(textures) {
     if (textures[key]) root.style.setProperty(variable, 'url("' + textures[key] + '")');
   }
 }
+
+// Import the block/item PNGs from a vanilla Java resource-pack ZIP.
+// Supports ordinary ZIP entries (stored or DEFLATE); ZIP64 is not required for
+// normal resource packs. Unrecognised formats are skipped rather than breaking boot.
+async function unzipEntry(bytes, method, start, compressedSize) {
+  const data = bytes.slice(start, start + compressedSize);
+  if (method === 0) return data;
+  if (method !== 8 || typeof DecompressionStream === 'undefined') {
+    throw new Error('Нужен браузер с поддержкой DEFLATE ZIP');
+  }
+  const stream = new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+async function readZipPngEntries(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let eocd = -1;
+  for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65557); i--) {
+    if (view.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error('В ZIP не найдена центральная директория');
+  const count = view.getUint16(eocd + 10, true);
+  let cursor = view.getUint32(eocd + 16, true);
+  const entries = [];
+  for (let i = 0; i < count; i++) {
+    if (view.getUint32(cursor, true) !== 0x02014b50) throw new Error('Повреждённая запись ZIP');
+    const method = view.getUint16(cursor + 10, true);
+    const compressedSize = view.getUint32(cursor + 20, true);
+    const nameLength = view.getUint16(cursor + 28, true);
+    const extraLength = view.getUint16(cursor + 30, true);
+    const commentLength = view.getUint16(cursor + 32, true);
+    const localOffset = view.getUint32(cursor + 42, true);
+    const name = new TextDecoder().decode(bytes.slice(cursor + 46, cursor + 46 + nameLength));
+    cursor += 46 + nameLength + extraLength + commentLength;
+    if (!name.toLowerCase().endsWith('.png')) continue;
+    if (!/^(?:assets\/minecraft\/)?textures\/(?:block|item)\//.test(name)) continue;
+    if (view.getUint32(localOffset, true) !== 0x04034b50) continue;
+    const localNameLength = view.getUint16(localOffset + 26, true);
+    const localExtraLength = view.getUint16(localOffset + 28, true);
+    const dataStart = localOffset + 30 + localNameLength + localExtraLength;
+    entries.push({ name: name.replace(/^assets\/minecraft\//, ''), method, dataStart, compressedSize });
+  }
+  return { bytes, entries };
+}
+
+export async function importJavaResourcePackZip(file) {
+  if (!file || !/\.zip$/i.test(file.name)) throw new Error('Выбери ZIP-архив ресурспака');
+  const { bytes, entries } = await readZipPngEntries(file);
+  const existing = loadPackRecord() || { name: 'Java resource pack', textures: {}, items: {} };
+  const textures = { ...(existing.textures || {}) };
+  const items = { ...(existing.items || {}) };
+  let usedBlocks = 0, usedItems = 0, skipped = 0;
+  for (const entry of entries) {
+    const category = entry.name.includes('/block/') ? 'block' : 'item';
+    const base = entry.name.split('/').pop().replace(/\.png$/i, '');
+    if (category === 'block' && !Object.prototype.hasOwnProperty.call(TEXTURES, base)) { skipped++; continue; }
+    try {
+      const raw = await unzipEntry(bytes, entry.method, entry.dataStart, entry.compressedSize);
+      const bitmap = await createImageBitmap(new Blob([raw], { type: 'image/png' }));
+      const canvas = document.createElement('canvas');
+      canvas.width = TILE_SIZE; canvas.height = TILE_SIZE;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(bitmap, 0, 0, TILE_SIZE, TILE_SIZE);
+      bitmap.close();
+      const url = canvas.toDataURL('image/png');
+      if (category === 'block') { textures[base] = url; usedBlocks++; }
+      else { items[base] = url; usedItems++; }
+    } catch { skipped++; }
+  }
+  if (!usedBlocks && !usedItems) throw new Error('Не найдено совместимых PNG текстур блоков или предметов');
+  try {
+    savePackRecord({ name: file.name, textures, items });
+  } catch {
+    throw new Error('Не хватило места в хранилище браузера для ресурспака');
+  }
+  return { blocks: usedBlocks, items: usedItems, skipped, modelFiles: entries.length };
+}
+
+export async function decodePackItemTextures(record) {
+  const out = new Map();
+  for (const [name, url] of Object.entries(record?.items || {})) {
+    try {
+      const bitmap = await createImageBitmap(await (await fetch(url)).blob());
+      const canvas = document.createElement('canvas');
+      canvas.width = TILE_SIZE; canvas.height = TILE_SIZE;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(bitmap, 0, 0, TILE_SIZE, TILE_SIZE);
+      bitmap.close();
+      out.set('mc:' + name, canvas.toDataURL('image/png'));
+    } catch { /* Keep the built-in item icon. */ }
+  }
+  return out;
+}
