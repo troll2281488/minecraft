@@ -160,7 +160,7 @@ function vanillaLayerParts(model, layerName = 'main', animationBones = null) {
 const MOB_TEXTURE_FILES = Object.freeze({
   cow:'cow.png', goat:'goat.png', pig:'pig.png', sheep:'sheep.png', sheep_fur:'sheep_fur.png', chicken:'chicken.png', wolf:'wolf.png', horse:'horse.png', rabbit:'rabbit.png', polar_bear:'polar_bear.png', mooshroom:'mooshroom.png',
   bee:'bee.png', ender_dragon:'ender_dragon.png',
-  axolotl:'axolotl.png', allay:'allay.png', fox:'fox.png', panda:'panda.png', dolphin:'dolphin.png',
+  axolotl:'axolotl.png', allay:'allay.png', frog:'frog.png', tadpole:'tadpole.png', warden:'warden.png', fox:'fox.png', panda:'panda.png', dolphin:'dolphin.png',
   cod:'cod.png', salmon:'salmon.png', pufferfish:'pufferfish.png', phantom:'phantom.png', iron_golem:'iron_golem.png',
   pillager:'pillager.png', evoker:'evoker.png', vindicator:'vindicator.png', illusioner:'illusioner.png', ravager:'ravager.png',
   piglin:'piglin.png', zombified_piglin:'zombified_piglin.png', piglin_brute:'piglin_brute.png', hoglin:'hoglin.png', zoglin:'zoglin.png',
@@ -1233,6 +1233,37 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         [[-0.18,0.76,0.08],[0.035,0.22,0.035],[0.16,0.12,0.07,1]],
         [[0.18,0.76,0.08],[0.035,0.22,0.035],[0.16,0.12,0.07,1]],
       ];
+      const allayFallback = [
+        [[0,1.02,0],[0.34,0.42,0.24],[0.66,0.83,0.91,1]],
+        [[0,1.40,0.04],[0.38,0.36,0.34],[0.72,0.88,0.94,1]],
+        [[-0.28,1.18,0],[0.035,0.44,0.24],[0.78,0.91,0.95,0.8]],
+        [[0.28,1.18,0],[0.035,0.44,0.24],[0.78,0.91,0.95,0.8]],
+      ];
+      const axolotlFallback = [
+        [[0,0.72,0],[0.34,0.30,0.72],[0.85,0.68,0.72,1]],
+        [[0,0.82,0.38],[0.30,0.25,0.30],[0.92,0.77,0.79,1]],
+        [[-0.28,0.92,0.38],[0.22,0.08,0.08],[0.91,0.31,0.47,1]],
+        [[0.28,0.92,0.38],[0.22,0.08,0.08],[0.91,0.31,0.47,1]],
+        [[0,0.70,-0.40],[0.12,0.16,0.25],[0.91,0.55,0.64,1]],
+      ];
+      const frogFallback = [
+        [[0,0.68,0],[0.48,0.30,0.54],[0.42,0.67,0.27,1]],
+        [[0,0.92,0.27],[0.42,0.34,0.34],[0.48,0.73,0.31,1]],
+        [[-0.30,0.48,0.18],[0.22,0.20,0.22],[0.36,0.57,0.22,1]],
+        [[0.30,0.48,0.18],[0.22,0.20,0.22],[0.36,0.57,0.22,1]],
+      ];
+      const tadpoleFallback = [
+        [[0,0.62,0],[0.20,0.18,0.24],[0.26,0.39,0.35,1]],
+        [[0,0.58,-0.20],[0.08,0.06,0.34],[0.22,0.34,0.30,1]],
+      ];
+      const wardenFallback = [
+        [[0,1.02,0],[0.70,0.92,0.46],[0.10,0.20,0.22,1]],
+        [[0,1.78,0],[0.62,0.58,0.50],[0.12,0.25,0.27,1]],
+        [[-0.39,1.18,0],[0.28,0.82,0.28],[0.10,0.21,0.24,1]],
+        [[0.39,1.18,0],[0.28,0.82,0.28],[0.10,0.21,0.24,1]],
+        [[-0.20,0.40,0],[0.28,0.72,0.28],[0.08,0.17,0.19,1]],
+        [[0.20,0.40,0],[0.28,0.72,0.28],[0.08,0.17,0.19,1]],
+      ];
       const villagerFallback = [
         [[0,0.98,0],[0.43,0.72,0.34],[0.48,0.30,0.18,1]],
         [[0,1.62,0],[0.48,0.48,0.42],[0.67,0.50,0.36,1]],
@@ -1241,7 +1272,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         [[-0.13,0.39,0],[0.20,0.70,0.22],[0.34,0.25,0.18,1]],
         [[0.13,0.39,0],[0.20,0.70,0.22],[0.34,0.25,0.18,1]],
       ];
-      let parts = vanillaParts ?? (mob.type === 'bee' ? beeFallback : mob.type === 'villager' ? villagerFallback
+      let parts = vanillaParts ?? (mob.type === 'bee' ? beeFallback : mob.type === 'allay' ? allayFallback : mob.type === 'axolotl' ? axolotlFallback : mob.type === 'frog' ? frogFallback : mob.type === 'tadpole' ? tadpoleFallback : mob.type === 'warden' ? wardenFallback : mob.type === 'villager' ? villagerFallback
         : mob.type === 'zombie' ? zombie
         : mob.type === 'skeleton' || mob.type === 'stray' ? skeleton
         : mob.type === 'creeper' ? creeper
@@ -1287,14 +1318,14 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       const legs = mob.type === 'bee' ? [-1, -1]
         : mob.type === 'spider' || mob.type === 'cave_spider' ? [4, 11]
         : mob.type === 'creeper' ? [2, 5]
-        : ['zombie','skeleton','stray','villager','enderman'].includes(mob.type) ? [4, 5]
+        : ['zombie','skeleton','stray','villager','enderman','warden'].includes(mob.type) ? [4, 5]
         : mob.type === 'pig' || mob.type === 'rabbit' ? [3, 6]
         : mob.type === 'cow' || mob.type === 'sheep' || mob.type === 'goat' || mob.type === 'mooshroom' || mob.type === 'polar_bear' || mob.type === 'horse' ? [2, 5]
         : mob.type === 'chicken' ? [4, 5] : [2, 5];
       const babyScale = mob.ageTicks < 0 ? 0.55 : 1;
       const death = mob.dying ? deathPose(mob.deathTicks) : null;
-      const animal = ['sheep', 'pig', 'cow', 'goat', 'chicken', 'mooshroom', 'rabbit', 'wolf', 'polar_bear', 'bee', 'horse'].includes(mob.type);
-      const humanoid = ['zombie', 'skeleton', 'stray', 'villager', 'enderman'].includes(mob.type);
+      const animal = ['sheep', 'pig', 'cow', 'goat', 'chicken', 'mooshroom', 'rabbit', 'wolf', 'polar_bear', 'bee', 'horse', 'axolotl', 'frog', 'tadpole'].includes(mob.type);
+      const humanoid = ['zombie', 'skeleton', 'stray', 'villager', 'enderman', 'warden'].includes(mob.type);
       // Mob movement advances along +sin(yaw), +cos(yaw); render the model on that same forward axis.
       draw(mob.x, mob.y - (death?.sink ?? 0), mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse * babyScale * (death?.scale ?? 1), {
         hurt: (mob.hurtTicks || 0) > 0, animal, humanoid, vanillaModel: !!vanillaParts,
