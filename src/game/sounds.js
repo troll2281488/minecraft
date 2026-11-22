@@ -84,6 +84,11 @@ export class GameSounds {
     const pack=new BedrockSoundPack(context);
     const result=await pack.import(file);
     this.bedrockPack=pack;
+    if (pack.musicFiles?.length) {
+      const imported = await this.music.importFiles(pack.musicFiles);
+      console.info('[music] Imported ' + imported.count + ' tracks from the resource pack.');
+      await this.music.start();
+    }
     // Keep the imported archive locally so the player does not have to import it
     // again after a reload. IndexedDB is used because the pack is larger than
     // localStorage's practical quota.
@@ -100,6 +105,10 @@ export class GameSounds {
       const pack=new BedrockSoundPack(this._ctx());
       await pack.import(new File([archive],'Donorcraft-Bedrock-Sounds.mcpack',{type:'application/zip'}));
       this.bedrockPack=pack;
+      if (pack.musicFiles?.length) {
+        await this.music.importFiles(pack.musicFiles);
+        await this.music.start();
+      }
       return true;
     })();
     try{return await this._restorePromise;}
