@@ -22,6 +22,7 @@ import { raycast } from '../game/interaction.js';
 import { renderBar } from '../ui/hud_bars.js';
 import { bedrockItemPose, bedrockChargeProgress, bedrockHumanoidPose } from './bedrock_animation_curves.js';
 import { sampleVanillaEntityAnimation } from './entity_animation_runtime.js';
+import { buildPlayerStateAnimation } from './player_animation.js';
 
 /**
  * A unit cube as 36 vertices of (x, y, z, u, v), two triangles per face.
@@ -100,6 +101,10 @@ function rotateModelPoint(point, rotation) {
   return [x, y, z];
 }
 function add3(a, b) { return [a[0] + b[0], a[1] + b[1], a[2] + b[2]]; }
+const PLAYER_BONE_PIVOTS = [
+  [0, 1.50, 0], [0, 1.375, 0], [-0.375, 1.375, 0],
+  [0.375, 1.375, 0], [-0.125, 0.75, 0], [0.125, 0.75, 0],
+];
 function multiply3(a, b) { return [a[0] * b[0], a[1] * b[1], a[2] * b[2]]; }
 function vanillaLayerParts(model, layerName = 'main', animationBones = null) {
   const layer = model?.layers?.[layerName];
@@ -876,8 +881,8 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           swing = pose.walking ? Math.sin(walkPhase + phase) * (pose.animal ? 0.34 : 0.24) : 0;
         }
         if (animationBone) swing = 0;
-        // The source entity clips are applied to their actual bone pivots before
-        // the parts reach the GPU. Do not layer the old guessed gait on top.
+        // Source mob clips have already been applied through the model's bone
+        // hierarchy. Keep those poses clean instead of layering guessed swings.
         if (!skin && pose.sourceAnimated) {
           partOffset[0] = offset[0]; partOffset[1] = offset[1]; partOffset[2] = offset[2];
           swing = 0;
@@ -885,6 +890,16 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         const animatedRotation = animationBone?.rotation ?? [0, 0, 0];
         const animatedPosition = animationBone?.position ?? [0, 0, 0];
         const animatedScale = animationBone?.scale ?? [1, 1, 1];
+        // The six-part player fallback rig needs joint pivots too: rotate the
+        // limb centre around its shoulder/hip, not around the cube's own centre.
+        if (animationBone && skin && partIndex < PLAYER_BONE_PIVOTS.length) {
+          const pivot = PLAYER_BONE_PIVOTS[partIndex];
+          const relative = [offset[0] - pivot[0], offset[1] - pivot[1], offset[2] - pivot[2]];
+          const rotated = rotateModelPoint(relative, animatedRotation);
+          partOffset[0] = pivot[0] + rotated[0];
+          partOffset[1] = pivot[1] + rotated[1];
+          partOffset[2] = pivot[2] + rotated[2];
+        }
         partOffset[0] += (animatedPosition[0] ?? 0) / 16;
         partOffset[1] -= (animatedPosition[1] ?? 0) / 16;
         partOffset[2] -= (animatedPosition[2] ?? 0) / 16;
@@ -1007,15 +1022,30 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     if (this.thirdPerson) {
       document.getElementById('held-item-view')?.classList.add('hidden');
       const playerMoving = !this.player.ridingHorse && !this.player.ridingMinecart && this.player.onGround && Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) > 0.035;
+      const playerSwimming = !!this.player.inWater && Math.hypot(this.player.vx ?? 0, this.player.vy ?? 0, this.player.vz ?? 0) > 0.025;
+      const playerAirborne = !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround;
+      const playerSneaking = !!this.player.sneaking;
+      const playerAttacking = this.player.attackTime > 0;
       const playerAnimation = sampleVanillaEntityAnimation(this.entityModels?.getAnimations?.('minecraft:player'), {
         inWater: !!this.player.inWater,
-        airborne: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround,
-        attacking: this.player.attackTime > 0,
+        airborne: playerAirborne,
+        attacking: playerAttacking,
         walking: playerMoving,
         sprinting: !!this.player.sprinting,
         cyclePhase: (this.player.walkPhase ?? 0) / (Math.PI * 2),
       }, (this.player.ageTicks ?? 0) / 20);
-      const playerAnimationPose = { animationBones: playerAnimation?.bones ?? null };
+      const statePose = buildPlayerStateAnimation({
+        walkPhase: this.player.walkPhase,
+        swimming: playerSwimming,
+        sneaking: playerSneaking,
+        attacking: playerAttacking,
+        attackTime: this.player.attackTime,
+        airborne: playerAirborne,
+        jumping: playerAirborne && (this.player.vy ?? 0) > 0.05,
+        sprinting: !!this.player.sprinting,
+      });
+      const useStatePose = playerSwimming || playerSneaking || playerAttacking || playerAirborne;
+      const playerAnimationPose = { animationBones: useStatePose ? statePose : playerAnimation?.bones ?? null };
       draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : this.player.ridingMinecart ? 0.42 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { inWater: this.player.inWater, swimming: this.player.inWater && Math.hypot(this.player.vx ?? 0, this.player.vy ?? 0, this.player.vz ?? 0) > 0.025, airborne: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround, sprinting: !!this.player.sprinting, jumping: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking || !!this.player.ridingHorse || !!this.player.ridingMinecart, riding: !!this.player.ridingHorse || !!this.player.ridingMinecart, walking: playerMoving, attack: this.player.attackTime > 0, attackTime: this.player.attackTime, ...playerAnimationPose }, true);
       draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, outerHuman, this.player.walkPhase, 4, 5, 1, { inWater: this.player.inWater, swimming: this.player.inWater && Math.hypot(this.player.vx ?? 0, this.player.vy ?? 0, this.player.vz ?? 0) > 0.025, airborne: !this.player.ridingHorse && !this.player.onGround, sneaking: this.player.sneaking || !!this.player.ridingHorse, riding: !!this.player.ridingHorse, skinLayer: true }, true);
       const armorColors = ['#b8b8b8','#8f8f9b','#b17a45','#6c778a'];
