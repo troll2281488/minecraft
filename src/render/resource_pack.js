@@ -223,7 +223,7 @@ export async function decodePack(record) {
   const out = new Map();
   if (!record) return out;
   for (const [name, url] of Object.entries(record.textures)) {
-    if (!Object.prototype.hasOwnProperty.call(TEXTURES, name)) continue;
+    if (!name || typeof url !== 'string') continue;
     try {
       const img = await loadImage(url);
       const canvas = document.createElement('canvas');
@@ -424,13 +424,61 @@ async function readZipPngEntries(file) {
   return { bytes, entries };
 }
 
+
+function resolveJavaBlockFaces(models, blockstates) {
+  const facesByBlock = {};
+  const resolveModel = (id, seen = new Set()) => {
+    const key = String(id || '').replace(/^minecraft:/, '').replace(/^block\//, '');
+    if (!key || seen.has(key)) return null;
+    seen.add(key);
+    const model = models.get(key);
+    if (!model) return null;
+    const parent = resolveModel(model.parent, seen);
+    const textures = { ...(parent?.textures || {}), ...(model.textures || {}) };
+    const elements = model.elements || parent?.elements || [];
+    const result = {};
+    const directions = ['down', 'up', 'north', 'south', 'west', 'east'];
+    for (const direction of directions) {
+      let faceTexture = null;
+      for (const element of elements) {
+        const raw = element.faces?.[direction]?.texture;
+        if (raw) { faceTexture = raw; break; }
+      }
+      if (!faceTexture && directions.includes(direction)) {
+        const fallback = direction === 'up' || direction === 'down' ? (textures.end || textures.all) : (textures.side || textures.all);
+        faceTexture = fallback || null;
+      }
+      let guard = 0;
+      while (faceTexture?.startsWith('#') && guard++ < 12) faceTexture = textures[faceTexture.slice(1)] || null;
+      if (faceTexture) result[direction] = faceTexture.replace(/^minecraft:block\//, '').replace(/^block\//, '').split('/').pop();
+    }
+    return Object.keys(result).length ? result : null;
+  };
+  for (const [blockName, state] of blockstates) {
+    const variants = state.variants;
+    let modelId = null;
+    if (variants) {
+      const keys = Object.keys(variants);
+      const chosen = variants[''] ?? variants[keys[0]];
+      const entry = Array.isArray(chosen) ? chosen[0] : chosen;
+      modelId = entry?.model;
+    } else if (state.multipart?.length) {
+      modelId = state.multipart[0]?.apply?.[0]?.model || state.multipart[0]?.apply?.model;
+    }
+    if (!modelId) continue;
+    const faces = resolveModel(modelId);
+    if (faces) facesByBlock['mc:' + blockName] = faces;
+  }
+  return facesByBlock;
+}
+
 export async function importJavaResourcePackZip(file) {
   if (!file || !/\.zip$/i.test(file.name)) throw new Error('Выбери ZIP-архив ресурспака');
   const { bytes, entries } = await readZipPngEntries(file);
   const existing = loadPackRecord() || { name: 'Java resource pack', textures: {}, items: {} };
   const textures = { ...(existing.textures || {}) };
   const items = { ...(existing.items || {}) };
-  let usedBlocks = 0, usedItems = 0, skipped = 0;
+  let usedBlocks = 0, usedItems = 0, skipped = 0, modelFiles = 0, blockstateFiles = 0;\n  const modelJson = new Map(), blockstateJson = new Map();
   for (const entry of entries) {
     const category = entry.name.includes('/block/') ? 'block' : 'item';
     const base = entry.name.split('/').pop().replace(/\.png$/i, '');
@@ -449,13 +497,13 @@ export async function importJavaResourcePackZip(file) {
       else { items[base] = url; usedItems++; }
     } catch { skipped++; }
   }
-  if (!usedBlocks && !usedItems) throw new Error('Не найдено совместимых PNG текстур блоков или предметов');
+  if (!usedBlocks && !usedItems && !modelFiles && !blockstateFiles) throw new Error('Не найдено совместимых текстур, моделей или blockstates');\n  const blockFaces = resolveJavaBlockFaces(modelJson, blockstateJson);
   try {
-    savePackRecord({ name: file.name, textures, items });
+    savePackRecord({ name: file.name, textures, items, blockFaces, modelFiles, blockstateFiles });
   } catch {
     throw new Error('Не хватило места в хранилище браузера для ресурспака');
   }
-  return { blocks: usedBlocks, items: usedItems, skipped, modelFiles: entries.length };
+  return { blocks: usedBlocks, items: usedItems, skipped, modelFiles, blockstateFiles, mappedBlocks: Object.keys(blockFaces).length };
 }
 
 export async function decodePackItemTextures(record) {
