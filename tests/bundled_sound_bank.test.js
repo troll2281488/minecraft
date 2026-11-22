@@ -9,6 +9,7 @@ describe('bundled sound classification', () => {
   it('classifies generic and material impact samples', () => {
     assertEqual(classifyBundledSound('impactMining_002.ogg', 'kenney-impact'), 'impact:generic');
     assertEqual(classifyBundledSound('impactMetal_heavy_001.ogg', 'kenney-impact'), 'impact:metal');
+    assertEqual(classifyBundledSound('oga-rpg-sfx/creature_monster_02.ogg', 'oga-rpg-sfx'), 'mob:creature');
   });
   it('ignores unrelated files', () => {
     assertEqual(classifyBundledSound('readme.txt', 'kenney-impact'), null);
