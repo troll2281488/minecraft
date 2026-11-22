@@ -115,6 +115,28 @@ describe('wheat farming and farmland hydration', () => {
     assertEqual(changed.filter((c) => c.x === 0 && c.y === 64 && c.z === 0).length, 1);
   });
 
+  it('uses one shared water scan for dense village fields', () => {
+    const farmland = BLOCKS.get('mc:farmland').defaultState;
+    const water = BLOCKS.get('mc:water').defaultState;
+    const entries = [];
+    for (let x = -3; x <= 4; x++) {
+      for (let z = -3; z <= 3; z++) {
+        if (x === 4 && z === 4) continue;
+        entries.push([`${x},64,${z}`, farmland]);
+      }
+    }
+    entries.push(['-8,64,-8', farmland]);
+    entries.push(['4,64,4', water]);
+    const world = makeWorld(entries);
+    const originalGetBlock = world.getBlock.bind(world);
+    let reads = 0;
+    world.getBlock = (x, y, z) => { reads++; return originalGetBlock(x, y, z); };
+    tickFarming(world, { x: 0, y: 65, z: 0 }, 20);
+    assertEqual(world.getBlock(0, 64, 0).get('moisture'), 7);
+    assertEqual(world.getBlock(-8, 64, -8).get('moisture'), 0);
+    assert(reads < 4000, `dense farm hydration made too many world reads: ${reads}`);
+  });
+
   it('loses one moisture level per second when no water is nearby', () => {
     const soil = BLOCKS.get('mc:farmland').defaultState.with('moisture', 4);
     const world = makeWorld([['0,64,0', soil]]);
