@@ -10,7 +10,7 @@ export const SOUND_EVENTS = Object.freeze({
   'block.door.open':'doorOpen','block.door.close':'doorClose',
   'block.chest.open':'chestOpen','block.chest.close':'chestClose',
   'block.furnace.start':'furnace','block.note':'note',
-  'entity.player.hurt':'hurt','entity.player.levelup':'levelup','entity.player.land':'land',
+  'entity.player.hurt':'hurt','entity.player.levelup':'levelup',
   'entity.item.pickup':'pickup','entity.item.drop':'drop','entity.experience_orb.pickup':'xp',
   'entity.arrow.shoot':'shoot','entity.arrow.hit':'arrowHit',
   'entity.generic.explode':'explode','entity.mob.ambient':'ambient',
@@ -22,7 +22,7 @@ export const SOUND_EVENTS = Object.freeze({
   'fluid.water':'water','fluid.lava':'lava','ui.click':'click','ui.toast':'toast',
 });
 export const SOUND_PRESETS = Object.freeze({
-  break:{f:190,d:.13,type:'square',volume:.075}, land:{f:125,d:.12,type:'triangle',volume:.055}, place:{f:320,d:.075,type:'triangle',volume:.07},
+  break:{f:190,d:.13,type:'square',volume:.075}, place:{f:320,d:.075,type:'triangle',volume:.07},
   hit:{f:105,d:.09,type:'sawtooth',volume:.075}, hurt:{f:78,d:.16,type:'triangle',volume:.085},
   pickup:{f:620,d:.12,type:'sine',volume:.065}, xp:{f:940,d:.10,type:'sine',volume:.045}, drop:{f:250,d:.08,type:'triangle',volume:.06},
   step:{f:95,d:.035,type:'sine',volume:.009}, equip:{f:440,d:.10,type:'sine',volume:.06},
@@ -150,7 +150,7 @@ export class GameSounds {
       break:'block.break', place:'block.place', hit:'block.hit', step:'block.step',
       doorOpen:'block.door.open', doorClose:'block.door.close',
       chestOpen:'block.chest.open', chestClose:'block.chest.close',
-      hurt:'entity.player.hurt', land:'entity.player.land', mobHurt:'entity.mob.hurt', mobDeath:'entity.mob.death',
+      hurt:'entity.player.hurt', mobHurt:'entity.mob.hurt', mobDeath:'entity.mob.death',
       pickup:'entity.item.pickup', drop:'entity.item.drop', xp:'entity.experience_orb.pickup',
       levelup:'entity.player.levelup', eat:'item.eat', shoot:'entity.arrow.shoot', bow:'entity.arrow.shoot',
       arrowHit:'entity.arrow.hit', cast:'item.cast', reel:'item.reel', bite:'item.fishing.bite',
