@@ -100,29 +100,40 @@ function rotateModelPoint(point, rotation) {
   return [x, y, z];
 }
 function add3(a, b) { return [a[0] + b[0], a[1] + b[1], a[2] + b[2]]; }
-function vanillaLayerParts(model, layerName = 'main') {
+function multiply3(a, b) { return [a[0] * b[0], a[1] * b[1], a[2] * b[2]]; }
+function vanillaLayerParts(model, layerName = 'main', animationBones = null) {
   const layer = model?.layers?.[layerName];
   if (!layer?.root) return null;
   const result = [];
-  const visit = (bone, parentOffset = [0, 0, 0], parentRotation = [0, 0, 0], name = 'root') => {
+  const visit = (bone, parentOffset = [0, 0, 0], parentRotation = [0, 0, 0], parentScale = [1, 1, 1], name = 'root') => {
     const pose = bone.pose ?? {};
-    const pivot = add3(parentOffset, rotateModelPoint(pose.offset ?? [0, 0, 0], parentRotation));
+    const animation = animationBones?.[name] ?? {};
+    const localOffset = (pose.offset ?? [0, 0, 0]).map((value, axis) => value + (animation.position?.[axis] ?? 0));
+    const pivot = add3(parentOffset, rotateModelPoint(multiply3(localOffset, parentScale), parentRotation));
     const local = pose.rotation ?? [0, 0, 0];
-    const rotation = [parentRotation[0] + local[0], parentRotation[1] + local[1], parentRotation[2] + local[2]];
+    const rotation = [
+      parentRotation[0] + local[0] + (animation.rotation?.[0] ?? 0),
+      parentRotation[1] + local[1] + (animation.rotation?.[1] ?? 0),
+      parentRotation[2] + local[2] + (animation.rotation?.[2] ?? 0),
+    ];
+    const localScale = animation.scale ?? [1, 1, 1];
+    const worldScale = multiply3(parentScale, localScale);
     for (const cube of bone.cubes ?? []) {
       if (!Array.isArray(cube.uv) || !Array.isArray(cube.origin) || !Array.isArray(cube.size)) continue;
       const size = cube.size;
       const center = [cube.origin[0] + size[0] / 2, cube.origin[1] + size[1] / 2, cube.origin[2] + size[2] / 2];
-      const modelCenter = add3(pivot, rotateModelPoint(center, rotation));
+      const modelCenter = add3(pivot, rotateModelPoint(multiply3(center, worldScale), rotation));
       const grow = cube.grow ?? [0, 0, 0];
-      const expanded = size.map((v, i) => v + 2 * (grow[i] ?? 0));
+      const expanded = size.map((value, axis) => (value + 2 * (grow[axis] ?? 0)) * worldScale[axis]);
       result.push([
         [modelCenter[0] / 16, (24 - modelCenter[1]) / 16, -modelCenter[2] / 16],
-        expanded.map(v => v / 16), [1, 1, 1, 1], cube.uv, size,
+        expanded.map(value => value / 16), [1, 1, 1, 1], cube.uv, size,
         [rotation[0], -rotation[1], -rotation[2]], name, (24 - pivot[1]) / 16,
       ]);
     }
-    for (const [childName, child] of Object.entries(bone.children ?? {})) visit(child, pivot, rotation, childName);
+    for (const [childName, child] of Object.entries(bone.children ?? {})) {
+      visit(child, pivot, rotation, worldScale, childName);
+    }
   };
   visit(layer.root);
   return result.length ? result : null;
@@ -865,6 +876,12 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
           swing = pose.walking ? Math.sin(walkPhase + phase) * (pose.animal ? 0.34 : 0.24) : 0;
         }
         if (animationBone) swing = 0;
+        // The source entity clips are applied to their actual bone pivots before
+        // the parts reach the GPU. Do not layer the old guessed gait on top.
+        if (!skin && pose.sourceAnimated) {
+          partOffset[0] = offset[0]; partOffset[1] = offset[1]; partOffset[2] = offset[2];
+          swing = 0;
+        }
         const animatedRotation = animationBone?.rotation ?? [0, 0, 0];
         const animatedPosition = animationBone?.position ?? [0, 0, 0];
         const animatedScale = animationBone?.scale ?? [1, 1, 1];
@@ -1094,7 +1111,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     }
     for (const mob of this.entities?.mobs ?? []) {
       const vanillaModel = this.entityModels?.getModel?.('minecraft:' + mob.type);
-      const vanillaParts = vanillaLayerParts(vanillaModel, 'main');
+      let vanillaParts = null;
       const beeFallback = [
         [[0,1.05,0],[0.48,0.42,0.58],[0.93,0.68,0.12,1]],
         [[0,1.10,0.29],[0.28,0.28,0.20],[0.18,0.14,0.08,1]],
@@ -1140,6 +1157,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         hasArmor: !!mob.armor || !!mob.hasArmor,
         cyclePhase: (mob.walkPhase ?? 0) / (Math.PI * 2),
       }, idlePhase / 0.9) : null;
+      vanillaParts = vanillaLayerParts(vanillaModel, 'main', vanillaAnimation?.bones ?? null);
       const pulse = mob.type === 'creeper' && mob.anim?.fuse > 0
         ? 1 + Math.sin(mob.anim.fuse * Math.PI * 12) * 0.10 * mob.anim.fuse
         : ['slime','magma_cube'].includes(mob.type)
@@ -1162,7 +1180,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         hurt: (mob.hurtTicks || 0) > 0, animal, humanoid, vanillaModel: !!vanillaParts,
         mobType: mob.type, mobTextureKey: mob.type === 'villager' ? 'villager_' + (mob.villagerCareer === 'archer' ? 'fletcher' : (mob.villagerCareer || 'farmer')) : mob.type,
         idle: mob.anim?.idle ?? 0, walking: !!mob.anim?.walking, sprinting: !!mob.sprinting, attack: (mob.anim?.attack ?? 0) > 0, attackTime: mob.anim?.attack ?? 0, airborne: !!mob.airborne, jumping: !!mob.jumping, swimming: !!mob.inWater, riding: !!mob.riding, humanoid,
-        animationBones: vanillaAnimation?.bones ?? null, animationName: vanillaAnimation?.name ?? null,
+        sourceAnimated: !!vanillaParts, animationName: vanillaAnimation?.name ?? null,
       });
       if (mob.type === 'goat' && !vanillaParts) {
         draw(mob.x, mob.y, mob.z, mob.yaw, [
@@ -1179,11 +1197,11 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         ], mob.walkPhase, -1, -1, 1, {});
       }
       if (mob.type === 'sheep' && !mob.sheared && vanillaModel?.layers?.fur) {
-        const furParts = vanillaLayerParts(vanillaModel, 'fur');
+        const furParts = vanillaLayerParts(vanillaModel, 'fur', vanillaAnimation?.bones ?? null);
         if (furParts) draw(mob.x, mob.y, mob.z, mob.yaw + Math.PI, furParts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
           hurt: (mob.hurtTicks || 0) > 0, animal: true, vanillaModel: true,
           mobType: mob.type, mobTextureKey: 'sheep_fur', idle: mob.anim?.idle ?? 0,
-          walking: !!mob.anim?.walking,
+          walking: !!mob.anim?.walking, sourceAnimated: true,
         });
       }
     }
