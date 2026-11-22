@@ -173,6 +173,10 @@ download_variant "minecart.png" "minecart.png"
 download_variant "experience_orb.png" "experience_orb.png"
 download_variant "fishing_hook.png" "fishing_hook.png"
 download_variant "lead_knot.png" "lead_knot.png"
+download_variant "llama/brown.png" "llama_brown.png"
+download_variant "llama/gray.png" "llama_gray.png"
+download_variant "llama/white.png" "llama_white.png"
+download_variant "cow/red_mooshroom.png" "red_mooshroom.png"
 
 node --input-type=module <<'NODE'
 import fs from 'node:fs';
