@@ -274,7 +274,7 @@ export const ScreensMixin = {
     if (!panel || document.getElementById('java-resource-pack-settings')) return;
     const section = document.createElement('section');
     section.id = 'java-resource-pack-settings';
-    section.innerHTML = '<h2>Ресурспак Minecraft Java</h2><p class="sub">Импорт ZIP с Java-текстурами блоков и предметов. Подходящие текстуры заменят встроенные; модели и blockstates пока сохраняются в архиве, но не отображаются автоматически.</p><div class="settings-row"><button id="btn-import-java-pack" class="secondary" type="button">Импортировать texts.zip</button></div><p id="java-resource-pack-status" role="status" aria-live="polite">Java-ресурспак не импортирован.</p>';
+    section.innerHTML = '<h2>Ресурспак Minecraft Java</h2><p class="sub">Импорт ZIP с Java-текстурами блоков и предметов. Подходящие текстуры заменят встроенные; модели и blockstates этим импортом пока не подключаются.</p><div class="settings-row"><button id="btn-import-java-pack" class="secondary" type="button">Импортировать texts.zip</button></div><p id="java-resource-pack-status" role="status" aria-live="polite">Java-ресурспак не импортирован.</p>';
     const back = document.getElementById('btn-settings-back');
     panel.insertBefore(section, back);
     section.querySelector('#btn-import-java-pack').addEventListener('click', () => {
