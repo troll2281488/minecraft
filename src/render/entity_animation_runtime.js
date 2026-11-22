@@ -52,7 +52,8 @@ export function sampleVanillaEntityAnimation(animationFile, state = {}, elapsedS
   const name = chooseAnimation(animations, state);
   const clip = name ? animations[name] : null;
   if (!clip?.bones || !Number.isFinite(clip.length) || clip.length <= 0) return null;
-  const time = clip.loop ? ((Math.max(0, elapsedSeconds) % clip.length)) : clamp(elapsedSeconds, 0, clip.length);
+  const phaseTime = Number.isFinite(state.cyclePhase) ? ((state.cyclePhase % 1 + 1) % 1) * clip.length : elapsedSeconds;
+  const time = clip.loop ? (Math.max(0, phaseTime) % clip.length) : clamp(phaseTime, 0, clip.length);
   const bones = {};
   for (const [boneName, channels] of Object.entries(clip.bones)) {
     const sampled = {};
