@@ -415,7 +415,7 @@ async function readZipPngEntries(file) {
     const name = new TextDecoder().decode(bytes.slice(cursor + 46, cursor + 46 + nameLength));
     cursor += 46 + nameLength + extraLength + commentLength;
     if (!/\.(?:png|json|png\.mcmeta)$/i.test(name)) continue;
-    if (!/^(?:assets\/minecraft\/)?(?:textures\/(?:block|item)\/|blockstates\/|models\/block\/)/.test(name)) continue;
+    if (!/^(?:assets\/minecraft\/)?(?:textures\/(?:block|item|entity)\/|blockstates\/|models\/block\/)/.test(name)) continue;
     if (view.getUint32(localOffset, true) !== 0x04034b50) continue;
     const localNameLength = view.getUint16(localOffset + 26, true);
     const localExtraLength = view.getUint16(localOffset + 28, true);
@@ -481,7 +481,7 @@ export function resolveJavaBlockFaces(models, blockstates) {
   return facesByBlock;
 }
 
-export async function importJavaResourcePackZip(file) {
+export function javaEntityTextureKey(path) {\n  const normalized = String(path || '').replaceAll('\\\\', '/').replace(/^assets\\/minecraft\\//, '').replace(/^textures\\/entity\\//, '');\n  if (!normalized.toLowerCase().endsWith('.png')) return null;\n  const basename = normalized.split('/').pop().replace(/\\.png$/i, '');\n  return /^[a-z0-9_]+$/i.test(basename) ? basename.toLowerCase() : null;\n}\n\nexport async function importJavaResourcePackZip(file) {
   if (!file || !/\.zip$/i.test(file.name)) throw new Error('Выбери ZIP-архив ресурспака');
   const { bytes, entries } = await readZipPngEntries(file);
   const existing = loadPackRecord() || { name: 'Java resource pack', textures: {}, items: {} };
@@ -515,16 +515,27 @@ export async function importJavaResourcePackZip(file) {
       const raw = await unzipEntry(bytes, entry.method, entry.dataStart, entry.compressedSize);
       const bitmap = await createImageBitmap(new Blob([raw], { type: 'image/png' }));
       const canvas = document.createElement('canvas');
-      canvas.width = TILE_SIZE; canvas.height = TILE_SIZE;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      ctx.imageSmoothingEnabled = false;
-      // Java animated block textures are vertical frame strips (e.g. water_still 16x512).
-      // Keep the first 16x16 frame instead of shrinking the entire strip into one tile.
-      const frameSize = Math.min(bitmap.width, bitmap.height, TILE_SIZE);
-      ctx.drawImage(bitmap, 0, 0, frameSize, frameSize, 0, 0, TILE_SIZE, TILE_SIZE);
       const animation = category === 'block'
         ? parseTextureAnimation(metadataByPath.get(entry.name), bitmap.width, bitmap.height)
         : null;
+      if (category === 'entity') {
+        // Entity skins use model-specific UV layouts (commonly 64x64 or 64x32).
+        // Preserve their native dimensions; resizing them to a 16px block tile
+        // would destroy every UV island and make the imported skin unusable.
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(bitmap, 0, 0);
+      } else {
+        canvas.width = TILE_SIZE; canvas.height = TILE_SIZE;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.imageSmoothingEnabled = false;
+        // Java animated block textures are vertical frame strips (e.g. water_still 16x512).
+        // Keep the first 16x16 frame instead of shrinking the entire strip into one tile.
+        const frameSize = Math.min(bitmap.width, bitmap.height, TILE_SIZE);
+        ctx.drawImage(bitmap, 0, 0, frameSize, frameSize, 0, 0, TILE_SIZE, TILE_SIZE);
+      }
       if (animation) {
         const frameUrls = [];
         for (const frame of animation.frames) {
@@ -545,14 +556,14 @@ export async function importJavaResourcePackZip(file) {
       else { items[base] = url; usedItems++; }
     } catch { skipped++; }
   }
-  if (!usedBlocks && !usedItems && !modelFiles && !blockstateFiles) throw new Error('Не найдено совместимых текстур, моделей или blockstates');
+  if (!usedBlocks && !usedItems && !usedEntities && !modelFiles && !blockstateFiles) throw new Error('Не найдено совместимых текстур, моделей или blockstates');
   const blockFaces = resolveJavaBlockFaces(modelJson, blockstateJson);
   try {
-    savePackRecord({ name: file.name, textures, items, animations, blockFaces, modelFiles, blockstateFiles });
+    savePackRecord({ name: file.name, textures, items, entities, animations, blockFaces, modelFiles, blockstateFiles });
   } catch {
     throw new Error('Не хватило места в хранилище браузера для ресурспака');
   }
-  return { blocks: usedBlocks, items: usedItems, skipped, modelFiles, blockstateFiles, mappedBlocks: Object.keys(blockFaces).length };
+  return { blocks: usedBlocks, items: usedItems, entities: usedEntities, skipped, modelFiles, blockstateFiles, mappedBlocks: Object.keys(blockFaces).length };
 }
 
 export async function decodePackAnimations(record) {
@@ -593,6 +604,25 @@ export async function decodePackItemTextures(record) {
       bitmap.close();
       out.set('mc:' + name, canvas.toDataURL('image/png'));
     } catch { /* Keep the built-in item icon. */ }
+  }
+  return out;
+}
+
+/** Decode imported Java entity skins without changing their native UV dimensions. */
+export async function decodePackEntityTextures(record) {
+  const out = new Map();
+  for (const [name, url] of Object.entries(record?.entities || {})) {
+    try {
+      const bitmap = await createImageBitmap(await (await fetch(url)).blob());
+      const canvas = document.createElement('canvas');
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      context.imageSmoothingEnabled = false;
+      context.drawImage(bitmap, 0, 0);
+      bitmap.close();
+      out.set(name, canvas.toDataURL('image/png'));
+    } catch { /* Keep the built-in entity skin. */ }
   }
   return out;
 }
