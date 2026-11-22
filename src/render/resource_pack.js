@@ -415,7 +415,7 @@ async function readZipPngEntries(file) {
     const name = new TextDecoder().decode(bytes.slice(cursor + 46, cursor + 46 + nameLength));
     cursor += 46 + nameLength + extraLength + commentLength;
     if (!/\.(?:png|json|png\.mcmeta)$/i.test(name)) continue;
-    if (!/^(?:assets\/minecraft\/)?(?:textures\/(?:block|item|entity)\/|blockstates\/|models\/block\/)/.test(name)) continue;
+    if (!/^(?:assets\/minecraft\/)?(?:textures\/(?:block|item|entity)\/|blockstates\/|models\/(?:block|item)\/)/.test(name)) continue;
     if (view.getUint32(localOffset, true) !== 0x04034b50) continue;
     const localNameLength = view.getUint16(localOffset + 26, true);
     const localExtraLength = view.getUint16(localOffset + 28, true);
