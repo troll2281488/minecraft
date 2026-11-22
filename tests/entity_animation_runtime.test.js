@@ -1,5 +1,5 @@
 import { describe, it, assertEqual } from './framework.js';
-import { sampleVanillaEntityAnimation, blendEntityAnimationBones } from '../src/render/entity_animation_runtime.js';
+import { sampleVanillaEntityAnimation, blendEntityAnimationBones, hasEntityAnimationPose } from '../src/render/entity_animation_runtime.js';
 
 describe('Vanilla entity animation runtime', () => {
   const animation = {
@@ -113,6 +113,12 @@ describe('Vanilla entity animation runtime', () => {
     const pose = sampleVanillaEntityAnimation(clips, { hurt: true, hurtProgress: 1 }, 40);
     assertEqual(pose.time, 0);
     assertEqual(pose.bones.body.rotation[0], 0);
+  });
+
+  it('marks only non-empty sampled bone poses as source-animated', () => {
+    assertEqual(hasEntityAnimationPose(null), false);
+    assertEqual(hasEntityAnimationPose({ bones: {} }), false);
+    assertEqual(hasEntityAnimationPose({ bones: { wing: { rotation: [0, 0, 1] } } }), true);
   });
 
   it('returns null when no source animation exists', () => {
