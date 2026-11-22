@@ -173,6 +173,35 @@ const MOB_TEXTURE_FILES = Object.freeze({
   zombie_villager:'zombie_villager.png', husk:'husk.png', donkey:'donkey.png', mule:'mule.png',
   skeleton_horse:'skeleton_horse.png', zombie_horse:'zombie_horse.png', llama:'llama.png',
   creeper:'creeper.png', enderman:'enderman.png', spider:'spider.png', cave_spider:'cave_spider.png',
+  // Additional variants live in assets/mob-textures/variants/.
+  axolotl_wild:'variants/axolotl_wild.png', axolotl_gold:'variants/axolotl_gold.png',
+  axolotl_cyan:'variants/axolotl_cyan.png', axolotl_blue:'variants/axolotl_blue.png',
+  frog_cold:'variants/frog_cold.png', frog_warm:'variants/frog_warm.png',
+  fox_snow:'variants/fox_snow.png', fox_sleep:'variants/fox_sleep.png', fox_snow_sleep:'variants/fox_snow_sleep.png',
+  parrot_blue:'variants/parrot_blue.png', parrot_green:'variants/parrot_green.png',
+  parrot_grey:'variants/parrot_grey.png', parrot_yellow_blue:'variants/parrot_yellow_blue.png',
+  panda_aggressive:'variants/panda_aggressive.png', panda_brown:'variants/panda_brown.png',
+  panda_lazy:'variants/panda_lazy.png', panda_playful:'variants/panda_playful.png',
+  panda_weak:'variants/panda_weak.png', panda_worried:'variants/panda_worried.png',
+  rabbit_black:'variants/rabbit_black.png', rabbit_cerberus:'variants/rabbit_caerbannog.png',
+  rabbit_gold:'variants/rabbit_gold.png', rabbit_salt:'variants/rabbit_salt.png',
+  rabbit_toast:'variants/rabbit_toast.png', rabbit_white:'variants/rabbit_white.png',
+  rabbit_white_splotched:'variants/rabbit_white_splotched.png',
+  horse_black:'variants/horse_black.png', horse_chestnut:'variants/horse_chestnut.png',
+  horse_creamy:'variants/horse_creamy.png', horse_darkbrown:'variants/horse_darkbrown.png',
+  horse_gray:'variants/horse_gray.png', horse_white:'variants/horse_white.png',
+  bee_angry:'variants/bee_angry.png', bee_angry_nectar:'variants/bee_angry_nectar.png',
+  bee_nectar:'variants/bee_nectar.png', bee_stinger:'variants/bee_stinger.png',
+  iron_golem_crackiness_low:'variants/iron_golem_crackiness_low.png',
+  iron_golem_crackiness_medium:'variants/iron_golem_crackiness_medium.png',
+  iron_golem_crackiness_high:'variants/iron_golem_crackiness_high.png',
+  pig_saddle:'variants/pig_saddle.png', ghast_shooting:'variants/ghast_shooting.png',
+  stray_overlay:'variants/stray_overlay.png', enderman_eyes:'variants/enderman_eyes.png',
+  phantom_eyes:'variants/phantom_eyes.png', spider_eyes:'variants/spider_eyes.png',
+  ...Object.fromEntries(['black','blue','brown','cyan','gray','green','light_blue','light_gray','lime','magenta','orange','pink','purple','red','white','yellow']
+    .map(color => ['shulker_' + color, 'variants/shulker_' + color + '.png'])),
+  ...Object.fromEntries(['tropical_a','tropical_b','tropical_a_pattern_1','tropical_a_pattern_2','tropical_a_pattern_3','tropical_a_pattern_4','tropical_a_pattern_5','tropical_a_pattern_6','tropical_b_pattern_1','tropical_b_pattern_2','tropical_b_pattern_3','tropical_b_pattern_4','tropical_b_pattern_5','tropical_b_pattern_6']
+    .map(name => [name, 'variants/' + name + '.png'])),
 });
 
 const SNOWY_LEAF_BIOMES = new Set([
@@ -1329,7 +1358,21 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       // Mob movement advances along +sin(yaw), +cos(yaw); render the model on that same forward axis.
       draw(mob.x, mob.y - (death?.sink ?? 0), mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse * babyScale * (death?.scale ?? 1), {
         hurt: (mob.hurtTicks || 0) > 0, animal, humanoid, vanillaModel: !!vanillaParts,
-        mobType: mob.type, mobTextureKey: mob.type === 'villager' ? 'villager_' + (mob.villagerCareer === 'archer' ? 'fletcher' : (mob.villagerCareer || 'farmer')) : mob.type,
+        mobType: mob.type, mobTextureKey: mob.type === 'villager' ? 'villager_' + (mob.villagerCareer === 'archer' ? 'fletcher' : (mob.villagerCareer || 'farmer')) : (
+          mob.type === 'axolotl' ? ['axolotl','axolotl_wild','axolotl_gold','axolotl_cyan','axolotl_blue'][Math.abs(mob.id || 0) % 5] :
+          mob.type === 'frog' ? ['frog','frog_cold','frog_warm'][Math.abs(mob.id || 0) % 3] :
+          mob.type === 'fox' ? ['fox','fox_snow'][Math.abs(mob.id || 0) % 2] :
+          mob.type === 'panda' ? ['panda','panda_aggressive','panda_brown','panda_lazy','panda_playful','panda_weak','panda_worried'][Math.abs(mob.id || 0) % 7] :
+          mob.type === 'parrot' ? ['parrot','parrot_blue','parrot_green','parrot_grey','parrot_yellow_blue'][Math.abs(mob.id || 0) % 5] :
+          mob.type === 'rabbit' ? ['rabbit','rabbit_black','rabbit_gold','rabbit_salt','rabbit_toast','rabbit_white','rabbit_white_splotched'][Math.abs(mob.id || 0) % 7] :
+          mob.type === 'horse' ? ['horse','horse_black','horse_chestnut','horse_creamy','horse_darkbrown','horse_gray','horse_white'][Math.abs(mob.id || 0) % 7] :
+          mob.type === 'shulker' ? 'shulker_' + ['black','blue','brown','cyan','gray','green','light_blue','light_gray','lime','magenta','orange','pink','purple','red','white','yellow'][Math.abs(mob.id || 0) % 16] :
+          mob.type === 'bee' && mob.angry ? (mob.hasNectar ? 'bee_angry_nectar' : 'bee_angry') :
+          mob.type === 'bee' && mob.hasNectar ? 'bee_nectar' :
+          mob.type === 'iron_golem' && mob.health < 10 ? 'iron_golem_crackiness_high' :
+          mob.type === 'iron_golem' && mob.health < 30 ? 'iron_golem_crackiness_medium' :
+          mob.type === 'iron_golem' && mob.health < 50 ? 'iron_golem_crackiness_low' :
+          mob.type),
         idle: mob.anim?.idle ?? 0, walking: !!mob.anim?.walking, sprinting: !!mob.sprinting, attack: (mob.anim?.attack ?? 0) > 0, attackTime: mob.anim?.attack ?? 0, airborne: !!mob.airborne, jumping: !!mob.jumping, swimming: !!mob.inWater, riding: !!mob.riding, humanoid,
         sourceAnimated, animationName: vanillaAnimation?.name ?? null,
         ownSwing: vanillaParts ? null : mobLegSwing(mob, { legStart: legs[0], legEnd: legs[1], walking: !!mob.anim?.walking, sprinting: !!mob.sprinting, riding: !!mob.riding, swimming: !!mob.inWater, walkPhase: mob.walkPhase }),
