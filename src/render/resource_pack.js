@@ -437,24 +437,12 @@ export function resolveJavaBlockFaces(models, blockstates) {
     const parent = resolveModel(model.parent, seen);
     return {
       textures: { ...(parent?.textures || {}), ...(model.textures || {}) },
-      elements: model.elements || parent?.elements || [],
+      elements: model.elements?.length ? model.elements : (parent?.elements || []),
     };
   };
-  for (const [blockName, state] of blockstates) {
-    const variants = state.variants;
-    let modelId = null;
-    if (variants) {
-      const keys = Object.keys(variants);
-      const chosen = variants[''] ?? variants[keys[0]];
-      const entry = Array.isArray(chosen) ? chosen[0] : chosen;
-      modelId = entry?.model;
-    } else if (state.multipart?.length) {
-      modelId = state.multipart[0]?.apply?.[0]?.model || state.multipart[0]?.apply?.model;
-    }
-    if (!modelId) continue;
+  const addModelFaces = (result, modelId) => {
     const compiled = resolveModel(modelId);
-    if (!compiled) continue;
-    const result = {};
+    if (!compiled) return;
     for (const direction of ['down', 'up', 'north', 'south', 'west', 'east']) {
       let texture = null;
       for (const element of compiled.elements) {
@@ -462,13 +450,13 @@ export function resolveJavaBlockFaces(models, blockstates) {
         if (candidate) { texture = candidate; break; }
       }
       if (!texture) texture = (direction === 'up' || direction === 'down')
-        ? (compiled.textures.end || compiled.textures.all)
-        : (compiled.textures.side || compiled.textures.all);
+        ? (compiled.textures.end || compiled.textures.all || compiled.textures.particle)
+        : (compiled.textures.side || compiled.textures.all || compiled.textures.particle);
       let guard = 0;
-      while (texture?.startsWith('#') && guard++ < 12) {
+      while (texture?.startsWith('#') && guard++ < 16) {
         texture = compiled.textures[texture.slice(1)] || null;
       }
-      if (texture) {
+      if (texture && !result[direction]) {
         result[direction] = texture
           .replace(/^minecraft:block\//, '')
           .replace(/^block\//, '')
@@ -476,9 +464,45 @@ export function resolveJavaBlockFaces(models, blockstates) {
           .pop();
       }
     }
+  };
+
+  for (const [blockName, state] of blockstates) {
+    const result = {};
+    const variants = state.variants;
+    if (variants) {
+      const keys = Object.keys(variants);
+      const chosen = variants[''] ?? variants[keys[0]];
+      const choices = Array.isArray(chosen) ? chosen : [chosen];
+      for (const choice of choices) if (choice?.model) addModelFaces(result, choice.model);
+    }
+    for (const part of state.multipart || []) {
+      const apply = Array.isArray(part.apply) ? part.apply : [part.apply];
+      for (const choice of apply) if (choice?.model) addModelFaces(result, choice.model);
+    }
     if (Object.keys(result).length) facesByBlock['mc:' + blockName] = result;
   }
   return facesByBlock;
+}
+
+export function resolveJavaItemTextureKeys(models) {
+  const resolved = {};
+  const resolve = (id, seen = new Set()) => {
+    const key = String(id || '').replace(/^minecraft:/, '').replace(/^item\//, '');
+    if (!key || seen.has(key)) return null;
+    seen.add(key);
+    const model = models.get(key);
+    if (!model) return null;
+    const parent = resolve(model.parent, seen);
+    return { ...(parent || {}), ...(model.textures || {}) };
+  };
+  for (const [name] of models) {
+    const textures = resolve(name);
+    const layer = textures?.layer0 || textures?.layer1 || textures?.particle;
+    if (!layer) continue;
+    const key = String(layer).replace(/^minecraft:(?:item|block)\//, '').replace(/^(?:item|block)\//, '').split('/').pop();
+    if (/^[a-z0-9_]+$/i.test(key)) resolved[name] = key;
+  }
+  return resolved;
 }
 
 export function javaEntityTextureKey(path) {
@@ -496,6 +520,7 @@ export async function importJavaResourcePackZip(file) {
   const items = { ...(existing.items || {}) };
   const entities = { ...(existing.entities || {}) };
   const animations = { ...(existing.animations || {}) };
+  const itemModelTextures = { ...(existing.itemModelTextures || {}) };
   const metadataByPath = new Map();
   let usedBlocks = 0, usedItems = 0, usedEntities = 0, skipped = 0;
   let modelFiles = 0, blockstateFiles = 0;
@@ -511,6 +536,7 @@ export async function importJavaResourcePackZip(file) {
 
   const modelJson = new Map();
   const blockstateJson = new Map();
+  const itemModelJson = new Map();
   for (const entry of entries) {
     if (entry.name.endsWith('.png.mcmeta')) continue;
     if (entry.name.endsWith('.json')) {
@@ -519,6 +545,9 @@ export async function importJavaResourcePackZip(file) {
         const parsed = JSON.parse(new TextDecoder().decode(raw));
         if (entry.name.startsWith('models/block/')) {
           modelJson.set(entry.name.slice('models/block/'.length, -5), parsed);
+          modelFiles++;
+        } else if (entry.name.startsWith('models/item/')) {
+          itemModelJson.set(entry.name.slice('models/item/'.length, -5), parsed);
           modelFiles++;
         } else if (entry.name.startsWith('blockstates/')) {
           blockstateJson.set(entry.name.slice('blockstates/'.length, -5), parsed);
@@ -607,10 +636,11 @@ export async function importJavaResourcePackZip(file) {
     throw new Error('Не найдено совместимых текстур, моделей или blockstates');
   }
   const importedFaces = resolveJavaBlockFaces(modelJson, blockstateJson);
+  Object.assign(itemModelTextures, resolveJavaItemTextureKeys(itemModelJson));
   const blockFaces = { ...(existing.blockFaces || {}), ...importedFaces };
   try {
     savePackRecord({
-      name: file.name, textures, items, entities, animations, blockFaces,
+      name: file.name, textures, items, entities, animations, blockFaces, itemModelTextures,
       modelFiles, blockstateFiles,
     });
   } catch {
@@ -649,7 +679,9 @@ export async function decodePackAnimations(record) {
 
 export async function decodePackItemTextures(record) {
   const out = new Map();
-  for (const [name, url] of Object.entries(record?.items || {})) {
+  const decoded = new Map();
+  const load = async (name, url) => {
+    if (decoded.has(name)) return decoded.get(name);
     try {
       const bitmap = await createImageBitmap(await (await fetch(url)).blob());
       const canvas = document.createElement('canvas');
@@ -658,8 +690,20 @@ export async function decodePackItemTextures(record) {
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(bitmap, 0, 0, TILE_SIZE, TILE_SIZE);
       bitmap.close();
-      out.set('mc:' + name, canvas.toDataURL('image/png'));
-    } catch { /* Keep the built-in item icon. */ }
+      const dataUrl = canvas.toDataURL('image/png');
+      decoded.set(name, dataUrl);
+      return dataUrl;
+    } catch { return null; }
+  };
+  for (const [name, url] of Object.entries(record?.items || {})) {
+    const dataUrl = await load(name, url);
+    if (dataUrl) out.set('mc:' + name, dataUrl);
+  }
+  for (const [itemName, textureName] of Object.entries(record?.itemModelTextures || {})) {
+    const url = record?.items?.[textureName] || record?.textures?.[textureName];
+    if (!url) continue;
+    const dataUrl = await load(textureName, url);
+    if (dataUrl) out.set('mc:' + itemName, dataUrl);
   }
   return out;
 }
