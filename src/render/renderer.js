@@ -789,8 +789,12 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
             else swing = partIndex === 4 ? humanoid.leftLeg : humanoid.rightLeg;
           }
           // First-person attack swing is already applied above; do not add a second rotation.
+        } else if (!skin && pose.animationBones?.[partName]) {
+          // This bone is driven by the source keyframes; don't layer the
+          // approximate procedural gait on top of the vanilla animation.
+          swing = 0;
         } else if (!skin && pose.vanillaModel && /tail/i.test(partName ?? '')) {
-          // Tails have their own gait: relaxed sway at rest, counter-swing while moving.
+          // Fallback only for bones without a source animation track.
           const tailRate = ['wolf','ocelot','cat','horse','donkey','mule'].includes(pose.mobType) ? 1.45 : 1;
           swing = Math.sin((pose.idle ?? 0) * 1.7 + walkPhase * (pose.walking ? tailRate : 0.15)) * (pose.walking ? 0.22 : 0.09);
           if (pose.mobType === 'wolf' && pose.angry) swing -= 0.28;
