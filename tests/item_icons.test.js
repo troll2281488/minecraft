@@ -31,3 +31,34 @@ describe('expanded pixel-art item icons', () => {
     });
   }
 });
+
+
+describe('equipment and potion icon silhouettes', () => {
+  for (const slot of ['helmet', 'chestplate', 'leggings', 'boots']) {
+    it(`renders a dedicated ${slot} silhouette`, () => {
+      const pixels = generateItemIcon({ id: `mc:iron_${slot}`, block: null, tool: null, armorSlot: slot });
+      assert(pixels instanceof Uint8Array && pixels.length === 1024, 'expected 16x16 RGBA icon');
+      const colors = new Set();
+      for (let i = 0; i < pixels.length; i += 4) if (pixels[i + 3]) colors.add(`${pixels[i]},${pixels[i + 1]},${pixels[i + 2]}`);
+      assert(colors.size >= 2, 'armour should have shaded pixels');
+    });
+  }
+  for (const id of ['mc:potion_swiftness', 'mc:potion_strength', 'mc:potion_healing', 'mc:potion_water_breathing', 'mc:water_bottle']) {
+    it(`${id} renders a bottle icon`, () => {
+      const pixels = generateItemIcon({ id, block: null, tool: null });
+      assert(pixels instanceof Uint8Array && pixels.length === 1024, 'expected 16x16 RGBA icon');
+      let visible = 0;
+      for (let i = 3; i < pixels.length; i += 4) if (pixels[i]) visible++;
+      assert(visible >= 20, 'bottle should be visible');
+    });
+  }
+  for (const id of ['mc:shield', 'mc:bow', 'mc:crossbow', 'mc:trident']) {
+    it(`${id} renders its own equipment shape`, () => {
+      const pixels = generateItemIcon({ id, block: null, tool: null });
+      assert(pixels instanceof Uint8Array && pixels.length === 1024, 'expected 16x16 RGBA icon');
+      let visible = 0;
+      for (let i = 3; i < pixels.length; i += 4) if (pixels[i]) visible++;
+      assert(visible >= 8, 'equipment shape should be visible');
+    });
+  }
+});
