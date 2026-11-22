@@ -57,6 +57,29 @@ download "enderman/enderman.png" "enderman.png"
 download "spider/spider.png" "spider.png"
 download "spider/cave_spider.png" "cave_spider.png"
 
+
+# Additional Java mobs through 1.19 (including the 1.19 additions).
+download "goat/goat.png" "goat.png"
+download "axolotl/axolotl_lucy.png" "axolotl.png"
+download "allay/allay.png" "allay.png"
+download "fox/fox.png" "fox.png"
+download "panda/panda.png" "panda.png"
+download "dolphin.png" "dolphin.png"
+download "fish/cod.png" "cod.png"
+download "fish/salmon.png" "salmon.png"
+download "fish/pufferfish.png" "pufferfish.png"
+download "phantom.png" "phantom.png"
+download "iron_golem/iron_golem.png" "iron_golem.png"
+download "illager/pillager.png" "pillager.png"
+download "illager/evoker.png" "evoker.png"
+download "illager/vindicator.png" "vindicator.png"
+download "illager/ravager.png" "ravager.png"
+download "piglin/piglin.png" "piglin.png"
+download "piglin/zombified_piglin.png" "zombified_piglin.png"
+download "piglin/piglin_brute.png" "piglin_brute.png"
+download "hoglin/hoglin.png" "hoglin.png"
+download "hoglin/zoglin.png" "zoglin.png"
+
 # Vanilla villager base + career overlays (composited at runtime by the renderer).
 download "villager/villager.png" "villager.png"
 for career in farmer fisherman shepherd librarian cleric armorer toolsmith butcher leatherworker fletcher nitwit; do
