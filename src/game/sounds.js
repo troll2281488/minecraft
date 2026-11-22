@@ -122,7 +122,7 @@ export class GameSounds {
   setEnabled(enabled){this.enabled=!!enabled;}
   setVolume(volume){this.masterVolume=Math.max(0,Math.min(1,Number(volume)||0));}
   playEvent(eventId,material='stone'){
-    if(this.enabled&&this.bedrockPack?.play(eventId,this.masterVolume))return true;
+    if(this.enabled&&this.bedrockPack?.play(eventId,this.masterVolume,material))return true;
     const kind=SOUND_EVENTS[eventId];
     if(!kind)return false;
     this.play(kind,material);
@@ -146,7 +146,7 @@ export class GameSounds {
       click:'ui.click', toast:'ui.toast',
       explode:'entity.generic.explode', ambient:'entity.mob.ambient',
     })[kind];
-    if(packEvent && this.bedrockPack?.play(packEvent,this.masterVolume))return true;
+    if(packEvent && this.bedrockPack?.play(packEvent,this.masterVolume,material))return true;
     // Do not play generic synthesized or unrelated CC0 samples as Minecraft audio.
     return false;
   }
