@@ -24,6 +24,9 @@ with zipfile.ZipFile(archive) as z:
         name = pathlib.Path(item.filename).name
         if not name or name.startswith('._'):
             continue
+        # Keep the pack focused on ambience, movement, blocks, creatures and UI.
+        if any(word in name.lower() for word in ('knife','sword','bow','arrow','weapon','gun','rifle','pistol','blade','punch','shoot','shot')):
+            continue
         target = out / name
         if target.exists():
             stem, suffix = target.stem, target.suffix
