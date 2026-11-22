@@ -49,7 +49,7 @@ export class BackgroundMusic{
   if(this.builtinLoaded)return this.tracks.length;
   if(this.loading)return this.loading;
   this.loading=(async()=>{
-   const [saved,builtin]=await Promise.all([readTracks(),readBuiltinTracks()]);
+   const [saved,builtin]=await Promise.all([readTracks().catch(error=>{console.warn('[music] Saved playlist unavailable:',error);return[];}),readBuiltinTracks()]);
    this.builtinTracks=builtin;
    this._setTracks([...saved,...builtin]);
    this.builtinLoaded=true;
