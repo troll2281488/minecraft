@@ -1,101 +1,120 @@
 const ROOT = new URL('../../assets/audio/', import.meta.url);
-
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-const materialOf = (name) => {
-  if (/grass|leaf|leaves|dirt|mud|earth/.test(name)) return 'grass';
+
+function materialOf(value = '') {
+  const name = String(value).toLowerCase().replace(/^minecraft:/, '');
+  if (/grass|leaves|dirt|mud|earth|podzol/.test(name)) return 'grass';
   if (/wood|plank|log|door/.test(name)) return 'wood';
-  if (/stone|rock|brick|concrete|gravel/.test(name)) return 'stone';
-  if (/sand/.test(name)) return 'sand';
   if (/snow|ice/.test(name)) return 'snow';
+  if (/carpet|wool/.test(name)) return 'carpet';
+  if (/sand/.test(name)) return 'sand';
   if (/metal|iron|steel/.test(name)) return 'metal';
   if (/glass/.test(name)) return 'glass';
-  return 'generic';
-};
+  return 'concrete';
+}
 
-export function classifyBundledSound(file, pack) {
-  const normalized = String(file).toLowerCase().replace(/\\\\/g, '/');
-  const name = normalized.split('/').pop() ?? '';
-  const cleanName = name.replace(/\\.(ogg|opus|wav)$/i, '');
-  const material = materialOf(cleanName);
-  if (pack === 'kenney-footsteps') return `step:${material}`;
-  if (pack === 'kenney-impact') {
-    if (/footstep|step/.test(cleanName)) return `step:${material}`;
-    if (/impact|collision|thud|hit|mining/.test(cleanName)) return `impact:${material}`;
+function groupFor(eventId, material) {
+  const m = materialOf(material);
+  if (eventId === 'block.step') return ['step:' + (m === 'sand' ? 'concrete' : m), 'step:concrete'];
+  if (eventId === 'block.break' || eventId === 'block.place' || eventId === 'block.hit') {
+    if (m === 'wood') return ['impact:wood', 'impact:generic'];
+    if (m === 'metal') return ['impact:metal', 'impact:generic'];
+    if (m === 'glass') return ['impact:glass', 'impact:generic'];
+    return ['impact:generic'];
   }
-  if (pack === 'oga-rpg-sfx' && /creature|monster|beast/.test(cleanName)) return 'mob:creature';
-  return null;
+  if (eventId.startsWith('block.door') || eventId.startsWith('block.chest')) return ['door'];
+  if (eventId.startsWith('ui.')) return ['ui'];
+  if (eventId.includes('item.') || eventId.includes('experience') || eventId.includes('levelup') || eventId === 'item.equip') return ['inventory'];
+  if (eventId.startsWith('entity.mob') || eventId.startsWith('entity.player') || eventId.startsWith('entity.generic')) return ['mob:creature', 'impact:generic'];
+  if (eventId === 'entity.villager.trade') return ['inventory', 'ui'];
+  return [];
 }
 
 export class BundledSoundBank {
   constructor() {
-    this.groups = new Map();
-    this.ready = false;
-    this.loadPromise = null;
     this.context = null;
-    this.lastAmbientAt = 0;
+    this.manifestPromise = null;
+    this.groups = new Map();
+    this.loading = new Map();
+    this.lastChoice = new Map();
   }
 
-  async load(context) {
-    if (this.ready) return true;
-    if (this.loadPromise) return this.loadPromise;
-    this.context = context;
-    this.loadPromise = (async () => {
-      const response = await fetch(new URL('manifest.json', ROOT));
-      if (!response.ok) throw new Error(`Built-in sound manifest unavailable (${response.status})`);
-      const manifest = await response.json();
-      const files = Array.isArray(manifest.files) ? manifest.files : [];
-      let cursor = 0;
-      const workers = Array.from({ length: 4 }, async () => {
-        while (cursor < files.length) {
-          const entry = files[cursor++];
-          const bucket = classifyBundledSound(entry.file, entry.pack);
-          if (!bucket) continue;
-          try {
-            const audioResponse = await fetch(new URL(`${entry.pack}/${entry.file}`, ROOT));
-            if (!audioResponse.ok) continue;
-            const bytes = await audioResponse.arrayBuffer();
-            const buffer = await context.decodeAudioData(bytes);
-            if (!this.groups.has(bucket)) this.groups.set(bucket, []);
-            this.groups.get(bucket).push(buffer);
-          } catch (error) {
-            console.warn('[audio] Skipped bundled sound:', entry.file, error);
-          }
+  async _manifest() {
+    if (!this.manifestPromise) {
+      this.manifestPromise = fetch(new URL('manifest.json', ROOT))
+        .then((response) => {
+          if (!response.ok) throw new Error('CC0 sound manifest unavailable: ' + response.status);
+          return response.json();
+        })
+        .catch((error) => {
+          this.manifestPromise = null;
+          throw error;
+        });
+    }
+    return this.manifestPromise;
+  }
+
+  async _loadGroup(group) {
+    if (this.groups.has(group)) return this.groups.get(group);
+    if (this.loading.has(group)) return this.loading.get(group);
+    const promise = (async () => {
+      const manifest = await this._manifest();
+      const candidates = (manifest.files || []).filter((entry) => entry.group === group);
+      if (!candidates.length) return [];
+      // Load a small set of varied clips for this event only; other categories
+      // remain on the server until the player actually triggers them.
+      const shuffled = [...candidates].sort(() => Math.random() - 0.5);
+      const selected = shuffled.slice(0, Math.min(group === 'mob:creature' ? 12 : 8, shuffled.length));
+      const decoded = await Promise.all(selected.map(async (entry) => {
+        try {
+          const response = await fetch(new URL(entry.pack + '/' + encodeURIComponent(entry.file), ROOT));
+          if (!response.ok) return null;
+          return await this.context.decodeAudioData(await response.arrayBuffer());
+        } catch (error) {
+          console.warn('[audio] Could not decode CC0 sound ' + entry.file, error);
+          return null;
         }
-      });
-      await Promise.all(workers);
-      this.ready = true;
-      return true;
+      }));
+      const buffers = decoded.filter(Boolean);
+      this.groups.set(group, buffers);
+      return buffers;
     })();
-    try {
-      return await this.loadPromise;
-    } finally {
-      this.loadPromise = null;
-    }
+    this.loading.set(group, promise);
+    try { return await promise; }
+    finally { this.loading.delete(group); }
   }
 
-  play(eventId, material = 'stone', volume = 0.75) {
-    if (!this.ready || !this.context) return false;
-    const materialKey = materialOf(String(material).toLowerCase());
-    let keys = [];
-    if (eventId === 'block.step') {
-      keys = [`step:${materialKey}`, 'step:generic'];
-    } else if (['block.break', 'block.place', 'block.hit'].includes(eventId)) {
-      keys = [`impact:${materialKey}`, 'impact:generic'];
-    } else if (['entity.mob.ambient', 'entity.mob.hurt', 'entity.mob.death'].includes(eventId)) {
-      keys = ['mob:creature'];
-    }
-    let choices = null;
-    for (const key of keys) {
-      if (this.groups.get(key)?.length) { choices = this.groups.get(key); break; }
-    }
-    if (!choices?.length) return false;
-    const source = this.context.createBufferSource();
-    const gain = this.context.createGain();
-    source.buffer = choices[Math.floor(Math.random() * choices.length)];
-    const eventGain = eventId === 'block.step' ? 0.34 : 0.72;
-    gain.gain.value = clamp(Number(volume) || 0, 0, 1) * eventGain;
-    source.connect(gain).connect(this.context.destination);
-    source.start();
+  play(eventId, material = 'stone', volume = 1) {
+    if (!this.context) return false;
+    const groups = groupFor(eventId, material);
+    if (!groups.length) return false;
+    const eventVolume = eventId === 'block.step' ? 0.16
+      : eventId === 'block.place' ? 0.28
+      : eventId.startsWith('ui.') ? 0.32
+      : eventId.startsWith('entity.mob') ? 0.46
+      : 0.42;
+    const attempt = async () => {
+      let choices = [];
+      for (const group of groups) {
+        choices = await this._loadGroup(group);
+        if (choices.length) break;
+      }
+      if (!choices.length || !this.context) return false;
+      const previous = this.lastChoice.get(groups[0]);
+      let index = Math.floor(Math.random() * choices.length);
+      if (choices.length > 1 && index === previous) index = (index + 1) % choices.length;
+      this.lastChoice.set(groups[0], index);
+      if (this.context.state === 'suspended') await this.context.resume().catch(() => {});
+      const source = this.context.createBufferSource();
+      const gain = this.context.createGain();
+      source.buffer = choices[index];
+      if (eventId === 'block.step') source.playbackRate.value = 0.97 + Math.random() * 0.06;
+      gain.gain.value = clamp(Number(volume) || 0, 0, 1) * eventVolume;
+      source.connect(gain).connect(this.context.destination);
+      source.start();
+      return true;
+    };
+    attempt().catch((error) => console.warn('[audio] CC0 playback failed:', error));
     return true;
   }
 }
