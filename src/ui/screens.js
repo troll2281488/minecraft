@@ -274,7 +274,7 @@ export const ScreensMixin = {
     if (!panel || document.getElementById('java-resource-pack-settings')) return;
     const section = document.createElement('section');
     section.id = 'java-resource-pack-settings';
-    section.innerHTML = '<h2>Ресурспак Minecraft Java</h2><p class="sub">Импортируй ZIP-ресурспак Java 1.19: текстуры блоков, предметов и существ (с сохранением UV-размеров), а также blockstates, кубические модели и анимации текстур. Сложная геометрия моделей существ пока не заменяется.</p><div class="settings-row"><button id="btn-import-java-pack" class="secondary" type="button">Импортировать ZIP-ресурспак</button></div><p id="java-resource-pack-status" role="status" aria-live="polite">Java-ресурспак не импортирован.</p>';
+    section.innerHTML = '<h2>Ресурспак Minecraft Java</h2><p class="sub">Импортируй ZIP-ресурспак Java 1.19: текстуры блоков, предметов и существ (с сохранением UV-размеров), а также blockstates, модели блоков и предметов, наследование текстур и анимации. Сложная 3D-геометрия предметов и существ пока не заменяется.</p><div class="settings-row"><button id="btn-import-java-pack" class="secondary" type="button">Импортировать ZIP-ресурспак</button></div><p id="java-resource-pack-status" role="status" aria-live="polite">Java-ресурспак не импортирован.</p>';
     const back = document.getElementById('btn-settings-back');
     panel.insertBefore(section, back);
     section.querySelector('#btn-import-java-pack').addEventListener('click', () => {
