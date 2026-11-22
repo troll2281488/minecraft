@@ -27,6 +27,8 @@ jobs:
         run: bash scripts/fetch-vanilla-entity-models.sh
       - name: Download authorized mob textures
         run: bash scripts/fetch-mob-textures.sh
+      - name: Download bundled CC0 sound effects
+        run: bash scripts/fetch-bundled-sounds.sh
       - name: Check JavaScript syntax
         run: |
           find src -name '*.js' -print0 | while IFS= read -r -d '' file; do
