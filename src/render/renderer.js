@@ -23,6 +23,7 @@ import { renderBar } from '../ui/hud_bars.js';
 import { bedrockItemPose, bedrockChargeProgress, bedrockHumanoidPose } from './bedrock_animation_curves.js';
 import { sampleVanillaEntityAnimation, blendEntityAnimationBones } from './entity_animation_runtime.js';
 import { buildPlayerStateAnimation } from './player_animation.js';
+import { humanoidBones, mobLegSwing, deathPose } from './own_animation.js';
 
 /**
  * A unit cube as 36 vertices of (x, y, z, u, v), two triangles per face.
@@ -890,6 +891,7 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         } else if (!skin && partIndex >= legStart && partIndex <= legEnd) {
           swing = pose.walking ? Math.sin(walkPhase + phase) * (pose.animal ? 0.34 : 0.24) : 0;
         }
+        if (!skin && pose.ownSwing && pose.ownSwing[partIndex] !== undefined) swing = pose.ownSwing[partIndex];
         if (animationBone) swing = 0;
         // Source mob clips have already been applied through the model's bone
         // hierarchy. Keep those poses clean instead of layering guessed swings.
@@ -1056,7 +1058,18 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
       });
       const useStatePose = playerSwimming || playerSneaking || playerAttacking || playerAirborne;
       const playerTargetBones = useStatePose ? statePose : playerAnimation?.bones ?? null;
-      const playerAnimationPose = { animationBones: smoothEntityAnimation(this.player, playerTargetBones) };
+      const authoredPlayerBones = humanoidBones(this.player, {
+        speedBlocksPerSecond: Math.hypot(this.player.vx ?? 0, this.player.vz ?? 0) * 20,
+        walkPhase: this.player.walkPhase,
+        onGround: !!this.player.onGround,
+        inWater: !!this.player.inWater,
+        airborne: playerAirborne,
+        jumping: playerAirborne && (this.player.vy ?? 0) > 0.05,
+        sprinting: !!this.player.sprinting,
+        sneaking: !!this.player.sneaking,
+        attackTime: this.player.attackTime ?? 0,
+      });
+      const playerAnimationPose = { animationBones: smoothEntityAnimation(this.player, { ...(playerTargetBones ?? {}), ...authoredPlayerBones }) };
       draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : this.player.ridingMinecart ? 0.42 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, human, this.player.walkPhase, 4, 5, 1, { inWater: this.player.inWater, swimming: this.player.inWater && Math.hypot(this.player.vx ?? 0, this.player.vy ?? 0, this.player.vz ?? 0) > 0.025, airborne: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround, sprinting: !!this.player.sprinting, jumping: !this.player.ridingHorse && !this.player.ridingMinecart && !this.player.onGround && this.player.vy > 0.05, sneaking: this.player.sneaking || !!this.player.ridingHorse || !!this.player.ridingMinecart, riding: !!this.player.ridingHorse || !!this.player.ridingMinecart, walking: playerMoving, attack: this.player.attackTime > 0, attackTime: this.player.attackTime, ...playerAnimationPose }, true);
       draw(this.renderPosition.x, this.renderPosition.y + (this.player.ridingHorse ? 1.15 : 0), this.renderPosition.z, this.player.yaw * Math.PI / 180, outerHuman, this.player.walkPhase, 4, 5, 1, { inWater: this.player.inWater, swimming: this.player.inWater && Math.hypot(this.player.vx ?? 0, this.player.vy ?? 0, this.player.vz ?? 0) > 0.025, airborne: !this.player.ridingHorse && !this.player.onGround, sneaking: this.player.sneaking || !!this.player.ridingHorse, riding: !!this.player.ridingHorse, skinLayer: true, animationBones: playerAnimationPose.animationBones }, true);
       const armorColors = ['#b8b8b8','#8f8f9b','#b17a45','#6c778a'];
@@ -1092,7 +1105,18 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         walking: !!remote.walking, sprinting: !!remote.sprinting,
         cyclePhase: (remote.walkPhase ?? 0) / (Math.PI * 2),
       }, (remote.ageTicks ?? 0) / 20);
-      const remoteAnimationPose = { animationBones: smoothEntityAnimation(remote, remoteAnimation?.bones ?? null) };
+      const authoredRemoteBones = humanoidBones(remote, {
+        speedBlocksPerSecond: remote.walking ? (remote.sprinting ? 5.6 : 4.3) : 0,
+        walkPhase: remote.walkPhase || 0,
+        onGround: !remote.airborne,
+        inWater: !!remote.inWater,
+        airborne: !!remote.airborne,
+        jumping: !!remote.jumping,
+        sprinting: !!remote.sprinting,
+        sneaking: !!remote.sneaking,
+        attackTime: remote.attacking ? (remote.attackTime ?? 8) : 0,
+      });
+      const remoteAnimationPose = { animationBones: smoothEntityAnimation(remote, { ...(remoteAnimation?.bones ?? {}), ...authoredRemoteBones }) };
       draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, human, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, jumping: !!remote.jumping, sneaking: !!remote.sneaking, walking: !!remote.walking, attack: !!remote.attacking, attackTime: remote.attackTime ?? 0, ...remoteAnimationPose }, true);
       draw(remote.x, remote.y, remote.z, remote.yaw * Math.PI / 180, outerHuman, remote.walkPhase || 0, 4, 5, 1, { swimming: !!remote.inWater, airborne: !!remote.airborne, sneaking: !!remote.sneaking, skinLayer: true, animationBones: remoteAnimationPose.animationBones }, true);
       const remoteArmorParts = [];
@@ -1217,14 +1241,16 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         : mob.type === 'cow' || mob.type === 'sheep' || mob.type === 'goat' || mob.type === 'mooshroom' || mob.type === 'polar_bear' || mob.type === 'horse' ? [2, 5]
         : mob.type === 'chicken' ? [4, 5] : [2, 5];
       const babyScale = mob.ageTicks < 0 ? 0.55 : 1;
+      const death = mob.dying ? deathPose(mob.deathTicks) : null;
       const animal = ['sheep', 'pig', 'cow', 'goat', 'chicken', 'mooshroom', 'rabbit', 'wolf', 'polar_bear', 'bee', 'horse'].includes(mob.type);
       const humanoid = ['zombie', 'skeleton', 'stray', 'villager', 'enderman'].includes(mob.type);
       // Mob movement advances along +sin(yaw), +cos(yaw); render the model on that same forward axis.
-      draw(mob.x, mob.y, mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse * babyScale, {
+      draw(mob.x, mob.y - (death?.sink ?? 0), mob.z, mob.yaw, parts, mob.walkPhase, legs[0], legs[1], pulse * babyScale * (death?.scale ?? 1), {
         hurt: (mob.hurtTicks || 0) > 0, animal, humanoid, vanillaModel: !!vanillaParts,
         mobType: mob.type, mobTextureKey: mob.type === 'villager' ? 'villager_' + (mob.villagerCareer === 'archer' ? 'fletcher' : (mob.villagerCareer || 'farmer')) : mob.type,
         idle: mob.anim?.idle ?? 0, walking: !!mob.anim?.walking, sprinting: !!mob.sprinting, attack: (mob.anim?.attack ?? 0) > 0, attackTime: mob.anim?.attack ?? 0, airborne: !!mob.airborne, jumping: !!mob.jumping, swimming: !!mob.inWater, riding: !!mob.riding, humanoid,
         sourceAnimated: !!vanillaParts, animationName: vanillaAnimation?.name ?? null,
+        ownSwing: vanillaParts ? null : mobLegSwing(mob, { legStart: legs[0], legEnd: legs[1], walking: !!mob.anim?.walking, sprinting: !!mob.sprinting, riding: !!mob.riding, swimming: !!mob.inWater, walkPhase: mob.walkPhase }),
       });
       if (mob.type === 'goat' && !vanillaParts) {
         draw(mob.x, mob.y, mob.z, mob.yaw, [
