@@ -143,6 +143,22 @@ describe('Java block model texture resolution', () => {
     assertEqual(faces['mc:stone'].north, 'stone');
   });
 
+  it('resolves vanilla built-in cube parents even when the pack does not include vanilla parent JSON', () => {
+    const models = new Map([
+      ['custom_stone', {
+        parent: 'minecraft:block/cube_all',
+        textures: { all: 'minecraft:block/custom_stone' },
+      }],
+    ]);
+    const states = new Map([
+      ['stone', { variants: { '': { model: 'minecraft:block/custom_stone' } } }],
+    ]);
+    const faces = resolveJavaBlockFaces(models, states);
+    for (const face of ['down', 'up', 'north', 'south', 'west', 'east']) {
+      assertEqual(faces['mc:stone'][face], 'custom_stone');
+    }
+  });
+
   it('uses per-face model textures rather than replacing all faces with one tile', () => {
     const models = new Map([
       ['log', {
