@@ -133,7 +133,24 @@ export async function boot() {
 
   setHudSprites(remoteTextures.hud);
   setMinecraftUiTextures(remoteTextures.ui);
-  const textures = buildTextures(remoteTextures.blocks);
+  // Build a texture layer for every texture referenced by the registered block
+  // catalog, even when the network texture source has no matching PNG.
+  const requiredBlockTextures = new Set();
+  for (const state of BLOCKS.statesById) {
+    const block = state.block;
+    if (block.texture) requiredBlockTextures.add(block.texture);
+    if (block.textures) {
+      for (const name of Object.values(block.textures)) {
+        if (typeof name === 'string' && name !== 'none') requiredBlockTextures.add(name);
+      }
+    }
+    if (block.doorTextures) {
+      for (const name of Object.values(block.doorTextures)) {
+        if (typeof name === 'string' && name !== 'none') requiredBlockTextures.add(name);
+      }
+    }
+  }
+  const textures = buildTextures(remoteTextures.blocks, [...requiredBlockTextures]);
   const textureArray = createTextureArray(gl, textures, TILE_SIZE);
   const textureTable = buildBlockTextureTable(BLOCKS, textures.index, savedJavaPack?.blockFaces);
   const icons = buildItemIconCache(ITEMS, BLOCKS, textures.data, textures.index, remoteTextures.items);
