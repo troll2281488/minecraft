@@ -14,13 +14,14 @@ describe('shift-click armour', () => {
     assertEqual(inv.slots[SLOT.ARMOR_END].item.id, 'mc:iron_helmet');
     assert(inv.slots[0].isEmpty, 'hotbar slot should be empty');
   });
-  it('swaps out the piece already worn', () => {
+  it('leaves worn armour in place and sends a second piece to the hotbar', () => {
     const inv = new Inventory();
     inv.slots[SLOT.ARMOR_END] = ItemStack.of('mc:leather_helmet', 1);
     inv.slots[9] = ItemStack.of('mc:diamond_helmet', 1);
     inv.shiftClickSlot(9);
-    assertEqual(inv.slots[SLOT.ARMOR_END].item.id, 'mc:diamond_helmet');
-    assertEqual(inv.slots[9].item.id, 'mc:leather_helmet');
+    assertEqual(inv.slots[SLOT.ARMOR_END].item.id, 'mc:leather_helmet');
+    assertEqual(inv.slots[0].item.id, 'mc:diamond_helmet');
+    assert(inv.slots[9].isEmpty, 'source slot should be empty after transfer');
   });
 });
 

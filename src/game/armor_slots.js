@@ -1,19 +1,12 @@
 /**
- * Equipping armour into the four armour slots, Java 1.12.2.
+ * Armour-slot helpers for the Java Edition player inventory.
  *
- * Inventory layout: slots 36..39 are helmet, chestplate, leggings, boots (matching
- * SLOT.ARMOR_START in game/inventory.js). A piece only goes into the slot for its
- * armorSlot. Putting a piece onto an occupied slot swaps the two stacks.
+ * Internal slots 36..39 are boots, leggings, chestplate, helmet. The inventory
+ * module owns the canonical order and index mapping so save and UI code agree.
  */
-import { SLOT } from './inventory.js';
+import { SLOT, ARMOR_ORDER, armorSlotIndex } from './inventory.js';
 
-export const ARMOR_ORDER = ['helmet', 'chestplate', 'leggings', 'boots'];
-
-/** Index into the inventory for a given armour slot name. */
-export function armorSlotIndex(slotName) {
-  const i = ARMOR_ORDER.indexOf(slotName);
-  return i === -1 ? -1 : SLOT.ARMOR_START + i;
-}
+export { ARMOR_ORDER, armorSlotIndex };
 
 /**
  * Try to equip `stack` into its armour slot inside `slots` (mutates `slots`).

@@ -1,4 +1,5 @@
 import { describe, it, assertEqual } from './framework.js';
+import './inventory_interaction.test.js';
 import './stronghold_library.test.js';
 import './entity_animation_runtime.test.js';
 import './bundled_sound_bank.test.js';

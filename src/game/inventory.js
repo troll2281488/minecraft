@@ -33,6 +33,21 @@ export const SLOT = {
   TOTAL: 41,
 };
 
+// Minecraft's serialized player-inventory order is boots, leggings,
+// chestplate, helmet. The GUI presents these in the opposite visual order.
+export const ARMOR_ORDER = Object.freeze(['boots', 'leggings', 'chestplate', 'helmet']);
+
+export function armorSlotIndex(slotName) {
+  const index = ARMOR_ORDER.indexOf(slotName);
+  return index < 0 ? -1 : SLOT.ARMOR_START + index;
+}
+
+export function canPlaceInSlot(index, stack) {
+  const armorIndex = index - SLOT.ARMOR_START;
+  if (armorIndex < 0 || armorIndex >= ARMOR_ORDER.length) return true;
+  return stack?.item?.armorSlot === ARMOR_ORDER[armorIndex];
+}
+
 export class Inventory {
   constructor(size = SLOT.TOTAL) {
     /** @type {ItemStack[]} never null -- empty slots hold ItemStack.EMPTY clones */
@@ -166,26 +181,64 @@ export class Inventory {
   // -- Click handling -----------------------------------------------------
 
   clickSlot(index) {
-    const slot = this.get(index);
+    if (!Number.isInteger(index) || index < 0 || index >= this.slots.length) return false;
+    const slot = this.slots[index];
     const cursor = this.cursor;
 
     if (cursor.isEmpty) {
+      if (slot.isEmpty) return false;
       this.cursor = slot;
       this.slots[index] = ItemStack.EMPTY.clone();
-    } else if (slot.isEmpty) {
-      this.slots[index] = cursor;
-      this.cursor = ItemStack.EMPTY.clone();
-    } else if (slot.canStackWith(cursor)) {
-      slot.mergeFrom(cursor);
-      if (cursor.count <= 0) this.cursor = ItemStack.EMPTY.clone();
     } else {
-      this.slots[index] = cursor;
-      this.cursor = slot;
+      // Armour slots only accept their matching piece. A left click still swaps
+      // an already-equipped piece back to the cursor, as in Java Edition.
+      if (!canPlaceInSlot(index, cursor)) return false;
+      if (slot.isEmpty) {
+        this.slots[index] = cursor;
+        this.cursor = ItemStack.EMPTY.clone();
+      } else if (slot.canStackWith(cursor)) {
+        if (slot.mergeFrom(cursor) <= 0) return false;
+        if (cursor.count <= 0) this.cursor = ItemStack.EMPTY.clone();
+      } else {
+        this.slots[index] = cursor;
+        this.cursor = slot;
+      }
     }
     this.version++;
+    return true;
   }
 
-  /** Distribute a cursor stack as evenly as possible across dragged player slots. */
+  /**
+   * Move a stack directly between two slots with one left-button drag.
+   * Compatible stacks merge up to their limit; other stacks swap only when
+   * both destination slots accept the resulting item.
+   */
+  moveSlot(sourceIndex, destinationIndex) {
+    if (!Number.isInteger(sourceIndex) || !Number.isInteger(destinationIndex) ||
+        sourceIndex < 0 || destinationIndex < 0 ||
+        sourceIndex >= this.slots.length || destinationIndex >= this.slots.length ||
+        sourceIndex === destinationIndex) return false;
+
+    const source = this.slots[sourceIndex];
+    const destination = this.slots[destinationIndex];
+    if (source.isEmpty || !canPlaceInSlot(destinationIndex, source)) return false;
+
+    if (destination.isEmpty) {
+      this.slots[destinationIndex] = source;
+      this.slots[sourceIndex] = ItemStack.EMPTY.clone();
+    } else if (destination.canStackWith(source)) {
+      if (destination.mergeFrom(source) <= 0) return false;
+      if (source.count <= 0) this.slots[sourceIndex] = ItemStack.EMPTY.clone();
+    } else {
+      if (!canPlaceInSlot(sourceIndex, destination)) return false;
+      this.slots[sourceIndex] = destination;
+      this.slots[destinationIndex] = source;
+    }
+
+    this.version++;
+    return true;
+  }
+
   distributeCursor(indices) {
     if (this.cursor.isEmpty || !Array.isArray(indices)) return false;
     const unique = [...new Set(indices)].filter((index) =>
@@ -197,21 +250,40 @@ export class Inventory {
     });
     if (!eligible.length) return false;
 
-    let remaining = this.cursor.count;
-    for (let i = 0; i < eligible.length && remaining > 0; i++) {
-      const index = eligible[i];
+    // Water-fill the shortest compatible stacks. This balances final stack
+    // counts too, rather than distributing evenly while ignoring items already
+    // present in partially-filled slots.
+    const targets = eligible.map((index) => {
       const slot = this.slots[index];
-      const targetsLeft = eligible.length - i;
-      const fairShare = Math.ceil(remaining / targetsLeft);
-      const room = slot.isEmpty ? this.cursor.maxStackSize : slot.maxStackSize - slot.count;
-      const moved = Math.min(fairShare, room, remaining);
+      const initialCount = slot.isEmpty ? 0 : slot.count;
+      return {
+        index,
+        initialCount,
+        count: initialCount,
+        capacity: slot.isEmpty ? this.cursor.maxStackSize : slot.maxStackSize,
+      };
+    });
+    let remaining = this.cursor.count;
+    while (remaining > 0) {
+      let target = null;
+      for (const candidate of targets) {
+        if (candidate.count >= candidate.capacity) continue;
+        if (!target || candidate.count < target.count) target = candidate;
+      }
+      if (!target) break;
+      target.count++;
+      remaining--;
+    }
+
+    for (const target of targets) {
+      const moved = target.count - target.initialCount;
       if (moved <= 0) continue;
+      const slot = this.slots[target.index];
       if (slot.isEmpty) {
-        this.slots[index] = new ItemStack(this.cursor.item, moved, this.cursor.damage, this.cursor.data);
+        this.slots[target.index] = new ItemStack(this.cursor.item, moved, this.cursor.damage, this.cursor.data);
       } else {
         slot.count += moved;
       }
-      remaining -= moved;
     }
 
     this.cursor.count = remaining;
@@ -221,32 +293,38 @@ export class Inventory {
   }
 
   rightClickSlot(index) {
-    const slot = this.get(index);
+    if (!Number.isInteger(index) || index < 0 || index >= this.slots.length) return false;
+    const slot = this.slots[index];
     const cursor = this.cursor;
 
     if (cursor.isEmpty) {
-      if (slot.isEmpty) return;
+      if (slot.isEmpty) return false;
       const half = Math.ceil(slot.count / 2);
       this.cursor = slot.split(half);
       if (slot.count <= 0) this.slots[index] = ItemStack.EMPTY.clone();
-    } else if (slot.isEmpty) {
-      this.slots[index] = cursor.split(1);
-      if (cursor.count <= 0) this.cursor = ItemStack.EMPTY.clone();
-    } else if (slot.canStackWith(cursor) && slot.count < slot.maxStackSize) {
-      slot.count++;
-      cursor.count--;
-      if (cursor.count <= 0) this.cursor = ItemStack.EMPTY.clone();
+    } else {
+      if (!canPlaceInSlot(index, cursor)) return false;
+      if (slot.isEmpty) {
+        this.slots[index] = cursor.split(1);
+        if (cursor.count <= 0) this.cursor = ItemStack.EMPTY.clone();
+      } else if (slot.canStackWith(cursor) && slot.count < slot.maxStackSize) {
+        slot.count++;
+        cursor.count--;
+        if (cursor.count <= 0) this.cursor = ItemStack.EMPTY.clone();
+      } else {
+        return false;
+      }
     }
     this.version++;
+    return true;
   }
 
   shiftClickSlot(index) {
     const slot = this.get(index);
     if (slot.isEmpty) return;
 
-    const armorTargets = { boots: 36, leggings: 37, chestplate: 38, helmet: 39 };
-    const armorTarget = armorTargets[slot.item?.armorSlot];
-    if (armorTarget !== undefined && index < SLOT.ARMOR_START &&
+    const armorTarget = armorSlotIndex(slot.item?.armorSlot);
+    if (armorTarget !== -1 && index < SLOT.ARMOR_START &&
         this.slots[armorTarget].isEmpty) {
       // Vanilla only auto-equips into an empty armor slot. If it is occupied,
       // continue with the ordinary shift-transfer instead of swapping gear out.

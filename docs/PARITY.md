@@ -80,8 +80,10 @@ Reference target for this compatibility track is **Minecraft: Java Edition 1.19.
 | Left-click take/swap, right-click half/one | yes | ✅ |
 | Shift-click transfer between hotbar and main | yes | ✅ |
 | Shift-click between chest/furnace slots and player inventory | yes | 🟡 *(two-way transfer; partial stacks remain in source; automated tests)* |
+| Armor slot order and placement | Internal slots 36–39 are boots, leggings, chestplate, helmet; GUI displays helmet → boots | yes | 🟡 *(matching-piece validation, cursor swap and shift-click auto-equip; browser layout needs visual QA)* |
 | Shift-click armor auto-equip (occupied slot falls back to storage) | yes | 🟡 *(empty-slot equip + occupied-slot fallback tested)* |
-| Left-drag distribute / right-drag one-each | yes | 🟡 *(left-drag distributes evenly across compatible player inventory slots; right-drag places one per slot)* |
+| Left-button drag/drop between slots | yes | 🟡 *(direct move, compatible merge, guarded swaps; browser gesture needs manual QA)* |
+| Left-drag distribute / right-drag one-each | yes | 🟡 *(left-drag balances compatible player stacks; right-drag places one per slot)* |
 | Shaped matching (any offset + mirrored) | yes | ✅ |
 | Shapeless matching | yes | ✅ |
 | Tag ingredients (`#mc:planks`) | yes | ✅ |
@@ -171,6 +173,10 @@ Observer detects a change in the adjacent block on its facing side and emits a t
 Hoppers now have a five-slot saved inventory, a vanilla-shaped recipe, a container UI, one-item transfers on an eight-tick cadence between nearby hoppers/chests/furnaces, and redstone locking. The simulation is host-authoritative in multiplayer and only scans a small area around the active player to limit work and network traffic. Hoppers collect dropped items from a simplified top intake volume. Furnace routing distinguishes top-face smelting input, horizontal-side fuel input and bottom-face output extraction; invalid first slots are skipped so later valid items can move. Minecart containers, furnace fuel-container remainders (such as empty buckets), the exact vanilla hopper cooldown and full unloaded-chunk scheduling remain incomplete. Hoppers also feed compostable items into a composter directly below (one item per transfer attempt; failed compost rolls still consume the item), and a hopper below extracts one bone meal only when the composter reaches level 8 and has room. Composter blockstate changes use the normal block replication path; hopper inventory snapshots remain batched. Comparators read composter levels with Java signal strengths 0, 1, 3, 5, 7, 9, 11, 13, and 15. These are active-area simulations; unloaded automation is not ticked.
 
 ## Not yet started
+
+Elytra acquisition/gliding and Netherite progression are deliberately deferred: the current branch
+does not yet have playable End/End City loot or Nether/Ancient Debris generation. Adding only
+unobtainable gear or disconnected recipes would be a placeholder rather than a completed feature.
 
 Survival is partial: health, hunger, player XP levels, XP orbs from player-credited mob kills, eligible ore mining, fishing, successful animal breeding, villager trades and manually claimed furnace smelting XP; furnace XP is fractionally banked, persisted and released when its block is broken. Same-value orb merging, water buoyancy, fire/lava/cactus destruction, XP attraction/pickup and the survival XP HUD are present, with food consumption and basic starvation/
 regeneration; mob spawning, wandering, simple fleeing/pursuit, melee combat with armour damage reduction/durability, sheep shearing,

@@ -171,6 +171,10 @@ export class UI {
   buildInventory(inventory, grid, handlers) {
     this.invHandlers = handlers;
     const screen = $('inventory-screen');
+    screen._leftDragActive = false;
+    screen._leftDragSeen = null;
+    screen._leftPendingSource = null;
+    screen._leftPendingTarget = null;
     screen._leftDragHandler = (indices) => handlers.onDistribute?.(indices);
 
     const build = (container, count, indexOf, kind) => {
@@ -183,10 +187,19 @@ export class UI {
         el.oncontextmenu = (e) => e.preventDefault();
         el.onmousedown = (e) => {
           e.preventDefault();
-          if (e.button === 0 && kind === 'inventory' && !inventory.cursor.isEmpty) {
-            screen._leftDragActive = true;
-            screen._leftDragSeen = [index];
-            return;
+          if (e.button === 0 && kind === 'inventory') {
+            if (!inventory.cursor.isEmpty) {
+              screen._leftDragActive = true;
+              screen._leftDragSeen = [index];
+              return;
+            }
+            if (!inventory.get(index).isEmpty) {
+              // Defer the ordinary click until mouseup. If the pointer entered a
+              // second slot, this becomes a direct source-to-destination drag.
+              screen._leftPendingSource = { index, shift: e.shiftKey };
+              screen._leftPendingTarget = null;
+              return;
+            }
           }
           if (e.button === 2) {
             screen._rightDragActive = true;
@@ -195,6 +208,10 @@ export class UI {
           handlers.onClick(kind, index, e.button, e.shiftKey);
         };
         el.addEventListener('mouseenter', () => {
+          if (screen._leftPendingSource && kind === 'inventory') {
+            if (index !== screen._leftPendingSource.index) screen._leftPendingTarget = index;
+            return;
+          }
           if (screen._leftDragActive && kind === 'inventory') {
             if (!screen._leftDragSeen.includes(index)) screen._leftDragSeen.push(index);
             return;
@@ -205,6 +222,9 @@ export class UI {
           screen._rightDragSeen?.add(key);
           handlers.onClick(kind, index, 2, false);
         });
+        el.addEventListener('mouseleave', () => {
+          if (screen._leftPendingTarget === index) screen._leftPendingTarget = null;
+        });
         container.appendChild(el);
         slots.push(el);
       }
@@ -214,9 +234,21 @@ export class UI {
     screen.oncontextmenu = (e) => e.preventDefault();
     if (!screen._rightDragReleaseBound) {
       document.addEventListener('mouseup', () => {
-        if (screen._leftDragActive) screen._leftDragHandler?.(screen._leftDragSeen || []);
+        if (screen._leftPendingSource) {
+          const source = screen._leftPendingSource;
+          const destination = screen._leftPendingTarget;
+          if (Number.isInteger(destination) && destination !== source.index) {
+            handlers.onMove?.(source.index, destination);
+          } else {
+            handlers.onClick('inventory', source.index, 0, source.shift);
+          }
+        } else if (screen._leftDragActive) {
+          screen._leftDragHandler?.(screen._leftDragSeen || []);
+        }
         screen._leftDragActive = false;
         screen._leftDragSeen = null;
+        screen._leftPendingSource = null;
+        screen._leftPendingTarget = null;
         screen._rightDragActive = false;
         screen._rightDragSeen = null;
       });
@@ -239,7 +271,8 @@ export class UI {
     screen.onmousedown = null;
     this.invMainSlots = build($('inv-main'), 27, (i) => SLOT.MAIN_START + i, 'inventory');
     this.invHotbarSlots = build($('inv-hotbar'), 9, (i) => SLOT.HOTBAR_START + i, 'inventory');
-    this.invArmorSlots = build($('inv-armor'), 4, (i) => SLOT.ARMOR_START + i, 'inventory');
+    // The GUI shows helmet → boots; the serialized slots remain boots → helmet.
+    this.invArmorSlots = build($('inv-armor'), 4, (i) => SLOT.ARMOR_END - i, 'inventory');
     this.craftSlots = build($('craft-grid'), grid.size * grid.size, (i) => i, 'craft');
     this.resultSlots = build($('craft-result'), 1, () => 0, 'result');
 
@@ -304,7 +337,7 @@ export class UI {
 
     this.invMainSlots.forEach((el, i) => this._paintSlot(el, inventory.get(SLOT.MAIN_START + i)));
     this.invHotbarSlots.forEach((el, i) => this._paintSlot(el, inventory.get(SLOT.HOTBAR_START + i)));
-    this.invArmorSlots?.forEach((el, i) => this._paintSlot(el, inventory.get(SLOT.ARMOR_START + i)));
+    this.invArmorSlots?.forEach((el, i) => this._paintSlot(el, inventory.get(SLOT.ARMOR_END - i)));
     this.craftSlots.forEach((el, i) => this._paintSlot(el, grid.get(i)));
     this._paintSlot(this.resultSlots[0], grid.result);
 
