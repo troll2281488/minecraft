@@ -1,5 +1,6 @@
 import { describe, it, assert } from './framework.js';
 import { generateItemIcon, resolveBlockItemTextureLayers } from '../src/render/item_icons.js';
+import { buildTextures } from '../src/render/atlas.js';
 
 describe('expanded pixel-art item icons', () => {
   for (const id of [
@@ -86,5 +87,28 @@ describe('3D block inventory icons and safe texture fallback', () => {
     );
     assert(layers.top === 1 && layers.left === 1 && layers.right === 1,
       'all missing faces should resolve to stone');
+  });
+});
+
+
+describe('generated fallback block textures', () => {
+  it('creates distinct material-like pixels for unresolved block texture names', () => {
+    const built = buildTextures(null, ['unmapped_oak_planks', 'unmapped_diamond_ore']);
+    for (const name of ['unmapped_oak_planks', 'unmapped_diamond_ore']) {
+      const layer = built.index.get(name);
+      assert(layer !== undefined && layer !== built.index.get('__missing'),
+        'every required block texture should receive its own layer');
+      const start = layer * 16 * 16 * 4;
+      const pixels = built.data.subarray(start, start + 16 * 16 * 4);
+      const colors = new Set();
+      for (let i = 0; i < pixels.length; i += 4) {
+        colors.add(pixels[i] + ',' + pixels[i + 1] + ',' + pixels[i + 2]);
+      }
+      assert(colors.size > 2, 'fallback should contain textured pixel art, not a flat fill');
+      assert(!pixels.every((value, index) => index % 4 === 1 ? value === 0 : true),
+        'fallback must not be the magenta diagnostic checker');
+    }
+    assert(built.index.get('unmapped_oak_planks') !== built.index.get('unmapped_diamond_ore'),
+      'different materials need separate layers');
   });
 });
