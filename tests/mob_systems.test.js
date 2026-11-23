@@ -206,3 +206,15 @@ describe('Java mountain goats', () => {
     assertEqual(restored.mobs[0].hornsDropped, 1);
   });
 });
+
+
+describe('Mob projectile gravity', () => {
+  it('keeps no-gravity fireballs moving without vertical gravity acceleration', () => {
+    const arrow = createArrow(0, 4, 0, [0, 1, 0], 0.2);
+    arrow.noGravity = true;
+    const before = arrow.vy;
+    stepArrow(arrow, () => false, []);
+    assert(arrow.vy > 0, 'no-gravity projectile should keep moving upward');
+    assert(arrow.vy < before, 'drag should still slow the projectile');
+  });
+});
