@@ -1,5 +1,5 @@
 import { describe, it, assert } from './framework.js';
-import { generateItemIcon } from '../src/render/item_icons.js';
+import { generateItemIcon, resolveBlockItemTextureLayers } from '../src/render/item_icons.js';\n\nconst resolveBlockItemTextureLayersForTest = resolveBlockItemTextureLayers;
 
 describe('expanded pixel-art item icons', () => {
   for (const id of [
@@ -61,4 +61,30 @@ describe('equipment and potion icon silhouettes', () => {
       assert(visible >= 8, 'equipment shape should be visible');
     });
   }
+});
+
+
+describe('3D block inventory icons and safe texture fallback', () => {
+  it('resolves top and side faces without selecting the diagnostic checker', () => {
+    const textureIndex = new Map([
+      ['__missing', 0], ['stone', 1], ['grass_top', 2], ['dirt', 3],
+    ]);
+    const layers = resolveBlockItemTextureLayersForTest(
+      { textures: { top: 'grass_top', side: 'dirt', west: 'dirt', east: 'unknown_face' } },
+      textureIndex,
+    );
+    assert(layers.top === 2, 'top face should use its own texture');
+    assert(layers.left === 3, 'left face should use its own texture');
+    assert(layers.right === 3, 'unknown face should use safe stone fallback');
+  });
+
+  it('uses a safe non-checker texture if every requested block face is missing', () => {
+    const textureIndex = new Map([['__missing', 0], ['stone', 1]]);
+    const layers = resolveBlockItemTextureLayersForTest(
+      { textures: { top: 'missing_top', side: 'missing_side' } },
+      textureIndex,
+    );
+    assert(layers.top === 1 && layers.left === 1 && layers.right === 1,
+      'all missing faces should resolve to stone');
+  });
 });
