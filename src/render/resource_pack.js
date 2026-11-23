@@ -189,25 +189,92 @@ export async function loadItsBrianTextures(blocks, items, { signal } = {}) {
   return { blocks: blockTextures, items: itemIcons, hud, ui };
 }
 
-export function loadPackRecord() {
+const PACK_DB_NAME = 'minecraft-resource-packs';
+const PACK_DB_VERSION = 1;
+const PACK_STORE = 'packs';
+let packDbPromise;
+
+function openPackDatabase() {
+  if (packDbPromise) return packDbPromise;
+  packDbPromise = new Promise((resolve, reject) => {
+    if (!globalThis.indexedDB) {
+      reject(new Error('Браузер не поддерживает IndexedDB'));
+      return;
+    }
+    const request = indexedDB.open(PACK_DB_NAME, PACK_DB_VERSION);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(PACK_STORE)) db.createObjectStore(PACK_STORE);
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('Не удалось открыть хранилище ресурспаков'));
+    request.onblocked = () => reject(new Error('Хранилище занято другой вкладкой игры'));
+  });
+  return packDbPromise;
+}
+
+async function readPackFromDatabase() {
+  const db = await openPackDatabase();
+  return new Promise((resolve, reject) => {
+    const request = db.transaction(PACK_STORE, 'readonly').objectStore(PACK_STORE).get('active');
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error || new Error('Не удалось прочитать ресурспак'));
+  });
+}
+
+async function writePackToDatabase(record) {
+  const db = await openPackDatabase();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(PACK_STORE, 'readwrite');
+    tx.objectStore(PACK_STORE).put(record, 'active');
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('Не удалось сохранить ресурспак'));
+    tx.onabort = () => reject(tx.error || new Error('Сохранение ресурспака отменено'));
+  });
+}
+
+export async function loadPackRecord() {
   try {
-    const rec = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-    return rec && rec.textures ? rec : null;
-  } catch {
-    return null;
+    const stored = await readPackFromDatabase();
+    if (stored?.textures) return stored;
+  } catch (error) {
+    console.warn('[resource-pack] IndexedDB read failed:', error);
   }
+  // One-time migration for packs saved by older builds in localStorage.
+  try {
+    const legacy = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    if (legacy?.textures) {
+      try {
+        await writePackToDatabase(legacy);
+        localStorage.removeItem(STORAGE_KEY);
+      } catch (error) {
+        console.warn('[resource-pack] Legacy pack migration failed:', error);
+      }
+      return legacy;
+    }
+  } catch {}
+  return null;
 }
 
-function savePackRecord(rec) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(rec));
+async function savePackRecord(rec) {
+  await writePackToDatabase(rec);
 }
 
-export function clearPackRecord() {
-  localStorage.removeItem(STORAGE_KEY);
+export async function clearPackRecord() {
+  const db = await openPackDatabase();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(PACK_STORE, 'readwrite');
+    tx.objectStore(PACK_STORE).delete('active');
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error || new Error('Не удалось удалить ресурспак'));
+    tx.onabort = () => reject(tx.error || new Error('Удаление ресурспака отменено'));
+  });
+  try { localStorage.removeItem(STORAGE_KEY); } catch {}
 }
 
-export function packTextureCount() {
-  const rec = loadPackRecord();  return rec ? Object.keys(rec.textures).length : 0;
+export async function packTextureCount() {
+  const rec = await loadPackRecord();
+  return rec ? Object.keys(rec.textures || {}).length : 0;
 }
 
 function loadImage(src) {
@@ -282,9 +349,9 @@ export async function importPackFiles(files) {
   }
   const used = Object.keys(added).length;
   if (!used) return { used, skipped, error: null };
-  const existing = loadPackRecord()?.textures || {};
+  const existing = (await loadPackRecord())?.textures || {};
   try {
-    savePackRecord({ name: 'pack', textures: { ...existing, ...added } });
+    await savePackRecord({ name: 'pack', textures: { ...existing, ...added } });
   } catch {
     return { used: 0, skipped, error: 'quota' };
   }
@@ -566,7 +633,7 @@ export function javaEntityTextureKey(path) {
 export async function importJavaResourcePackZip(file) {
   if (!file || !/\.zip$/i.test(file.name)) throw new Error('Выбери ZIP-архив ресурспака');
   const { bytes, entries } = await readZipPngEntries(file);
-  const existing = loadPackRecord() || { name: 'Java resource pack', textures: {}, items: {} };
+  const existing = await loadPackRecord() || { name: 'Java resource pack', textures: {}, items: {} };
   const textures = { ...(existing.textures || {}) };
   const items = { ...(existing.items || {}) };
   const entities = { ...(existing.entities || {}) };
@@ -690,7 +757,7 @@ export async function importJavaResourcePackZip(file) {
   Object.assign(itemModelTextures, resolveJavaItemTextureKeys(itemModelJson));
   const blockFaces = { ...(existing.blockFaces || {}), ...importedFaces };
   try {
-    savePackRecord({
+    await savePackRecord({
       name: file.name, textures, items, entities, animations, blockFaces, itemModelTextures,
       modelFiles, blockstateFiles,
     });
