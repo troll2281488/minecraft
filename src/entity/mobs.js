@@ -602,10 +602,52 @@ export class MobSystem {
         continue;
       }
       if (arrow.isFireworkRocket) arrow.vy += 0.05;
+      const previousPosition = { x: arrow.x, y: arrow.y, z: arrow.z };
       const result = stepArrow(arrow,
         (x, y, z) => world.getBlock(x, y, z).block.solid,
-        this.mobs,
+        arrow.fromMob ? [] : this.mobs,
       );
+
+      // Hostile projectiles collide with the player in world space. Shield
+      // facing is checked by _damagePlayer, so a raised shield can stop them.
+      if (arrow.fromMob && !arrow.done && !arrow.stuck) {
+        const dx = player.x - arrow.x;
+        const dy = (player.y + 0.9) - arrow.y;
+        const dz = player.z - arrow.z;
+        const radius = arrow.projectileType === 'ghast_fireball' ? 0.88 : 0.58;
+        if (dx * dx + dy * dy + dz * dz <= radius * radius) {
+          const shieldSlot = this.game.inventory?.held?.item?.id === 'mc:shield'
+            ? this.game.inventory.selectedSlot
+            : this.game.inventory?.get(40)?.item?.id === 'mc:shield' ? 40 : -1;
+          const shieldActive = shieldSlot >= 0 && this.game.mouseButtons?.has(2) &&
+            shieldBlocksAttack(player, arrow.x, arrow.z, true);
+          this._damagePlayer(arrow.damage || 2, arrow.x, arrow.z);
+          if (!shieldActive && arrow.projectileType === 'ghast_fireball') {
+            const blastRadius = 2.25;
+            const distance = Math.hypot(dx, dy, dz);
+            if (distance < blastRadius) {
+              const falloff = 1 - distance / blastRadius;
+              this._damagePlayer(Math.max(1, Math.ceil(3 * falloff)), arrow.x, arrow.z);
+              const horizontal = Math.max(0.2, Math.hypot(dx, dz));
+              player.vx += dx / horizontal * 0.22;
+              player.vz += dz / horizontal * 0.22;
+              player.vy += 0.12;
+            }
+            this.game.sounds?.play('explode');
+          }
+          if (!shieldActive && (arrow.projectileType === 'blaze_fireball' || arrow.projectileType === 'ghast_fireball')) {
+            this.spawnBlockParticles(arrow.x, arrow.y, arrow.z, 'mc:lava');
+            player.fireTicks = Math.max(player.fireTicks || 0, arrow.projectileType === 'ghast_fireball' ? 60 : 40);
+          }
+          if (!shieldActive && arrow.slowness) {
+            player.vx *= 0.65;
+            player.vz *= 0.65;
+            player.effects?.add?.('slowness', 100, 0);
+          }
+          this.arrows.splice(i, 1);
+          continue;
+        }
+      }
       if (result.hit === 'mob' && result.mob) {
         if (arrow.isFireworkRocket) {
           this.detonateFireworkRocket(arrow.x, arrow.y, arrow.z);
@@ -661,6 +703,14 @@ export class MobSystem {
         arrow.offsetX = arrow.x - mob.x; arrow.offsetY = arrow.y - mob.y; arrow.offsetZ = arrow.z - mob.z;
         arrow.done = false;
       } else if (result.hit === 'block') {
+        if (arrow.fromMob) {
+          if (arrow.projectileType === 'ghast_fireball') {
+            this.spawnBlockParticles(arrow.x, arrow.y, arrow.z, 'mc:lava');
+            this.game.sounds?.play('explode');
+          }
+          this.arrows.splice(i, 1);
+          continue;
+        }
         if (arrow.isFireworkRocket) {
           this.detonateFireworkRocket(arrow.x, arrow.y, arrow.z);
           this.arrows.splice(i, 1);
@@ -1416,7 +1466,7 @@ export class MobSystem {
     mob.knockbackX = (dx / length) * 0.16;
     mob.knockbackZ = (dz / length) * 0.16;
     mob.knockbackY = 0.10;
-    if (!['zombie','skeleton','stray','creeper','spider','cave_spider','enderman'].includes(mob.type)) {
+    if (!MOB_AI_PROFILES[mob.type]) {
       mob.fleeTicks = 180;
       mob.moveTicks = 100;
       mob.pauseTicks = 0;
@@ -1969,16 +2019,44 @@ export class MobSystem {
         mob.ramCooldown = 600;
       }
 
-      // Skeletons and strays keep their distance and fire ranged attacks.
-      if (profile?.rangedRange && hostile && distance < profile.rangedRange && distance > 3) {
+      // Hostile ranged mobs launch real projectiles that travel through the world.
+      if (profile?.rangedRange && hostile && distance < profile.rangedRange && distance > 2.5) {
         mob.attackTicks++;
         mob.anim.attack = Math.min(1, mob.attackTicks / 18);
         if (mob.attackTicks >= profile.attackCooldown) {
-          mob.attackTicks = 0; mob.anim.attack = 0;
-          this._damagePlayer(mob.type === 'blaze' ? 6 : profile.damage, mob.x, mob.z);
-          if (mob.type === 'stray') { player.vx *= 0.72; player.vz *= 0.72; }
-          const hitMessage = mob.type === 'blaze' ? 'Блейз попал огненным зарядом!' : mob.type === 'stray' ? 'Странник попал в тебя!' : 'Скелет попал в тебя!';
-          this.game.ui?.toast(hitMessage, { error: true, duration: 1000 });
+          mob.attackTicks = 0;
+          mob.anim.attack = 0;
+          const startX = mob.x;
+          const startY = mob.y + (mob.type === 'ghast' ? 1.6 : 1.35);
+          const startZ = mob.z;
+          const aimX = player.x - startX;
+          const aimY = (player.y + 1.0) - startY;
+          const aimZ = player.z - startZ;
+          const aimLength = Math.max(0.01, Math.hypot(aimX, aimY, aimZ));
+          const isArrowMob = ['skeleton', 'stray', 'illusioner'].includes(mob.type);
+          const arcLift = isArrowMob ? Math.min(0.22, distance * 0.012) : 0;
+          const dirLength = Math.hypot(aimX / aimLength, aimY / aimLength + arcLift, aimZ / aimLength);
+          const dir = [aimX / aimLength / dirLength, (aimY / aimLength + arcLift) / dirLength, aimZ / aimLength / dirLength];
+          const projectileType = isArrowMob ? 'arrow'
+            : mob.type === 'blaze' ? 'blaze_fireball'
+            : mob.type === 'ghast' ? 'ghast_fireball'
+            : mob.type === 'wither' ? 'wither_skull'
+            : mob.type === 'witch' ? 'witch_potion'
+            : 'magic_orb';
+          const speed = isArrowMob ? 0.42
+            : projectileType === 'ghast_fireball' ? 0.28
+            : projectileType === 'witch_potion' ? 0.30 : 0.38;
+          const projectile = createArrow(
+            startX + dir[0] * 0.65, startY, startZ + dir[2] * 0.65,
+            dir, speed,
+          );
+          projectile.fromMob = true;
+          projectile.projectileType = projectileType;
+          projectile.noGravity = !isArrowMob && projectileType !== 'witch_potion';
+          projectile.damage = mob.type === 'blaze' ? 4 : profile.damage;
+          projectile.slowness = mob.type === 'stray' || mob.type === 'witch';
+          this.arrows.push(projectile);
+          this.game.sounds?.play(isArrowMob ? 'bow' : 'fire');
         }
         mob.targetYaw = Math.atan2(dx, dz);
       } else if (hostile && distance < (profile?.meleeRange ?? 1.35) && mob.type !== 'creeper') {
