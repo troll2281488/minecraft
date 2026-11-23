@@ -114,7 +114,7 @@ export async function boot() {
   ]);
   // Apply locally imported Java resource-pack textures over the community defaults.
   // The ZIP import is user-initiated; saved overrides survive reloads in this browser.
-  const savedJavaPack = loadPackRecord();
+  const savedJavaPack = await loadPackRecord();
   let localTextureAnimations = new Map();
   let localEntityTextures = new Map();
   if (savedJavaPack) {
