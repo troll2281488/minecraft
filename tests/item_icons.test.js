@@ -1,7 +1,9 @@
 import { describe, it, assert } from './framework.js';
 import { generateItemIcon, resolveBlockItemTextureLayers } from '../src/render/item_icons.js';
 import { buildTextures } from '../src/render/atlas.js';
-import { BLOCKS, BLOCK_COUNT, STATE_COUNT, ITEM_COUNT } from '../src/world/blocks/index.js';
+import { BLOCKS } from '../src/world/block.js';
+import { BLOCK_COUNT, STATE_COUNT, ITEM_COUNT } from '../src/world/blocks/index.js';
+import { TEXTURES } from '../src/render/atlas.js';
 
 describe('expanded pixel-art item icons', () => {
   for (const id of [
@@ -136,7 +138,7 @@ describe('registered vanilla texture coverage', () => {
     }
     console.log('[asset coverage] ' + BLOCK_COUNT + ' blocks, ' + STATE_COUNT +
       ' blockstates, ' + ITEM_COUNT + ' items, ' + required.size +
-      ' unique block texture keys (' + [...required].filter(name => !built.names.includes(name)).length +
-      ' unresolved).');
+      ' unique block texture keys (' + [...required].filter(name => !Object.hasOwn(TEXTURES, name)).length +
+      ' with generated fallback art).');
   });
 });
