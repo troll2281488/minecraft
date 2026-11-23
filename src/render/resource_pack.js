@@ -399,7 +399,7 @@ async function unzipEntry(bytes, method, start, compressedSize) {
  * contain the assets folders directly (as exported by several pack tools).
  */
 export function normalizeJavaPackEntryPath(input) {
-  const path = String(input || '').replace(/\\\\/g, '/').replace(/^\\.\\//, '');
+  const path = String(input || '').replace(/\\/g, '/').replace(/^\.\//, '');
   const parts = path.split('/').filter(Boolean);
   if (!parts.length) return null;
 
@@ -419,8 +419,8 @@ export function normalizeJavaPackEntryPath(input) {
   if (start < 0 || start >= parts.length) return null;
   const relative = parts.slice(start).join('/');
   return relative
-    .replace(/^textures\\/blocks\\//, 'textures/block/')
-    .replace(/^textures\\/items\\//, 'textures/item/');
+    .replace(/^textures\/blocks\//, 'textures/block/')
+    .replace(/^textures\/items\//, 'textures/item/');
 }
 
 async function readZipPngEntries(file) {
@@ -449,8 +449,8 @@ async function readZipPngEntries(file) {
     const name = decoder.decode(bytes.slice(cursor + 46, cursor + 46 + nameLength));
     cursor += 46 + nameLength + extraLength + commentLength;
     const normalizedName = normalizeJavaPackEntryPath(name);
-    if (!normalizedName || !/\\.(?:png|json|png\\.mcmeta)$/i.test(normalizedName)) continue;
-    if (!/^(?:textures\\/(?:block|item|entity)\\/|blockstates\\/|models\\/(?:block|item)\\/)/.test(normalizedName)) continue;
+    if (!normalizedName || !/\.(?:png|json|png\.mcmeta)$/i.test(normalizedName)) continue;
+    if (!/^(?:textures\/(?:block|item|entity)\/|blockstates\/|models\/(?:block|item)\/)/.test(normalizedName)) continue;
     if (localOffset + 30 > bytes.length || view.getUint32(localOffset, true) !== 0x04034b50) continue;
     const localNameLength = view.getUint16(localOffset + 26, true);
     const localExtraLength = view.getUint16(localOffset + 28, true);
@@ -463,7 +463,6 @@ async function readZipPngEntries(file) {
   }
   return { bytes, entries };
 }
-
 
 export function resolveJavaBlockFaces(models, blockstates) {
   const facesByBlock = {};
