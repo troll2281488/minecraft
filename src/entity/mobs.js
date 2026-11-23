@@ -1456,14 +1456,14 @@ export class MobSystem {
     const facing = [-Math.sin(yaw) * Math.cos(pitch), -Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)];
     for (let i = this.arrows.length - 1; i >= 0; i--) {
       const projectile = this.arrows[i];
-      if (projectile.projectileType !== 'ghast_fireball' || !projectile.fromMob || projectile.stuck) continue;
+      if (!['ghast_fireball', 'blaze_fireball'].includes(projectile.projectileType) || !projectile.fromMob || projectile.done || projectile.stuck) continue;
       const dx = projectile.x - player.x;
       const dy = projectile.y - (player.y + 0.9);
       const dz = projectile.z - player.z;
       const distance = Math.hypot(dx, dy, dz);
-      if (distance > 2.6 || distance < 0.001) continue;
+      if (distance > 3.2 || distance < 0.001) continue;
       const dot = (dx * facing[0] + dy * facing[1] + dz * facing[2]) / distance;
-      if (dot < 0.25) continue;
+      if (dot < 0.45) continue;
       const target = this.mobs
         .filter((mob) => mob.health > 0 && MOB_AI_PROFILES[mob.type])
         .sort((a, b) => Math.hypot(a.x - projectile.x, a.y - projectile.y, a.z - projectile.z) -
@@ -1476,16 +1476,17 @@ export class MobSystem {
         const length = Math.max(0.001, Math.hypot(tx, ty, tz));
         direction = [tx / length, ty / length, tz / length];
       }
-      projectile.vx = direction[0] * 0.62;
-      projectile.vy = direction[1] * 0.62;
-      projectile.vz = direction[2] * 0.62;
+      const speed = Math.max(0.55, Math.hypot(projectile.vx, projectile.vy, projectile.vz) * 1.45);
+      projectile.vx = direction[0] * speed;
+      projectile.vy = direction[1] * speed;
+      projectile.vz = direction[2] * speed;
       projectile.fromMob = false;
-      projectile.damage = 6;
+      projectile.damage = 18;
       projectile.age = 0;
       projectile.done = false;
       projectile.stuck = false;
-      this.game.sounds?.play('hit');
-      this.spawnBlockParticles(projectile.x, projectile.y, projectile.z, 'mc:fire');
+      this.game.sounds?.play('fire');
+      this.spawnBlockParticles(projectile.x, projectile.y, projectile.z, 'mc:lava');
       return true;
     }
     return false;
@@ -1500,13 +1501,21 @@ export class MobSystem {
     const held = this.game.inventory?.held;
     const baseDamage = Math.max(1, held?.item?.attackDamage || 1);
     const weaknessPenalty = player.effects?.has('weakness') ? 4 * (player.effects.amplifier('weakness') + 1) : 0;
-    const damage = Math.max(0, baseDamage + enchantmentDamageBonus(held, mob.type) +
-      (player.effects?.has('strength') ? 3 * (player.effects.amplifier('strength') + 1) : 0) - weaknessPenalty);
+    // Critical hits require a real downward fall, not merely being airborne.
+    const isCritical = !player.onGround && !player.inWater && !player.flying &&
+      !player.climbing && (player.vy || 0) < -0.02;
+    const critMultiplier = isCritical ? 1.5 : 1;
+    const damage = Math.max(0, (baseDamage + enchantmentDamageBonus(held, mob.type) +
+      (player.effects?.has('strength') ? 3 * (player.effects.amplifier('strength') + 1) : 0) -
+      weaknessPenalty) * critMultiplier);
     const finalDamage = mob.type === 'horse' ? calculateHorseArmorDamage(damage, mob.horseArmor) : damage;
     const previousHealth = mob.health;
     mob.health = Math.max(0, mob.health - finalDamage);
     if (previousHealth > 0 && mob.health <= 0 && ['zombie','skeleton','stray','creeper','spider','enderman','witch','slime','magma_cube','ghast','blaze','wither_skeleton','drowned','phantom','guardian','elder_guardian','silverfish','cave_spider'].includes(mob.type)) player.recordAdvancementEvent?.('killed_hostile', this.game.tickCount || 0);
     this.game.sounds?.play('hit');
+    if (isCritical) {
+      this.spawnBlockParticles(mob.x, mob.y + 1.0, mob.z, 'mc:glowstone');
+    }
     mob.hurtTicks = 10;
     mob.anim.hurt = 1;
     mob.playerDamageTicks = 100;
@@ -1514,11 +1523,14 @@ export class MobSystem {
     const dx = mob.x - player.x;
     const dz = mob.z - player.z;
     const length = Math.max(0.01, Math.hypot(dx, dz));
-    // A visible hit impulse: mobs slide away for several ticks instead of
-    // receiving a single tiny position nudge that their AI immediately cancels.
-    mob.knockbackX = (dx / length) * 0.16;
-    mob.knockbackZ = (dz / length) * 0.16;
-    mob.knockbackY = 0.10;
+    const sprintKnockback = player.sprinting ? 2.1 : 1;
+    mob.knockbackX = (dx / length) * 0.16 * sprintKnockback;
+    mob.knockbackZ = (dz / length) * 0.16 * sprintKnockback;
+    mob.knockbackY = isCritical || player.sprinting ? 0.15 : 0.10;
+    if (player.sprinting) {
+      player.vx *= 0.6;
+      player.vz *= 0.6;
+    }
     if (!MOB_AI_PROFILES[mob.type]) {
       mob.fleeTicks = 180;
       mob.moveTicks = 100;
