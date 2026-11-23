@@ -1,5 +1,5 @@
 import { describe, it, assert } from './framework.js';
-import { generateItemIcon, resolveBlockItemTextureLayers } from '../src/render/item_icons.js';\n\nconst resolveBlockItemTextureLayersForTest = resolveBlockItemTextureLayers;
+import { generateItemIcon, resolveBlockItemTextureLayers } from '../src/render/item_icons.js';\n\nconst resolveBlockItemTextureLayers = resolveBlockItemTextureLayers;
 
 describe('expanded pixel-art item icons', () => {
   for (const id of [
