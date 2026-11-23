@@ -488,7 +488,7 @@ export function buildItemIconCache(items, blocks, textureData, textureIndex, ext
   const cache = new Map();
 
   for (const item of items.items.values()) {
-    const external = externalItemIcons?.get(item.id);
+    const external = item.block ? null : externalItemIcons?.get(item.id);
     if (external) {
       cache.set(item.id, external);
       continue;
