@@ -465,23 +465,37 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
 
   _updateTextureAnimations(now = (globalThis.performance?.now?.() ?? Date.now())) {
     if (!this.textureAnimations?.size) return;
+    // Java animated textures run at 20 updates/second. Do not rebuild frame
+    // descriptors or walk every animation on each 60/120 Hz render frame.
+    if (this._lastTextureAnimationUpdate !== undefined &&
+        now - this._lastTextureAnimationUpdate < 50) return;
+    this._lastTextureAnimationUpdate = now;
+
+    if (!this._compiledTextureAnimations) {
+      this._compiledTextureAnimations = [];
+      for (const [name, source] of this.textureAnimations) {
+        const layer = this.textures?.index?.get(name);
+        if (layer === undefined || !source.frames?.length) continue;
+        const frames = source.frames.map((_, index) => ({
+          index,
+          time: Math.max(1, source.times?.[index] || 1),
+        }));
+        const duration = frames.reduce((sum, frame) => sum + frame.time, 0);
+        this._compiledTextureAnimations.push({
+          name, layer, frames, duration, pixels: source.frames,
+        });
+      }
+    }
+
     const gl = this.gl;
     let changed = false;
     gl.bindTexture(gl.TEXTURE_2D_ARRAY, this.textureArray);
-    for (const [name, animation] of this.textureAnimations) {
-      const layer = this.textures?.index?.get(name);
-      if (layer === undefined || !animation.frames?.length) continue;
-      const times = animation.times.map((time) => Math.max(1, time || 1));
-      const duration = times.reduce((sum, time) => sum + time, 0);
-      const frame = textureFrameAt({
-        frames: animation.frames.map((_, index) => ({ index, time: times[index] })),
-        duration,
-      }, Math.floor(now / 50));
-      if (this._animatedFrameByName?.get(name) === frame) continue;
-      this._animatedFrameByName ||= new Map();
-      this._animatedFrameByName.set(name, frame);
-      gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, layer, TILE_SIZE, TILE_SIZE, 1,
-        gl.RGBA, gl.UNSIGNED_BYTE, animation.frames[frame]);
+    for (const animation of this._compiledTextureAnimations) {
+      const frame = textureFrameAt(animation, Math.floor(now / 50));
+      if (this._animatedFrameByName.get(animation.name) === frame) continue;
+      this._animatedFrameByName.set(animation.name, frame);
+      gl.texSubImage3D(gl.TEXTURE_2D_ARRAY, 0, 0, 0, animation.layer, TILE_SIZE, TILE_SIZE, 1,
+        gl.RGBA, gl.UNSIGNED_BYTE, animation.pixels[frame]);
       changed = true;
     }
     if (changed) gl.generateMipmap(gl.TEXTURE_2D_ARRAY);
