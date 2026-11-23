@@ -84,7 +84,7 @@ export function stepArrow(arrow, isSolid, mobs = []) {
     }
   }
 
-  arrow.vy -= ARROW.GRAVITY;
+  if (!arrow.noGravity) arrow.vy -= ARROW.GRAVITY;
   const drag = ARROW.DRAG;
   arrow.vx *= drag; arrow.vy *= drag; arrow.vz *= drag;
   return { hit: null };
