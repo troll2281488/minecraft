@@ -540,11 +540,22 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     // Keep the near plane away from the camera to preserve depth-buffer precision.
     // A 0.05 plane wastes precision at normal block distances and can amplify z-fighting.
     mat4.perspective(this.projection, fov, aspect, 0.2, far);
+    const dmgFeedback = this.game?.damageFeedback ?? 0;
+    const damageEl = document.getElementById('damage-overlay');
+    if (damageEl) damageEl.style.opacity = dmgFeedback > 0.01 ? String(Math.min(0.95, dmgFeedback * 1.15)) : '0';
+    let shakeYaw = 0, shakePitch = 0, shakeY = 0;
+    if (dmgFeedback > 0.01) {
+      const time = (this.tickCount || 0) * 1.7 + dmgFeedback * 12;
+      shakeYaw = Math.sin(time * 2.3) * dmgFeedback * 3.4;
+      shakePitch = Math.cos(time * 2.9) * dmgFeedback * 2.6 - dmgFeedback * 2.2;
+      shakeY = Math.sin(time * 3.5) * dmgFeedback * 0.045;
+      if (this.game) this.game.damageFeedback = Math.max(0, dmgFeedback - 0.032);
+    }
     let cameraX = this.renderPosition.x;
-    let cameraY = this.renderPosition.y + player.eyeHeight + (player.ridingHorse ? 1.15 : 0);
+    let cameraY = this.renderPosition.y + player.eyeHeight + (player.ridingHorse ? 1.15 : 0) + shakeY;
     let cameraZ = this.renderPosition.z;
-    let cameraYaw = player.yaw;
-    let cameraPitch = player.pitch;
+    let cameraYaw = player.yaw + shakeYaw;
+    let cameraPitch = player.pitch + shakePitch;
     if (this.thirdPerson) {
       const yaw = player.yaw * Math.PI / 180;
       const pitch = player.pitch * Math.PI / 180;
