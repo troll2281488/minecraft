@@ -497,10 +497,23 @@ export function resolveJavaItemTextureKeys(models) {
   };
   for (const [name] of models) {
     const textures = resolve(name);
-    const layer = textures?.layer0 || textures?.layer1 || textures?.particle;
-    if (!layer) continue;
-    const key = String(layer).replace(/^minecraft:(?:item|block)\//, '').replace(/^(?:item|block)\//, '').split('/').pop();
-    if (/^[a-z0-9_]+$/i.test(key)) resolved[name] = key;
+    const layers = [];
+    for (let index = 0; index <= 4; index++) {
+      const layer = textures?.['layer' + index];
+      if (!layer) continue;
+      const key = String(layer).replace(/^minecraft:(?:item|block)\\//, '').replace(/^(?:item|block)\\//, '').split('/').pop();
+      if (/^[a-z0-9_]+$/i.test(key)) layers.push(key);
+    }
+    // Preserve the historical string shape for single-layer models; multi-layer
+    // generated items keep their ordered overlays so the decoder can composite them.
+    if (layers.length === 1) resolved[name] = layers[0];
+    else if (layers.length > 1) resolved[name] = layers;
+    else {
+      const particle = textures?.particle;
+      if (!particle) continue;
+      const key = String(particle).replace(/^minecraft:(?:item|block)\\//, '').replace(/^(?:item|block)\\//, '').split('/').pop();
+      if (/^[a-z0-9_]+$/i.test(key)) resolved[name] = key;
+    }
   }
   return resolved;
 }
@@ -699,11 +712,37 @@ export async function decodePackItemTextures(record) {
     const dataUrl = await load(name, url);
     if (dataUrl) out.set('mc:' + name, dataUrl);
   }
-  for (const [itemName, textureName] of Object.entries(record?.itemModelTextures || {})) {
-    const url = record?.items?.[textureName] || record?.textures?.[textureName];
-    if (!url) continue;
-    const dataUrl = await load(textureName, url);
-    if (dataUrl) out.set('mc:' + itemName, dataUrl);
+  for (const [itemName, textureSpec] of Object.entries(record?.itemModelTextures || {})) {
+    const textureNames = Array.isArray(textureSpec) ? textureSpec : [textureSpec];
+    const layers = [];
+    for (const textureName of textureNames) {
+      if (typeof textureName !== 'string') continue;
+      const url = record?.items?.[textureName] || record?.textures?.[textureName];
+      if (!url) continue;
+      const dataUrl = await load(textureName, url);
+      if (dataUrl) layers.push(dataUrl);
+    }
+    if (!layers.length) continue;
+    if (layers.length === 1) {
+      out.set('mc:' + itemName, layers[0]);
+      continue;
+    }
+    // Java generated item models draw layer0 first, then transparent overlays.
+    // Composite at native 16x16 nearest-neighbour resolution to preserve pixel art.
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = TILE_SIZE;
+      canvas.height = TILE_SIZE;
+      const context = canvas.getContext('2d');
+      if (!context) continue;
+      context.imageSmoothingEnabled = false;
+      for (const layerUrl of layers) {
+        const bitmap = await createImageBitmap(await (await fetch(layerUrl)).blob());
+        context.drawImage(bitmap, 0, 0, TILE_SIZE, TILE_SIZE);
+        bitmap.close();
+      }
+      out.set('mc:' + itemName, canvas.toDataURL('image/png'));
+    } catch { /* Keep the standalone imported item texture as fallback. */ }
   }
   return out;
 }
