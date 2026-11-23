@@ -1,10 +1,25 @@
 import { describe, it, assert, assertEqual } from './framework.js';
-import { shouldFetchExternalItemTexture, shouldFetchExternalBlockTexture, resolveJavaBlockFaces, resolveJavaItemTextureKeys, javaEntityTextureKey } from '../src/render/resource_pack.js';
+import { shouldFetchExternalItemTexture, shouldFetchExternalBlockTexture, resolveJavaBlockFaces, resolveJavaItemTextureKeys, javaEntityTextureKey, normalizeJavaPackEntryPath } from '../src/render/resource_pack.js';
 import '../src/world/blocks/index.js';
 import { BLOCKS } from '../src/world/block.js';
 import { buildTextures, buildBlockTextureTable } from '../src/render/atlas.js';
 import { packSurface } from '../src/render/mesher.js';
 import { parseTextureAnimation, textureFrameAt } from '../src/render/texture_animation.js';
+
+describe('Java resource pack ZIP path normalization', () => {
+  it('accepts standard and wrapped Java resource-pack folder layouts', () => {
+    assertEqual(normalizeJavaPackEntryPath('assets/minecraft/textures/block/stone.png'), 'textures/block/stone.png');
+    assertEqual(normalizeJavaPackEntryPath('my-pack/assets/minecraft/textures/item/apple.png'), 'textures/item/apple.png');
+    assertEqual(normalizeJavaPackEntryPath('texts/textures/block/stone.png'), 'textures/block/stone.png');
+    assertEqual(normalizeJavaPackEntryPath('./texts/models/block/stone.json'), 'models/block/stone.json');
+  });
+
+  it('accepts legacy plural texture folder names and ignores unrelated files', () => {
+    assertEqual(normalizeJavaPackEntryPath('assets/minecraft/textures/blocks/stone.png'), 'textures/block/stone.png');
+    assertEqual(normalizeJavaPackEntryPath('assets/minecraft/textures/items/apple.png'), 'textures/item/apple.png');
+    assertEqual(normalizeJavaPackEntryPath('pack/README.txt'), null);
+  });
+});
 
 describe('External item texture selection', () => {
   it('uses built-in generated icons for spawn eggs', () => {
