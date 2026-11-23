@@ -182,6 +182,21 @@ describe('Java blockstate multipart and item model imports', () => {
     assertEqual(resolved.custom_sword, 'shared_icon');
     assertEqual(resolved.apple, 'red_apple');
   });
+
+  it('keeps ordered layer0-layer4 overlays from generated item models', () => {
+    const models = new Map([
+      ['generated', { textures: { layer0: 'minecraft:item/base' } }],
+      ['glint_item', { parent: 'minecraft:item/generated', textures: {
+        layer1: 'minecraft:item/overlay', layer2: 'minecraft:item/highlight',
+      } }],
+      ['layered', { parent: 'minecraft:item/glint_item', textures: {
+        layer0: 'minecraft:item/body', layer4: 'minecraft:item/trim',
+      } }],
+    ]);
+    const resolved = resolveJavaItemTextureKeys(models);
+    assertEqual(JSON.stringify(resolved.glint_item), JSON.stringify(['base', 'overlay', 'highlight']));
+    assertEqual(JSON.stringify(resolved.layered), JSON.stringify(['body', 'overlay', 'highlight', 'trim']));
+  });
 });
 
 describe('Java animated texture metadata', () => {
