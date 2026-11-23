@@ -287,9 +287,9 @@ export const ScreensMixin = {
         const status = section.querySelector('#java-resource-pack-status');
         try {
           const result = await importJavaResourcePackZip(file);
-          status.textContent = 'Импортировано текстур блоков: ' + result.blocks + '; предметов: ' + result.items + '; существ: ' + (result.entities || 0) + '. Моделей: ' + result.modelFiles + '; blockstates: ' + result.blockstateFiles + '; сопоставлено блоков: ' + result.mappedBlocks + '. Пропущено: ' + result.skipped + '. Перезагрузка игры...';
-          this.ui.toast('Java-текстуры импортированы. Перезагрузи игру.');
-          setTimeout(() => location.reload(), 900);
+          this._resourcePackReloadPending = true;
+          status.textContent = 'Импортировано текстур блоков: ' + result.blocks + '; предметов: ' + result.items + '; существ: ' + (result.entities || 0) + '. Моделей: ' + result.modelFiles + '; blockstates: ' + result.blockstateFiles + '; сопоставлено блоков: ' + result.mappedBlocks + '. Пропущено: ' + result.skipped + '. Пак сохранён. Нажми «Готово», чтобы применить.';
+          this.ui.toast('Ресурспак сохранён. Нажми «Готово» для применения.');
         } catch (error) {
           status.textContent = 'Ошибка импорта: ' + error.message;
           this.ui.toast('Не удалось импортировать Java-ресурспак: ' + error.message, { error: true, duration: 8000 });
@@ -354,6 +354,11 @@ export const ScreensMixin = {
   },
 
   _leaveSettings() {
+    if (this._resourcePackReloadPending) {
+      this._resourcePackReloadPending = false;
+      location.reload();
+      return;
+    }
     const returnScreen = this._settingsReturnScreen || 'title';
     this._settingsReturnScreen = null;
     if (returnScreen === 'pause' && this.running) this._resume();
