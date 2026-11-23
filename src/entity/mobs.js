@@ -1439,7 +1439,51 @@ export class MobSystem {
     return finalDamage;
   }
 
+  deflectGhastFireball() {
+    const player = this.game.player;
+    if (!player) return false;
+    const yaw = (player.yaw || 0) * Math.PI / 180;
+    const pitch = (player.pitch || 0) * Math.PI / 180;
+    const facing = [-Math.sin(yaw) * Math.cos(pitch), -Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)];
+    for (let i = this.arrows.length - 1; i >= 0; i--) {
+      const projectile = this.arrows[i];
+      if (projectile.projectileType !== 'ghast_fireball' || !projectile.fromMob || projectile.stuck) continue;
+      const dx = projectile.x - player.x;
+      const dy = projectile.y - (player.y + 0.9);
+      const dz = projectile.z - player.z;
+      const distance = Math.hypot(dx, dy, dz);
+      if (distance > 2.6 || distance < 0.001) continue;
+      const dot = (dx * facing[0] + dy * facing[1] + dz * facing[2]) / distance;
+      if (dot < 0.25) continue;
+      const target = this.mobs
+        .filter((mob) => mob.health > 0 && MOB_AI_PROFILES[mob.type])
+        .sort((a, b) => Math.hypot(a.x - projectile.x, a.y - projectile.y, a.z - projectile.z) -
+          Math.hypot(b.x - projectile.x, b.y - projectile.y, b.z - projectile.z))[0];
+      let direction = facing;
+      if (target) {
+        const tx = target.x - projectile.x;
+        const ty = target.y + 0.7 - projectile.y;
+        const tz = target.z - projectile.z;
+        const length = Math.max(0.001, Math.hypot(tx, ty, tz));
+        direction = [tx / length, ty / length, tz / length];
+      }
+      projectile.vx = direction[0] * 0.62;
+      projectile.vy = direction[1] * 0.62;
+      projectile.vz = direction[2] * 0.62;
+      projectile.fromMob = false;
+      projectile.damage = 6;
+      projectile.age = 0;
+      projectile.done = false;
+      projectile.stuck = false;
+      this.game.sounds?.play('hit');
+      this.spawnBlockParticles(projectile.x, projectile.y, projectile.z, 'mc:fire');
+      return true;
+    }
+    return false;
+  }
+
   attackFromPlayer() {
+    if (this.deflectGhastFireball()) return true;
     const mob = this.targetedMob();
     if (!mob) return this.game.multiplayer?.attackFromPlayer() ?? false;
     if (this.attackCooldown > 0) return true;
