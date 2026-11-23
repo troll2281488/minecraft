@@ -621,23 +621,14 @@ export class MobSystem {
             : this.game.inventory?.get(40)?.item?.id === 'mc:shield' ? 40 : -1;
           const shieldActive = shieldSlot >= 0 && this.game.mouseButtons?.has(2) &&
             shieldBlocksAttack(player, arrow.x, arrow.z, true);
-          this._damagePlayer(arrow.damage || 2, arrow.x, arrow.z);
-          if (!shieldActive && arrow.projectileType === 'ghast_fireball') {
-            const blastRadius = 2.25;
-            const distance = Math.hypot(dx, dy, dz);
-            if (distance < blastRadius) {
-              const falloff = 1 - distance / blastRadius;
-              this._damagePlayer(Math.max(1, Math.ceil(3 * falloff)), arrow.x, arrow.z);
-              const horizontal = Math.max(0.2, Math.hypot(dx, dz));
-              player.vx += dx / horizontal * 0.22;
-              player.vz += dz / horizontal * 0.22;
-              player.vy += 0.12;
-            }
-            this.game.sounds?.play('explode');
+          if (arrow.projectileType === 'ghast_fireball') {
+            if (!shieldActive) this.detonateGhastFireball(arrow.x, arrow.y, arrow.z);
+          } else {
+            this._damagePlayer(arrow.damage || 2, arrow.x, arrow.z);
           }
-          if (!shieldActive && (arrow.projectileType === 'blaze_fireball' || arrow.projectileType === 'ghast_fireball')) {
+          if (!shieldActive && arrow.projectileType === 'blaze_fireball') {
             this.spawnBlockParticles(arrow.x, arrow.y, arrow.z, 'mc:lava');
-            player.fireTicks = Math.max(player.fireTicks || 0, arrow.projectileType === 'ghast_fireball' ? 60 : 40);
+            player.fireTicks = Math.max(player.fireTicks || 0, 40);
           }
           if (!shieldActive && arrow.slowness) {
             player.vx *= 0.65;
@@ -704,10 +695,7 @@ export class MobSystem {
         arrow.done = false;
       } else if (result.hit === 'block') {
         if (arrow.fromMob) {
-          if (arrow.projectileType === 'ghast_fireball') {
-            this.spawnBlockParticles(arrow.x, arrow.y, arrow.z, 'mc:lava');
-            this.game.sounds?.play('explode');
-          }
+          if (arrow.projectileType === 'ghast_fireball') this.detonateGhastFireball(arrow.x, arrow.y, arrow.z);
           this.arrows.splice(i, 1);
           continue;
         }
@@ -1437,6 +1425,27 @@ export class MobSystem {
     }
     player.health = Math.max(0, player.health - finalDamage);
     return finalDamage;
+  }
+
+  detonateGhastFireball(x, y, z) {
+    const player = this.game.player;
+    if (player?.gamemode === 'survival') {
+      const dx = player.x - x;
+      const dy = (player.y + 0.9) - y;
+      const dz = player.z - z;
+      const distance = Math.hypot(dx, dy, dz);
+      const radius = 2.5;
+      if (distance < radius) {
+        const falloff = 1 - distance / radius;
+        this._damagePlayer(Math.max(1, Math.ceil(4 * falloff)), x, z);
+        const horizontal = Math.max(0.2, Math.hypot(dx, dz));
+        player.vx += dx / horizontal * 0.22 * falloff;
+        player.vz += dz / horizontal * 0.22 * falloff;
+        player.vy += 0.12 * falloff;
+      }
+    }
+    this.spawnBlockParticles(x, y, z, 'mc:lava');
+    this.game.sounds?.play('explode');
   }
 
   deflectGhastFireball() {
