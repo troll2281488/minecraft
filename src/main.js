@@ -455,6 +455,12 @@ class Game {
       this.sounds?.step(under.soundGroup || 'stone');
     }
     this.entities?.tick();
+    // Observe health after player physics and mob simulation so fall, fire,
+    // projectile and melee damage all trigger the same visual feedback.
+    if (this._lastPlayerHealth !== undefined && player.health < this._lastPlayerHealth) {
+      this.damageFeedback = Math.min(1, (this.damageFeedback || 0) + 0.78);
+    }
+    this._lastPlayerHealth = player.health;
     if (player.health <= 0 && !this.deathScreenOpen) {
       // Java 1.19: keepInventory preserves XP; otherwise drop 7 × level (max 100).
       // This prototype currently handles death XP in the Overworld, where respawn
