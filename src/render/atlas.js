@@ -995,20 +995,70 @@ function missingTexture() {
 }
 
 /**
+ * Deterministic, material-aware fallback art for block textures that have no
+ * built-in tile and could not be downloaded from the vanilla texture source.
+ * This is deliberately ordinary pixel art, never the purple diagnostic tile.
+ */
+export function generatedFallbackTexture(name) {
+  const key = String(name || 'unknown').toLowerCase();
+  const palette = key.includes('sand') ? hex(0xd8c58a)
+    : key.includes('dirt') || key.includes('soil') || key.includes('podzol') ? hex(0x795438)
+    : key.includes('wood') || key.includes('log') || key.includes('plank') || key.includes('chest') || key.includes('crafting') ? hex(0x986a3e)
+    : key.includes('leaf') || key.includes('grass') || key.includes('moss') || key.includes('sapling') || key.includes('fern') ? hex(0x568b3c)
+    : key.includes('ice') || key.includes('water') || key.includes('glass') ? hex(0x83b8c9)
+    : key.includes('lava') || key.includes('fire') ? hex(0xd66a25)
+    : key.includes('ore') ? hex(0x85817b)
+    : key.includes('brick') || key.includes('cobble') || key.includes('stone') || key.includes('anvil') ? hex(0x858585)
+    : key.includes('wool') || key.includes('clay') ? hex(0xa5a0a0)
+    : key.includes('snow') ? hex(0xe5e8e8)
+    : hex(0x89827a);
+
+  if (key.includes('leaves')) return leaves(palette, key);
+  if (key.includes('plank')) return planks(palette, key);
+  if (key.endsWith('_log') || key.includes('log_side')) return barkSide(palette, key);
+  if (key.includes('log_top')) return logTop(shade(palette, 0.7), palette, key);
+  if (key.includes('cobble') || key.includes('brick') || key.includes('masonry')) return cobble(palette, key);
+  if (key.includes('ore')) {
+    const gem = key.includes('diamond') ? hex(0x45d7c8)
+      : key.includes('gold') ? hex(0xf2ce43)
+      : key.includes('redstone') ? hex(0xc72d28)
+      : key.includes('lapis') ? hex(0x3156ad)
+      : key.includes('emerald') ? hex(0x39b96c)
+      : hex(0xb4a99a);
+    return oreTile(palette, gem, key, 6);
+  }
+
+  const tile = grainy(palette, key.includes('glass') || key.includes('ice') ? 0.12 : 0.28, key, { clumps: 10, clumpSize: 2 });
+  const rng = new Random(key);
+  // Add material-specific pixel marks so unknown keys do not all look alike.
+  if (key.includes('glass') || key.includes('ice')) {
+    for (let n = 0; n < 7; n++) {
+      const x = rng.nextInt(TILE_SIZE), y = rng.nextInt(TILE_SIZE);
+      const c = shade(palette, n % 2 ? 1.28 : 0.72);
+      setPx(tile, x, y, c[0], c[1], c[2], key.includes('glass') ? 180 : 255);
+    }
+  } else if (key.includes('torch') || key.includes('lantern') || key.includes('candle')) {
+    for (let y = 3; y < 13; y++) setPx(tile, 7 + (y % 3 === 0 ? 1 : 0), y, 0x65, 0x42, 0x25);
+    for (const [x,y] of [[7,2],[8,2],[7,3],[8,3],[6,4],[9,4]]) setPx(tile,x,y,0xf4,0xb9,0x42);
+  }
+  return tile;
+}
+
+/**
  * Generate every texture and pack them into one Uint8Array laid out as
  * consecutive layers, ready for texImage3D.
  *
  * @returns {{data: Uint8Array, layers: number, index: Map<string, number>, names: string[]}}
  */
-export function buildTextures(overrides = null) {
-  const names = ['__missing', ...new Set([...Object.keys(TEXTURES), ...(overrides ? [...overrides.keys()] : [])])].sort((a, b) => a === '__missing' ? -1 : b === '__missing' ? 1 : a.localeCompare(b));
+export function buildTextures(overrides = null, requiredNames = []) {
+  const names = ['__missing', ...new Set([...Object.keys(TEXTURES), ...(overrides ? [...overrides.keys()] : []), ...requiredNames.filter(name => typeof name === 'string' && name && name !== 'none')])].sort((a, b) => a === '__missing' ? -1 : b === '__missing' ? 1 : a.localeCompare(b));
   const layers = names.length;
   const data = new Uint8Array(TILE_SIZE * TILE_SIZE * 4 * layers);
   const index = new Map();
 
   names.forEach((name, layer) => {
     index.set(name, layer);
-    const tile = name === '__missing' ? missingTexture() : (overrides?.get(name) ?? (TEXTURES[name] ? TEXTURES[name]() : missingTexture()));
+    const tile = name === '__missing' ? missingTexture() : (overrides?.get(name) ?? (TEXTURES[name] ? TEXTURES[name]() : generatedFallbackTexture(name)));
     data.set(tile, layer * TILE_SIZE * TILE_SIZE * 4);
   });
 
