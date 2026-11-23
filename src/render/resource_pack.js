@@ -501,7 +501,7 @@ export function resolveJavaItemTextureKeys(models) {
     for (let index = 0; index <= 4; index++) {
       const layer = textures?.['layer' + index];
       if (!layer) continue;
-      const key = String(layer).replace(/^minecraft:(?:item|block)\\//, '').replace(/^(?:item|block)\\//, '').split('/').pop();
+      const key = String(layer).replace(/^minecraft:(?:item|block)\//, '').replace(/^(?:item|block)\//, '').split('/').pop();
       if (/^[a-z0-9_]+$/i.test(key)) layers.push(key);
     }
     // Preserve the historical string shape for single-layer models; multi-layer
@@ -511,7 +511,7 @@ export function resolveJavaItemTextureKeys(models) {
     else {
       const particle = textures?.particle;
       if (!particle) continue;
-      const key = String(particle).replace(/^minecraft:(?:item|block)\\//, '').replace(/^(?:item|block)\\//, '').split('/').pop();
+      const key = String(particle).replace(/^minecraft:(?:item|block)\//, '').replace(/^(?:item|block)\//, '').split('/').pop();
       if (/^[a-z0-9_]+$/i.test(key)) resolved[name] = key;
     }
   }
