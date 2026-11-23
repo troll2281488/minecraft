@@ -393,34 +393,73 @@ async function unzipEntry(bytes, method, start, compressedSize) {
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
+/**
+ * Convert common Java resource-pack layouts to paths relative to assets/minecraft.
+ * Accepts a normal pack, a ZIP with an extra enclosing folder, and archives that
+ * contain the assets folders directly (as exported by several pack tools).
+ */
+export function normalizeJavaPackEntryPath(input) {
+  const path = String(input || '').replace(/\\\\/g, '/').replace(/^\\.\\//, '');
+  const parts = path.split('/').filter(Boolean);
+  if (!parts.length) return null;
+
+  let start = -1;
+  for (let i = 0; i < parts.length - 1; i++) {
+    if (parts[i] === 'assets' && parts[i + 1] === 'minecraft') {
+      start = i + 2;
+      break;
+    }
+  }
+  if (start < 0) {
+    start = parts.findIndex((part, index) =>
+      (part === 'textures' && ['block', 'blocks', 'item', 'items', 'entity'].includes(parts[index + 1])) ||
+      (part === 'blockstates' && index + 1 < parts.length) ||
+      (part === 'models' && ['block', 'item'].includes(parts[index + 1])));
+  }
+  if (start < 0 || start >= parts.length) return null;
+  const relative = parts.slice(start).join('/');
+  return relative
+    .replace(/^textures\\/blocks\\//, 'textures/block/')
+    .replace(/^textures\\/items\\//, 'textures/item/');
+}
+
 async function readZipPngEntries(file) {
   const bytes = new Uint8Array(await file.arrayBuffer());
+  if (bytes.length < 22) throw new Error('Файл слишком маленький и не похож на ZIP');
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let eocd = -1;
   for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65557); i--) {
     if (view.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
   }
-  if (eocd < 0) throw new Error('В ZIP не найдена центральная директория');
+  if (eocd < 0) throw new Error('Не найдена ZIP-директория. Проверь, что выбран именно .zip, а не .7z/.rar');
   const count = view.getUint16(eocd + 10, true);
   let cursor = view.getUint32(eocd + 16, true);
   const entries = [];
+  const decoder = new TextDecoder();
   for (let i = 0; i < count; i++) {
-    if (view.getUint32(cursor, true) !== 0x02014b50) throw new Error('Повреждённая запись ZIP');
+    if (cursor + 46 > bytes.length || view.getUint32(cursor, true) !== 0x02014b50) {
+      throw new Error('Архив повреждён или использует неподдерживаемый ZIP64');
+    }
     const method = view.getUint16(cursor + 10, true);
     const compressedSize = view.getUint32(cursor + 20, true);
     const nameLength = view.getUint16(cursor + 28, true);
     const extraLength = view.getUint16(cursor + 30, true);
     const commentLength = view.getUint16(cursor + 32, true);
     const localOffset = view.getUint32(cursor + 42, true);
-    const name = new TextDecoder().decode(bytes.slice(cursor + 46, cursor + 46 + nameLength));
+    const name = decoder.decode(bytes.slice(cursor + 46, cursor + 46 + nameLength));
     cursor += 46 + nameLength + extraLength + commentLength;
-    if (!/\.(?:png|json|png\.mcmeta)$/i.test(name)) continue;
-    if (!/^(?:assets\/minecraft\/)?(?:textures\/(?:block|item|entity)\/|blockstates\/|models\/(?:block|item)\/)/.test(name)) continue;
-    if (view.getUint32(localOffset, true) !== 0x04034b50) continue;
+    const normalizedName = normalizeJavaPackEntryPath(name);
+    if (!normalizedName || !/\\.(?:png|json|png\\.mcmeta)$/i.test(normalizedName)) continue;
+    if (!/^(?:textures\\/(?:block|item|entity)\\/|blockstates\\/|models\\/(?:block|item)\\/)/.test(normalizedName)) continue;
+    if (localOffset + 30 > bytes.length || view.getUint32(localOffset, true) !== 0x04034b50) continue;
     const localNameLength = view.getUint16(localOffset + 26, true);
     const localExtraLength = view.getUint16(localOffset + 28, true);
     const dataStart = localOffset + 30 + localNameLength + localExtraLength;
-    entries.push({ name: name.replace(/^assets\/minecraft\//, ''), method, dataStart, compressedSize });
+    if (dataStart + compressedSize > bytes.length) continue;
+    entries.push({ name: normalizedName, method, dataStart, compressedSize });
+  }
+  if (!entries.length) {
+    throw new Error('В ZIP не найдены assets/minecraft/textures, models или blockstates. Проверь содержимое архива.');
   }
   return { bytes, entries };
 }
