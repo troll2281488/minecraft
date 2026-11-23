@@ -1,5 +1,5 @@
 import { describe, it, assert } from './framework.js';
-import { generateItemIcon, resolveBlockItemTextureLayers } from '../src/render/item_icons.js';\n\nconst resolveBlockItemTextureLayers = resolveBlockItemTextureLayers;
+import { generateItemIcon, resolveBlockItemTextureLayers } from '../src/render/item_icons.js';
 
 describe('expanded pixel-art item icons', () => {
   for (const id of [
@@ -69,7 +69,7 @@ describe('3D block inventory icons and safe texture fallback', () => {
     const textureIndex = new Map([
       ['__missing', 0], ['stone', 1], ['grass_top', 2], ['dirt', 3],
     ]);
-    const layers = resolveBlockItemTextureLayersForTest(
+    const layers = resolveBlockItemTextureLayers(
       { textures: { top: 'grass_top', side: 'dirt', west: 'dirt', east: 'unknown_face' } },
       textureIndex,
     );
@@ -80,7 +80,7 @@ describe('3D block inventory icons and safe texture fallback', () => {
 
   it('uses a safe non-checker texture if every requested block face is missing', () => {
     const textureIndex = new Map([['__missing', 0], ['stone', 1]]);
-    const layers = resolveBlockItemTextureLayersForTest(
+    const layers = resolveBlockItemTextureLayers(
       { textures: { top: 'missing_top', side: 'missing_side' } },
       textureIndex,
     );
