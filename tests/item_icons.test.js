@@ -1,6 +1,7 @@
 import { describe, it, assert } from './framework.js';
 import { generateItemIcon, resolveBlockItemTextureLayers } from '../src/render/item_icons.js';
 import { buildTextures } from '../src/render/atlas.js';
+import { BLOCKS, BLOCK_COUNT, STATE_COUNT, ITEM_COUNT } from '../src/world/blocks/index.js';
 
 describe('expanded pixel-art item icons', () => {
   for (const id of [
@@ -110,5 +111,32 @@ describe('generated fallback block textures', () => {
     }
     assert(built.index.get('unmapped_oak_planks') !== built.index.get('unmapped_diamond_ore'),
       'different materials need separate layers');
+  });
+});
+
+
+describe('registered vanilla texture coverage', () => {
+  it('allocates a non-diagnostic texture layer for every registered block face', () => {
+    const required = new Set();
+    for (const state of BLOCKS.statesById) {
+      const block = state.block;
+      if (block.texture && block.texture !== 'none') required.add(block.texture);
+      for (const name of Object.values(block.textures ?? {})) {
+        if (typeof name === 'string' && name !== 'none') required.add(name);
+      }
+      for (const name of Object.values(block.doorTextures ?? {})) {
+        if (typeof name === 'string' && name !== 'none') required.add(name);
+      }
+    }
+    const built = buildTextures(null, [...required]);
+    for (const name of required) {
+      const layer = built.index.get(name);
+      assert(layer !== undefined && layer !== built.index.get('__missing'),
+        'missing registered texture layer: ' + name);
+    }
+    console.log('[asset coverage] ' + BLOCK_COUNT + ' blocks, ' + STATE_COUNT +
+      ' blockstates, ' + ITEM_COUNT + ' items, ' + required.size +
+      ' unique block texture keys (' + [...required].filter(name => !built.names.includes(name)).length +
+      ' unresolved).');
   });
 });
