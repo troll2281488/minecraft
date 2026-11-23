@@ -1271,10 +1271,33 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
     for (const arrow of this.entities?.arrows ?? []) {
       const yaw = arrow.stuckYaw ?? Math.atan2(-arrow.vx, arrow.vz);
       const pitch = arrow.stuckPitch ?? Math.atan2(-arrow.vy, Math.hypot(arrow.vx, arrow.vz));
-      draw(arrow.x, arrow.y, arrow.z, yaw, [
-        [[0,0,0],[0.045,0.045,0.62],[0.46,0.34,0.18,1]],
-        [[0,0.025,-0.24],[0.16,0.012,0.16],[0.82,0.82,0.82,1]],
-      ], pitch, -1, -1, 1, {});
+      const pType = arrow.projectileType || 'arrow';
+      if (pType === 'blaze_fireball') {
+        draw(arrow.x, arrow.y, arrow.z, (arrow.age || 0) * 0.25, [
+          [[0,0,0],[0.28,0.28,0.28],[1.0,0.42,0.05,1]],
+          [[0,0,0],[0.36,0.36,0.36],[1.0,0.82,0.15,0.55]],
+        ], (arrow.age || 0) * 0.2, -1, -1, 1, {});
+      } else if (pType === 'ghast_fireball') {
+        draw(arrow.x, arrow.y, arrow.z, (arrow.age || 0) * 0.18, [
+          [[0,0,0],[0.68,0.68,0.68],[0.95,0.90,0.85,1]],
+          [[0,0,0],[0.78,0.78,0.78],[1.0,0.35,0.05,0.5]],
+        ], 0, -1, -1, 1, {});
+      } else if (pType === 'wither_skull') {
+        draw(arrow.x, arrow.y, arrow.z, yaw, [
+          [[0,0,0],[0.34,0.34,0.34],[0.14,0.14,0.18,1]],
+          [[-0.08,0.04,0.16],[0.06,0.04,0.04],[0.55,0.75,0.95,1]],
+          [[0.08,0.04,0.16],[0.06,0.04,0.04],[0.55,0.75,0.95,1]],
+        ], pitch, -1, -1, 1, {});
+      } else if (pType === 'witch_potion' || pType === 'magic_orb') {
+        draw(arrow.x, arrow.y, arrow.z, (arrow.age || 0) * 0.3, [
+          [[0,0,0],[0.24,0.24,0.24],[0.68,0.18,0.92,1]],
+        ], 0, -1, -1, 1, {});
+      } else {
+        draw(arrow.x, arrow.y, arrow.z, yaw, [
+          [[0,0,0],[0.045,0.045,0.62],[0.46,0.34,0.18,1]],
+          [[0,0.025,-0.24],[0.16,0.012,0.16],[0.82,0.82,0.82,1]],
+        ], pitch, -1, -1, 1, {});
+      }
     }
     for (const mob of this.entities?.mobs ?? []) {
       const vanillaModel = this.entityModels?.getModel?.('minecraft:' + mob.type);
@@ -1421,6 +1444,22 @@ void main(){ vec3 color=uColor.rgb; vec3 cell=floor(vLocalPos*8.0);
         sourceAnimated, animationName: vanillaAnimation?.name ?? null,
         ownSwing: vanillaParts ? null : mobLegSwing(mob, { legStart: legs[0], legEnd: legs[1], walking: !!mob.anim?.walking, sprinting: !!mob.sprinting, riding: !!mob.riding, swimming: !!mob.inWater, walkPhase: mob.walkPhase }),
       });
+      if ((mob.type === 'skeleton' || mob.type === 'stray' || mob.type === 'illusioner') && !mob.dying) {
+        const aiming = (mob.anim?.attack ?? 0) > 0;
+        const bowY = aiming ? 1.38 : 0.98;
+        const bowZ = aiming ? 0.42 : 0.24;
+        draw(mob.x, mob.y, mob.z, mob.yaw, [
+          [[0.36,bowY,bowZ],[0.06,0.56,0.06],[0.46,0.30,0.14,1]],
+          [[0.36,bowY+0.22,bowZ-0.08],[0.05,0.14,0.14],[0.46,0.30,0.14,1]],
+          [[0.36,bowY-0.22,bowZ-0.08],[0.05,0.14,0.14],[0.46,0.30,0.14,1]],
+          [[0.36,bowY,bowZ-0.14],[0.02,0.50,0.02],[0.85,0.85,0.85,1]],
+        ], 0, -1, -1, 1, {});
+      } else if (mob.type === 'wither_skeleton' && !mob.dying) {
+        draw(mob.x, mob.y, mob.z, mob.yaw, [
+          [[0.42,1.15,0.36],[0.08,0.72,0.08],[0.32,0.34,0.36,1]],
+          [[0.42,1.48,0.36],[0.20,0.16,0.20],[0.42,0.43,0.45,1]],
+        ], 0, -1, -1, 1, {});
+      }
       if (mob.type === 'goat' && !vanillaParts) {
         draw(mob.x, mob.y, mob.z, mob.yaw, [
           [[-0.27,1.30,0.68],[0.075,0.24,0.075],[0.78,0.72,0.58,1]],
