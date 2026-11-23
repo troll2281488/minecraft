@@ -424,6 +424,66 @@ export function iconToCanvas(pixels, scale = 2) {
  * changes, and regenerating icons on each redraw would be visibly slow with a
  * full inventory open.
  */
+/**
+ * Resolve safe texture layers for a block inventory icon. A missing face must
+ * never leak the diagnostic magenta checkerboard into a normal inventory slot.
+ */
+export function resolveBlockItemTextureLayers(block, textureIndex) {
+  const safe = textureIndex.get('stone') ?? textureIndex.get('cobblestone') ??
+    [...textureIndex.entries()].find(([name]) => name !== '__missing')?.[1] ?? 0;
+  const faces = block?.textures ?? {};
+  const layer = (...names) => {
+    for (const name of names) {
+      if (typeof name !== 'string') continue;
+      const found = textureIndex.get(name);
+      if (found !== undefined && name !== '__missing') return found;
+    }
+    return safe;
+  };
+  const side = layer(faces.side, faces.north, faces.south, faces.west, faces.east, block?.texture);
+  return {
+    top: layer(faces.top, faces.up, faces.side, block?.texture),
+    left: layer(faces.west, faces.side, faces.north, block?.texture),
+    right: layer(faces.east, faces.side, faces.south, block?.texture),
+    side,
+  };
+}
+
+/**
+ * Draw a block as the familiar three-face isometric cube used by Minecraft's
+ * inventory, rather than a flat square crop of its top texture.
+ */
+export function blockItemIconToCanvas(block, textureData, textureIndex) {
+  const layers = resolveBlockItemTextureLayers(block, textureIndex);
+  const canvas = document.createElement('canvas');
+  canvas.width = 32;
+  canvas.height = 32;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  const sourceFor = (layer) => {
+    const source = document.createElement('canvas');
+    source.width = TILE_SIZE;
+    source.height = TILE_SIZE;
+    const image = ctx.createImageData(TILE_SIZE, TILE_SIZE);
+    const offset = layer * TILE_SIZE * TILE_SIZE * 4;
+    image.data.set(textureData.subarray(offset, offset + TILE_SIZE * TILE_SIZE * 4));
+    source.getContext('2d').putImageData(image, 0, 0);
+    return source;
+  };
+  const drawFace = (layer, transform) => {
+    ctx.save();
+    ctx.transform(...transform);
+    ctx.drawImage(sourceFor(layer), 0, 0, TILE_SIZE, TILE_SIZE);
+    ctx.restore();
+  };
+
+  // Side faces first; the top face sits over their upper edges.
+  drawFace(layers.left, [0.75, 0.375, 0, 0.8125, 4, 10]);
+  drawFace(layers.right, [0.75, -0.375, 0, 0.8125, 16, 16]);
+  drawFace(layers.top, [0.75, 0.375, -0.75, 0.375, 16, 3]);
+  return canvas;
+}
+
 export function buildItemIconCache(items, blocks, textureData, textureIndex, externalItemIcons = null) {
   const cache = new Map();
 
@@ -433,18 +493,14 @@ export function buildItemIconCache(items, blocks, textureData, textureIndex, ext
       cache.set(item.id, external);
       continue;
     }
-    let pixels = generateItemIcon(item);
 
-    if (!pixels) {
-      // Block item: lift the block's top-face texture straight out of the
-      // generated texture array.
+    if (item.block) {
       const block = blocks.get(item.block);
-      const name = block?.textures?.top ?? block?.textures?.side ?? block?.texture;
-      const layer = textureIndex.get(name) ?? textureIndex.get('__missing');
-      const offset = layer * TILE_SIZE * TILE_SIZE * 4;
-      pixels = textureData.subarray(offset, offset + TILE_SIZE * TILE_SIZE * 4);
+      cache.set(item.id, blockItemIconToCanvas(block, textureData, textureIndex).toDataURL());
+      continue;
     }
 
+    const pixels = generateItemIcon(item);
     cache.set(item.id, iconToCanvas(pixels, 2).toDataURL());
   }
 
