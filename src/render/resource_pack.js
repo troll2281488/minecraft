@@ -533,12 +533,27 @@ async function readZipPngEntries(file) {
 
 export function resolveJavaBlockFaces(models, blockstates) {
   const facesByBlock = {};
+  const vanillaParent = (key) => {
+    const faceMap = {
+      cube_all: { down: '#all', up: '#all', north: '#all', south: '#all', west: '#all', east: '#all' },
+      cube: { down: '#down', up: '#up', north: '#north', south: '#south', west: '#west', east: '#east' },
+      cube_column: { down: '#end', up: '#end', north: '#side', south: '#side', west: '#side', east: '#side' },
+      cube_bottom_top: { down: '#bottom', up: '#top', north: '#side', south: '#side', west: '#side', east: '#side' },
+      cube_top: { down: '#bottom', up: '#top', north: '#side', south: '#side', west: '#side', east: '#side' },
+      orientable: { down: '#bottom', up: '#top', north: '#front', south: '#front', west: '#side', east: '#side' },
+    };
+    const faces = faceMap[key];
+    if (!faces) return null;
+    return { textures: {}, elements: [{ faces: Object.fromEntries(
+      Object.entries(faces).map(([direction, texture]) => [direction, { texture }]),
+    ) }] };
+  };
   const resolveModel = (id, seen = new Set()) => {
     const key = String(id || '').replace(/^minecraft:/, '').replace(/^block\//, '');
     if (!key || seen.has(key)) return null;
     seen.add(key);
     const model = models.get(key);
-    if (!model) return null;
+    if (!model) return vanillaParent(key);
     const parent = resolveModel(model.parent, seen);
     return {
       textures: { ...(parent?.textures || {}), ...(model.textures || {}) },
